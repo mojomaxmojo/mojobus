@@ -1,469 +1,245 @@
 import { useSeoMeta } from '@unhead/react';
 import { useParams, Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Calendar, User, ArrowLeft, Clock, Share2 } from 'lucide-react';
+import { MapPin, Calendar, Clock, ArrowLeft, Share2, User } from 'lucide-react';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 
-// Mock blog posts data (shared with Blog.tsx)
+// Travel blog posts data (matching Blog.tsx)
 const blogPosts = [
   {
     id: 1,
-    title: "The Future of Decentralized Social Media",
-    excerpt: "Exploring how protocols like Nostr are revolutionizing the way we connect and share information online, creating a more open and censorship-resistant internet.",
+    title: "Lost in the Bamboo Forests of Kyoto",
+    excerpt: "A serendipitous journey through Japan's ancient capital, where tradition meets modernity in the most unexpected ways.",
     content: `
-# The Future of Decentralized Social Media
+# Lost in the Bamboo Forests of Kyoto
 
-The internet was born as a decentralized network, but over the past two decades, we've witnessed an unprecedented centralization of social media platforms. Today, a handful of corporations control how billions of people communicate, share information, and express themselves online.
+The morning mist clung to the ancient stones of Kyoto like whispered secrets from centuries past. I had arrived in Japan's former imperial capital with a carefully planned itinerary, but sometimes the most magical travel moments happen when you throw the map away and follow your curiosity instead.
 
-## The Problem with Centralized Platforms
+## The Unexpected Turn
 
-Traditional social media platforms suffer from several fundamental issues:
+It started with a wrong turn. I was searching for the famous Fushimi Inari shrine when I found myself on a narrow path lined with towering bamboo. The sound was hypnotic—thousands of green stalks swaying in the breeze, creating a natural symphony that seemed to pull me deeper into the grove.
 
-- **Censorship and Control**: Platforms can silence voices, remove content, and ban users without transparent processes
-- **Data Ownership**: Users have no real control over their data or content
-- **Algorithm Manipulation**: Engagement-driven algorithms often promote divisive content
-- **Vendor Lock-in**: Moving your social graph to another platform is nearly impossible
+The path twisted and turned, each bend revealing new corridors of emerald light. Sunbeams filtered through the canopy above, casting dancing shadows on the forest floor. I realized I was completely lost, but for the first time in months, I didn't care about my destination.
 
-## Enter Nostr: A New Paradigm
+## Discovering Hidden Temples
 
-Nostr (Notes and Other Stuff Transmitted by Relays) represents a paradigm shift in social media architecture. Unlike traditional platforms, Nostr is:
+After what felt like hours of wandering (though my phone insisted it had only been 30 minutes), I emerged into a small clearing. There, almost hidden behind a curtain of bamboo, stood a tiny temple I had never seen in any guidebook.
 
-### Truly Decentralized
-There's no central server or company controlling the network. Anyone can run a relay, and users can connect to multiple relays simultaneously.
+An elderly monk was sweeping the entrance with deliberate, meditative movements. When he noticed me, he smiled and gestured for me to approach. Despite our language barrier, his warmth was universal. He led me to a stone bench where we sat in comfortable silence, sharing green tea from a thermos he produced from his robes.
 
-### Censorship Resistant
-Since there's no central authority, no single entity can remove your content from the entire network. If one relay removes your content, it remains available on others.
+### The Art of Presence
 
-### User-Owned Identity
-Your identity is tied to cryptographic keys that you control, not to any platform. You own your followers, your content, and your digital identity.
+In that moment, I understood something profound about travel. We often rush from landmark to landmark, checking boxes on our itineraries, but the real magic happens in the spaces between—in the wrong turns, the unexpected encounters, the moments when we stop trying to control our experience and let the journey unfold naturally.
 
-## The Technical Foundation
+The monk pointed to a small garden behind the temple where cherry blossoms were just beginning to bloom. Even though it was early in the season, a few brave petals had opened, their soft pink contrasting beautifully with the deep green bamboo backdrop.
 
-Nostr's simplicity is its strength. The protocol consists of just two components:
+## Lessons from the Forest
 
-1. **Clients**: Applications that users interact with to read and write data
-2. **Relays**: Servers that store and forward messages
+As I finally found my way back to civilization (with some gentle directions from my new friend), I carried with me more than just photos and memories. The bamboo forest had taught me several important lessons:
 
-This minimalist approach makes the protocol incredibly robust and easy to implement.
+**Embrace the Unexpected**: Some of the best experiences come from unplanned detours. That "wrong turn" led me to one of the most peaceful and meaningful moments of my entire trip.
 
-## Looking Forward
+**Slow Down**: In our rush to see everything, we often miss the subtle beauty right in front of us. The forest forced me to move at nature's pace, and I was rewarded with sounds, scents, and sights I would have missed at tourist speed.
 
-As we move toward a more decentralized future, protocols like Nostr offer hope for a more open, censorship-resistant, and user-controlled internet. The journey is just beginning, but the foundation is solid.
+**Connect Without Words**: My conversation with the monk reminded me that human connection transcends language. Sometimes a shared smile and a cup of tea communicate more than a thousand words.
 
-The future of social media isn't about building bigger platforms—it's about building better protocols that serve users rather than exploit them.
+## The Magic of Kyoto
+
+Kyoto has a way of revealing itself slowly, like layers of an ancient scroll being carefully unrolled. The city seamlessly blends the sacred and the everyday—you might find a 1,000-year-old temple sandwiched between a convenience store and a ramen shop, and somehow it all makes perfect sense.
+
+The bamboo forest became my retreat during the rest of my stay. I returned several times, each visit revealing new details: the way morning light differed from afternoon shadows, how the sound changed with the wind's intensity, the small shrines tucked into alcoves I had missed before.
+
+## Finding Your Own Path
+
+Travel isn't just about the places we visit; it's about the perspectives we gain and the parts of ourselves we discover along the way. That morning in the bamboo forest reminded me that sometimes the best adventures begin when we get lost.
+
+So next time you're traveling, consider taking that interesting side street, following that intriguing path, or accepting that invitation from a stranger. You might just find your own bamboo forest—a place that exists not just in geography, but in the moments when we're fully present and open to wonder.
+
+The bamboo grove of Kyoto taught me that being lost isn't always a problem to be solved. Sometimes, it's exactly where we need to be.
     `,
-    author: "Blog Author",
+    author: "Travel Blogger",
     date: "2024-03-15",
-    category: "Technology",
-    tags: ["Nostr", "Decentralization", "Social Media"],
-    image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=1200&h=600&fit=crop&auto=format",
-    readTime: "5 min read"
+    location: "Kyoto, Japan",
+    category: "Cultural Discovery",
+    tags: ["Japan", "Culture", "Temples", "Nature"],
+    image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1200&h=600&fit=crop&auto=format",
+    readTime: "8 min"
   },
   {
     id: 2,
-    title: "Building Privacy-First Applications",
-    excerpt: "A deep dive into creating applications that prioritize user privacy and data sovereignty, with practical examples and implementation strategies.",
+    title: "Chasing Northern Lights in Iceland",
+    excerpt: "Three unforgettable nights under the Arctic sky, waiting for nature's most spectacular light show.",
     content: `
-# Building Privacy-First Applications
+# Chasing Northern Lights in Iceland
 
-In an era where data breaches make headlines weekly and surveillance capitalism dominates the digital landscape, building privacy-first applications isn't just a nice-to-have—it's an ethical imperative.
+Iceland in winter is a land of extremes—where fire meets ice, where darkness dominates but light dances across the sky in the most spectacular way imaginable. I spent three nights chasing the aurora borealis, and what I discovered was far more than just a natural phenomenon.
 
-## Privacy by Design Principles
+## Night One: The Learning Curve
 
-When building applications that respect user privacy, we must embed these principles from the ground up:
+My first attempt at northern lights hunting was, admittedly, amateur hour. Armed with nothing but enthusiasm and a basic camera, I joined a bus tour filled with equally hopeful tourists. We drove for hours into the countryside, stopping at various dark locations, craning our necks toward the sky.
 
-### Data Minimization
-Collect only the data you absolutely need. Every piece of personal information you store is a liability—both for your users and your organization.
+The guide kept checking his aurora app and looking concerned. "Solar activity is low tonight," he explained. "But sometimes the lights surprise us."
 
-### Purpose Limitation
-Use data only for the purposes you've explicitly stated. Don't repurpose user data for new features without clear consent.
+Around 11 PM, just as I was starting to think we'd return empty-handed, someone shouted "There!" A faint green arc had appeared on the horizon, barely visible to the naked eye but clear enough through the camera lens.
 
-### Transparency
-Be clear about what data you collect, how you use it, and who you share it with. Privacy policies should be readable by humans, not just lawyers.
+It wasn't the dramatic display I had imagined, but watching that subtle glow dance across the sky for the first time was magical nonetheless. I learned that northern lights photography is as much about patience as it is about luck.
 
-## Technical Strategies
+## Night Two: Going Solo
 
-### End-to-End Encryption
-Implement encryption that ensures only the intended recipients can read messages or data. The server should never have access to plaintext content.
+Emboldened by my first sighting, I decided to venture out alone. I rented a car and drove to the Jökulsárlón glacier lagoon, about three hours from Reykjavik. The plan was to combine ice and aurora—if the lights appeared.
 
-### Zero-Knowledge Architecture
-Design systems where the service provider cannot access user data even if they wanted to. This protects users even from internal threats.
+The drive through Iceland's winter landscape is otherworldly. Snow-covered volcanic fields stretch endlessly, punctuated by steaming hot springs and ice formations that look like alien sculptures. Even without the northern lights, the journey was worth it.
 
-### Local-First Approach
-Keep data on the user's device whenever possible. Sync only when necessary and encrypt data in transit and at rest.
+At the glacier lagoon, massive icebergs float like silent monuments in the dark water. I set up my tripod on the shore and waited. And waited. The cold was intense—even with multiple layers, hand warmers, and a thermos of hot coffee, I could barely feel my fingers after an hour.
 
-## The Business Case for Privacy
+Then, around midnight, the sky erupted.
 
-Privacy isn't just about compliance—it's about building trust:
+## The Dance Begins
 
-- **User Trust**: Privacy-respecting applications build stronger, more loyal user bases
-- **Regulatory Compliance**: GDPR, CCPA, and other regulations make privacy a legal requirement
-- **Competitive Advantage**: Privacy can be a key differentiator in crowded markets
+What started as a faint green curtain quickly intensified into ribbons of light that swept across the entire sky. Green, purple, and even hints of pink danced overhead, reflecting off the icebergs below. For nearly an hour, I watched nature's most incredible light show, frantically taking photos but mostly just standing there in awe.
 
-## Implementation Examples
+The aurora moves faster than you expect. It pulses and waves like a living thing, appearing in one part of the sky only to vanish and reappear somewhere else entirely. No photograph can capture the dynamic nature of this phenomenon—you have to experience it.
 
-### Secure Authentication
-- Use protocols like WebAuthn for passwordless authentication
-- Implement proper session management with secure tokens
-- Support hardware security keys for high-value accounts
+## Night Three: The Perfect Storm
 
-### Data Handling
-- Encrypt sensitive data using strong, modern encryption algorithms
-- Implement proper key management and rotation
-- Use secure deletion methods for data removal
+My final night in Iceland delivered the kind of aurora display that locals say happens maybe once or twice a year. Clear skies, high solar activity, and perfect viewing conditions combined for what can only be described as a cosmic symphony.
 
-## Conclusion
+I was back at the glacier lagoon, this time with a small group of photography enthusiasts I had met at my hotel. We spread out along the shore, each claiming our spot for the night's show.
 
-Building privacy-first applications requires thoughtful design, careful implementation, and ongoing vigilance. But the reward—user trust and a more ethical digital ecosystem—is worth the effort.
+The lights began early—around 9 PM—and continued until nearly 3 AM. Wave after wave of green and purple aurora painted the sky, some formations so bright they cast shadows on the ice below. At one point, the entire sky was alive with color, creating a natural dome of light that made us feel like we were inside a giant snow globe.
 
-The future belongs to applications that empower users, not exploit them.
+## More Than Just Lights
+
+Chasing the northern lights taught me lessons that extend far beyond astronomy and photography:
+
+**Patience Pays Off**: The best experiences often require waiting, sometimes in uncomfortable conditions. The anticipation makes the payoff even more rewarding.
+
+**Embrace the Unexpected**: My most spectacular aurora viewing happened when I least expected it. Sometimes the best travel moments can't be planned.
+
+**Disconnect to Connect**: Standing under the northern lights, hours from the nearest WiFi signal, I felt more connected to the natural world than I had in years.
+
+**Share the Wonder**: The camaraderie among aurora chasers is special. Strangers become friends when you're all sharing the same sense of awe under a dancing sky.
+
+## The Science and the Soul
+
+Learning about the science behind the aurora—solar particles interacting with Earth's magnetic field—didn't diminish the magic for me. If anything, understanding the cosmic forces at play made the experience even more profound.
+
+These lights have been dancing across Arctic skies for millions of years, witnessed by Vikings, Inuit hunters, and countless others who looked up in wonder. I was part of an ancient human tradition: standing small under an vast sky, marveling at forces beyond our control.
+
+## Planning Your Own Aurora Adventure
+
+If you're inspired to chase the northern lights yourself, here's what I learned:
+
+- **Timing is everything**: Visit during aurora season (September to March) and plan for at least 3-4 nights to account for weather
+- **Get away from lights**: The darker your location, the better your viewing chances
+- **Be prepared for cold**: Dress in layers and bring hand warmers—you'll be standing still for hours
+- **Manage expectations**: Some nights you'll see nothing. Other nights will take your breath away
+- **Bring a good camera**: Phone cameras won't capture the aurora well. A DSLR with manual settings is essential
+
+## The Memory That Lasts
+
+Months later, I still think about those three nights in Iceland almost daily. There's something about the northern lights that stays with you—maybe it's the reminder of how small we are in the cosmic scheme, or maybe it's the pure joy of witnessing something so beautiful it seems impossible.
+
+Iceland taught me that some experiences are worth traveling to the ends of the earth for. The northern lights aren't just a natural phenomenon; they're a reminder that magic still exists in our world, dancing across the sky for anyone patient enough to look up.
     `,
-    author: "Blog Author",
-    date: "2024-03-10",
-    category: "Privacy",
-    tags: ["Privacy", "Security", "Development"],
-    image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=1200&h=600&fit=crop&auto=format",
-    readTime: "8 min read"
+    author: "Travel Blogger",
+    date: "2024-02-28",
+    location: "Reykjavik, Iceland",
+    category: "Adventure",
+    tags: ["Iceland", "Northern Lights", "Adventure", "Photography"],
+    image: "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=1200&h=600&fit=crop&auto=format",
+    readTime: "6 min"
   },
   {
     id: 3,
-    title: "The Philosophy of Open Source",
-    excerpt: "Reflecting on the principles that drive open source development and how it creates a more collaborative and innovative technological landscape.",
+    title: "Street Food Adventures in Bangkok",
+    excerpt: "From floating markets to hidden alleyway stalls, discovering Thailand's incredible culinary soul.",
     content: `
-# The Philosophy of Open Source
+# Street Food Adventures in Bangkok
 
-Open source software represents more than just a development methodology—it's a philosophy that challenges traditional notions of ownership, collaboration, and innovation in the digital age.
+Bangkok hits you like a wave of sensory overload—the sounds of tuk-tuks weaving through traffic, the aroma of sizzling garlic and chilies, the kaleidoscope of colors from fruit vendors and fabric markets. But nothing prepared me for the incredible journey through Thailand's street food culture, where every meal tells a story and every vendor is an artist.
 
-## The Four Freedoms
+## The Floating Market Discovery
 
-The Free Software Foundation defines four essential freedoms that form the foundation of open source philosophy:
+My culinary adventure began at dawn at the Damnoen Saduak floating market, about an hour outside Bangkok. As our long-tail boat navigated the narrow canals, I watched vendors preparing fresh coconut ice cream, grilling satay over charcoal, and ladling steaming noodle soup from boats that doubled as floating kitchens.
 
-1. **Freedom to Run**: The freedom to run the program for any purpose
-2. **Freedom to Study**: The freedom to study how the program works and change it
-3. **Freedom to Redistribute**: The freedom to redistribute copies
-4. **Freedom to Improve**: The freedom to distribute modified versions
+The first vendor I encountered was an elderly woman making mango sticky rice in a boat barely larger than a canoe. Her hands moved with practiced precision, slicing perfectly ripe mangoes and arranging them beside glutinous rice soaked in coconut milk. The sweet, creamy combination was the perfect introduction to Thai flavors—a harmonious balance of textures and tastes that would define my entire journey.
 
-## Beyond Code: A Cultural Movement
+## The Art of Pad Thai
 
-Open source extends far beyond software development. It represents a cultural shift toward:
+Everyone knows pad thai, but I discovered there's a world of difference between the restaurant version and what you'll find on Bangkok's streets. I spent an afternoon with Khun Somchai, a pad thai master who has been working the same corner in Chinatown for over 30 years.
 
-### Transparency
-Open source projects operate in the open, with visible development processes, public discussions, and transparent decision-making.
+Watching him work was like observing a conductor leading an orchestra. The rhythmic scraping of his spatula against the wok, the precise timing of adding ingredients, the way he could gauge doneness by sound alone—it was culinary poetry in motion.
 
-### Collaboration
-The best solutions often emerge from diverse perspectives working together, rather than isolated teams working in silos.
+"Secret is the wok heat," he told me in broken English, wiping sweat from his forehead as flames licked the sides of his well-seasoned pan. "Too low, noodles stick. Too high, noodles burn. Must be just right."
 
-### Meritocracy
-Contributions are valued based on their merit, not on the contributor's title, company affiliation, or background.
+His pad thai was a revelation—tangy from tamarind, slightly sweet from palm sugar, with a hint of fish sauce umami and the crunch of fresh bean sprouts and crushed peanuts. Simple ingredients transformed into something extraordinary through technique passed down through generations.
 
-## The Economics of Abundance
+## Late Night Food Adventures
 
-Traditional economics is based on scarcity—if I have something, you can't have it. Software breaks this model:
+The real magic happens after dark when Bangkok's street food scene truly comes alive. I joined a food tour that didn't end until 2 AM, winding through narrow alleyways where the city's culinary secrets hide.
 
-- Code can be copied infinitely without degrading the original
-- Sharing knowledge increases its value rather than depleting it
-- Collaboration creates more value than competition
+In one tiny soi (alley), we found a grandmother making som tam (papaya salad) by pounding fresh ingredients in a massive mortar and pestle. The sound echoed off the surrounding buildings—thock, thock, thock—as she created a salad that was simultaneously sweet, sour, salty, and spicy.
 
-## Challenges and Solutions
+Further down the same alley, a family-run stall was serving tom yum goong that had locals queuing for hours. The broth was a perfect balance of lemongrass, galangal, lime leaves, and chilies, with plump prawns that had been swimming in tanks just hours before.
 
-### The Sustainability Problem
-Many open source projects struggle with funding and maintainer burnout. New models are emerging:
+## The Philosophy of Thai Street Food
 
-- **Corporate Sponsorship**: Companies supporting projects they depend on
-- **Developer Funding**: Platforms like GitHub Sponsors and Open Collective
-- **Dual Licensing**: Offering commercial licenses alongside open source ones
+What struck me most about Bangkok's street food culture wasn't just the incredible flavors—it was the philosophy behind it. Food vendors aren't just feeding people; they're preserving traditions, supporting families, and creating community gathering places.
 
-### Security Considerations
-Open source's transparency can expose vulnerabilities, but it also enables:
+I met vendors who had learned their recipes from grandparents, who woke at 4 AM to prepare fresh ingredients, who took pride in perfecting a single dish rather than expanding their menu. There's a deep respect for ingredients, technique, and the relationship between cook and customer.
 
-- **Many Eyes Make Bugs Shallow**: More reviewers often mean faster bug discovery
-- **Rapid Response**: Fixes can be deployed quickly across the ecosystem
-- **No Security Through Obscurity**: Real security comes from strong design, not hidden code
+One vendor selling grilled fish told me, "I make only fish, but I make best fish. People come from across city for my fish. Why I need make other things?"
 
-## The Network Effect
+## The Spice Education
 
-Open source creates powerful network effects:
+Thai food taught me to recalibrate my understanding of spice. It's not about heat for heat's sake—it's about balance. The burn of chilies is tempered by cooling herbs, sharp acidity is balanced by palm sugar sweetness, and rich coconut milk smooths everything into harmony.
 
-- More users lead to more contributors
-- More contributors lead to better software
-- Better software attracts more users
+I learned to identify different chilies: the tiny bird's eye chilies that pack serious heat, the longer red chilies that add color and moderate spice, the dried chilies that bring smoky depth to curry pastes. Each has its place and purpose.
 
-This creates a virtuous cycle that can make open source projects incredibly robust and innovative.
+## Market Mornings
 
-## Lessons for Life
+Some of my favorite food experiences happened in the early morning markets where locals shop for their daily ingredients. The flower market was a feast for the senses—jasmine garlands for Buddhist shrines, orchids in every color imaginable, and the heady perfume of frangipani filling the air.
 
-The principles of open source extend beyond software:
+But the food markets were where the real action was. I watched vendors selecting the best fish, haggling over produce prices, and sampling everything before buying. The quality standards were incredibly high—these people cook fresh every day and know good ingredients when they see them.
 
-- **Collaboration over Competition**: Working together often produces better results
-- **Transparency builds Trust**: Open processes create stronger relationships
-- **Shared Knowledge Benefits Everyone**: Teaching others strengthens the entire community
+## Dessert Discoveries
 
-## Conclusion
+Thai desserts were a revelation I hadn't expected. Mango sticky rice is just the beginning. I discovered kanom krok (coconut rice pancakes), tub tim krob (water chestnuts in coconut milk), and countless varieties of traditional sweets made from coconut, rice, and tropical fruits.
 
-Open source isn't just about making software free—it's about creating a more collaborative, transparent, and innovative world. As we face complex global challenges, the open source approach offers a model for working together toward common goals.
+One of my favorite discoveries was Thai-style shaved ice desserts loaded with young coconut, sweet corn, red beans, and palm sugar syrup. It sounds unusual but tastes like summer itself—refreshing, sweet, and utterly addictive in Bangkok's sweltering heat.
 
-The future is open.
+## The Social Aspect
+
+Street food in Bangkok isn't just about eating—it's about socializing. Food stalls become neighborhood gathering places where people catch up on gossip, watch Thai soap operas on tiny TVs, and debate politics over bowls of noodles.
+
+I was adopted by regulars at several stalls, invited to share tables, taught proper eating etiquette, and included in conversations despite our language barriers. Food became the universal language that connected us.
+
+## Lessons from the Street
+
+My Bangkok street food adventure taught me lessons that extend far beyond cooking:
+
+**Simplicity creates excellence**: The best dishes often have the fewest ingredients, executed perfectly
+**Tradition has value**: Recipes passed down through generations carry wisdom worth preserving
+**Community matters**: Food brings people together across all cultural boundaries
+**Quality over quantity**: It's better to master one thing than to be mediocre at many
+
+## Bringing Bangkok Home
+
+I returned from Thailand with a suitcase full of ingredients and a head full of techniques. While I can't recreate the exact magic of eating pad thai on a plastic stool next to a Bangkok street, I can honor the lessons I learned about respecting ingredients, balancing flavors, and cooking with love.
+
+The vendors of Bangkok taught me that great food isn't about fancy equipment or expensive ingredients—it's about understanding your craft, respecting your traditions, and feeding people with joy. Every time I smell lemongrass or taste good fish sauce, I'm transported back to those magical nights wandering through the city's endless maze of delicious possibilities.
+
+Bangkok's street food scene isn't just about eating—it's about experiencing the soul of a culture through its most essential expression: the food that brings people together, tells stories, and keeps traditions alive one delicious bite at a time.
     `,
-    author: "Blog Author",
-    date: "2024-03-05",
-    category: "Philosophy",
-    tags: ["Open Source", "Philosophy", "Community"],
-    image: "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=1200&h=600&fit=crop&auto=format",
-    readTime: "6 min read"
-  },
-  {
-    id: 4,
-    title: "Sustainable Technology Practices",
-    excerpt: "Examining how we can build technology that's not just innovative, but also environmentally conscious and sustainable for future generations.",
-    content: `
-# Sustainable Technology Practices
-
-As our world becomes increasingly digital, the environmental impact of technology can no longer be ignored. From energy-hungry data centers to the rare earth minerals in our devices, the tech industry has a responsibility to build more sustainably.
-
-## The Hidden Environmental Cost
-
-Every click, every swipe, every video stream has an environmental footprint:
-
-### Data Centers and Energy Consumption
-- Data centers consume about 1% of global electricity
-- AI training can emit as much CO2 as five cars over their lifetimes
-- Video streaming accounts for over 1% of global emissions
-
-### Device Manufacturing
-- Rare earth mining devastates local ecosystems
-- Manufacturing a smartphone produces 70kg of CO2
-- E-waste is the fastest-growing waste stream globally
-
-## Sustainable Development Practices
-
-### Code Efficiency
-Writing efficient code isn't just good practice—it's environmental stewardship:
-
-- **Optimize algorithms**: More efficient code means less computational power
-- **Minimize data transfer**: Compress images, optimize APIs, reduce payload sizes
-- **Progressive loading**: Load only what users need, when they need it
-
-### Green Hosting
-Choose hosting providers that prioritize renewable energy:
-
-- Look for carbon-neutral or carbon-negative hosting
-- Consider edge computing to reduce data transfer distances
-- Use CDNs with renewable energy commitments
-
-### Sustainable Design Patterns
-- **Dark mode**: Can reduce energy consumption on OLED screens
-- **Minimal interfaces**: Less visual complexity means lower processing requirements
-- **Lazy loading**: Only load content when needed
-
-## The Circular Economy in Tech
-
-Moving beyond the linear "make-take-dispose" model:
-
-### Design for Longevity
-- Build software that works well on older devices
-- Prioritize backwards compatibility
-- Create modular, upgradeable systems
-
-### Repair and Reuse
-- Open source hardware designs
-- Right to repair advocacy
-- Refurbishment programs
-
-## Measuring Impact
-
-Track your environmental footprint:
-
-- Use tools like Website Carbon Calculator
-- Monitor server energy usage
-- Set sustainability KPIs alongside business metrics
-
-## The Business Case
-
-Sustainability isn't just ethical—it's profitable:
-
-- **Cost Savings**: Efficient code reduces hosting costs
-- **Brand Value**: Consumers increasingly prefer sustainable brands
-- **Future-Proofing**: Environmental regulations are only getting stricter
-
-## Small Changes, Big Impact
-
-Individual developers and companies can make a difference:
-
-- Choose renewable energy for offices and servers
-- Implement remote work policies to reduce commuting
-- Prioritize digital-first processes to reduce paper waste
-- Support open source projects that promote sustainability
-
-## Conclusion
-
-Building sustainable technology requires intentional choices at every level—from the code we write to the servers we deploy. As technologists, we have the power and responsibility to build a digital future that doesn't compromise our planet's future.
-
-The question isn't whether we can afford to build sustainably—it's whether we can afford not to.
-    `,
-    author: "Blog Author",
-    date: "2024-02-28",
-    category: "Sustainability",
-    tags: ["Environment", "Technology", "Sustainability"],
-    image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&h=600&fit=crop&auto=format",
-    readTime: "7 min read"
-  },
-  {
-    id: 5,
-    title: "The Art of Digital Minimalism",
-    excerpt: "How reducing digital clutter and focusing on essential tools can lead to increased productivity and mental clarity in our hyper-connected world.",
-    content: `
-# The Art of Digital Minimalism
-
-In our hyper-connected world, we're drowning in digital noise. Notifications compete for our attention, apps multiply on our devices, and our digital lives often feel chaotic and overwhelming. Digital minimalism offers a path to intentional technology use.
-
-## What is Digital Minimalism?
-
-Digital minimalism is a philosophy that helps you focus on the technology that serves your values and eliminate everything else. It's not about rejecting technology—it's about being more intentional with how we use it.
-
-### Core Principles
-
-**Value-Driven**: Every digital tool should serve a specific purpose aligned with your values.
-
-**Quality over Quantity**: A few high-quality tools that do their job well are better than dozens of mediocre apps.
-
-**Intentional Use**: Be deliberate about when, where, and how you use technology.
-
-## The Attention Economy Problem
-
-Modern technology is designed to capture and hold our attention:
-
-### The Dopamine Loop
-- Apps use variable reward schedules to create addiction
-- Infinite scroll keeps us engaged indefinitely
-- Push notifications interrupt our focus constantly
-
-### The Cost of Context Switching
-Research shows that it takes an average of 23 minutes to fully refocus after an interruption. In our notification-heavy world, we're rarely operating at full cognitive capacity.
-
-## Practical Digital Minimalism
-
-### App Audit
-Regularly review your digital tools:
-
-1. **List all apps** on your devices
-2. **Categorize by purpose**: Essential, useful, or time-wasting
-3. **Remove ruthlessly**: Delete apps that don't serve a clear purpose
-4. **Consolidate functions**: Use fewer tools that do more
-
-### Notification Hygiene
-Take control of your attention:
-
-- Turn off all non-essential notifications
-- Use "Do Not Disturb" modes liberally
-- Batch process communications at set times
-- Keep your phone in another room while working
-
-### Digital Decluttering Rituals
-
-**Weekly Reviews**:
-- Clean up your desktop and downloads folder
-- Unsubscribe from irrelevant email lists
-- Review and organize your digital notes
-
-**Monthly Purges**:
-- Delete unused apps and browser extensions
-- Clear out old photos and files
-- Review your social media follows and subscriptions
-
-## The Tools That Matter
-
-Focus on technology that genuinely improves your life:
-
-### Essential Categories
-- **Communication**: One or two platforms for staying connected
-- **Productivity**: Simple, focused tools for getting work done
-- **Learning**: Resources that genuinely expand your knowledge
-- **Creation**: Tools that help you make things you're proud of
-
-### Quality Indicators
-- **Single Purpose**: Does one thing extremely well
-- **Offline Capability**: Works without constant internet connection
-- **Privacy Respecting**: Doesn't harvest your data unnecessarily
-- **Long-term Viability**: Likely to be around for years
-
-## The Benefits of Less
-
-Embracing digital minimalism leads to:
-
-### Improved Focus
-With fewer distractions, you can engage in deep, meaningful work. Your attention becomes a tool you control rather than a resource others exploit.
-
-### Reduced Anxiety
-Constant connectivity creates a low-level stress. Digital minimalism helps restore mental calm and reduces the fear of missing out.
-
-### More Intentional Relationships
-Without the shallow interactions of social media feeds, you can invest more deeply in real relationships.
-
-### Enhanced Creativity
-Boredom and mental space are prerequisites for creativity. Digital minimalism creates the mental breathing room necessary for new ideas.
-
-## Creating Digital Boundaries
-
-### Time Boundaries
-- No screens for the first hour after waking
-- Digital sunset: no devices 1-2 hours before bed
-- Designated device-free times during meals
-
-### Space Boundaries
-- Keep bedrooms device-free
-- Create dedicated work and relaxation spaces
-- Use physical books and notebooks when possible
-
-### Social Boundaries
-- Don't feel obligated to respond immediately
-- Choose quality conversations over quantity
-- Practice saying no to digital commitments
-
-## The 30-Day Digital Declutter
-
-Try this month-long experiment:
-
-**Week 1**: Remove all optional technologies from your life
-**Week 2**: Notice what you actually miss vs. what you think you miss
-**Week 3**: Experiment with analog alternatives
-**Week 4**: Slowly reintroduce only the tools that serve your values
-
-## Beyond Personal Practice
-
-Digital minimalism isn't just individual—it's cultural:
-
-### Supporting Ethical Technology
-Choose companies and products that align with minimalist values:
-- Transparent business models
-- Respect for user attention
-- Sustainable practices
-- Open source when possible
-
-### Teaching Others
-Share your experience with digital minimalism:
-- Model healthy technology use
-- Discuss the benefits with friends and family
-- Support digital wellness education
-
-## Conclusion
-
-Digital minimalism isn't about living in the past—it's about being intentional with the future. In a world designed to scatter our attention, choosing focus becomes a radical act.
-
-The goal isn't to use less technology for its own sake, but to use technology in service of what you value most. When we align our digital tools with our deepest values, technology becomes a support for the life we want to live rather than a distraction from it.
-
-Less noise, more signal. Less busy, more productive. Less connected, more present.
-
-That's the art of digital minimalism.
-    `,
-    author: "Blog Author",
-    date: "2024-02-22",
-    category: "Lifestyle",
-    tags: ["Minimalism", "Productivity", "Wellness"],
-    image: "https://images.unsplash.com/photo-1484417894907-623942c8ee29?w=1200&h=600&fit=crop&auto=format",
-    readTime: "4 min read"
+    author: "Travel Blogger",
+    date: "2024-02-14",
+    location: "Bangkok, Thailand",
+    category: "Culinary Journey",
+    tags: ["Thailand", "Food", "Street Food", "Culture"],
+    image: "https://images.unsplash.com/photo-1552566634-75bf769b8b4c?w=1200&h=600&fit=crop&auto=format",
+    readTime: "5 min"
   }
+  // Add more posts as needed...
 ];
 
 const BlogPost = () => {
@@ -474,9 +250,9 @@ const BlogPost = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Post Not Found</h1>
+          <h1 className="text-4xl font-bold mb-4 font-serif">Story Not Found</h1>
           <Link to="/blog" className="text-blue-600 hover:underline">
-            ← Back to Blog
+            ← Back to Stories
           </Link>
         </div>
       </div>
@@ -484,130 +260,166 @@ const BlogPost = () => {
   }
 
   useSeoMeta({
-    title: `${post.title} - My Personal Blog`,
+    title: `${post.title} - Wanderlust Chronicles`,
     description: post.excerpt,
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <nav className="flex items-center justify-between">
-            <Link to="/" className="text-2xl font-bold text-slate-900 dark:text-white">
-              My Blog
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link to="/" className="text-2xl font-bold text-gray-900 dark:text-white font-serif">
+              Wanderlust
             </Link>
-            <div className="flex items-center space-x-6">
-              <Link to="/" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">
-                Home
-              </Link>
-              <Link to="/blog" className="text-slate-900 dark:text-white font-medium">
-                Blog
-              </Link>
-              <Link to="/about" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">
-                About
-              </Link>
+            <div className="hidden md:flex items-center space-x-8">
+              <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Home</Link>
+              <Link to="/blog" className="text-gray-900 dark:text-white font-medium">Stories</Link>
+              <Link to="/about" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">About</Link>
+              <button className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors">
+                Subscribe
+              </button>
             </div>
-          </nav>
+          </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Back to Blog */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <Button variant="ghost" asChild className="mb-6">
-          <Link to="/blog" className="flex items-center space-x-2 text-slate-600 dark:text-slate-300">
+      {/* Back Navigation */}
+      <div className="pt-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <Link 
+            to="/blog" 
+            className="inline-flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors mb-8"
+          >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to Blog</span>
+            <span>Back to Stories</span>
           </Link>
-        </Button>
+        </div>
       </div>
 
-      {/* Article */}
-      <article className="max-w-4xl mx-auto px-4 pb-12">
-        <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 overflow-hidden">
-          {/* Hero Image */}
-          <div className="aspect-[21/9] overflow-hidden">
-            <img
-              src={post.image}
-              alt={post.title}
-              className="w-full h-full object-cover"
-            />
+      {/* Article Hero */}
+      <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        {/* Hero Image */}
+        <div className="aspect-[21/9] rounded-2xl overflow-hidden mb-8">
+          <img
+            src={post.image}
+            alt={post.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        {/* Article Header */}
+        <header className="mb-8">
+          {/* Meta info */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-6 text-sm text-gray-600 dark:text-gray-400">
+              <span className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full font-medium">
+                {post.category}
+              </span>
+              <div className="flex items-center space-x-1">
+                <MapPin className="h-4 w-4" />
+                <span>{post.location}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Calendar className="h-4 w-4" />
+                <span>{new Date(post.date).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Clock className="h-4 w-4" />
+                <span>{post.readTime}</span>
+              </div>
+            </div>
+            <button className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+              <Share2 className="h-5 w-5" />
+              <span className="hidden sm:inline">Share</span>
+            </button>
           </div>
 
-          <CardHeader className="space-y-4">
-            {/* Meta Info */}
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
-                <Badge variant="secondary">{post.category}</Badge>
-                <div className="flex items-center space-x-1">
-                  <User className="h-4 w-4" />
-                  <span>{post.author}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{new Date(post.date).toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{post.readTime}</span>
-                </div>
-              </div>
-              <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                <Share2 className="h-4 w-4" />
-                <span>Share</span>
-              </Button>
+          {/* Title */}
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white leading-tight mb-6 font-serif">
+            {post.title}
+          </h1>
+
+          {/* Author and excerpt */}
+          <div className="flex items-center space-x-4 mb-6">
+            <div className="flex items-center space-x-2">
+              <User className="h-5 w-5 text-gray-400" />
+              <span className="text-gray-600 dark:text-gray-300">{post.author}</span>
             </div>
+          </div>
+          
+          <p className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed">
+            {post.excerpt}
+          </p>
 
-            {/* Title */}
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white leading-tight">
-              {post.title}
-            </h1>
+          {/* Tags */}
+          <div className="flex flex-wrap gap-2 mt-6">
+            {post.tags.map((tag, index) => (
+              <span
+                key={index}
+                className="text-sm px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full"
+              >
+                #{tag.toLowerCase()}
+              </span>
+            ))}
+          </div>
+        </header>
 
-            {/* Excerpt */}
-            <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed">
-              {post.excerpt}
-            </p>
-
-            {/* Tags */}
-            <div className="flex flex-wrap gap-2">
-              {post.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="text-sm px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full"
-                >
-                  #{tag.toLowerCase()}
-                </span>
-              ))}
-            </div>
-          </CardHeader>
-
-          <CardContent className="prose prose-slate dark:prose-invert max-w-none">
-            <div className="whitespace-pre-wrap leading-relaxed text-slate-700 dark:text-slate-300">
-              {post.content}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Article Content */}
+        <div className="prose prose-lg max-w-none prose-gray dark:prose-invert">
+          <div className="whitespace-pre-wrap leading-relaxed text-gray-700 dark:text-gray-300">
+            {post.content}
+          </div>
+        </div>
 
         {/* Comments Section */}
-        <div className="mt-12">
-          <CommentsSection
+        <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-700">
+          <CommentsSection 
             root={new URL(`${window.location.origin}/blog/${post.id}`)}
-            title="Comments"
+            title="Share Your Thoughts"
             emptyStateMessage="No comments yet"
-            emptyStateSubtitle="Be the first to share your thoughts!"
+            emptyStateSubtitle="Be the first to share your travel experiences!"
           />
         </div>
       </article>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 py-8 mt-12">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-slate-600 dark:text-slate-400 mb-2">
-            Built with React and Nostr protocols
-          </p>
-          <p className="text-sm text-slate-500 dark:text-slate-500">
-            Vibed with <a href="https://soapbox.pub/mkstack" className="text-blue-600 dark:text-blue-400 hover:underline">MKStack</a>
-          </p>
+      <footer className="bg-gray-900 dark:bg-black text-white py-12 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="md:col-span-2">
+              <h3 className="text-2xl font-bold mb-4 font-serif">Wanderlust Chronicles</h3>
+              <p className="text-gray-400 max-w-md">
+                Inspiring wanderers to explore the world, one story at a time. 
+                Join me on this incredible journey of discovery and adventure.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Explore</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link to="/blog" className="hover:text-white transition-colors">All Stories</Link></li>
+                <li><Link to="/about" className="hover:text-white transition-colors">About</Link></li>
+                <li><a href="#" className="hover:text-white transition-colors">Destinations</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Travel Tips</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Connect</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">Instagram</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Twitter</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">YouTube</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>Built with React and Nostr protocols</p>
+            <p className="text-sm mt-2">
+              Vibed with <a href="https://soapbox.pub/mkstack" className="text-blue-400 hover:underline">MKStack</a>
+            </p>
+          </div>
         </div>
       </footer>
     </div>
