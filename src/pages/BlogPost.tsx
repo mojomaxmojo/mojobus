@@ -52,9 +52,9 @@ This minimalist approach makes the protocol incredibly robust and easy to implem
 
 As we move toward a more decentralized future, protocols like Nostr offer hope for a more open, censorship-resistant, and user-controlled internet. The journey is just beginning, but the foundation is solid.
 
-The future of social media isn't about building bigger platforms—it's about building better protocols.
+The future of social media isn't about building bigger platforms—it's about building better protocols that serve users rather than exploit them.
     `,
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-03-15",
     category: "Technology",
     tags: ["Nostr", "Decentralization", "Social Media"],
@@ -120,7 +120,7 @@ Building privacy-first applications requires thoughtful design, careful implemen
 
 The future belongs to applications that empower users, not exploit them.
     `,
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-03-10",
     category: "Privacy",
     tags: ["Privacy", "Security", "Development"],
@@ -206,7 +206,7 @@ Open source isn't just about making software free—it's about creating a more c
 
 The future is open.
     `,
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-03-05",
     category: "Philosophy",
     tags: ["Open Source", "Philosophy", "Community"],
@@ -302,7 +302,7 @@ Building sustainable technology requires intentional choices at every level—fr
 
 The question isn't whether we can afford to build sustainably—it's whether we can afford not to.
     `,
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-02-28",
     category: "Sustainability",
     tags: ["Environment", "Technology", "Sustainability"],
@@ -457,7 +457,7 @@ Less noise, more signal. Less busy, more productive. Less connected, more presen
 
 That's the art of digital minimalism.
     `,
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-02-22",
     category: "Lifestyle",
     tags: ["Minimalism", "Productivity", "Wellness"],
@@ -484,7 +484,7 @@ const BlogPost = () => {
   }
 
   useSeoMeta({
-    title: `${post.title} - MK Fain`,
+    title: `${post.title} - My Personal Blog`,
     description: post.excerpt,
   });
 
@@ -495,7 +495,7 @@ const BlogPost = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link to="/" className="text-2xl font-bold text-slate-900 dark:text-white">
-              MK Fain
+              My Blog
             </Link>
             <div className="flex items-center space-x-6">
               <Link to="/" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">

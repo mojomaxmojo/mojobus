@@ -12,7 +12,7 @@ const blogPosts = [
     title: "The Future of Decentralized Social Media",
     excerpt: "Exploring how protocols like Nostr are revolutionizing the way we connect and share information online, creating a more open and censorship-resistant internet.",
     content: "Full blog post content would go here...",
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-03-15",
     category: "Technology",
     tags: ["Nostr", "Decentralization", "Social Media"],
@@ -24,7 +24,7 @@ const blogPosts = [
     title: "Building Privacy-First Applications",
     excerpt: "A deep dive into creating applications that prioritize user privacy and data sovereignty, with practical examples and implementation strategies.",
     content: "Full blog post content would go here...",
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-03-10",
     category: "Privacy",
     tags: ["Privacy", "Security", "Development"],
@@ -36,7 +36,7 @@ const blogPosts = [
     title: "The Philosophy of Open Source",
     excerpt: "Reflecting on the principles that drive open source development and how it creates a more collaborative and innovative technological landscape.",
     content: "Full blog post content would go here...",
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-03-05",
     category: "Philosophy",
     tags: ["Open Source", "Philosophy", "Community"],
@@ -48,7 +48,7 @@ const blogPosts = [
     title: "Sustainable Technology Practices",
     excerpt: "Examining how we can build technology that's not just innovative, but also environmentally conscious and sustainable for future generations.",
     content: "Full blog post content would go here...",
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-02-28",
     category: "Sustainability",
     tags: ["Environment", "Technology", "Sustainability"],
@@ -60,7 +60,7 @@ const blogPosts = [
     title: "The Art of Digital Minimalism",
     excerpt: "How reducing digital clutter and focusing on essential tools can lead to increased productivity and mental clarity in our hyper-connected world.",
     content: "Full blog post content would go here...",
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-02-22",
     category: "Lifestyle",
     tags: ["Minimalism", "Productivity", "Wellness"],
@@ -72,7 +72,7 @@ const blogPosts = [
     title: "The Ethics of AI Development",
     excerpt: "As artificial intelligence becomes more powerful, we must carefully consider the ethical implications of the systems we're building and deploying.",
     content: "Full blog post content would go here...",
-    author: "MK Fain",
+    author: "Blog Author",
     date: "2024-02-15",
     category: "Ethics",
     tags: ["AI", "Ethics", "Technology"],
@@ -83,8 +83,8 @@ const blogPosts = [
 
 const Blog = () => {
   useSeoMeta({
-    title: 'Blog - MK Fain',
-    description: 'Thoughts on technology, privacy, open source, and digital life from MK Fain.',
+    title: 'Blog - My Personal Blog',
+    description: 'Thoughts on technology, privacy, open source, and digital life.',
   });
 
   return (
@@ -94,7 +94,7 @@ const Blog = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link to="/" className="text-2xl font-bold text-slate-900 dark:text-white">
-              MK Fain
+              My Blog
             </Link>
             <div className="flex items-center space-x-6">
               <Link to="/" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">

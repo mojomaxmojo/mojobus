@@ -7,8 +7,8 @@ import { Mail, Github, Twitter, Globe, Book, Coffee, Heart } from 'lucide-react'
 
 const About = () => {
   useSeoMeta({
-    title: 'About - MK Fain',
-    description: 'Learn more about MK Fain - freedom advocate, developer, and writer passionate about building a better digital future.',
+    title: 'About - My Personal Blog',
+    description: 'Learn more about the author and what drives this blog. Discover the topics, values, and ideas that shape these writings.',
   });
 
   return (
@@ -18,7 +18,7 @@ const About = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link to="/" className="text-2xl font-bold text-slate-900 dark:text-white">
-              MK Fain
+              My Blog
             </Link>
             <div className="flex items-center space-x-6">
               <Link to="/" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">
@@ -41,16 +41,16 @@ const About = () => {
           <div className="text-center mb-12">
             <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
               <img
-                src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=300&h=300&fit=crop&auto=format"
-                alt="MK Fain"
+                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&auto=format"
+                alt="Blog Author"
                 className="w-full h-full object-cover"
               />
             </div>
             <h1 className="text-5xl font-bold text-slate-900 dark:text-white mb-4">
-              Hey, I'm MK Fain
+              Hi, I'm the Author
             </h1>
             <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-              Freedom advocate, developer, and writer passionate about building a better digital future.
+              Welcome to my corner of the internet where I share thoughts, insights, and discoveries about the world around us.
             </p>
           </div>
         </div>
@@ -62,40 +62,40 @@ const About = () => {
           {/* About Card */}
           <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
             <CardHeader>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">About Me</h2>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">About This Blog</h2>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="prose prose-slate dark:prose-invert max-w-none">
                 <p className="text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
-                  I'm a passionate advocate for digital freedom and privacy, working at the intersection of technology, 
-                  philosophy, and human rights. As part of Team Soapbox, I'm dedicated to building tools that empower 
-                  individuals and communities to communicate freely and securely.
+                  This blog is a space for exploring ideas, sharing knowledge, and connecting with others who are 
+                  curious about the world. Here you'll find thoughtful articles about technology, personal growth, 
+                  and the intersection of digital life with human experience.
                 </p>
                 
                 <p className="text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
-                  My work focuses on decentralized technologies, particularly the Nostr protocol, which represents 
-                  a fundamental shift toward a more open and censorship-resistant internet. I believe that technology 
-                  should serve humanity, not the other way around.
+                  I believe in the power of open dialogue and the importance of questioning assumptions. 
+                  Whether we're discussing the latest technological innovations or reflecting on timeless 
+                  philosophical questions, my goal is to provide content that informs, challenges, and inspires.
                 </p>
 
                 <p className="text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
-                  When I'm not coding or writing, you'll find me reading about philosophy, tending to plants, 
-                  spending time with animals, or exploring sustainable living practices. I'm also a dedicated vegan, 
-                  believing that our choices in technology and life should reflect our values of compassion and sustainability.
+                  This blog is built with modern web technologies and embraces principles of privacy, 
+                  decentralization, and user empowerment. It's designed to be a place where ideas can 
+                  flourish and meaningful conversations can take place.
                 </p>
               </div>
 
               {/* Interests */}
               <div className="pt-6">
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Interests & Values</h3>
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Topics I Write About</h3>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { label: "Decentralization", icon: Globe },
-                    { label: "Open Source", icon: Github },
-                    { label: "Privacy Rights", icon: Heart },
+                    { label: "Technology", icon: Globe },
+                    { label: "Privacy & Security", icon: Heart },
                     { label: "Philosophy", icon: Book },
-                    { label: "Sustainability", icon: Coffee },
-                    { label: "Animal Rights", icon: Heart }
+                    { label: "Personal Growth", icon: Coffee },
+                    { label: "Digital Minimalism", icon: Heart },
+                    { label: "Open Source", icon: Github }
                   ].map((interest, index) => (
                     <Badge key={index} variant="secondary" className="flex items-center space-x-1 px-3 py-1">
                       <interest.icon className="h-3 w-3" />
@@ -107,47 +107,43 @@ const About = () => {
             </CardContent>
           </Card>
 
-          {/* Projects Card */}
+          {/* Writing Philosophy Card */}
           <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
             <CardHeader>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Projects & Work</h2>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Writing Philosophy</h2>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Ditto</h3>
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Thoughtful Content</h3>
                   <p className="text-slate-600 dark:text-slate-300">
-                    A powerful Nostr relay implementation that bridges the gap between traditional social media 
-                    and decentralized protocols.
+                    Every post is carefully researched and thoughtfully written. I believe in quality over quantity 
+                    and strive to provide value in every article.
                   </p>
-                  <Badge variant="outline">Nostr</Badge>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">MKStack</h3>
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Open Discussion</h3>
                   <p className="text-slate-600 dark:text-slate-300">
-                    A comprehensive development stack for building modern, privacy-focused web applications 
-                    with Nostr integration.
+                    I encourage comments, questions, and different perspectives. The best ideas emerge through 
+                    respectful dialogue and intellectual curiosity.
                   </p>
-                  <Badge variant="outline">Development Tools</Badge>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Bookstr</h3>
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Practical Insights</h3>
                   <p className="text-slate-600 dark:text-slate-300">
-                    Exploring how decentralized protocols can revolutionize book recommendations, 
-                    reading communities, and literary discussions.
+                    While I enjoy theoretical discussions, I always aim to provide practical takeaways that 
+                    readers can apply in their own lives and work.
                   </p>
-                  <Badge variant="outline">Community</Badge>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Shakespeare</h3>
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Continuous Learning</h3>
                   <p className="text-slate-600 dark:text-slate-300">
-                    An AI-powered Nostr website builder that democratizes web development through 
-                    natural language conversation.
+                    I'm always learning and evolving. My views may change as I gain new insights, and I'm 
+                    not afraid to revisit and update previous thoughts.
                   </p>
-                  <Badge variant="outline">AI Tools</Badge>
                 </div>
               </div>
             </CardContent>
@@ -160,22 +156,22 @@ const About = () => {
             </CardHeader>
             <CardContent>
               <p className="text-slate-600 dark:text-slate-300 mb-6">
-                I'm always interested in connecting with fellow builders, thinkers, and advocates for digital freedom. 
-                Feel free to reach out through any of these channels:
+                I love hearing from readers! Whether you have questions, comments, or just want to say hello, 
+                don't hesitate to reach out. I try to respond to all messages.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button variant="outline" className="justify-start" asChild>
-                  <a href="mailto:mk@ditto.pub" className="flex items-center space-x-2">
+                  <a href="mailto:hello@myblog.com" className="flex items-center space-x-2">
                     <Mail className="h-4 w-4" />
-                    <span>mk@ditto.pub</span>
+                    <span>hello@myblog.com</span>
                   </a>
                 </Button>
 
                 <Button variant="outline" className="justify-start" asChild>
-                  <a href="https://marykatefain.com" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2">
+                  <a href="https://myblog.com" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2">
                     <Globe className="h-4 w-4" />
-                    <span>marykatefain.com</span>
+                    <span>myblog.com</span>
                   </a>
                 </Button>
 
@@ -196,10 +192,10 @@ const About = () => {
 
               <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  <strong>Nostr:</strong> npub1jvnpg4c6ljadf5t6ry0w9q0rnm4mksde87kglkrc993z46c39axsgq89sc
+                  <strong>Response Time:</strong> I typically respond to emails within 24-48 hours. For urgent matters, please mention it in the subject line.
                 </p>
                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
-                  <strong>Lightning:</strong> zapmk@getalby.com
+                  <strong>Comments:</strong> You can also leave comments on any blog post using the Nostr-powered commenting system below each article.
                 </p>
               </div>
             </CardContent>

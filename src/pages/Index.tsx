@@ -7,8 +7,8 @@ import { ArrowRight, BookOpen, User, Calendar, ExternalLink } from 'lucide-react
 
 const Index = () => {
   useSeoMeta({
-    title: 'MK Fain - Freedom Advocate & Developer',
-    description: 'Personal blog and portfolio of MK Fain - Team Soapbox member, freedom advocate, and builder of decentralized technologies.',
+    title: 'My Personal Blog',
+    description: 'A modern personal blog built with React and Nostr protocols. Share your thoughts and connect with readers.',
   });
 
   // Recent blog posts preview
@@ -46,7 +46,7 @@ const Index = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link to="/" className="text-2xl font-bold text-slate-900 dark:text-white">
-              MK Fain
+              My Blog
             </Link>
             <div className="flex items-center space-x-6">
               <Link to="/" className="text-slate-900 dark:text-white font-medium">
@@ -69,13 +69,13 @@ const Index = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">
-                Building a
-                <span className="text-blue-600 dark:text-blue-400"> Freer </span>
-                Digital Future
+                Welcome to My
+                <span className="text-blue-600 dark:text-blue-400"> Personal </span>
+                Blog
               </h1>
               <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-                Freedom advocate, developer, and writer passionate about decentralized technologies,
-                privacy rights, and building tools that empower communities.
+                A place to share thoughts, ideas, and insights about technology, life, and everything in between.
+                Join the conversation and explore new perspectives.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" asChild className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -102,8 +102,8 @@ const Index = () => {
                 />
               </div>
               <div className="absolute -bottom-6 -left-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700">
-                <p className="text-sm font-medium text-slate-900 dark:text-white">Team Soapbox</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Building Nostr Infrastructure</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Personal Blog</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Powered by Modern Tech</p>
               </div>
             </div>
           </div>
@@ -114,46 +114,46 @@ const Index = () => {
       <section className="py-16 px-4 bg-white/50 dark:bg-slate-900/50">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 text-center">
-            Featured Projects
+            Featured Topics
           </h2>
           <p className="text-slate-600 dark:text-slate-300 text-center mb-12">
-            Building tools for a decentralized future
+            Explore the subjects I'm passionate about
           </p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
-                name: "Ditto",
-                description: "Powerful Nostr relay implementation bridging traditional and decentralized social media",
-                badge: "Nostr Protocol"
+                name: "Technology",
+                description: "Exploring the latest trends, innovations, and their impact on our daily lives",
+                badge: "Tech Insights"
               },
               {
-                name: "MKStack",
-                description: "Comprehensive development stack for privacy-focused web applications",
-                badge: "Dev Tools"
+                name: "Privacy",
+                description: "Understanding digital privacy, security, and protecting your online presence",
+                badge: "Digital Rights"
               },
               {
-                name: "Bookstr",
-                description: "Decentralized book recommendations and literary discussions",
-                badge: "Community"
+                name: "Philosophy",
+                description: "Deep thoughts on life, ethics, and the human experience in the modern world",
+                badge: "Deep Thinking"
               },
               {
-                name: "Shakespeare",
-                description: "AI-powered Nostr website builder through natural language",
-                badge: "AI Tools"
+                name: "Lifestyle",
+                description: "Tips for productivity, wellness, and living intentionally in a digital age",
+                badge: "Life Tips"
               }
-            ].map((project, index) => (
+            ].map((topic, index) => (
               <Card key={index} className="group hover:shadow-lg transition-all duration-300 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{project.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">{topic.name}</h3>
                     <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300" />
                   </div>
-                  <Badge variant="secondary" className="text-xs w-fit">{project.badge}</Badge>
+                  <Badge variant="secondary" className="text-xs w-fit">{topic.badge}</Badge>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                    {project.description}
+                    {topic.description}
                   </p>
                 </CardContent>
               </Card>
@@ -230,24 +230,24 @@ const Index = () => {
       <section className="py-16 px-4 bg-slate-900 dark:bg-slate-800">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
-            Let's Build the Future Together
+            Join the Conversation
           </h2>
           <p className="text-slate-300 text-lg mb-8 max-w-2xl mx-auto">
-            Interested in decentralized technologies, privacy rights, or open source development?
-            I'd love to connect and collaborate.
+            Have thoughts on any of the topics I write about?
+            I'd love to hear from you and start a meaningful discussion.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild>
               <Link to="/about" className="flex items-center space-x-2">
-                <span>Get in Touch</span>
+                <span>Learn More</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="text-white border-white hover:bg-white hover:text-slate-900" asChild>
-              <a href="https://marykatefain.com" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2">
-                <ExternalLink className="h-4 w-4" />
-                <span>Visit My Website</span>
-              </a>
+              <Link to="/blog" className="flex items-center space-x-2">
+                <BookOpen className="h-4 w-4" />
+                <span>Start Reading</span>
+              </Link>
             </Button>
           </div>
         </div>
