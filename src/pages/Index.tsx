@@ -41,7 +41,7 @@ const Index = () => {
   ];
 
   const destinations = [
-    { name: "Southeast Asia", count: 12, image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop&auto=format" },
+    { name: "Southeast Asia", count: 12, image: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fget.pxhere.com%2Fphoto%2Fbangkok-barbecue-close-up-cooked-cooking-cuisine-delicious-dining-dinner-dish-epicure-food-grill-grilled-hot-lunch-market-meal-pepper-plates-seafood-shrimps-street-food-tasty-thai-thailand-1536125.jpg&f=1&nofb=1&ipt=f2f7b6a2f7e7397a620c0846d76218cb0850390b16d36ae38cd49206076e839c" },
     { name: "Northern Europe", count: 8, image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=200&fit=crop&auto=format" },
     { name: "Mediterranean", count: 15, image: "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=300&h=200&fit=crop&auto=format" },
     { name: "South America", count: 6, image: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=300&h=200&fit=crop&auto=format" }
