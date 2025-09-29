@@ -236,7 +236,7 @@ Bangkok's street food scene isn't just about eating—it's about experiencing th
     location: "Bangkok, Thailand",
     category: "Culinary Journey",
     tags: ["Thailand", "Food", "Street Food", "Culture"],
-    image: "https://images.unsplash.com/photo-1552566634-75bf769b8b4c?w=1200&h=600&fit=crop&auto=format",
+    image: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=1200&h=600&fit=crop&auto=format",
     readTime: "5 min"
   }
   // Add more posts as needed...
@@ -288,8 +288,8 @@ const BlogPost = () => {
       {/* Back Navigation */}
       <div className="pt-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          <Link 
-            to="/blog" 
+          <Link
+            to="/blog"
             className="inline-flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors mb-8"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -348,7 +348,7 @@ const BlogPost = () => {
               <span className="text-gray-600 dark:text-gray-300">{post.author}</span>
             </div>
           </div>
-          
+
           <p className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed">
             {post.excerpt}
           </p>
@@ -375,7 +375,7 @@ const BlogPost = () => {
 
         {/* Comments Section */}
         <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-700">
-          <CommentsSection 
+          <CommentsSection
             root={new URL(`${window.location.origin}/blog/${post.id}`)}
             title="Share Your Thoughts"
             emptyStateMessage="No comments yet"
@@ -391,7 +391,7 @@ const BlogPost = () => {
             <div className="md:col-span-2">
               <h3 className="text-2xl font-bold mb-4 font-serif">Wanderlust Chronicles</h3>
               <p className="text-gray-400 max-w-md">
-                Inspiring wanderers to explore the world, one story at a time. 
+                Inspiring wanderers to explore the world, one story at a time.
                 Join me on this incredible journey of discovery and adventure.
               </p>
             </div>

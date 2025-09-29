@@ -19,7 +19,7 @@ const About = () => {
     { name: "Kyoto, Japan", reason: "Where ancient tradition meets modern wonder", image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=200&fit=crop&auto=format" },
     { name: "Patagonia, Chile", reason: "Raw wilderness that humbles the soul", image: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=300&h=200&fit=crop&auto=format" },
     { name: "Santorini, Greece", reason: "Where the Mediterranean shows off", image: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=300&h=200&fit=crop&auto=format" },
-    { name: "Bangkok, Thailand", reason: "A feast for every sense imaginable", image: "https://images.unsplash.com/photo-1552566634-75bf769b8b4c?w=300&h=200&fit=crop&auto=format" }
+    { name: "Bangkok, Thailand", reason: "A feast for every sense imaginable", image: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=300&h=200&fit=crop&auto=format" }
   ];
 
   return (
