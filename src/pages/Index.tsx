@@ -41,7 +41,7 @@ const Index = () => {
   ];
 
   const destinations = [
-    { name: "Southeast Asia", count: 12, image: "https://c.pxhere.com/photos/db/cd/Bangkok_barbecue_close_up_cooked_cooking_cuisine_delicious_dining-1536125.jpg!d" },
+    { name: "Southeast Asia", count: 12, image: "https://images.unsplash.com/photo-1563492065-874c52592051?w=300&h=200&fit=crop&auto=format" },
     { name: "Northern Europe", count: 8, image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=200&fit=crop&auto=format" },
     { name: "Mediterranean", count: 15, image: "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=300&h=200&fit=crop&auto=format" },
     { name: "South America", count: 6, image: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=300&h=200&fit=crop&auto=format" }
