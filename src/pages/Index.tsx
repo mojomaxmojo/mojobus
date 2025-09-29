@@ -36,7 +36,7 @@ const Index = () => {
       location: "Bangkok, Thailand",
       date: "February 14, 2024",
       readTime: "5 min",
-      image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=500&fit=crop&auto=format"
+      image: "/bangkok.png"
     }
   ];
 

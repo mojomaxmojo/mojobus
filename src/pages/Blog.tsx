@@ -40,7 +40,7 @@ const blogPosts = [
     location: "Bangkok, Thailand",
     category: "Culinary Journey",
     tags: ["Thailand", "Food", "Street Food", "Culture"],
-    image: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=800&h=500&fit=crop&auto=format",
+    image: "/bangkok.png",
     readTime: "5 min"
   },
   {

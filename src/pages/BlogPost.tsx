@@ -236,7 +236,7 @@ Bangkok's street food scene isn't just about eating—it's about experiencing th
     location: "Bangkok, Thailand",
     category: "Culinary Journey",
     tags: ["Thailand", "Food", "Street Food", "Culture"],
-    image: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=1200&h=600&fit=crop&auto=format",
+    image: "/bangkok.png",
     readTime: "5 min"
   }
   // Add more posts as needed...
