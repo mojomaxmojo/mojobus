@@ -41,7 +41,7 @@ const Index = () => {
   ];
 
   const destinations = [
-    { name: "Southeast Asia", count: 12, image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=300&h=200&fit=crop&auto=format" },
+    { name: "Southeast Asia", count: 12, image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop&auto=format" },
     { name: "Northern Europe", count: 8, image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=300&h=200&fit=crop&auto=format" },
     { name: "Mediterranean", count: 15, image: "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=300&h=200&fit=crop&auto=format" },
     { name: "South America", count: 6, image: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=300&h=200&fit=crop&auto=format" }
