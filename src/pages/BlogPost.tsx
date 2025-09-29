@@ -2,6 +2,8 @@ import { useSeoMeta } from '@unhead/react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Calendar, Clock, ArrowLeft, Share2, User } from 'lucide-react';
 import { CommentsSection } from '@/components/comments/CommentsSection';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Travel blog posts data (matching Blog.tsx)
 const blogPosts = [
@@ -367,10 +369,22 @@ const BlogPost = () => {
         </header>
 
         {/* Article Content */}
-        <div className="prose prose-lg max-w-none prose-gray dark:prose-invert">
-          <div className="whitespace-pre-wrap leading-relaxed text-gray-700 dark:text-gray-300">
+        <div className="prose prose-lg max-w-none prose-gray dark:prose-invert prose-headings:font-serif prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl prose-p:leading-relaxed prose-p:mb-6 prose-ul:mb-6 prose-ol:mb-6 prose-li:mb-2">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code(props) {
+                const {children, className, ...rest} = props
+                return (
+                  <code {...rest} className={`${className} bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm`}>
+                    {children}
+                  </code>
+                )
+              }
+            }}
+          >
             {post.content}
-          </div>
+          </ReactMarkdown>
         </div>
 
         {/* Comments Section */}
