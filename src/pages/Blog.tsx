@@ -66,7 +66,7 @@ const blogPosts = [
     location: "Torres del Paine, Chile",
     category: "Adventure",
     tags: ["Chile", "Hiking", "Nature", "Wilderness"],
-    image: "https://images.unsplash.com/photo-1615748038025-95c46e0b7ac6?w=800&h=500&fit=crop&auto=format",
+    image: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=800&h=500&fit=crop&auto=format",
     readTime: "10 min"
   },
   {
@@ -137,7 +137,7 @@ const Blog = () => {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   </div>
-                  
+
                   <div className="space-y-3">
                     {/* Meta info */}
                     <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
@@ -218,7 +218,7 @@ const Blog = () => {
             <div className="md:col-span-2">
               <h3 className="text-2xl font-bold mb-4 font-serif">Wanderlust Chronicles</h3>
               <p className="text-gray-400 max-w-md">
-                Inspiring wanderers to explore the world, one story at a time. 
+                Inspiring wanderers to explore the world, one story at a time.
                 Join me on this incredible journey of discovery and adventure.
               </p>
             </div>
