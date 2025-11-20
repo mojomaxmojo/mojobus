@@ -1,5 +1,6 @@
 import { nip19 } from 'nostr-tools';
 import { useParams } from 'react-router-dom';
+import { ArticleView } from '@/components/ArticleView';
 import NotFound from './NotFound';
 
 export function NIP19Page() {
@@ -21,22 +22,38 @@ export function NIP19Page() {
   switch (type) {
     case 'npub':
     case 'nprofile':
-      // AI agent should implement profile view here
-      return <div>Profile placeholder</div>;
+      // TODO: Implement profile view
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-4">Profil Ansicht</h1>
+          <p className="text-muted-foreground">Profil-Ansicht ist noch nicht implementiert.</p>
+        </div>
+      );
 
     case 'note':
-      // AI agent should implement note view here
-      return <div>Note placeholder</div>;
+      // TODO: Implement note view
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-4">Note Ansicht</h1>
+          <p className="text-muted-foreground">Note-Ansicht ist noch nicht implementiert.</p>
+        </div>
+      );
 
     case 'nevent':
-      // AI agent should implement event view here
-      return <div>Event placeholder</div>;
+      // TODO: Implement event view
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-4">Event Ansicht</h1>
+          <p className="text-muted-foreground">Event-Ansicht ist noch nicht implementiert.</p>
+        </div>
+      );
 
     case 'naddr':
-      // AI agent should implement addressable event view here
-      return <div>Addressable event placeholder</div>;
+      // Addressable event view (articles)
+      const naddr = decoded.data as nip19.AddressPointer;
+      return <ArticleView naddr={naddr} />;
 
     default:
       return <NotFound />;
   }
-} 
+}

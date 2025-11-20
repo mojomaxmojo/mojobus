@@ -1,121 +1,144 @@
-# Personal Blog Template
+# MojoBus Blog
 
-A modern, customizable personal blog built with React, TypeScript, TailwindCSS, and Nostr protocols.
+[![Edit with Shakespeare](https://shakespeare.diy/badge.svg)](https://shakespeare.diy/clone?url=nostr%3A%2F%2Fnpub1jvnpg4c6ljadf5t6ry0w9q0rnm4mksde87kglkrc993z46c39axsgq89sc%2Fgit.shakespeare.diy%2Fpixel-diary)
+
+Ein vollständig Nostr-integrierter Blog für Perpetual Traveler – Unser Leben am Meer.
+
+## 🌊 Über das Projekt
+
+Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Leon (Lionhunter), unser RV und das Meer. Wir leben als Perpetual Traveler, meist direkt am Strand, autark mit Solarstrom und minimalistisch unterwegs.
+
+Das Rauschen der Wellen ist unser Wecker, Sonnenuntergänge sind unser Alltag. Jeder Tag bringt neue Orte, neue Begegnungen und das Gefühl, wirklich frei zu sein.
+
+Auf Nostr teilen wir Geschichten, Tipps und Einblicke in dieses Leben zwischen Sand und Horizont. Vielleicht ruft es auch dich – nach Abenteuer, Einfachheit und Freiheit. 🌊🚐✨
 
 ## ✨ Features
 
-- **Modern Design** - Clean, responsive design with dark/light mode support
-- **Blog System** - Full-featured blog with posts, categories, and tags
-- **Nostr Integration** - Decentralized commenting system using Nostr protocol
-- **SEO Optimized** - Proper meta tags and semantic markup
-- **Performance** - Fast loading with modern build tools
-- **Responsive** - Works beautifully on mobile, tablet, and desktop
+- **Vollständige Nostr-Integration**: Alle Inhalte werden auf Nostr veröffentlicht und geladen
+- **Longform Artikel**: Ausführliche Artikel (NIP-23, kind 30023) mit Markdown-Unterstützung
+- **Short Notes**: Kurze Updates und Gedanken (kind 1) mit Infinite Scroll
+- **Nostr-Login**: Sichere Authentifizierung über Nostr-Signers
+- **Kommentare**: Dezentrales Kommentarsystem mit NIP-22
+- **Responsive Design**: Optimiert für Mobile, Tablet und Desktop
+- **Ocean Theme**: Angepasstes Farbschema inspiriert vom Meer
+- **Caching**: Intelligentes Caching für optimale Performance
 
-## 🚀 Quick Start
+## 🎨 Design
 
-1. **Customize the content** in these files:
-   - `src/pages/Index.tsx` - Homepage content and branding
-   - `src/pages/About.tsx` - About page with your information
-   - `src/pages/Blog.tsx` & `src/pages/BlogPost.tsx` - Blog posts data
+Das Design verwendet ein Ocean-Theme mit Farben inspiriert vom Meer:
+- Primärfarbe: Ocean Blue (#0891B2)
+- Akzentfarbe: Tropical Aqua (#00BCD4)
+- Sanfte Übergänge und Wave-Animationen
 
-2. **Update branding** throughout the site:
-   - Replace "My Blog" with your actual blog name
-   - Update "Blog Author" with your name
-   - Replace placeholder email and social links
+## 🚀 Tech Stack
 
-3. **Add your content**:
-   - Replace the sample blog posts with your own content
-   - Update the author photo and hero images
-   - Customize the topics and interests sections
+- **React 18** mit TypeScript
+- **Nostrify** für Nostr-Integration
+- **TailwindCSS** für Styling
+- **TanStack Query** für State Management und Caching
+- **React Router** für Navigation
+- **shadcn/ui** für UI-Komponenten
+- **React Markdown** für Artikel-Rendering
 
-## 📝 Customizing Blog Posts
+## 📝 Nostr-Konfiguration
 
-Blog posts are currently stored as static data in the components. To add new posts:
+Die Autoren sind in `src/config/nostr.ts` konfiguriert:
 
-1. **Add to the `blogPosts` array** in both `src/pages/Blog.tsx` and `src/pages/BlogPost.tsx`
-2. **Include these fields**:
-   - `id` - Unique identifier
-   - `title` - Post title
-   - `excerpt` - Short description for previews
-   - `content` - Full markdown/text content
-   - `author` - Author name
-   - `date` - Publication date (YYYY-MM-DD format)
-   - `category` - Post category
-   - `tags` - Array of tags
-   - `image` - Hero image URL
-   - `readTime` - Estimated reading time
+```typescript
+authors: {
+  mojo: 'npub1f4vym2mu3q9fsz08muz8d469hl568l5358qx90qlaspyuz67ru0sfxvupf',
+  partner: 'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc5c5407f828002qdls5wz',
+}
+```
 
-## 🎨 Styling & Theming
+## 🏗️ Projektstruktur
 
-The blog uses TailwindCSS for styling with a custom color scheme:
+```
+src/
+├── components/       # React-Komponenten
+│   ├── Header.tsx   # Haupt-Navigation
+│   ├── Footer.tsx   # Footer mit Kontaktinfos
+│   └── ArticleView.tsx # Artikel-Anzeige
+├── pages/           # Seiten-Komponenten
+│   ├── Home.tsx     # Startseite
+│   ├── Articles.tsx # Artikel-Übersicht
+│   ├── Notes.tsx    # Notes Feed
+│   ├── About.tsx    # Über uns
+│   └── Publish.tsx  # Veröffentlichungs-Formular
+├── hooks/           # Custom Hooks
+│   ├── useLongformArticles.ts # Longform-Artikel laden
+│   └── useNotes.ts  # Notes mit Infinite Scroll
+└── config/          # Konfiguration
+    └── nostr.ts     # Nostr-Konfiguration
+```
 
-- **Primary Colors**: Blue accent with slate/gray base
-- **Dark Mode**: Automatic dark mode support
-- **Typography**: Clean, readable fonts with proper hierarchy
-- **Components**: Built with shadcn/ui component library
+## 📱 Hauptmenü
 
-To customize colors, edit the CSS custom properties in `src/index.css`.
+- **Home**: Startseite mit Hero-Section und aktuellen Artikeln
+- **Artikel**: Übersicht aller Longform-Artikel mit Suche und Filter
+- **Notes**: Feed mit kurzen Updates (Infinite Scroll)
+- **About**: Über uns mit Kontaktmöglichkeiten
+- **Login**: Nostr-Login mit Untermenü für "Sign up" und "Veröffentlichen"
 
-## 🔧 Technical Stack
+## ✍️ Veröffentlichen
 
-- **React 18** - Modern React with hooks and concurrent rendering
-- **TypeScript** - Type-safe JavaScript development
-- **TailwindCSS** - Utility-first CSS framework
-- **Vite** - Fast build tool and development server
-- **Nostr** - Decentralized commenting system
-- **React Router** - Client-side routing
-- **shadcn/ui** - Accessible UI components
+Eingeloggte Benutzer können über das Menü "Veröffentlichen" auf zwei Arten Inhalte erstellen:
 
-## 🎯 Key Pages
+### Notes (kind 1)
+- Kurze Texte und Updates
+- Tags für Kategorisierung
+- Schnelles Teilen von Gedanken
 
-- **`/`** - Homepage with hero section and recent posts
-- **`/blog`** - Blog listing with all posts
-- **`/blog/:id`** - Individual blog post pages
-- **`/about`** - About page with author information
+### Artikel (kind 30023)
+- Ausführliche Artikel mit Markdown
+- Titel, Zusammenfassung und Bild
+- Tags für bessere Auffindbarkeit
+- Automatische URL-Generierung
 
-## 📧 Contact & Social Links
+## 🔍 Artikel-Anzeige
 
-Update the contact information in `src/pages/About.tsx`:
+Artikel werden über NIP-19 `naddr1`-Identifier aufgerufen:
+- Route: `/:naddr1...`
+- Markdown-Rendering
+- Autor-Informationen
+- Kommentar-Sektion
+- Responsive Bilder
 
-- Email address
-- Website URL  
-- Social media links (GitHub, Twitter, etc.)
-- Nostr public key (if applicable)
+## 🎯 Hashtags
 
-## 🔒 Privacy & Decentralization
+Das Projekt verwendet folgende Hashtags:
+- #offgridlife
+- #beachlife
+- #vanlife
+- #oceanview
+- #btc
 
-This blog embraces privacy-first principles:
+## 📧 Kontakt
 
-- **Nostr Comments** - Decentralized commenting system
-- **No Tracking** - No analytics or tracking by default
-- **Static Hosting** - Can be hosted anywhere
-- **Open Source** - Fully customizable and transparent
+- **Lightning**: wiseboot30@zeusnuts.com
+- **NIP-05**: mojomojo@iris.to
+- **Website**: mojobus.org
 
-## 🚀 Deployment
-
-The blog builds to static files and can be deployed anywhere:
+## 🛠️ Entwicklung
 
 ```bash
+# Dependencies installieren
+npm install
+
+# Entwicklungsserver starten
+npm run dev
+
+# Typecheck
+npm run typecheck
+
+# Build
 npm run build
 ```
 
-The `dist` folder contains all files needed for deployment.
+## 📄 Lizenz
 
-## 🤝 Contributing
-
-This is a template designed to be customized. Feel free to:
-
-- Modify the design and layout
-- Add new features or pages
-- Improve the blog post system
-- Enhance the Nostr integration
-
-## 📄 License
-
-This template is open source and available for anyone to use and customize.
+Open Source – anpassbar und transparent.
 
 ---
 
-**Built with ❤️ using React and Nostr protocols**
-
-*Vibed with [MKStack](https://soapbox.pub/mkstack)*
+**Vibed with ❤️ using [MKStack](https://soapbox.pub/mkstack)**

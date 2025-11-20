@@ -1,329 +1,273 @@
-import { useSeoMeta } from '@unhead/react';
-import { Link } from 'react-router-dom';
-import { MapPin, Camera, Plane, Heart, Mail, Instagram, Youtube, Globe } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuthor } from '@/hooks/useAuthor';
+import { NOSTR_CONFIG } from '@/config/nostr';
+import { Mail, Globe, Zap, Key, Waves, Sun, Compass } from 'lucide-react';
 
-const About = () => {
-  useSeoMeta({
-    title: 'About - Wanderlust Chronicles',
-    description: 'Meet the traveler behind Wanderlust Chronicles. Discover the passion for exploration, cultural discovery, and storytelling that drives these adventures.',
-  });
-
-  const travelStats = [
-    { number: "47", label: "Countries Visited" },
-    { number: "6", label: "Continents Explored" },
-    { number: "12", label: "Languages Attempted" },
-    { number: "∞", label: "Memories Made" }
-  ];
-
-  const favoriteDestinations = [
-    { name: "Kyoto, Japan", reason: "Where ancient tradition meets modern wonder", image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=300&h=200&fit=crop&auto=format" },
-    { name: "Patagonia, Chile", reason: "Raw wilderness that humbles the soul", image: "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=300&h=200&fit=crop&auto=format" },
-    { name: "Santorini, Greece", reason: "Where the Mediterranean shows off", image: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=300&h=200&fit=crop&auto=format" },
-    { name: "Bangkok, Thailand", reason: "A feast for every sense imaginable", image: "/bangkok.png" }
-  ];
-
+export function About() {
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="text-2xl font-bold text-gray-900 dark:text-white font-serif">
-              Wanderlust
-            </Link>
-            <div className="hidden md:flex items-center space-x-8">
-              <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Home</Link>
-              <Link to="/blog" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Stories</Link>
-              <Link to="/about" className="text-gray-900 dark:text-white font-medium">About</Link>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors">
-                Subscribe
-              </button>
+    <div className="min-h-screen py-12">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto space-y-12">
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <div className="flex justify-center mb-6">
+              <Waves className="h-16 w-16 text-primary wave-animation" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold">Über Uns</h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Perpetual Traveler – Leben zwischen Sand und Horizont
+            </p>
+          </div>
+
+          {/* Story Section */}
+          <Card className="border-2">
+            <CardHeader>
+              <CardTitle className="text-2xl">Unsere Geschichte</CardTitle>
+            </CardHeader>
+            <CardContent className="prose prose-slate dark:prose-invert max-w-none space-y-4">
+              <p className="text-muted-foreground leading-relaxed">
+                Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Leon (Lionhunter), 
+                unser RV und das Meer. Wir leben als Perpetual Traveler, meist direkt am Strand, 
+                autark mit Solarstrom und minimalistisch unterwegs.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Das Rauschen der Wellen ist unser Wecker, Sonnenuntergänge sind unser Alltag. 
+                Jeder Tag bringt neue Orte, neue Begegnungen und das Gefühl, wirklich frei zu sein.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Auf Nostr teilen wir Geschichten, Tipps und Einblicke in dieses Leben zwischen 
+                Sand und Horizont. Vielleicht ruft es auch dich – nach Abenteuer, Einfachheit 
+                und Freiheit. 🌊🚐✨
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Values Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="text-center">
+              <CardHeader>
+                <div className="flex justify-center mb-2">
+                  <Sun className="h-10 w-10 text-primary" />
+                </div>
+                <CardTitle>Freiheit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Leben ohne feste Verpflichtungen, jeden Tag neu entdecken
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center">
+              <CardHeader>
+                <div className="flex justify-center mb-2">
+                  <Compass className="h-10 w-10 text-primary" />
+                </div>
+                <CardTitle>Abenteuer</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Neue Orte, neue Menschen, neue Erfahrungen
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center">
+              <CardHeader>
+                <div className="flex justify-center mb-2">
+                  <Zap className="h-10 w-10 text-primary" />
+                </div>
+                <CardTitle>Autarkie</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Unabhängig mit Solarstrom und minimalistischem Lebensstil
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Authors Section */}
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-center">Die Reisenden</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <AuthorCard pubkey={NOSTR_CONFIG.authorPubkeys[0]} npub={NOSTR_CONFIG.authors.mojo} />
+              <AuthorCard pubkey={NOSTR_CONFIG.authorPubkeys[1]} npub={NOSTR_CONFIG.authors.partner} />
             </div>
           </div>
-        </div>
-      </nav>
 
-      {/* Hero Section */}
-      <section className="pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 font-serif">
-                Hello, I'm Your
-                <span className="block text-blue-600 dark:text-blue-400">Travel Guide</span>
-              </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
-                Welcome to my world of wanderlust! I'm a passionate traveler, storyteller,
-                and cultural enthusiast who believes that the best education comes from
-                exploring our incredible planet.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a
-                  href="mailto:hello@wanderlust.com"
-                  className="inline-flex items-center justify-center space-x-2 bg-blue-600 text-white px-8 py-4 rounded-full font-medium hover:bg-blue-700 transition-colors"
-                >
-                  <Mail className="h-5 w-5" />
-                  <span>Get in Touch</span>
-                </a>
-                <a
-                  href="#"
-                  className="inline-flex items-center justify-center space-x-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-8 py-4 rounded-full font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Instagram className="h-5 w-5" />
-                  <span>Follow My Journey</span>
-                </a>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&h=750&fit=crop&auto=format"
-                  alt="Travel Blogger"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="absolute -bottom-6 -right-6 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-8 w-8 text-blue-600" />
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">Currently in</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Bali, Indonesia</p>
+          {/* Contact Section */}
+          <Card className="border-2 bg-muted/30">
+            <CardHeader>
+              <CardTitle className="text-2xl">Kontakt</CardTitle>
+              <CardDescription>
+                Nimm Kontakt mit uns auf – wir freuen uns auf deine Nachricht!
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-background">
+                  <Zap className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-muted-foreground">Lightning Address</div>
+                    <div className="font-mono text-sm truncate">wiseboot30@zeusnuts.com</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-background">
+                  <Key className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-muted-foreground">NIP-05</div>
+                    <div className="font-mono text-sm truncate">mojomojo@iris.to</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-background">
+                  <Globe className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-muted-foreground">Website</div>
+                    <a 
+                      href="http://mojobus.org" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline truncate block"
+                    >
+                      mojobus.org
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-background">
+                  <Mail className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-muted-foreground">Kontakt</div>
+                    <div className="text-sm">Über Nostr DM</div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Travel Stats */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 font-serif">
-              My Journey in Numbers
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Every number tells a story, every destination has left its mark on my heart.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {travelStats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl md:text-5xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-gray-600 dark:text-gray-300 font-medium">
-                  {stat.label}
-                </div>
+              <div className="flex flex-wrap gap-2 pt-4 justify-center">
+                <Badge variant="secondary" className="gap-1">
+                  <Hash className="h-3 w-3" />
+                  offgridlife
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <Hash className="h-3 w-3" />
+                  beachlife
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <Hash className="h-3 w-3" />
+                  vanlife
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <Hash className="h-3 w-3" />
+                  oceanview
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <Hash className="h-3 w-3" />
+                  btc
+                </Badge>
               </div>
-            ))}
-          </div>
+            </CardContent>
+          </Card>
         </div>
-      </section>
-
-      {/* My Story */}
-      <section className="py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 font-serif text-center">
-            My Story
-          </h2>
-
-          <div className="prose prose-lg max-w-none text-gray-600 dark:text-gray-300 space-y-6">
-            <p className="text-xl leading-relaxed">
-              My love affair with travel began with a backpack, a Eurail pass, and absolutely
-              no plan. That first solo trip through Europe at 22 changed everything—I discovered
-              that the world was far more beautiful, complex, and welcoming than I had ever imagined.
-            </p>
-
-            <p className="leading-relaxed">
-              Since then, I've been fortunate to explore 47 countries across 6 continents,
-              from the bustling streets of Bangkok to the serene temples of Kyoto, from the
-              rugged wilderness of Patagonia to the sun-soaked islands of Greece. Each journey
-              has taught me something new about the world and about myself.
-            </p>
-
-            <p className="leading-relaxed">
-              What drives me isn't just the thrill of seeing new places—it's the connections
-              I make with people along the way. The monk who shared tea with me in a hidden
-              temple, the street food vendor who taught me about Thai spices, the fellow
-              travelers who became lifelong friends under the northern lights—these are the
-              moments that make travel magical.
-            </p>
-
-            <p className="leading-relaxed">
-              Through this blog, I want to share not just the destinations I visit, but the
-              stories that unfold along the way. Travel isn't just about the places we see;
-              it's about the perspectives we gain, the prejudices we shed, and the compassion
-              we develop for our fellow human beings.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Favorite Destinations */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 font-serif text-center">
-            Destinations Close to My Heart
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-center mb-12 max-w-2xl mx-auto">
-            While every place I've visited has left its mark, these destinations hold special significance in my journey.
-          </p>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {favoriteDestinations.map((destination, index) => (
-              <div key={index} className="group">
-                <div className="aspect-[4/3] rounded-xl overflow-hidden mb-4">
-                  <img
-                    src={destination.image}
-                    alt={destination.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                </div>
-                <h3 className="font-bold text-gray-900 dark:text-white mb-2">
-                  {destination.name}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {destination.reason}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Travel Philosophy */}
-      <section className="py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 font-serif text-center">
-            My Travel Philosophy
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div className="flex items-start space-x-4">
-                <Heart className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Travel with Purpose</h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    Every journey should leave both the traveler and the destination a little bit better.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <Camera className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Capture Stories, Not Just Photos</h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    The best souvenirs are the connections we make and the perspectives we gain.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="flex items-start space-x-4">
-                <Plane className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Embrace the Unexpected</h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    The best adventures often begin when things don't go according to plan.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <Globe className="h-6 w-6 text-blue-600 mt-1 flex-shrink-0" />
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Think Globally, Connect Locally</h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    The world becomes smaller when we take time to understand each other.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact */}
-      <section className="py-16 bg-blue-600 dark:bg-blue-700">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4 font-serif">Let's Connect</h2>
-          <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
-            Have a travel question? Want to share your own adventure?
-            I'd love to hear from fellow wanderers and dreamers.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="mailto:hello@wanderlust.com"
-              className="inline-flex items-center justify-center space-x-2 bg-white text-blue-600 px-8 py-3 rounded-full font-medium hover:bg-gray-100 transition-colors"
-            >
-              <Mail className="h-5 w-5" />
-              <span>Email Me</span>
-            </a>
-            <a
-              href="#"
-              className="inline-flex items-center justify-center space-x-2 border border-white text-white px-8 py-3 rounded-full font-medium hover:bg-white hover:text-blue-600 transition-colors"
-            >
-              <Instagram className="h-5 w-5" />
-              <span>Instagram</span>
-            </a>
-            <a
-              href="#"
-              className="inline-flex items-center justify-center space-x-2 border border-white text-white px-8 py-3 rounded-full font-medium hover:bg-white hover:text-blue-600 transition-colors"
-            >
-              <Youtube className="h-5 w-5" />
-              <span>YouTube</span>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 dark:bg-black text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="md:col-span-2">
-              <h3 className="text-2xl font-bold mb-4 font-serif">Wanderlust Chronicles</h3>
-              <p className="text-gray-400 max-w-md">
-                Inspiring wanderers to explore the world, one story at a time.
-                Join me on this incredible journey of discovery and adventure.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Explore</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link to="/blog" className="hover:text-white transition-colors">All Stories</Link></li>
-                <li><Link to="/about" className="hover:text-white transition-colors">About</Link></li>
-                <li><a href="#" className="hover:text-white transition-colors">Destinations</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Travel Tips</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Connect</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Instagram</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Twitter</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">YouTube</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>Built with React and Nostr protocols</p>
-            <p className="text-sm mt-2">
-              Vibed with <a href="https://soapbox.pub/mkstack" className="text-blue-400 hover:underline">MKStack</a>
-            </p>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   );
-};
+}
 
-export default About;
+function AuthorCard({ pubkey, npub }: { pubkey: string; npub: string }) {
+  const author = useAuthor(pubkey);
+  const metadata = author.data?.metadata;
+
+  if (author.isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-16 w-16 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader>
+        <div className="flex items-start gap-4">
+          <Avatar className="h-16 w-16">
+            {metadata?.picture && <AvatarImage src={metadata.picture} alt={metadata.name} />}
+            <AvatarFallback className="text-lg">
+              {(metadata?.name || 'U').slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-lg">{metadata?.name || 'Unbekannt'}</h3>
+            {metadata?.nip05 && (
+              <p className="text-sm text-muted-foreground truncate">✓ {metadata.nip05}</p>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {metadata?.about && (
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+            {metadata.about}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {metadata?.website && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={metadata.website} target="_blank" rel="noopener noreferrer">
+                <Globe className="h-3 w-3 mr-1" />
+                Website
+              </a>
+            </Button>
+          )}
+          {metadata?.lud16 && (
+            <Button variant="outline" size="sm" className="font-mono text-xs">
+              <Zap className="h-3 w-3 mr-1" />
+              {metadata.lud16}
+            </Button>
+          )}
+        </div>
+        <div className="pt-2 border-t">
+          <div className="text-xs text-muted-foreground">Nostr Public Key</div>
+          <div className="font-mono text-xs break-all mt-1">{npub}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Hash({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <line x1="4" x2="20" y1="9" y2="9" />
+      <line x1="4" x2="20" y1="15" y2="15" />
+      <line x1="10" x2="8" y1="3" y2="21" />
+      <line x1="16" x2="14" y1="3" y2="21" />
+    </svg>
+  );
+}
