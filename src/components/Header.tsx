@@ -21,14 +21,11 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="flex flex-col items-center">
-              <img
-                src="/mojobuslogo.png"
-                alt="MojoBus Logo"
-                className="h-10 w-auto"
-              />
-              <div className="hidden sm:block text-xs text-muted-foreground mt-1">Perpetual Traveler</div>
-            </div>
+            <img
+              src="/mojobuslogo.png"
+              alt="MojoBus Logo"
+              className="h-10 w-auto"
+            />
           </Link>
 
           {/* Desktop Navigation */}

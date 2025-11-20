@@ -10,8 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
+import { useUploadFile } from '@/hooks/useUploadFile';
 import { NOSTR_CONFIG } from '@/config/nostr';
-import { FileText, MessageSquare, Loader2, X } from 'lucide-react';
+import { FileText, MessageSquare, Loader2, X, Upload, Image as ImageIcon } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 
 export function Publish() {
@@ -81,7 +82,9 @@ function PublishNoteForm() {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const { mutate: createEvent, isPending } = useNostrPublish();
+  const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -97,9 +100,36 @@ function PublishNoteForm() {
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const [[_, url]] = await uploadFile(file);
+      setImages(prev => [...prev, url]);
+      toast({
+        title: 'Bild hochgeladen!',
+        description: 'Das Bild wurde erfolgreich hochgeladen.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Fehler beim Hochladen',
+        description: 'Das Bild konnte nicht hochgeladen werden.',
+        variant: 'destructive',
+      });
+    }
+
+    // Reset input
+    e.target.value = '';
+  };
+
+  const removeImage = (imageUrl: string) => {
+    setImages(prev => prev.filter(img => img !== imageUrl));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!content.trim()) {
       toast({
         title: 'Fehler',
@@ -109,12 +139,20 @@ function PublishNoteForm() {
       return;
     }
 
+    let finalContent = content.trim();
     const eventTags = tags.map(tag => ['t', tag]);
+
+    // Add imeta tags for each image
+    images.forEach(imageUrl => {
+      eventTags.push(['imeta', `url ${imageUrl}`]);
+      // Add image URL to content
+      finalContent += `\n\n${imageUrl}`;
+    });
 
     createEvent(
       {
         kind: NOSTR_CONFIG.kinds.note,
-        content: content.trim(),
+        content: finalContent,
         tags: eventTags,
       },
       {
@@ -125,6 +163,7 @@ function PublishNoteForm() {
           });
           setContent('');
           setTags([]);
+          setImages([]);
           navigate('/notes');
         },
         onError: (error) => {
@@ -201,6 +240,57 @@ function PublishNoteForm() {
             )}
           </div>
 
+          {/* Image Upload */}
+          <div className="space-y-2">
+            <Label>Bilder</Label>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('note-image-upload')?.click()}
+                disabled={isPending || isUploading}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {isUploading ? 'Lädt...' : 'Bild hochladen'}
+              </Button>
+              <input
+                id="note-image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={isPending || isUploading}
+              />
+              <span className="text-xs text-muted-foreground">
+                JPG, PNG, GIF, WebP
+              </span>
+            </div>
+
+            {/* Preview uploaded images */}
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                {images.map((imageUrl, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={imageUrl}
+                      alt={`Upload ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(imageUrl)}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      disabled={isPending}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-2 pt-4">
             <Button type="submit" disabled={isPending || !content.trim()} className="flex-1">
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -212,6 +302,7 @@ function PublishNoteForm() {
               onClick={() => {
                 setContent('');
                 setTags([]);
+                setImages([]);
               }}
               disabled={isPending}
             >
@@ -231,7 +322,9 @@ function PublishArticleForm() {
   const [image, setImage] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const { mutate: createEvent, isPending } = useNostrPublish();
+  const { mutateAsync: uploadFile } = useUploadFile();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -247,9 +340,39 @@ function PublishArticleForm() {
     setTags(tags.filter(t => t !== tagToRemove));
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const [[_, url]] = await uploadFile(file);
+      setImage(url);
+      toast({
+        title: 'Bild hochgeladen!',
+        description: 'Das Titelbild wurde erfolgreich hochgeladen.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Fehler beim Hochladen',
+        description: 'Das Bild konnte nicht hochgeladen werden.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+
+    // Reset input
+    e.target.value = '';
+  };
+
+  const removeImage = () => {
+    setImage('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim() || !content.trim()) {
       toast({
         title: 'Fehler',
@@ -299,14 +422,14 @@ function PublishArticleForm() {
             title: 'Erfolgreich veröffentlicht!',
             description: 'Dein Artikel wurde auf Nostr veröffentlicht.',
           });
-          
+
           // Navigate to the article
           const naddr = nip19.naddrEncode({
             kind: event.kind,
             pubkey: event.pubkey,
             identifier,
           });
-          
+
           navigate(`/${naddr}`);
         },
         onError: (error) => {
@@ -355,15 +478,49 @@ function PublishArticleForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="article-image">Bild-URL</Label>
-            <Input
-              id="article-image"
-              type="url"
-              placeholder="https://..."
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              disabled={isPending}
-            />
+            <Label>Titelbild</Label>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('article-image-upload')?.click()}
+                disabled={isPending || isUploading}
+                className="gap-2"
+              >
+                <ImageIcon className="h-4 w-4" />
+                {isUploading ? 'Lädt...' : 'Titelbild hochladen'}
+              </Button>
+              <input
+                id="article-image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={isPending || isUploading}
+              />
+              <span className="text-xs text-muted-foreground">
+                JPG, PNG, GIF, WebP
+              </span>
+            </div>
+
+            {/* Preview uploaded image */}
+            {image && (
+              <div className="relative group">
+                <img
+                  src={image}
+                  alt="Titelbild Vorschau"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  disabled={isPending}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
