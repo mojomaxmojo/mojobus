@@ -30,15 +30,15 @@ export function Articles() {
   // Filter Artikel
   const filteredArticles = useMemo(() => {
     if (!articles) return [];
-    
+
     return articles.filter(article => {
       const metadata = extractArticleMetadata(article);
-      
+
       // Tag Filter
       if (selectedTag && !metadata.tags.includes(selectedTag)) {
         return false;
       }
-      
+
       // Suchfilter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -49,7 +49,7 @@ export function Articles() {
           metadata.tags.some(tag => tag.toLowerCase().includes(query))
         );
       }
-      
+
       return true;
     });
   }, [articles, searchQuery, selectedTag]);
@@ -68,6 +68,24 @@ export function Articles() {
 
           {/* Search and Filter */}
           <div className="space-y-4">
+            {/* Author Filter */}
+            <div className="flex flex-wrap gap-2">
+              <Badge
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() => setSearchQuery('')}
+              >
+                Alle Autoren
+              </Badge>
+              <Badge
+                variant={searchQuery === 'mojo' ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setSearchQuery('')}
+              >
+                Mojo
+              </Badge>
+            </div>
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -173,7 +191,7 @@ function ArticleCard({ article }: { article: any }) {
   const metadata = extractArticleMetadata(article);
   const author = useAuthor(article.pubkey);
   const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
-  
+
   const naddr = nip19.naddrEncode({
     kind: article.kind,
     pubkey: article.pubkey,
@@ -216,7 +234,7 @@ function ArticleCard({ article }: { article: any }) {
                 )}
               </div>
             )}
-            
+
             {/* Meta Info */}
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
