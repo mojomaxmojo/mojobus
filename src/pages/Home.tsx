@@ -8,6 +8,8 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { Waves, Compass, Sun, Anchor } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
+import { memo } from 'react';
+import type { NostrEvent } from '@nostrify/nostrify';
 
 export function Home() {
   const { data: articles, isLoading } = useLongformArticles();
@@ -29,7 +31,7 @@ export function Home() {
               Unser Leben am Meer
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Leon (Lionhunter), unser RV und das Meer. 
+              Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Leon (Lionhunter), unser RV und das Meer.
               Wir leben als Perpetual Traveler, meist direkt am Strand, autark mit Solarstrom und minimalistisch unterwegs.
             </p>
             <div className="flex flex-wrap justify-center gap-2 pt-4">
@@ -175,11 +177,11 @@ export function Home() {
   );
 }
 
-function ArticleCard({ article }: { article: any }) {
+const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent }) {
   const metadata = extractArticleMetadata(article);
   const author = useAuthor(article.pubkey);
   const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
-  
+
   const naddr = nip19.naddrEncode({
     kind: article.kind,
     pubkey: article.pubkey,
@@ -214,4 +216,4 @@ function ArticleCard({ article }: { article: any }) {
       </Link>
     </Card>
   );
-}
+});

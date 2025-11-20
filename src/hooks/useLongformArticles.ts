@@ -13,7 +13,7 @@ export function useLongformArticles() {
   return useQuery({
     queryKey: ['longform-articles', NOSTR_CONFIG.authorPubkeys],
     queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       const events = await nostr.query(
         [
@@ -34,6 +34,8 @@ export function useLongformArticles() {
     },
     staleTime: NOSTR_CONFIG.cache.staleTime,
     gcTime: NOSTR_CONFIG.cache.maxAge,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 
@@ -46,7 +48,7 @@ export function useLongformArticle(identifier: string, authorPubkey: string) {
   return useQuery({
     queryKey: ['longform-article', identifier, authorPubkey],
     queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       const events = await nostr.query(
         [
@@ -70,6 +72,8 @@ export function useLongformArticle(identifier: string, authorPubkey: string) {
     staleTime: NOSTR_CONFIG.cache.staleTime,
     gcTime: NOSTR_CONFIG.cache.maxAge,
     enabled: !!identifier && !!authorPubkey,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 

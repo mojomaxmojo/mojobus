@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 import { useInView } from 'react-intersection-observer';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +12,8 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { Calendar, Hash, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { nip19 } from 'nostr-tools';
+import type { NostrEvent } from '@nostrify/nostrify';
 
 export function Notes() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useNotes();
@@ -28,12 +31,12 @@ export function Notes() {
   // Filter notes by search query
   const filteredNotes = useMemo(() => {
     if (!searchQuery) return notes;
-    
+
     const query = searchQuery.toLowerCase();
     return notes.filter(note => {
       const content = note.content.toLowerCase();
       const tags = extractNoteTags(note);
-      
+
       return (
         content.includes(query) ||
         tags.some(tag => tag.toLowerCase().includes(query))
@@ -115,7 +118,7 @@ export function Notes() {
               {filteredNotes.map((note) => (
                 <NoteCard key={note.id} note={note} />
               ))}
-              
+
               {/* Load More Trigger */}
               {hasNextPage && !searchQuery && (
                 <div ref={ref} className="py-4">
@@ -176,42 +179,46 @@ export function Notes() {
   );
 }
 
-function NoteCard({ note }: { note: any }) {
+const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
   const author = useAuthor(note.pubkey);
   const authorName = author.data?.metadata?.name || genUserName(note.pubkey);
   const authorAvatar = author.data?.metadata?.picture;
   const tags = extractNoteTags(note);
   const images = extractNoteImages(note);
 
+  // Create note1 identifier
+  const noteId = nip19.noteEncode(note.id);
+
   return (
-    <Card className="hover:shadow-md transition-shadow flex flex-col h-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-3">
-          <Avatar className="h-10 w-10">
-            {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
-            <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold truncate">{authorName}</span>
-              <span className="text-muted-foreground">•</span>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <time>
-                  {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </time>
+    <Link to={`/${noteId}`}>
+      <Card className="hover:shadow-md transition-shadow flex flex-col h-full cursor-pointer">
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            <Avatar className="h-10 w-10">
+              {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
+              <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold truncate">{authorName}</span>
+                <span className="text-muted-foreground">•</span>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  <time>
+                    {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </time>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-4">
+        </CardHeader>
+        <CardContent className="flex-1 space-y-4">
         {/* Content */}
         <div className="whitespace-pre-wrap break-words line-clamp-3">
           <NoteContent event={note} className="text-sm" />
@@ -256,8 +263,9 @@ function NoteCard({ note }: { note: any }) {
         )}
       </CardContent>
     </Card>
+    </Link>
   );
-}
+});
 
 function Hash({ className }: { className?: string }) {
   return (

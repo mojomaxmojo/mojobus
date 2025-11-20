@@ -16,7 +16,7 @@ export function useNotes() {
       const filter: any = {
         kinds: [NOSTR_CONFIG.kinds.note],
         authors: NOSTR_CONFIG.authorPubkeys,
-        limit: 20,
+        limit: 30, // Increased for better performance
       };
 
       if (pageParam) {
@@ -24,7 +24,7 @@ export function useNotes() {
       }
 
       const events = await nostr.query([filter], {
-        signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
+        signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
       });
 
       return events;
@@ -37,6 +37,8 @@ export function useNotes() {
     initialPageParam: undefined,
     staleTime: NOSTR_CONFIG.cache.staleTime,
     gcTime: NOSTR_CONFIG.cache.maxAge,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 

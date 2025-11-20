@@ -8,8 +8,9 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { RelaySelector } from '@/components/RelaySelector';
 import { Search, Calendar, User } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { nip19 } from 'nostr-tools';
+import type { NostrEvent } from '@nostrify/nostrify';
 
 export function Articles() {
   const { data: articles, isLoading } = useLongformArticles();
@@ -187,7 +188,7 @@ export function Articles() {
   );
 }
 
-function ArticleCard({ article }: { article: any }) {
+const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent }) {
   const metadata = extractArticleMetadata(article);
   const author = useAuthor(article.pubkey);
   const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
@@ -252,4 +253,4 @@ function ArticleCard({ article }: { article: any }) {
       </Link>
     </Card>
   );
-}
+});

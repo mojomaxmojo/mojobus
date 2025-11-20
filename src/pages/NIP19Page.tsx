@@ -1,6 +1,7 @@
 import { nip19 } from 'nostr-tools';
 import { useParams } from 'react-router-dom';
 import { ArticleView } from '@/components/ArticleView';
+import { NoteView } from '@/components/NoteView';
 import NotFound from './NotFound';
 
 export function NIP19Page() {
@@ -31,13 +32,9 @@ export function NIP19Page() {
       );
 
     case 'note':
-      // TODO: Implement note view
-      return (
-        <div className="container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-4">Note Ansicht</h1>
-          <p className="text-muted-foreground">Note-Ansicht ist noch nicht implementiert.</p>
-        </div>
-      );
+      // Note view (kind 1)
+      const noteId = decoded.data as string;
+      return <NoteView eventId={noteId} />;
 
     case 'nevent':
       // TODO: Implement event view
