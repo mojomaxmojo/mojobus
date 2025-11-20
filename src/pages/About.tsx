@@ -30,17 +30,17 @@ export function About() {
             </CardHeader>
             <CardContent className="prose prose-slate dark:prose-invert max-w-none space-y-4">
               <p className="text-muted-foreground leading-relaxed">
-                Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Leon (Lionhunter), 
-                unser RV und das Meer. Wir leben als Perpetual Traveler, meist direkt am Strand, 
+                Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Leon (Lionhunter),
+                unser RV und das Meer. Wir leben als Perpetual Traveler, meist direkt am Strand,
                 autark mit Solarstrom und minimalistisch unterwegs.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                Das Rauschen der Wellen ist unser Wecker, Sonnenuntergänge sind unser Alltag. 
+                Das Rauschen der Wellen ist unser Wecker, Sonnenuntergänge sind unser Alltag.
                 Jeder Tag bringt neue Orte, neue Begegnungen und das Gefühl, wirklich frei zu sein.
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                Auf Nostr teilen wir Geschichten, Tipps und Einblicke in dieses Leben zwischen 
-                Sand und Horizont. Vielleicht ruft es auch dich – nach Abenteuer, Einfachheit 
+                Auf Nostr teilen wir Geschichten, Tipps und Einblicke in dieses Leben zwischen
+                Sand und Horizont. Vielleicht ruft es auch dich – nach Abenteuer, Einfachheit
                 und Freiheit. 🌊🚐✨
               </p>
             </CardContent>
@@ -96,7 +96,7 @@ export function About() {
             <h2 className="text-2xl font-bold text-center">Die Reisenden</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <AuthorCard pubkey={NOSTR_CONFIG.authorPubkeys[0]} npub={NOSTR_CONFIG.authors.mojo} />
-              <AuthorCard pubkey={NOSTR_CONFIG.authorPubkeys[1]} npub={NOSTR_CONFIG.authors.partner} />
+              {/* TODO: Partner-Karte hinzufügen, wenn NPUB verfügbar */}
             </div>
           </div>
 
@@ -130,9 +130,9 @@ export function About() {
                   <Globe className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-muted-foreground">Website</div>
-                    <a 
-                      href="http://mojobus.org" 
-                      target="_blank" 
+                    <a
+                      href="http://mojobus.org"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline truncate block"
                     >

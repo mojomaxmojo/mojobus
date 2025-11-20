@@ -7,7 +7,7 @@ export function ConvertNpub() {
   useEffect(() => {
     const npubs = [
       'npub1f4vym2mu3q9fsz08muz8d469hl568l5358qx90qlaspyuz67ru0sfxvupf',
-      'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc5c5407f828002qdls5wz',
+      // 'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc5c5407f828002qdls5wz', // Invalid NPUB
     ];
 
     const converted = npubs.map(npub => {
