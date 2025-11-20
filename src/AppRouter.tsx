@@ -8,6 +8,7 @@ import { Articles } from "./pages/Articles";
 import { Notes } from "./pages/Notes";
 import { About } from "./pages/About";
 import { Publish } from "./pages/Publish";
+import { TestNostr } from "./pages/TestNostr";
 import { NIP19Page } from "./pages/NIP19Page";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +25,7 @@ export function AppRouter() {
             <Route path="/notes" element={<Notes />} />
             <Route path="/about" element={<About />} />
             <Route path="/veroeffentlichen" element={<Publish />} />
+            <Route path="/test" element={<TestNostr />} />
             {/* NIP-19 route for npub1, note1, naddr1, nevent1, nprofile1 */}
             <Route path="/:nip19" element={<NIP19Page />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

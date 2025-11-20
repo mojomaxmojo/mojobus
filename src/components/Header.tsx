@@ -21,14 +21,13 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <img 
-              src="/mojobuslogo.png" 
-              alt="MojoBus Logo" 
-              className="h-10 w-auto"
-            />
-            <div className="hidden sm:block">
-              <div className="font-bold text-lg text-primary">MojoBus</div>
-              <div className="text-xs text-muted-foreground">Perpetual Traveler</div>
+            <div className="flex flex-col items-center">
+              <img
+                src="/mojobuslogo.png"
+                alt="MojoBus Logo"
+                className="h-10 w-auto"
+              />
+              <div className="hidden sm:block text-xs text-muted-foreground mt-1">Perpetual Traveler</div>
             </div>
           </Link>
 
@@ -92,37 +91,37 @@ export function Header() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t py-4 space-y-4">
             <nav className="flex flex-col space-y-3">
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className="text-sm font-medium hover:text-primary transition-colors px-2 py-1"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Home
               </Link>
-              <Link 
-                to="/artikel" 
+              <Link
+                to="/artikel"
                 className="text-sm font-medium hover:text-primary transition-colors px-2 py-1"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Artikel
               </Link>
-              <Link 
-                to="/notes" 
+              <Link
+                to="/notes"
                 className="text-sm font-medium hover:text-primary transition-colors px-2 py-1"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Notes
               </Link>
-              <Link 
-                to="/about" 
+              <Link
+                to="/about"
                 className="text-sm font-medium hover:text-primary transition-colors px-2 py-1"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 About
               </Link>
               {user && (
-                <Link 
-                  to="/veroeffentlichen" 
+                <Link
+                  to="/veroeffentlichen"
                   className="text-sm font-medium hover:text-primary transition-colors px-2 py-1 flex items-center gap-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >

@@ -1,5 +1,5 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useNostr } from '@nostrify/react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useNostr } from '@/hooks/useNostr';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import type { NostrEvent } from '@nostrify/nostrify';
 
@@ -18,7 +18,7 @@ export function useNotes() {
         authors: NOSTR_CONFIG.authorPubkeys,
         limit: 20,
       };
-      
+
       if (pageParam) {
         filter.until = pageParam;
       }
@@ -46,7 +46,7 @@ export function useNotes() {
 export function useNote(eventId: string) {
   const { nostr } = useNostr();
 
-  return useInfiniteQuery({
+  return useQuery({
     queryKey: ['note', eventId],
     queryFn: async ({ signal }) => {
       const events = await nostr.query(
@@ -63,8 +63,6 @@ export function useNote(eventId: string) {
 
       return events[0] || null;
     },
-    getNextPageParam: () => undefined,
-    initialPageParam: undefined,
     staleTime: NOSTR_CONFIG.cache.staleTime,
     gcTime: NOSTR_CONFIG.cache.maxAge,
     enabled: !!eventId,
@@ -91,14 +89,14 @@ export function extractNoteUrls(content: string): string[] {
  */
 export function extractNoteImages(event: NostrEvent): string[] {
   const images: string[] = [];
-  
+
   // Aus content extrahieren
   const urls = extractNoteUrls(event.content);
-  const imageUrls = urls.filter(url => 
+  const imageUrls = urls.filter(url =>
     /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url)
   );
   images.push(...imageUrls);
-  
+
   // Aus imeta tags extrahieren
   const imetaTags = event.tags.filter(([name]) => name === 'imeta');
   imetaTags.forEach(tag => {
@@ -108,6 +106,6 @@ export function extractNoteImages(event: NostrEvent): string[] {
       images.push(url);
     }
   });
-  
+
   return [...new Set(images)]; // Duplikate entfernen
 }

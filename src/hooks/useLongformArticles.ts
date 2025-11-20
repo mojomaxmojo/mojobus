@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useNostr } from '@nostrify/react';
+import { useNostr } from '@/hooks/useNostr';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import type { NostrEvent } from '@nostrify/nostrify';
 
@@ -14,7 +14,7 @@ export function useLongformArticles() {
     queryKey: ['longform-articles', NOSTR_CONFIG.authorPubkeys],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-      
+
       const events = await nostr.query(
         [
           {
@@ -28,7 +28,7 @@ export function useLongformArticles() {
 
       // Validiere und sortiere Artikel
       const validArticles = events.filter(validateLongformArticle);
-      
+
       // Sortiere nach Datum (neueste zuerst)
       return validArticles.sort((a, b) => b.created_at - a.created_at);
     },
@@ -47,7 +47,7 @@ export function useLongformArticle(identifier: string, authorPubkey: string) {
     queryKey: ['longform-article', identifier, authorPubkey],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-      
+
       const events = await nostr.query(
         [
           {
