@@ -13,8 +13,8 @@ export const AUTHORS = [
   {
     id: 'susanne',
     name: 'Susanne',
-    npub: 'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc5c5407f828002qd3jm5n',
-    pubkey: '94afa1cfb1c7e23f00c27e0705ae628703f0e084b391e278fb3f8fd0ffc1e400',
+    npub: 'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc9c5407f828002qdls5wz',
+    pubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
   },
 ] as const;
 
