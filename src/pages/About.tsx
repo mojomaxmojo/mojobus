@@ -4,10 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthor } from '@/hooks/useAuthor';
-import { NOSTR_CONFIG } from '@/config/nostr';
+import { AUTHORS } from '@/config/nostr';
 import { Mail, Globe, Zap, Key, Waves, Sun, Compass } from 'lucide-react';
+import { getValidAuthors } from '@/lib/authors';
 
 export function About() {
+  const validAuthors = getValidAuthors();
+
   return (
     <div className="min-h-screen py-12">
       <div className="container mx-auto px-4">
@@ -94,9 +97,14 @@ export function About() {
           {/* Authors Section */}
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-center">Die Reisenden</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <AuthorCard pubkey={NOSTR_CONFIG.authorPubkeys[0]} npub={NOSTR_CONFIG.authors.mojo} />
-              {/* TODO: Partner-Karte hinzufügen, wenn NPUB verfügbar */}
+            <div className={`grid grid-cols-1 md:grid-cols-${validAuthors.length} gap-6`}>
+              {validAuthors.map((author) => (
+                <AuthorCard
+                  key={author.name}
+                  pubkey={author.pubkey}
+                  npub={author.npub}
+                />
+              ))}
             </div>
           </div>
 

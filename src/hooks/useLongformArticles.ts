@@ -4,80 +4,6 @@ import { NOSTR_CONFIG } from '@/config/nostr';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 /**
- * Hook zum Laden von Longform Artikeln (NIP-23, kind 30023)
- * Lädt alle Artikel der konfigurierten Autoren
- */
-export function useLongformArticles() {
-  const { nostr } = useNostr();
-
-  return useQuery({
-    queryKey: ['longform-articles', NOSTR_CONFIG.authorPubkeys],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-
-      const events = await nostr.query(
-        [
-          {
-            kinds: [NOSTR_CONFIG.kinds.longform],
-            authors: NOSTR_CONFIG.authorPubkeys,
-            limit: 100,
-          },
-        ],
-        { signal }
-      );
-
-      // Validiere und sortiere Artikel
-      const validArticles = events.filter(validateLongformArticle);
-
-      // Sortiere nach Datum (neueste zuerst)
-      return validArticles.sort((a, b) => b.created_at - a.created_at);
-    },
-    staleTime: NOSTR_CONFIG.cache.staleTime,
-    gcTime: NOSTR_CONFIG.cache.maxAge,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  });
-}
-
-/**
- * Hook zum Laden eines einzelnen Artikels anhand seiner ID (d-tag)
- */
-export function useLongformArticle(identifier: string, authorPubkey: string) {
-  const { nostr } = useNostr();
-
-  return useQuery({
-    queryKey: ['longform-article', identifier, authorPubkey],
-    queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
-
-      const events = await nostr.query(
-        [
-          {
-            kinds: [NOSTR_CONFIG.kinds.longform],
-            authors: [authorPubkey],
-            '#d': [identifier],
-            limit: 1,
-          },
-        ],
-        { signal }
-      );
-
-      const article = events[0];
-      if (!article || !validateLongformArticle(article)) {
-        return null;
-      }
-
-      return article;
-    },
-    staleTime: NOSTR_CONFIG.cache.staleTime,
-    gcTime: NOSTR_CONFIG.cache.maxAge,
-    enabled: !!identifier && !!authorPubkey,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  });
-}
-
-/**
  * Validiert ein Longform Artikel Event (NIP-23)
  */
 function validateLongformArticle(event: NostrEvent): boolean {
@@ -115,4 +41,78 @@ export function extractArticleMetadata(event: NostrEvent) {
     tags,
     content: event.content,
   };
+}
+
+/**
+ * Hook zum Laden von Longform Artikeln (NIP-23, kind 30023)
+ * Lädt alle Artikel der konfigurierten Autoren
+ */
+export function useLongformArticles() {
+  const { nostr } = useNostr();
+
+  return useQuery({
+    queryKey: ['longform-articles', NOSTR_CONFIG.authorPubkeys],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+
+      const events = await nostr.query(
+        [
+          {
+            kinds: [NOSTR_CONFIG.kinds.longform],
+            authors: NOSTR_CONFIG.authorPubkeys,
+            limit: 100,
+          },
+        ],
+        { signal }
+      );
+
+      // Validiere und sortiere Artikel
+      const validArticles = events.filter(validateLongformArticle);
+
+      // Sortiere nach Datum (neueste zuerst)
+      return validArticles.sort((a, b) => b.created_at - a.created_at);
+    },
+    staleTime: NOSTR_CONFIG.cache.staleTime,
+    gcTime: NOSTR_CONFIG.cache.maxAge,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+}
+
+/**
+ * Hook zum Laden eines einzelnen Longform Artikels
+ */
+export function useLongformArticle(identifier: string, authorPubkey: string) {
+  const { nostr } = useNostr();
+
+  return useQuery({
+    queryKey: ['longform-article', identifier, authorPubkey],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+
+      const events = await nostr.query(
+        [
+          {
+            kinds: [NOSTR_CONFIG.kinds.longform],
+            authors: [authorPubkey],
+            '#d': [identifier],
+            limit: 1,
+          },
+        ],
+        { signal }
+      );
+
+      const article = events[0];
+      if (!article || !validateLongformArticle(article)) {
+        return null;
+      }
+
+      return article;
+    },
+    staleTime: NOSTR_CONFIG.cache.staleTime,
+    gcTime: NOSTR_CONFIG.cache.maxAge,
+    enabled: !!identifier && !!authorPubkey,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 }

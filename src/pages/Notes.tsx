@@ -14,11 +14,13 @@ import { Calendar, Hash, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { AUTHORS } from '@/config/nostr';
 
 export function Notes() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useNotes();
   const { ref, inView } = useInView();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
 
   useEffect(() => {
     if (inView && hasNextPage) {
@@ -28,21 +30,29 @@ export function Notes() {
 
   const notes = data?.pages.flat() || [];
 
-  // Filter notes by search query
+  // Filter notes by author and search query
   const filteredNotes = useMemo(() => {
-    if (!searchQuery) return notes;
-
-    const query = searchQuery.toLowerCase();
     return notes.filter(note => {
-      const content = note.content.toLowerCase();
-      const tags = extractNoteTags(note);
+      // Autoren-Filter
+      if (selectedAuthor && note.pubkey !== selectedAuthor) {
+        return false;
+      }
 
-      return (
-        content.includes(query) ||
-        tags.some(tag => tag.toLowerCase().includes(query))
-      );
+      // Suchfilter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const content = note.content.toLowerCase();
+        const tags = extractNoteTags(note);
+
+        return (
+          content.includes(query) ||
+          tags.some(tag => tag.toLowerCase().includes(query))
+        );
+      }
+
+      return true;
     });
-  }, [notes, searchQuery]);
+  }, [notes, searchQuery, selectedAuthor]);
 
   return (
     <div className="min-h-screen py-12">
@@ -61,19 +71,22 @@ export function Notes() {
             {/* Author Filter */}
             <div className="flex flex-wrap gap-2">
               <Badge
-                variant="outline"
+                variant={selectedAuthor === null ? "default" : "outline"}
                 className="cursor-pointer"
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSelectedAuthor(null)}
               >
                 Alle Autoren
               </Badge>
-              <Badge
-                variant={searchQuery === 'mojo' ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => setSearchQuery(searchQuery === 'mojo' ? '' : 'mojo')}
-              >
-                Mojo
-              </Badge>
+              {AUTHORS.map((author) => (
+                <Badge
+                  key={author.id}
+                  variant={selectedAuthor === author.pubkey ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setSelectedAuthor(selectedAuthor === author.pubkey ? null : author.pubkey)}
+                >
+                  {author.name}
+                </Badge>
+              ))}
             </div>
 
             {/* Search */}
@@ -149,13 +162,16 @@ export function Notes() {
             <Card className="border-dashed">
               <CardContent className="py-12 px-8 text-center">
                 <div className="max-w-sm mx-auto space-y-6">
-                  {searchQuery ? (
+                  {searchQuery || selectedAuthor ? (
                     <>
                       <p className="text-muted-foreground">
                         Keine Notes gefunden für deine Suche.
                       </p>
                       <button
-                        onClick={() => setSearchQuery('')}
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedAuthor(null);
+                        }}
                         className="text-sm text-primary hover:underline"
                       >
                         Suche zurücksetzen

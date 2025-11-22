@@ -11,15 +11,18 @@ import { Search, Calendar, User } from 'lucide-react';
 import { useState, useMemo, memo } from 'react';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { AUTHORS } from '@/config/nostr';
 
 export function Articles() {
-  const { data: articles, isLoading } = useLongformArticles();
+  const { data, isLoading } = useLongformArticles();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
+
+  const articles = data || [];
 
   // Extrahiere alle Tags
   const allTags = useMemo(() => {
-    if (!articles) return [];
     const tagSet = new Set<string>();
     articles.forEach(article => {
       const metadata = extractArticleMetadata(article);
@@ -30,12 +33,17 @@ export function Articles() {
 
   // Filter Artikel
   const filteredArticles = useMemo(() => {
-    if (!articles) return [];
-
     return articles.filter(article => {
       const metadata = extractArticleMetadata(article);
 
-      // Tag Filter
+      // Autoren-Filter
+      if (selectedAuthor) {
+        if (article.pubkey !== selectedAuthor) {
+          return false;
+        }
+      }
+
+      // Tag-Filter
       if (selectedTag && !metadata.tags.includes(selectedTag)) {
         return false;
       }
@@ -53,7 +61,7 @@ export function Articles() {
 
       return true;
     });
-  }, [articles, searchQuery, selectedTag]);
+  }, [articles, searchQuery, selectedTag, selectedAuthor]);
 
   return (
     <div className="min-h-screen py-12">
@@ -72,19 +80,22 @@ export function Articles() {
             {/* Author Filter */}
             <div className="flex flex-wrap gap-2">
               <Badge
-                variant="outline"
+                variant={selectedAuthor === null ? "default" : "outline"}
                 className="cursor-pointer"
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSelectedAuthor(null)}
               >
                 Alle Autoren
               </Badge>
-              <Badge
-                variant={searchQuery === 'mojo' ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => setSearchQuery('')}
-              >
-                Mojo
-              </Badge>
+              {AUTHORS.map((author) => (
+                <Badge
+                  key={author.id}
+                  variant={selectedAuthor === author.pubkey ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setSelectedAuthor(selectedAuthor === author.pubkey ? null : author.pubkey)}
+                >
+                  {author.name}
+                </Badge>
+              ))}
             </div>
 
             <div className="relative">
@@ -146,7 +157,7 @@ export function Articles() {
             <Card className="border-dashed">
               <CardContent className="py-12 px-8 text-center">
                 <div className="max-w-sm mx-auto space-y-6">
-                  {searchQuery || selectedTag ? (
+                  {searchQuery || selectedTag || selectedAuthor ? (
                     <>
                       <p className="text-muted-foreground">
                         Keine Artikel gefunden für deine Suche.
@@ -160,9 +171,12 @@ export function Articles() {
                             Suche zurücksetzen
                           </button>
                         )}
-                        {selectedTag && (
+                        {(selectedTag || selectedAuthor) && (
                           <button
-                            onClick={() => setSelectedTag(null)}
+                            onClick={() => {
+                              setSelectedTag(null);
+                              setSelectedAuthor(null);
+                            }}
                             className="text-sm text-primary hover:underline ml-4"
                           >
                             Filter entfernen
@@ -192,7 +206,7 @@ const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent
   const metadata = extractArticleMetadata(article);
   const author = useAuthor(article.pubkey);
   const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
-
+  
   const naddr = nip19.naddrEncode({
     kind: article.kind,
     pubkey: article.pubkey,
@@ -235,7 +249,7 @@ const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent
                 )}
               </div>
             )}
-
+            
             {/* Meta Info */}
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">

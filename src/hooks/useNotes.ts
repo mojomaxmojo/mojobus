@@ -1,24 +1,30 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useNostr } from '@/hooks/useNostr';
 import { NOSTR_CONFIG } from '@/config/nostr';
+import { getValidAuthorPubkeys } from '@/lib/authors';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 /**
- * Hook zum Laden von Notes (kind 1) mit Infinite Scroll
- * Lädt alle Notes der konfigurierten Autoren
+ * Hook zum Laden von Notes mit Infinite Scroll
  */
 export function useNotes() {
   const { nostr } = useNostr();
 
   return useInfiniteQuery({
-    queryKey: ['notes', NOSTR_CONFIG.authorPubkeys],
+    queryKey: ['notes'],
     queryFn: async ({ pageParam, signal }) => {
       const filter: any = {
         kinds: [NOSTR_CONFIG.kinds.note],
-        authors: NOSTR_CONFIG.authorPubkeys,
-        limit: 30, // Increased for better performance
+        limit: 30,
       };
-
+      
+      // Hole gültige Autoren-Pubkeys
+      const authorPubkeys = getValidAuthorPubkeys();
+      
+      if (authorPubkeys.length > 0) {
+        filter.authors = authorPubkeys;
+      }
+      
       if (pageParam) {
         filter.until = pageParam;
       }
@@ -72,42 +78,37 @@ export function useNote(eventId: string) {
 }
 
 /**
- * Extrahiert Hashtags aus einem Note
+ * Extrahiert Tags aus einem Note Event
  */
 export function extractNoteTags(event: NostrEvent): string[] {
-  return event.tags.filter(([name]) => name === 't').map(([, value]) => value);
+  return event.tags
+    .filter(tag => tag[0] === 't')
+    .map(tag => tag[1] as string);
 }
 
 /**
- * Extrahiert URLs aus dem Note Content
- */
-export function extractNoteUrls(content: string): string[] {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return content.match(urlRegex) || [];
-}
-
-/**
- * Extrahiert Bild-URLs aus einem Note (aus content und imeta tags)
+ * Extrahiert Bild-URLs aus einem Note Event
  */
 export function extractNoteImages(event: NostrEvent): string[] {
   const images: string[] = [];
-
-  // Aus content extrahieren
-  const urls = extractNoteUrls(event.content);
-  const imageUrls = urls.filter(url =>
-    /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url)
-  );
-  images.push(...imageUrls);
-
-  // Aus imeta tags extrahieren
-  const imetaTags = event.tags.filter(([name]) => name === 'imeta');
-  imetaTags.forEach(tag => {
-    const urlPart = tag.find(part => part.startsWith('url '));
-    if (urlPart) {
-      const url = urlPart.replace('url ', '');
-      images.push(url);
+  
+  // Suche nach Bildern im Content
+  const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
+  const matches = event.content.match(urlRegex);
+  if (matches) {
+    images.push(...matches);
+  }
+  
+  // Suche nach imeta Tags
+  event.tags.forEach(tag => {
+    if (tag[0] === 'imeta') {
+      tag.forEach((item, index) => {
+        if (item.startsWith('url ')) {
+          images.push(item.substring(4));
+        }
+      });
     }
   });
-
-  return [...new Set(images)]; // Duplikate entfernen
+  
+  return [...new Set(images)]; // Entferne Duplikate
 }
