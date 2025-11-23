@@ -12,7 +12,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { NOSTR_CONFIG } from '@/config/nostr';
-import { FileText, MessageSquare, Loader2, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { FileText, MessageSquare, Loader2, X, Upload, Image as ImageIcon, MapPin } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 
 export function Publish() {
@@ -83,6 +83,7 @@ function PublishNoteForm() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [position, setPosition] = useState('');
   const { mutate: createEvent, isPending } = useNostrPublish();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
   const { toast } = useToast();
@@ -142,6 +143,11 @@ function PublishNoteForm() {
     let finalContent = content.trim();
     const eventTags = tags.map(tag => ['t', tag]);
 
+    // Add position as location tag if provided
+    if (position.trim()) {
+      eventTags.push(['location', position.trim()]);
+    }
+
     // Add imeta tags for each image
     images.forEach(imageUrl => {
       eventTags.push(['imeta', `url ${imageUrl}`]);
@@ -164,6 +170,7 @@ function PublishNoteForm() {
           setContent('');
           setTags([]);
           setImages([]);
+          setPosition('');
           navigate('/notes');
         },
         onError: (error) => {
@@ -200,6 +207,20 @@ function PublishNoteForm() {
             <p className="text-xs text-muted-foreground">
               {content.length} Zeichen
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="note-position" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Position
+            </Label>
+            <Input
+              id="note-position"
+              placeholder="Wo bist du gerade? (z.B. Thailand, Strand von Patong)"
+              value={position}
+              onChange={(e) => setPosition(e.target.value)}
+              disabled={isPending}
+            />
           </div>
 
           <div className="space-y-2">
@@ -303,6 +324,7 @@ function PublishNoteForm() {
                 setContent('');
                 setTags([]);
                 setImages([]);
+                setPosition('');
               }}
               disabled={isPending}
             >
@@ -320,6 +342,7 @@ function PublishArticleForm() {
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
+  const [position, setPosition] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -406,6 +429,11 @@ function PublishArticleForm() {
     tags.forEach(tag => {
       eventTags.push(['t', tag]);
     });
+
+    // Add position as location tag if provided
+    if (position.trim()) {
+      eventTags.push(['location', position.trim()]);
+    }
 
     // published_at als aktueller Timestamp
     eventTags.push(['published_at', Math.floor(Date.now() / 1000).toString()]);
@@ -524,6 +552,20 @@ function PublishArticleForm() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="article-position" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Position
+            </Label>
+            <Input
+              id="article-position"
+              placeholder="Wo wurde dieser Artikel geschrieben? (z.B. Thailand, Strand von Patong)"
+              value={position}
+              onChange={(e) => setPosition(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="article-content">Inhalt *</Label>
             <Textarea
               id="article-content"
@@ -590,6 +632,7 @@ function PublishArticleForm() {
                 setSummary('');
                 setContent('');
                 setImage('');
+                setPosition('');
                 setTags([]);
               }}
               disabled={isPending}
