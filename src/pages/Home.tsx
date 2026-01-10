@@ -38,7 +38,7 @@ export function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-primary/10 via-background to-background pt-[60px] pb-20 md:pb-32">
+      <section className="relative bg-gradient-to-b from-primary/10 via-background to-background pt-[60px] pb-10 md:pb-24">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <div className="flex justify-center mb-6">
@@ -74,7 +74,7 @@ export function Home() {
       </section>
 
       {/* Recent Articles Section */}
-      <section className="bg-muted/30 -mt-[54px] pt-6 pb-16 md:pt-6 md:pb-24">
+      <section className="bg-muted/30 pt-4 pb-16 md:pt-8 md:pb-24">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
