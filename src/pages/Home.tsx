@@ -33,7 +33,7 @@ export function Home() {
     ]
   });
   const { data: articles, isLoading } = useLongformArticles();
-  const recentArticles = articles?.slice(0, 3) || [];
+  const recentArticles = articles?.slice(0, 6) || [];
 
   return (
     <div className="min-h-screen">
@@ -86,7 +86,7 @@ export function Home() {
 
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Card key={i}>
                     <CardHeader>
                       <Skeleton className="h-48 w-full rounded-md mb-4" />
