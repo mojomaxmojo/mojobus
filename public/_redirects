@@ -1,1 +1,22 @@
+# Cache static assets for 30 days
+/assets/*    Cache-Control: public, max-age=2592000, immutable
+/*.js       Cache-Control: public, max-age=2592000, immutable
+/*.css      Cache-Control: public, max-age=2592000, immutable
+/*.png      Cache-Control: public, max-age=2592000, immutable
+/*.jpg      Cache-Control: public, max-age=2592000, immutable
+/*.jpeg     Cache-Control: public, max-age=2592000, immutable
+/*.webp     Cache-Control: public, max-age=2592000, immutable
+/*.svg      Cache-Control: public, max-age=2592000, immutable
+/*.ico      Cache-Control: public, max-age=2592000, immutable
+/*.woff     Cache-Control: public, max-age=2592000, immutable
+/*.woff2    Cache-Control: public, max-age=2592000, immutable
+/*.ttf      Cache-Control: public, max-age=2592000, immutable
+
+# Cache HTML for 24 hours
+/*.html     Cache-Control: public, max-age=86400, must-revalidate
+
+# Cache manifest for 7 days
+/manifest.webmanifest Cache-Control: public, max-age=604800
+
+# Fallback for SPA routing
 /* /index.html 200

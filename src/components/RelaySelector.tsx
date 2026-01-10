@@ -1,174 +1,162 @@
-import { Check, ChevronsUpDown, Wifi, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useState } from "react";
-import { useAppContext } from "@/hooks/useAppContext";
+import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { RELAY_PRESETS } from "@/config/relays";
+import { useNostr } from "@nostrify/react";
 
-interface RelaySelectorProps {
-  className?: string;
+interface PresetOption {
+value: string;
+label: string;
+description: string;
 }
 
-export function RelaySelector(props: RelaySelectorProps) {
-  const { className } = props;
-  const { config, updateConfig, presetRelays = [] } = useAppContext();
-  
-  const selectedRelay = config.relayUrl;
-  const setSelectedRelay = (relay: string) => {
-    updateConfig((current) => ({ ...current, relayUrl: relay }));
-  };
+const PRESET_OPTIONS: PresetOption[] = [
+{
+value: "fast",
+label: "Fast",
+description: "Schnelle Ladezeiten, minimale Latency",
+},
+{
+value: "balanced",
+label: "Balanced",
+description: "Ausgewogene Performance und Zuverlässigkeit",
+},
+{
+value: "reliable",
+label: "Reliable",
+description: "Maximale Zuverlässigkeit mit mehreren Relays",
+},
+];
 
-  const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState("");
+export function RelaySelector() {
+const { nostr } = useNostr();
+const [selectedPreset, setSelectedPreset] = useState<string>("fast");
+const [customRelays, setCustomRelays] = useState<string[]>([]);
+const [autoApply, setAutoApply] = useState<boolean>(true);
 
-  const selectedOption = presetRelays.find((option) => option.url === selectedRelay);
+const applyPreset = async (preset: string) => {
+const presetConfig = RELAY_PRESETS[preset as keyof typeof RELAY_PRESETS];
 
-  // Function to normalize relay URL by adding wss:// if no protocol is present
-  const normalizeRelayUrl = (url: string): string => {
-    const trimmed = url.trim();
-    if (!trimmed) return trimmed;
-    
-    // Check if it already has a protocol
-    if (trimmed.includes('://')) {
-      return trimmed;
-    }
-    
-    // Add wss:// prefix
-    return `wss://${trimmed}`;
-  };
+if (presetConfig) {
+try {
+const currentRelays = nostr.getRelays();
+const newRelays = presetConfig.relayUrls;
 
-  // Handle adding a custom relay
-  const handleAddCustomRelay = (url: string) => {
-    setSelectedRelay?.(normalizeRelayUrl(url));
-    setOpen(false);
-    setInputValue("");
-  };
+console.log("Replacing relays...");
+console.log("Current:", currentRelays);
+console.log("New:", newRelays);
 
-  // Check if input value looks like a valid relay URL
-  const isValidRelayInput = (value: string): boolean => {
-    const trimmed = value.trim();
-    if (!trimmed) return false;
-    
-    // Basic validation - should contain at least a domain-like structure
-    const normalized = normalizeRelayUrl(trimmed);
-    try {
-      new URL(normalized);
-      return true;
-    } catch {
-      return false;
-    }
-  };
+currentRelays.forEach(relay => {
+nostr.removeRelay(relay.url);
+});
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("justify-between", className)}
-        >
-          <div className="flex items-center gap-2">
-            <Wifi className="h-4 w-4" />
-            <span className="truncate">
-              {selectedOption 
-                ? selectedOption.name 
-                : selectedRelay 
-                  ? selectedRelay.replace(/^wss?:\/\//, '')
-                  : "Select relay..."
-              }
-            </span>
-          </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
-        <Command>
-          <CommandInput 
-            placeholder="Search relays or type URL..." 
-            value={inputValue}
-            onValueChange={setInputValue}
-          />
-          <CommandList>
-            <CommandEmpty>
-              {inputValue && isValidRelayInput(inputValue) ? (
-                <CommandItem
-                  onSelect={() => handleAddCustomRelay(inputValue)}
-                  className="cursor-pointer"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  <div className="flex flex-col">
-                    <span className="font-medium">Add custom relay</span>
-                    <span className="text-xs text-muted-foreground">
-                      {normalizeRelayUrl(inputValue)}
-                    </span>
-                  </div>
-                </CommandItem>
-              ) : (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  {inputValue ? "Invalid relay URL" : "No relay found."}
-                </div>
-              )}
-            </CommandEmpty>
-            <CommandGroup>
-              {presetRelays
-                .filter((option) => 
-                  !inputValue || 
-                  option.name.toLowerCase().includes(inputValue.toLowerCase()) ||
-                  option.url.toLowerCase().includes(inputValue.toLowerCase())
-                )
-                .map((option) => (
-                  <CommandItem
-                    key={option.url}
-                    value={option.url}
-                    onSelect={(currentValue) => {
-                      setSelectedRelay(normalizeRelayUrl(currentValue));
-                      setOpen(false);
-                      setInputValue("");
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedRelay === option.url ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{option.name}</span>
-                      <span className="text-xs text-muted-foreground">{option.url}</span>
-                    </div>
-                  </CommandItem>
-                ))}
-              {inputValue && isValidRelayInput(inputValue) && (
-                <CommandItem
-                  onSelect={() => handleAddCustomRelay(inputValue)}
-                  className="cursor-pointer border-t"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  <div className="flex flex-col">
-                    <span className="font-medium">Add custom relay</span>
-                    <span className="text-xs text-muted-foreground">
-                      {normalizeRelayUrl(inputValue)}
-                    </span>
-                  </div>
-                </CommandItem>
-              )}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
+newRelays.forEach(url => {
+nostr.addRelay({ url, read: true, write: true });
+});
+
+localStorage.setItem("nostr:app-config", JSON.stringify({
+...JSON.parse(localStorage.getItem("nostr:app-config") || "{}"),
+relayUrls: newRelays,
+activeRelay: newRelays[0],
+maxRelays: presetConfig.maxRelays,
+queryTimeout: presetConfig.queryTimeout,
+preset: preset,
+}));
+
+setSelectedPreset(preset);
+} catch (error) {
+console.error("Failed to apply preset:", error);
+}
+}
+};
+
+const handlePresetChange = (preset: string) => {
+setSelectedPreset(preset);
+if (autoApply) {
+applyPreset(preset);
+}
+};
+
+return (
+<div className="space-y-6">
+<div>
+<h3 className="text-lg font-semibold mb-4">Relay-Preset wählen</h3>
+<p className="text-sm text-muted-foreground mb-6">
+Wähle einen Relay-Preset für optimale Performance
+</p>
+</div>
+
+<div>
+<Label htmlFor="relay-preset">Relay-Preset wählen</Label>
+<Select value={selectedPreset} onValueChange={handlePresetChange}>
+<SelectTrigger id="relay-preset">
+<SelectValue placeholder="Preset wählen..." />
+</SelectTrigger>
+<SelectContent>
+{PRESET_OPTIONS.map((option) => (
+<SelectItem key={option.value} value={option.value}>
+<div className="flex flex-col">
+<span className="font-medium">{option.label}</span>
+<span className="text-xs text-muted-foreground">
+{option.description}
+</span>
+</div>
+</SelectItem>
+))}
+</SelectContent>
+</Select>
+</div>
+<p className="text-xs text-muted-foreground">
+Automatische Anpassung aller Relay-Einstellungen
+</p>
+
+<div className="space-y-2">
+<label className="flex items-center space-x-2">
+<input
+type="checkbox"
+checked={autoApply}
+onChange={(e) => setAutoApply(e.target.checked)}
+className="h-4 w-4"
+/>
+<span className="text-sm">Preset automatisch anwenden</span>
+</label>
+</div>
+
+{selectedPreset && (
+<div className="bg-muted/50 rounded-lg p-4 space-y-3">
+<h4 className="text-sm font-medium mb-2">Gewähltes Preset: {selectedPreset}</h4>
+<div className="text-xs text-muted-foreground">
+{PRESET_OPTIONS.find(o => o.value === selectedPreset)?.description}
+</div>
+
+<div className="grid grid-cols-2 gap-4 text-xs">
+<div>
+<span className="font-medium">Relays:</span>
+<div className="text-muted-foreground">
+{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.relayUrls.join(", ") || "-"}
+</div>
+</div>
+<div>
+<span className="font-medium">Max Relays:</span>
+<div className="text-muted-foreground">
+{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.maxRelays || "-"}
+</div>
+</div>
+<div>
+<span className="font-medium">Timeout:</span>
+<div className="text-muted-foreground">
+{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.queryTimeout ? `${RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS].queryTimeout / 1000}s` : "-"} ms
+</div>
+</div>
+<div>
+<span className="font-medium">Deduplizierung:</span>
+<div className="text-muted-foreground">
+{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.enableDeduplication ? "Aktiv" : "Inaktiv"}
+</div>
+</div>
+</div>
+</div>
+)}
+</div>
+);
 }

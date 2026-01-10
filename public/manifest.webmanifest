@@ -1,0 +1,47 @@
+{
+  "name": "MojoBus - Perpetual Traveler Blog",
+  "short_name": "MojoBus",
+  "description": "Unser Leben am Meer. Vanlife, offgrid und Geschichten vom Strand.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0891B2",
+  "orientation": "portrait",
+  "lang": "de",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/mojobuslogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "travel", "blog"],
+  "shortcuts": [
+    {
+      "name": "Neuer Artikel",
+      "short_name": "Artikel",
+      "description": "Einen neuen Artikel schreiben",
+      "url": "/veroeffentlichen?tab=article",
+      "icons": [
+        {
+          "src": "/mojobuslogo.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Neuer Ort",
+      "short_name": "Ort",
+      "description": "Einen besonderen Ort teilen",
+      "url": "/veroeffentlichen?tab=place",
+      "icons": [
+        {
+          "src": "/mojobuslogo.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

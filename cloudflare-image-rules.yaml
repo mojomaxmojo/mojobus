@@ -1,0 +1,399 @@
+# Cloudflare Workers Image Caching Configuration
+# MojoBus Blog - Optimized Image Delivery Strategy
+
+# Import the worker script
+name: mojobus-images-worker
+main: cloudflare-images-worker.js
+compatibility_date: "2024-01-01"
+
+# Route patterns
+routes:
+  # User uploaded images - extremely aggressive caching
+  - pattern: "uploads/*"
+    cache:
+      edge:
+        max_age: 31536000  # 1 year
+        immutable: true
+        bypass_on_cache: false
+      browser:
+        max_age: 31536000  # 1 year
+        immutable: true
+        ignore_headers: [ "Set-Cookie", "Set-Cookie2" ]
+      strategy: "ULTRA_AGGRESSIVE"
+    compression:
+      brotli: 8
+      gzip: 8
+      zstd: 4
+    api_rate_limit:
+      # Extremely generous for user content
+      threshold: 200
+      period: 60
+    http2_policy:
+      up: "edge_multipart"
+    
+    # Optimized transformations
+    transformations:
+      # Generate AVIF automatically
+      - generate_avif:
+          preferred: "AVIF"  # Use AVIF if supported
+          quality: 80
+          fallback: true
+          lossy: true
+      
+      # Auto WebP conversion
+      - webp:
+          quality: 85
+          lossy: true
+          automatic: true
+      
+      # Auto JPEG optimization
+      - jpeg:
+          quality: 80
+          progressive: true
+          strip_metadata: true
+      
+      # Generate thumbnails for large images
+      - resize:
+          width: 1200
+          height: 1200
+          fit: "inside"
+          automatic: true
+    
+    # Allow range requests for progressive loading
+    enable_range: true
+
+  # System branding images - very aggressive caching
+  - pattern: "mojobuslogo.*"
+    cache:
+      edge:
+        max_age: 2592000  # 30 days
+        immutable: true
+        bypass_on_cache: false
+      browser:
+        max_age: 2592000  # 30 days
+        immutable: true
+      strategy: "HIGH_PRIORITY"
+    compression:
+      brotli: 8
+      gzip: 8
+      zstd: 4
+    transformations:
+      # Optimize for logos and branding
+      - jpeg:
+          quality: 90
+          progressive: true
+          strip_metadata: true
+      - png:
+          quality: 85
+          lossy: true
+          dither: "ordered"
+    
+    # Security headers
+    security:
+      cors: {
+        allowed_origins: ["*"]
+        max_age: 86400
+        credentials: false
+      }
+      frame_options:
+        deny: true
+
+  # Fallback images - aggressive caching
+  - pattern: "assets/images/fallback/*"
+    cache:
+      edge:
+        max_age: 2592000  # 30 days
+        immutable: true
+      browser:
+        max_age: 2592000  # 30 days
+        immutable: true
+      strategy: "AGGRESSIVE"
+    compression:
+      brotli: 7
+      gzip: 7
+
+  # Temporary uploads - no caching
+  - pattern: "temp/*"
+    cache:
+      edge:
+        max_age: 300  # 5 minutes
+        immutable: false
+        bypass_on_cache: true
+      browser:
+        max_age: 300  # 5 minutes
+        immutable: false
+      strategy: "NO_CACHE"
+    compression:
+      brotli: 6
+      gzip: 6
+    
+    # Override caching headers
+    cache_rules:
+      - match:
+          - request_method: ["GET", "HEAD"]
+        - url: "temp/*"
+        - url_query: ["no_cache"]
+      - url_query: ["bypass"]
+      action: BYPASS_CACHE
+
+  # Conditional cache rules based on query parameters
+  - pattern: "uploads/*"
+    cache:
+      edge:
+        max_age: 31536000  # 1 year
+        immutable: true
+        bypass_on_cache: false
+      browser:
+        max_age: 31536000  # 1 year
+        immutable: true
+      strategy: "ULTRA_AGGRESSIVE"
+    
+    cache_rules:
+      # Bypass cache for debugging
+      - match:
+          - request_method: ["GET", "HEAD"]
+          - url: "uploads/*"
+          - url_query: ["debug", "nocache"]
+          - url_query: ["bypass"]
+      action: BYPASS_CACHE
+      
+      # Longer cache for "long_term" query
+      - match:
+          - request_method: ["GET", "HEAD"]
+          - url: "uploads/*"
+          - url_query: ["long_term"]
+      action: SET_CACHE:
+        edge:
+          max_age: 31536000  # 1 year
+          immutable: true
+          browser:
+            max_age: 31536000  # 1 year
+            immutable: true
+
+      # Medium cache for "short_term" query
+      - match:
+          - request_method: ["GET", "HEAD"]
+          - url: "uploads/*"
+          - url_query: ["short_term"]
+      action: SET_CACHE:
+        edge:
+          max_age: 2592000  # 30 days
+          immutable: true
+          browser:
+            max_age: 2592000  # 30 days
+            immutable: true
+
+  # Special handling for AVIF/WebP requests
+  - pattern: "uploads/*"
+    # Accept AVIF first, WebP second
+    respond_with_status: 200
+    content_type: "image/avif"
+    content_type: "image/webp"
+    
+    # Transform images based on Accept header
+    # Will automatically generate AVIF if Accept header includes image/avif
+
+# Privacy and security policies
+privacy:
+  content_type: "image/*"
+  log_request_body: true
+
+# Anonymize IP addresses for logging
+log_settings:
+  redacted_fields:
+    - ip_address
+    - user_agent
+
+# Edge caching configuration
+edge_cache:
+  max_age: 86400  # 1 day
+  api_tokens: "static"
+  
+# Origin request header authentication
+authentication:
+  # Enable strict mode for authentication tokens
+  jwt_auth: true
+  
+# Service worker features
+service_worker:
+  # Enable service worker mode for better control
+  compatibility_flags: [ "websockets", "streams", "module_rules" ]
+  
+  # Configure caching for service worker
+  cache: "public, max-age=86400, immutable"
+
+# Enable features for optimal performance
+features:
+  # Enable CORS for all methods
+  - cors_headers
+
+  # Enable H2 prioritization
+  - h2_prioritization
+
+  # Enable early hints
+  - early_hints
+
+  # Enable image resizing
+  - image_resize
+
+# Optimizations for different image types
+image_resizing:
+  # Generate multiple image sizes for responsive design
+  default_aspect_ratio: "16:9"
+  auto_encode_webp: true
+  auto_encode_avif: true
+  
+  # Resized image configurations
+  versions:
+    - id: "w1200"
+      fit: "scale-down"
+      width: 1200
+      height: 1200
+      format: "auto"  # Accepts: avif, webp, jpeg
+      quality: 80
+      
+    - id: "w800"
+      fit: "scale-down"
+      width: 800
+      height: 800
+      format: "auto"  # Accepts: avif, webp, jpeg
+      quality: 80
+      
+    - id: "w400"
+      fit: "scale-down"
+      width: 400
+      height: 400
+      format: "auto"  # Accepts: avif, webp, jpeg
+      quality: 80
+      
+    - id: "w200"
+      fit: "scale-down"
+      width: 200
+      height: 200
+      format: "auto"  # Accepts: avif, webp, jpeg
+      quality: 80
+
+# Analytics and monitoring
+analytics:
+  # Enable analytics for image requests
+  enabled: true
+  
+  # Custom analytics endpoint
+  - request_id_format: "uuid"
+  
+  # Redact sensitive information
+  redact_pii: true
+  
+  # Custom events
+  custom_events:
+    event_name: "image_request"
+    parameters:
+      - id: "$request_id"
+      - url: "$request_url"
+      - host: "$request_host"
+      - country: "$cf-ipcountry"
+      - method: "$request_method"
+      - status: "$response_status"
+      - content_type: "$content_type"
+      - user_agent: "$http_user_agent"
+      - referer: "$http_referer"
+      - content_length: "$response_content_length"
+      - cache_status: "$cf_cache_status"
+      - image_strategy: "$x-image-cache-strategy"
+
+# Rate limiting configuration
+rate_limit:
+  # General rate limiting
+  general:
+    rate_limit: "10000:5m"  # 10k requests per 5 minutes per IP
+    rate_limit_mode: "challenge"  # Use challenge page for rate limiting
+    rate_limit_challenge_ttl: 3600  # 1 hour challenge TTL
+    
+  # Stricter rate limiting for uploads
+  uploads:
+    rate_limit: "100:1m"  # 100 uploads per minute per IP
+    rate_limit_mode: "block"  # Block requests when limit exceeded
+    
+  # Lenient rate limiting for public images
+  public:
+    rate_limit: "60000:10m"  # 60k requests per 10 minutes per IP
+
+# WebP and AVIF optimization
+webp:
+  quality: 80
+  auto: true
+  
+avif:
+  quality: 80
+  auto: true
+  
+  # Browser support detection
+browser_support:
+  chrome: "min_version: 100"
+  firefox: "min_version: 100"
+  safari: "min_version: 14"
+  edge: "min_version: 100"
+
+# Content delivery optimization
+content_delivery:
+  # Enable Brotli compression
+  brotli: {
+    level: 8
+    mode: "auto"
+  }
+  
+  # Enable Gzip compression
+  gzip: {
+    level: 6
+    mode: "auto"
+  }
+  
+  # Enable Zstandard compression
+  zstd:
+    level: 4
+    mode: "auto"
+  }
+  
+  # Content negotiation
+  accept:
+    # Prioritize AVIF
+    accept_encoding: ["br", "gzip", "zstd"]
+    prefer:
+      - "image/avif"
+      - "image/webp"
+      - "image/jpeg"
+      - "image/png"
+
+# Logging configuration
+log_settings:
+  # Log level (DEBUG, INFO, WARN, ERROR)
+  log_level: "INFO"
+  
+  # Custom log format
+  format: "json"
+  
+  # Redact sensitive information
+  redact_pii: true
+  redact_fields:
+    - ip_address
+    - user_agent
+    - cookie
+    - auth_header
+    - cf_ipcountry
+    - cf_ipcity
+    - cf_ipregion
+    - cf_ray_id
+
+# Development and debugging settings
+development:
+  # Enable debug mode in development
+  debug_mode: process.env.NODE_ENV === "development"
+  
+  # Enable verbose logging in development
+  verbose_logging: process.env.NODE_ENV === "development"
+  
+  # Disable caching in development
+  disable_cache: process.env.NODE_ENV === "development"
+  
+  # Enable local preview
+  local_preview: process.env.NODE_ENV === "development"

@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { useNostr } from '@/hooks/useNostr';
 import { NOSTR_CONFIG } from '@/config/nostr';
+import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 /**
@@ -9,11 +10,10 @@ import type { NostrEvent } from '@nostrify/nostrify';
 function validateLongformArticle(event: NostrEvent): boolean {
   if (event.kind !== NOSTR_CONFIG.kinds.longform) return false;
 
-  // Benötigte Tags: d (identifier), title
+  // Benötigte Tags: d (identifier)
   const d = event.tags.find(([name]) => name === 'd')?.[1];
-  const title = event.tags.find(([name]) => name === 'title')?.[1];
 
-  if (!d || !title) return false;
+  if (!d) return false;
 
   // Content sollte vorhanden sein
   if (!event.content || event.content.trim().length === 0) return false;
@@ -22,11 +22,25 @@ function validateLongformArticle(event: NostrEvent): boolean {
 }
 
 /**
- * Extrahiert Metadaten aus einem Longform Artikel
+ * Prüft ob ein Event ein Platz ist (hat type=place, #t place, #t places, oder identifier beginnt mit "place-")
+ */
+function isPlaceEvent(event: NostrEvent): boolean {
+  const typeTag = event.tags.find(([name]) => name === 'type')?.[1];
+  const placeTag = event.tags.some(([name, value]) => name === 't' && ['place', 'places'].includes(value));
+  const identifier = event.tags.find(([name]) => name === 'd')?.[1] || '';
+  const hasPlaceIdentifier = identifier.startsWith('place-');
+
+  return typeTag === 'place' || placeTag || hasPlaceIdentifier;
+}
+
+/**
+ * Extrahiert Metadaten aus einem Longform Artikel oder Platz
  */
 export function extractArticleMetadata(event: NostrEvent) {
   const d = event.tags.find(([name]) => name === 'd')?.[1] || '';
-  const title = event.tags.find(([name]) => name === 'title')?.[1] || 'Ohne Titel';
+  const title = event.tags.find(([name]) => name === 'title')?.[1] ||
+                event.tags.find(([name]) => name === 'name')?.[1] ||
+                extractTitleFromContent(event.content) || 'Ohne Titel';
   const summary = event.tags.find(([name]) => name === 'summary')?.[1] || '';
   const image = event.tags.find(([name]) => name === 'image')?.[1] || '';
   const published_at = event.tags.find(([name]) => name === 'published_at')?.[1];
@@ -44,33 +58,212 @@ export function extractArticleMetadata(event: NostrEvent) {
 }
 
 /**
- * Hook zum Laden von Longform Artikeln (NIP-23, kind 30023)
- * Lädt alle Artikel der konfigurierten Autoren
+ * Extrahiert Titel aus dem Content (für Markdown-Format mit # Titel)
  */
-export function useLongformArticles() {
+function extractTitleFromContent(content: string): string | null {
+  const lines = content.split('\n');
+  const firstLine = lines[0]?.trim();
+
+  if (firstLine?.startsWith('# ')) {
+    return firstLine.slice(2).trim();
+  }
+
+  return null;
+}
+
+/**
+ * Hook zum Laden von Longform Artikeln mit optionalen Filtern (NIP-23, kind 30023)
+ * Deprecated: Verwende useInfiniteLongformArticles für bessere Performance
+ */
+export function useLongformArticles(options?: {
+  kinds?: number[];
+  '#t'?: string[];
+  authors?: string[];
+  limit?: number;
+}) {
   const { nostr } = useNostr();
 
   return useQuery({
-    queryKey: ['longform-articles', NOSTR_CONFIG.authorPubkeys],
+    queryKey: ['longform-articles', NOSTR_CONFIG.authorPubkeys, options?.['#t']],
     queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
 
+      const filter: any = {
+        kinds: options?.kinds || [NOSTR_CONFIG.kinds.longform],
+        authors: options?.authors || NOSTR_CONFIG.authorPubkeys,
+        limit: options?.limit || 100,
+      };
+
+      // Füge Tag-Filter hinzu wenn vorhanden
+      if (options?.['#t'] && options['#t'].length > 0) {
+        filter['#t'] = options['#t'];
+      }
+
+      const events = await nostr.query([filter], { signal });
+
+      console.log('Found longform events:', events.length);
+
+      // Validiere und filtere Artikel (Plätze ausschließen)
+      const validArticles = events.filter(event => {
+        const isValid = validateLongformArticle(event);
+        const isPlace = isPlaceEvent(event);
+
+        console.log('Event:', event.id, {
+          kind: event.kind,
+          identifier: event.tags.find(([name]) => name === 'd')?.[1],
+          type: event.tags.find(([name]) => name === 'type')?.[1],
+          isValid,
+          isPlace,
+          willInclude: isValid && !isPlace
+        });
+
+        return isValid && !isPlace;
+      });
+
+      console.log('Valid articles after filtering:', validArticles.length);
+
+      // Sortiere nach Datum (neueste zuerst)
+      return validArticles.sort((a, b) => b.created_at - a.created_at);
+    },
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
+    gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+}
+
+/**
+ * Hook zum Laden von Longform Artikeln mit Infinite Scroll für bessere Performance
+ * Lädt Artikel in Batches (20-30 pro Seite) bei Bedarf
+ */
+export function useInfiniteLongformArticles(options?: {
+  kinds?: number[];
+  '#t'?: string[];
+  authors?: string[];
+}) {
+  const { nostr } = useNostr();
+
+  return useInfiniteQuery({
+    queryKey: ['infinite-longform-articles', NOSTR_CONFIG.authorPubkeys, options?.['#t']],
+    queryFn: async ({ pageParam, signal }) => {
+      const abortSignal = AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
+
+      const filter: any = {
+        kinds: options?.kinds || [NOSTR_CONFIG.kinds.longform],
+        authors: options?.authors || NOSTR_CONFIG.authorPubkeys,
+        limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage,
+      };
+
+      // Timestamp-basierte Pagination
+      if (pageParam) {
+        filter.until = pageParam;
+        console.log('🔄 Infinite Scroll: Fetching next page', { until: pageParam });
+      } else {
+        console.log('📄 Infinite Scroll: Fetching first page');
+      }
+
+      // Füge Tag-Filter hinzu wenn vorhanden
+      if (options?.['#t'] && options['#t'].length > 0) {
+        filter['#t'] = options['#t'];
+      }
+
+      const events = await nostr.query([filter], { signal: abortSignal });
+
+      console.log('📦 Infinite Scroll: Received', events.length, 'events from relay (limit was 25)');
+
+      // Validiere und filtere Artikel (Plätze ausschließen)
+      const validArticles = events.filter(event => {
+        const isValid = validateLongformArticle(event);
+        const isPlace = isPlaceEvent(event);
+        return isValid && !isPlace;
+      });
+
+      console.log('✅ Infinite Scroll: After filtering', validArticles.length, 'valid articles');
+
+      // Wenn der Relay zu viele Events zurückgibt, auf max itemsPerPage pro Seite beschränken
+      const MAX_PER_PAGE = DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage;
+      const paginatedArticles = validArticles.slice(0, MAX_PER_PAGE);
+
+      if (validArticles.length > MAX_PER_PAGE) {
+        console.log(`⚠️ Infinite Scroll: Limiting to ${MAX_PER_PAGE} articles (received ${validArticles.length})`);
+      }
+
+      // Sortiere nach Datum (neueste zuerst)
+      const sorted = paginatedArticles.sort((a, b) => b.created_at - a.created_at);
+      return sorted;
+    },
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length === 0) {
+        console.log('🚫 Infinite Scroll: No more articles (empty page)');
+        return undefined;
+      }
+
+      const lastCreated = lastPage[lastPage.length - 1].created_at;
+      const nextPageParam = lastCreated - 1;
+
+      console.log('➡️ Infinite Scroll: Next page param', {
+        lastPageLength: lastPage.length,
+        lastCreated,
+        nextPageParam
+      });
+
+      return nextPageParam;
+    },
+    initialPageParam: undefined,
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime * 2,
+    gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+}
+
+/**
+ * Hook zum Laden von Plätzen (nur Events mit type=place oder #t place)
+ */
+export function usePlaces() {
+  const { nostr } = useNostr();
+
+  return useQuery({
+    queryKey: ['places', NOSTR_CONFIG.authorPubkeys],
+    queryFn: async (c) => {
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
+
+      console.log('Querying for places...');
       const events = await nostr.query(
         [
           {
             kinds: [NOSTR_CONFIG.kinds.longform],
             authors: NOSTR_CONFIG.authorPubkeys,
-            limit: 100,
+            limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage * 4,
           },
         ],
         { signal }
       );
 
-      // Validiere und sortiere Artikel
-      const validArticles = events.filter(validateLongformArticle);
+      console.log('Found total longform events:', events.length);
+
+      // Validiere und filtere Plätze
+      const validPlaces = events.filter(event => {
+        const isValid = validateLongformArticle(event);
+        const isPlace = isPlaceEvent(event);
+
+        console.log('Place check for event:', event.id, {
+          kind: event.kind,
+          identifier: event.tags.find(([name]) => name === 'd')?.[1],
+          type: event.tags.find(([name]) => name === 'type')?.[1],
+          name: event.tags.find(([name]) => name === 'name')?.[1],
+          isValid,
+          isPlace,
+          willInclude: isValid && isPlace
+        });
+
+        return isValid && isPlace;
+      });
+
+      console.log('Valid places after filtering:', validPlaces.length);
 
       // Sortiere nach Datum (neueste zuerst)
-      return validArticles.sort((a, b) => b.created_at - a.created_at);
+      return validPlaces.sort((a, b) => b.created_at - a.created_at);
     },
     staleTime: NOSTR_CONFIG.cache.staleTime,
     gcTime: NOSTR_CONFIG.cache.maxAge,
@@ -88,7 +281,7 @@ export function useLongformArticle(identifier: string, authorPubkey: string) {
   return useQuery({
     queryKey: ['longform-article', identifier, authorPubkey],
     queryFn: async (c) => {
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
 
       const events = await nostr.query(
         [

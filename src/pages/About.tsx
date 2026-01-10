@@ -7,8 +7,24 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { AUTHORS } from '@/config/nostr';
 import { Mail, Globe, Zap, Key, Waves, Sun, Compass } from 'lucide-react';
 import { getValidAuthors } from '@/lib/authors';
+import { useHead } from '@unhead/react';
 
 export function About() {
+  // SEO Meta Tags
+  useHead({
+    title: 'Über Uns - MojoBus Perpetual Traveler Blog',
+    meta: [
+      { name: 'description', content: 'Lerne Mojo und unser Leben als Perpetual Traveler kennen. Vanlife, offgrid, Leben am Meer und unsere Abenteuer mit Lionhunter.' },
+      { property: 'og:title', content: 'Über Uns - MojoBus Perpetual Traveler Blog' },
+      { property: 'og:description', content: 'Lerne Mojo und unser Leben als Perpetual Traveler kennen. Vanlife, offgrid und unsere Abenteuer am Meer.' },
+      { property: 'og:url', content: 'https://mojobus.cc/about' },
+      { name: 'twitter:title', content: 'Über Uns - MojoBus Perpetual Traveler Blog' },
+      { name: 'twitter:description', content: 'Lerne Mojo und unser Leben als Perpetual Traveler kennen. 🌍🧭🌊' },
+    ],
+    link: [
+      { rel: 'canonical', href: 'https://mojobus.cc/about' }
+    ]
+  });
   const validAuthors = getValidAuthors();
 
   return (

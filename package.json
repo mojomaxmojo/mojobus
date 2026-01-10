@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "npm i --silent && vite",
-    "build": "npm i --silent && vite build -l error && cp dist/index.html dist/404.html && echo 'Project built successfully!'",
-    "test": "npm i --silent && tsc --noEmit && eslint && vitest run --reporter=dot --silent && vite build -l error && cp dist/index.html dist/404.html && echo 'All tests passed!'",
-    "deploy": "npm run build && npx -y nostr-deploy-cli deploy --skip-setup"
+    "build": "node build-intelligent.js",
+    "build:analyze": "npm i --silent && vite build -l error && node vite.analyze.js --analyze",
+    "build:force": "FORCE_REBUILD=true node build-intelligent.js",
+    "test": "npm run build && vitest run",
+    "deploy": "npm run build && npx -y nostr-deploy-cli deploy --skip-setup",
+    "clean": "rm -rf dist .build-cache.json .assets-cache.json",
+    "cache:clear": "npm run clean"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.6",
@@ -86,12 +90,14 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.20",
+    "buffer": "^6.0.3",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
     "globals": "^15.9.0",
     "jsdom": "^26.1.0",
     "postcss": "^8.4.47",
+    "rollup-plugin-visualizer": "^6.0.5",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",

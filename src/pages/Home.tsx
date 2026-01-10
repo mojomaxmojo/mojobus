@@ -10,8 +10,28 @@ import { Waves, Compass, Sun, Anchor } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
+import { useHead } from '@unhead/react';
 
 export function Home() {
+  // SEO Meta Tags
+  useHead({
+    title: 'MojoBus - Perpetual Traveler Blog',
+    meta: [
+      { name: 'description', content: 'Perpetual Traveler Blog. Unser Leben am Meer, vanlife, offgrid und Reisen. Geschichten, Tipps und Einblicke vom Strand.' },
+      { name: 'keywords', content: 'perpetual traveler, vanlife, offgrid, beachlife, reisen, camping, meer, strand, mobiles leben, nomaden' },
+      { property: 'og:title', content: 'MojoBus - Perpetual Traveler Blog' },
+      { property: 'og:description', content: 'Unser Leben am Meer. Vanlife, offgrid und Geschichten vom Strand. Perpetual Traveler Lifestyle mit Soul Leon (Lionhunter).' },
+      { property: 'og:url', content: 'https://mojobus.cc/' },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:title', content: 'MojoBus - Perpetual Traveler Blog' },
+      { name: 'twitter:description', content: 'Unser Leben am Meer. Vanlife, offgrid und Geschichten vom Strand. 🌊🚐✨' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+    link: [
+      { rel: 'canonical', href: 'https://mojobus.cc/' }
+    ]
+  });
   const { data: articles, isLoading } = useLongformArticles();
   const recentArticles = articles?.slice(0, 3) || [];
 
@@ -31,7 +51,7 @@ export function Home() {
               Unser Leben am Meer
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Leon (Lionhunter), unser RV und das Meer.
+              Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Soul Leon (Lionhunter), unser RV und das Meer.
               Wir leben als Perpetual Traveler, meist direkt am Strand, autark mit Solarstrom und minimalistisch unterwegs.
             </p>
             <div className="flex flex-wrap justify-center gap-2 pt-4">
@@ -188,15 +208,30 @@ const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent
     identifier: metadata.identifier,
   });
 
+  // Optimized thumbnail URL (200px, quality 80) with srcset
+  const thumbnailUrl = metadata.image ? getListThumbnailUrl(metadata.image) : null;
+  const srcset = metadata.image ? generateSrcset(metadata.image) : undefined;
+  const sizes = generateSizes('card');
+  const placeholderColor = metadata.image ? getImagePlaceholder(metadata.image) : undefined;
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <Link to={`/${naddr}`}>
-        {metadata.image && (
-          <div className="aspect-video overflow-hidden">
+        {thumbnailUrl && (
+          <div
+            className="aspect-video overflow-hidden bg-muted"
+            style={{
+              backgroundColor: placeholderColor,
+            }}
+          >
             <img
-              src={metadata.image}
+              src={thumbnailUrl}
+              srcSet={srcset}
+              sizes={sizes}
               alt={metadata.title}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         )}

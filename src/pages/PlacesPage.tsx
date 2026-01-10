@@ -1,0 +1,111 @@
+import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useNostr } from '@/hooks/useNostr';
+import { useHead } from '@unhead/react';
+
+const PlacesPage = () => {
+  const { nostr } = useNostr();
+
+  const { data: events, isLoading } = useQuery({
+    queryKey: ['places'],
+    queryFn: async () => {
+      try {
+        const filters = [{ kinds: [30023], '#t': ['place'], limit: 100 }];
+        const results = await nostr.query(filters);
+        return results || [];
+      } catch (error) {
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const places = useMemo(() => {
+    if (!events || !Array.isArray(events)) return [];
+    
+    return events.map((event: any) => {
+      const titleTag = event.tags.find((tag: any) => tag[0] === 'title');
+      const imageTag = event.tags.find((tag: any) => tag[0] === 'image');
+      const locationTag = event.tags.find((tag: any) => tag[0] === 'location');
+      
+      return {
+        id: event.id,
+        title: titleTag?.[1] || 'Unbenannt',
+        image: imageTag?.[1] || '',
+        location: locationTag?.[1] || '',
+        created_at: event.created_at,
+        author: event.pubkey
+      };
+    });
+  }, [events]);
+
+  useHead({
+    title: 'Plätze - MojoBus Perpetual Traveler Blog',
+    meta: [
+      { name: 'description', content: 'Alle Plätze sortiert nach Erstellungsdatum.' },
+      { name: 'keywords', content: 'orte' },
+      { property: 'og:title', content: 'Plätze - MojoBus' },
+      { property: 'og:url', content: 'https://mojobus.org/plaetze' },
+      { property: 'og:type', content: 'website' }
+    ],
+    link: [{ rel: 'canonical', href: 'https://mojobus.org/plaetze' }]
+  });
+
+  return (
+    <div className="min-h-screen py-12">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold">Plätze</h1>
+          <p className="text-gray-600">Alle Plätze sortiert nach Erstellungsdatum</p>
+        </div>
+
+        {isLoading && (
+          <div className="text-center py-20">
+            <div className="text-2xl">Lade Plätze...</div>
+          </div>
+        )}
+
+        {!isLoading && places.length === 0 && (
+          <div className="text-center py-20">
+            <div className="text-2xl">Noch keine Plätze vorhanden</div>
+            <p>
+              <Link to="/veroeffentlichen?tab=place">Ersten Ort erstellen</Link>
+            </p>
+          </div>
+        )}
+
+        {!isLoading && places.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {places.map((place) => (
+              <div key={place.id} className="bg-white rounded-xl p-6 shadow-md border border-gray-200">
+                {place.image && (
+                  <img 
+                    src={place.image} 
+                    alt={place.title}
+                    className="w-full h-48 object-cover rounded-lg mb-4"
+                  />
+                )}
+                <h3 className="font-bold text-xl mb-2">{place.title}</h3>
+                {place.location && (
+                  <p className="text-gray-600 mb-2">📍 {place.location}</p>
+                )}
+                <p className="text-sm text-gray-500 mb-4">
+                  Erstellt am: {new Date(place.created_at * 1000).toLocaleDateString()}
+                </p>
+                <Link 
+                  to={`/naddr1${place.id}`}
+                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                  Details
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default PlacesPage;

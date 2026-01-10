@@ -1,12 +1,21 @@
 import { createContext } from "react";
+import type { RelayConfig } from "@/config/relays";
 
 export type Theme = "dark" | "light" | "system";
 
 export interface AppConfig {
   /** Current theme */
   theme: Theme;
-  /** Selected relay URL */
-  relayUrl: string;
+  /** Selected relay URLs (multi-relay support) */
+  relayUrls: string[];
+  /** Active relay for publishing */
+  activeRelay: string;
+  /** Maximum number of relays to query from */
+  maxRelays: number;
+  /** Enable event deduplication */
+  enableDeduplication: boolean;
+  /** Query timeout in milliseconds */
+  queryTimeout: number;
 }
 
 export interface AppContextType {
@@ -14,8 +23,8 @@ export interface AppContextType {
   config: AppConfig;
   /** Update configuration using a callback that receives current config and returns new config */
   updateConfig: (updater: (currentConfig: AppConfig) => AppConfig) => void;
-  /** Optional list of preset relays to display in the RelaySelector */
-  presetRelays?: { name: string; url: string }[];
+  /** Available relays for selection */
+  availableRelays: RelayConfig[];
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);

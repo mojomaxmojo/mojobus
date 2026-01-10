@@ -1,4 +1,3 @@
-import { type AddressPointer } from 'nostr-tools/nip19';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -9,18 +8,213 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { RelaySelector } from '@/components/RelaySelector';
-import { Calendar, User, ArrowLeft, Hash } from 'lucide-react';
+import { Calendar, User, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { TextWithLinks } from '@/components/TextWithLinks';
+import { VideoEmbed, isVideoContent } from '@/components/VideoEmbed';
 import NotFound from '@/pages/NotFound';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { useToast } from '@/hooks/useToast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useState } from 'react';
+import { useHead } from '@unhead/react';
+import { nip19, type AddressPointer } from 'nostr-tools';
+import { getArticleHeaderUrl, generateSrcset, generateSizes } from '@/lib/imageUtils';
 
 interface ArticleViewProps {
   naddr: AddressPointer;
 }
 
+/**
+ * Entfernt die erste Zeile mit # Titel aus dem Content
+ */
+function removeTitleFromContent(content: string): string {
+  const lines = content.split('\n');
+  if (lines[0]?.trim().startsWith('# ')) {
+    return lines.slice(1).join('\n').trim();
+  }
+  return content;
+}
+
+/**
+ * Entfernt das erste Bild (normalerweise das Titelbild) aus dem Content
+ */
+function removeTitleImageFromContent(content: string): string {
+  const lines = content.split('\n');
+  const filteredLines = lines.filter((line, index) => {
+    const trimmedLine = line.trim();
+    // Remove first image line
+    if (trimmedLine.startsWith('![') && trimmedLine.includes('Titelbild')) {
+      // Also remove empty line that follows
+      return index === 0 ? false : !lines[index + 1]?.trim() === '';
+    }
+    return true;
+  });
+  return filteredLines.join('\n').trim();
+}
+
+// Parse position string to detect GPS coordinates
+const parsePosition = (position: string) => {
+  // GPS coordinate patterns
+  const gpsPatterns = [
+    /^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/, // 13.7563, 100.5018
+    /^(-?\d+\.?\d*)\s+(-?\d+\.?\d*)$/,  // 13.7563 100.5018
+  ];
+
+  for (const pattern of gpsPatterns) {
+    const match = position.match(pattern);
+    if (match) {
+      const [, lat, lng] = match.map(parseFloat);
+      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        return { lat, lng, isGPS: true };
+      }
+    }
+  }
+
+  return { lat: null, lng: null, isGPS: false };
+};
+
+// Generate OpenStreetMap URL for GPS coordinates
+const generateOSMUrl = (lat: number, lng: number) => {
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}&zoom=15`;
+};
+
+// Generate OpenStreetMap search URL for text locations
+const generateOSMSearchUrl = (position: string) => {
+  // Clean and encode position for search
+  const searchQuery = encodeURIComponent(position);
+  return `https://www.openstreetmap.org/search?query=${searchQuery}`;
+};
+
+// Custom component for rendering text with links and videos while preserving markdown
+function MarkdownWithLinks({ content }: { content: string }) {
+  return (
+    <div className="prose prose-slate dark:prose-invert prose-lg max-w-none">
+      <ReactMarkdown
+        components={{
+          p: ({ children }) => <p>{children}</p>,
+          li: ({ children }) => <li>{children}</li>,
+          blockquote: ({ children }) => <blockquote>{children}</blockquote>,
+          a: ({ href, children }) => {
+            if (href && isVideoContent(href)) {
+              return (
+                <div className="my-4">
+                  <VideoEmbed url={href} title={typeof children === 'string' ? children : undefined} />
+                </div>
+              );
+            }
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                {children}
+              </a>
+            );
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export function ArticleView({ naddr }: ArticleViewProps) {
   const { data: article, isLoading } = useLongformArticle(naddr.identifier, naddr.pubkey);
   const author = useAuthor(naddr.pubkey);
+  const { user } = useCurrentUser();
+  const { mutate: createEvent } = useNostrPublish();
+  const { toast } = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Check if current user is author
+  const isAuthor = user?.pubkey === naddr.pubkey;
+
+  // Dynamic SEO Meta Tags
+  useHead(() => {
+    if (!article) return {};
+
+    const metadata = extractArticleMetadata(article);
+    const title = metadata.title || 'Artikel';
+    const description = metadata.summary || `Perpetual Traveler Artikel von ${author.data?.metadata?.name || 'Mojo'}`;
+    const keywords = ['perpetual traveler', 'vanlife', 'offgrid', 'reisen', 'blog'];
+    const tags = article.tags.filter(([name]) => name === 't').map(([, value]) => value);
+    keywords.push(...tags);
+
+    return {
+      title: `${title} - MojoBus Perpetual Traveler Blog`,
+      meta: [
+        { name: 'description', content: description },
+        { name: 'keywords', content: keywords.join(', ') },
+        { property: 'og:title', content: `${title} - MojoBus` },
+        { property: 'og:description', content: description },
+        { property: 'og:type', content: 'article' },
+        { property: 'og:image', content: metadata.image || 'https://mojobus.org/mojobuslogo.png' },
+        { property: 'og:image:alt', content: title },
+        { property: 'article:author', content: author.data?.metadata?.name || 'Mojo' },
+        { property: 'article:published_time', content: new Date(metadata.publishedAt * 1000).toISOString() },
+        { property: 'article:tag', content: tags },
+        { name: 'twitter:title', content: `${title} - MojoBus` },
+        { name: 'twitter:description', content: description },
+        { name: 'twitter:card', content: metadata.image ? 'summary_large_image' : 'summary' },
+        { name: 'twitter:image', content: metadata.image || 'https://mojobus.org/mojobuslogo.png' },
+      ],
+      link: [
+        { rel: 'canonical', href: `https://mojobus.org/${nip19.naddrEncode(naddr)}` }
+      ]
+    };
+  });
+
+  const handleDelete = async () => {
+    if (!article) return;
+
+    try {
+      createEvent(
+        {
+          kind: 5, // Event deletion kind
+          content: 'Article deleted',
+          tags: [['e', article.id]],
+        },
+        {
+          onSuccess: () => {
+            toast({
+              title: 'Erfolgreich gelöscht!',
+              description: 'Der Artikel wurde von Nostr entfernt.',
+            });
+            setDeleteDialogOpen(false);
+            window.location.href = '/artikel';
+          },
+          onError: (error) => {
+            toast({
+              title: 'Fehler beim Löschen',
+              description: error.message,
+              variant: 'destructive',
+            });
+          },
+        }
+      );
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: 'Der Artikel konnte nicht gelöscht werden.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -78,18 +272,64 @@ export function ArticleView({ naddr }: ArticleViewProps) {
   const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
   const authorAvatar = author.data?.metadata?.picture;
 
+  // Extract location and type from article
+  const locationTag = article?.tags.find(([name]) => name === 'location');
+  const typeTag = article?.tags.find(([name]) => name === 'type');
+  const position = locationTag?.[1] || '';
+  const { lat, lng, isGPS } = position ? parsePosition(position) : { lat: null, lng: null, isGPS: false };
+  const isPlace = typeTag?.[1] === 'place';
+
+  // For places, check if title comes from name tag to avoid double display
+  const nameTag = article?.tags.find(([name]) => name === 'name')?.[1];
+  const titleFromName = nameTag && nameTag === metadata.title;
+
+  // Check if content should have title/image removed to avoid double display
+  const shouldRemoveTitle = isPlace && titleFromName;
+  const shouldRemoveTitleImage = isPlace && metadata.image;
+
+  // Content cleanup for places
+  let displayContent = metadata.content;
+  if (shouldRemoveTitle) {
+    displayContent = removeTitleFromContent(displayContent);
+  }
+  if (shouldRemoveTitleImage) {
+    displayContent = removeTitleImageFromContent(displayContent);
+  }
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <div className="bg-muted/30 py-12 md:py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto space-y-6">
-            <Button asChild variant="ghost" size="sm" className="mb-4">
-              <Link to="/artikel">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Zurück zu den Artikeln
-              </Link>
-            </Button>
+            <div className="flex items-center justify-between">
+              <Button asChild variant="ghost" size="sm" className="mb-4">
+                <Link to={isPlace ? "/veroeffentlichen?tab=place" : "/artikel"}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  {isPlace ? "Zurück zu den Plätzen" : "Zurück zu den Artikeln"}
+                </Link>
+              </Button>
+
+              {/* Edit/Delete buttons for authors */}
+              {isAuthor && (
+                <div className="flex gap-2 mb-4">
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={`/veroeffentlichen?edit=${article.id}&type=${isPlace ? 'place' : 'article'}`}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Bearbeiten
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Löschen
+                  </Button>
+                </div>
+              )}
+            </div>
 
             {/* Tags */}
             {metadata.tags.length > 0 && (
@@ -104,9 +344,16 @@ export function ArticleView({ naddr }: ArticleViewProps) {
             )}
 
             {/* Title */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-              {metadata.title}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+                {metadata.title}
+              </h1>
+              {isPlace && (
+                <Badge className="bg-ocean-100 text-ocean-800 border-ocean-200">
+                  📍 Ort
+                </Badge>
+              )}
+            </div>
 
             {/* Summary */}
             {metadata.summary && (
@@ -121,7 +368,7 @@ export function ArticleView({ naddr }: ArticleViewProps) {
                 {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
                 <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <div>
+              <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-1 font-semibold">
                     <User className="h-3 w-3" />
@@ -144,6 +391,8 @@ export function ArticleView({ naddr }: ArticleViewProps) {
                 )}
               </div>
             </div>
+
+
           </div>
         </div>
       </div>
@@ -154,20 +403,64 @@ export function ArticleView({ naddr }: ArticleViewProps) {
           <div className="max-w-4xl mx-auto space-y-12">
             {/* Featured Image */}
             {metadata.image && (
-              <div className="rounded-xl overflow-hidden shadow-lg">
+              <div className="rounded-xl overflow-hidden shadow-lg bg-muted">
                 <img
-                  src={metadata.image}
+                  src={getArticleHeaderUrl(metadata.image)}
+                  srcSet={generateSrcset(metadata.image)}
+                  sizes={generateSizes('header')}
                   alt={metadata.title}
                   className="w-full h-auto"
                   loading="eager"
+                  decoding="sync"
                 />
               </div>
             )}
 
             {/* Article Body */}
-            <article className="prose prose-slate dark:prose-invert prose-lg max-w-none">
-              <ReactMarkdown>{metadata.content}</ReactMarkdown>
-            </article>
+            <MarkdownWithLinks content={displayContent} />
+
+            {/* Position Display */}
+            {position && (
+              <div className="bg-muted/50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-ocean-600" />
+                    <span className="font-medium">Position</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className="h-6 px-2 text-xs"
+                  >
+                    <a
+                      href={isGPS && lat !== null && lng !== null
+                        ? generateOSMUrl(lat, lng)
+                        : generateOSMSearchUrl(position)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Karte
+                    </a>
+                  </Button>
+                </div>
+                <p className="mt-2 text-sm">{position}</p>
+                {isGPS && lat !== null && lng !== null && (
+                  <div className="mt-2 rounded-lg overflow-hidden border">
+                    <iframe
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}&layer=mapnik&marker=${lat},${lng}`}
+                      width="100%"
+                      height="200"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      className="rounded-lg"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Divider */}
             <div className="border-t my-12" />
@@ -182,6 +475,24 @@ export function ArticleView({ naddr }: ArticleViewProps) {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Artikel löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dies wird den Artikel permanent von Nostr entfernen. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,27 +1,21 @@
 /**
  * Nostr Konfiguration für MojoBus Blog
+ * Legacy-Konfiguration - Neue Konfigurationen unter ./relays.ts und ./app.ts
  */
 
-// Autoren-Daten (zentralisiert für einfache Verwaltung)
-export const AUTHORS = [
-  {
-    id: 'mojo',
-    name: 'Mojo',
-    npub: 'npub1f4vym2mu3q9fsz08muz8d469hl568l5358qx90qlaspyuz67ru0sfxvupf',
-    pubkey: '4d584dab7c880a9809e7df0476d745bfe9a3fe91a1c062bc1fec024e0b5e1f1f',
-  },
-  {
-    id: 'susanne',
-    name: 'Susanne',
-    npub: 'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc9c5407f828002qdls5wz',
-    pubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
-  },
-] as const;
+import { Author } from '@/config/types';
+import { AUTHORS, RELAYS as RELAYS_NEW } from './relays';
+
+// Re-export AUTHORS aus relays.ts für Kompatibilität
+export { AUTHORS, Author };
 
 export const NOSTR_CONFIG = {
   // Autoren NPUBs (Legacy-Support)
   authors: Object.fromEntries(AUTHORS.map(a => [a.id, a.npub])),
-  
+
+  // Autoren NIP-05 Identifiers
+  nip05: Object.fromEntries(AUTHORS.map(a => [a.id, a.nip05])),
+
   // Autoren Pubkeys (hex format für Nostr queries)
   authorPubkeys: AUTHORS.map(a => a.pubkey),
 
@@ -32,11 +26,15 @@ export const NOSTR_CONFIG = {
     metadata: 0,     // Profile metadata
   },
 
-  // Cache settings
+  // Cache settings - optimiert für Performance
   cache: {
     maxAge: 1000 * 60 * 60, // 1 hour
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes (erhöht für bessere Performance)
   },
 };
+
+// Default Relay configuration - Import aus relays.ts
+// Dies ist für Legacy-Unterstützung
+export const DEFAULT_RELAYS = RELAYS_NEW;
 
 export default NOSTR_CONFIG;

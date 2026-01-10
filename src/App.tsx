@@ -12,6 +12,9 @@ import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { NWCProvider } from '@/contexts/NWCContext';
 import { AppConfig } from '@/contexts/AppContext';
+import { DEFAULT_APP_CONFIG as DEFAULT_RELAY_CONFIG } from '@/config/relays';
+import { APP_SETTINGS, NOSTR_CONFIG, THEME_CONFIG } from '@/config';
+import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import AppRouter from './AppRouter';
 
 const head = createHead({
@@ -25,30 +28,31 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 60, // 1 hour
-      retry: 2,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
+      gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime,
+      retry: DEFAULT_PERFORMANCE_CONFIG.relay.retry.attempts,
+      retryDelay: (attemptIndex) => Math.min(
+        DEFAULT_PERFORMANCE_CONFIG.relay.retry.baseDelay * (DEFAULT_PERFORMANCE_CONFIG.relay.retry.multiplier ** attemptIndex),
+        DEFAULT_PERFORMANCE_CONFIG.relay.retry.maxDelay
+      ),
     },
   },
 });
 
+// Default Konfiguration wird jetzt aus verschiedenen Config-Modulen importiert
 const defaultConfig: AppConfig = {
-  theme: "light",
-  relayUrl: "wss://relay.primal.net",
+  theme: THEME_CONFIG.defaultTheme,
+  relayUrls: DEFAULT_RELAY_CONFIG.relayUrls,
+  activeRelay: DEFAULT_RELAY_CONFIG.activeRelay,
+  maxRelays: DEFAULT_PERFORMANCE_CONFIG.relay.maxRelaysForQueries,
+  enableDeduplication: DEFAULT_PERFORMANCE_CONFIG.relay.enableDeduplication,
+  queryTimeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
 };
-
-const presetRelays = [
-  { url: 'wss://ditto.pub/relay', name: 'Ditto' },
-  { url: 'wss://relay.nostr.band', name: 'Nostr.Band' },
-  { url: 'wss://relay.damus.io', name: 'Damus' },
-  { url: 'wss://relay.primal.net', name: 'Primal' },
-];
 
 export function App() {
   return (
     <UnheadProvider head={head}>
-      <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
+      <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig}>
         <QueryClientProvider client={queryClient}>
           <NostrLoginProvider storageKey='nostr:login'>
             <NostrProvider>
