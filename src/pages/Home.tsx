@@ -74,7 +74,7 @@ export function Home() {
       </section>
 
       {/* Recent Articles Section */}
-      <section className="py-16 md:py-24 bg-muted/30">
+      <section className="bg-muted/30 -mt-[54px] pt-6 pb-16 md:pt-6 md:pb-24">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
