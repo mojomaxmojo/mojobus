@@ -55,15 +55,16 @@ export function Home() {
       { rel: 'canonical', href: 'https://mojobus.cc/' }
     ]
   });
+
   const { data: longformEvents, isLoading: isLoadingLongform } = useLongformArticles();
   const notesQuery = useNotes();
+  const { nostr } = useNostr();
 
   // Get all notes from infinite query pages
   const noteEvents = notesQuery.data?.pages?.flat() || [];
   const isLoadingNotes = notesQuery.isLoading;
 
   // Fetch images
-  const { nostr } = useNostr();
   const { data: imageEvents = [], isLoading: isLoadingImages } = useQuery({
     queryKey: ['home-images'],
     queryFn: async ({ signal }) => {
@@ -96,7 +97,7 @@ export function Home() {
   const contentItems: ContentItem[] = [];
 
   // Process longform events (articles and places)
-  if (longformEvents) {
+  if (longformEvents && Array.isArray(longformEvents)) {
     longformEvents.forEach((event) => {
       const isPlace = isPlaceEvent(event);
       const metadata = extractArticleMetadata(event);
@@ -110,7 +111,7 @@ export function Home() {
   }
 
   // Process notes
-  if (noteEvents) {
+  if (noteEvents && Array.isArray(noteEvents)) {
     noteEvents.forEach((event) => {
       contentItems.push({
         type: 'note',
@@ -121,7 +122,7 @@ export function Home() {
   }
 
   // Process images
-  if (imageEvents) {
+  if (imageEvents && Array.isArray(imageEvents)) {
     imageEvents.forEach((event) => {
       contentItems.push({
         type: 'image',
@@ -174,7 +175,7 @@ export function Home() {
         </div>
       </section>
 
-      {/* Recent Articles Section */}
+      {/* Recent Content Section */}
       <section className="bg-muted/30 pt-[42px] pb-16 md:pt-[42px] md:pb-24">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
@@ -206,16 +207,16 @@ export function Home() {
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">
-                    Noch keine Artikel veröffentlicht. Schau bald wieder vorbei! 🌊
+                    Noch keine Inhalte veröffentlicht. Schau bald wieder vorbei! 🌊
                   </p>
                 </CardContent>
               </Card>
             )}
 
-            {!isLoading && recentArticles.length > 0 && (
+            {!isLoading && recentItems.length > 0 && (
               <div className="text-center mt-8">
                 <Button asChild variant="outline" size="lg">
-                  <Link to="/artikel">Alle Artikel anzeigen</Link>
+                  <Link to="/artikel">Alle Inhalte anzeigen</Link>
                 </Button>
               </div>
             )}
