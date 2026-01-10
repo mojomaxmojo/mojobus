@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLongformArticles } from '@/hooks/useLongformArticles';
 import { useNotes } from '@/hooks/useNotes';
+import { useNostr } from '@nostrify/react';
+import { useQuery } from '@tanstack/react-query';
+import { NOSTR_CONFIG } from '@/config/nostr';
 import { extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
@@ -15,9 +18,10 @@ import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes
 import { useHead } from '@unhead/react';
 
 type ContentItem = {
-  type: 'article' | 'place' | 'note';
+  type: 'article' | 'place' | 'note' | 'image';
   event: NostrEvent;
   date: number;
+  thumbnailUrl?: string;
 };
 
 /**
@@ -52,10 +56,42 @@ export function Home() {
     ]
   });
   const { data: longformEvents, isLoading: isLoadingLongform } = useLongformArticles();
-  const { data: noteEvents, isLoading: isLoadingNotes } = useNotes();
+  const notesQuery = useNotes();
+
+  // Get all notes from infinite query pages
+  const noteEvents = notesQuery.data?.pages?.flat() || [];
+  const isLoadingNotes = notesQuery.isLoading;
+
+  // Fetch images
+  const { nostr } = useNostr();
+  const { data: imageEvents = [], isLoading: isLoadingImages } = useQuery({
+    queryKey: ['home-images'],
+    queryFn: async ({ signal }) => {
+      const events = await nostr.query([
+        {
+          kinds: [1, 30023],
+          authors: NOSTR_CONFIG.authorPubkeys,
+          '#t': ['medien', 'media', 'bilder', 'images'],
+          limit: 50,
+        }
+      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(2000)]) });
+
+      return events.filter((event: any) => {
+        const content = event.content.toLowerCase();
+        return content.includes('.jpg') ||
+               content.includes('.jpeg') ||
+               content.includes('.png') ||
+               content.includes('.gif') ||
+               content.includes('.webp') ||
+               content.includes('imgur.com') ||
+               content.includes('cdn.blossom') ||
+               content.includes('nostr.build');
+      });
+    },
+  });
 
   // Combine and categorize content
-  const isLoading = isLoadingLongform || isLoadingNotes;
+  const isLoading = isLoadingLongform || isLoadingNotes || isLoadingImages;
 
   const contentItems: ContentItem[] = [];
 
@@ -63,10 +99,12 @@ export function Home() {
   if (longformEvents) {
     longformEvents.forEach((event) => {
       const isPlace = isPlaceEvent(event);
+      const metadata = extractArticleMetadata(event);
       contentItems.push({
         type: isPlace ? 'place' : 'article',
         event,
         date: event.created_at,
+        thumbnailUrl: metadata.image ? getListThumbnailUrl(metadata.image) : undefined,
       });
     });
   }
@@ -76,6 +114,17 @@ export function Home() {
     noteEvents.forEach((event) => {
       contentItems.push({
         type: 'note',
+        event,
+        date: event.created_at,
+      });
+    });
+  }
+
+  // Process images
+  if (imageEvents) {
+    imageEvents.forEach((event) => {
+      contentItems.push({
+        type: 'image',
         event,
         date: event.created_at,
       });
@@ -271,7 +320,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
       identifier: metadata.identifier,
     });
     link = `/${naddr}`;
-  } else if (item.type === 'note') {
+  } else if (item.type === 'note' || item.type === 'image') {
     content = item.event.content.substring(0, 200);
     const note = nip19.noteEncode(item.event.id);
     link = `/${note}`;
@@ -279,16 +328,17 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
 
   // Get type icon
   const TypeIcon = item.type === 'place' ? MapPin :
-                  item.type === 'note' ? StickyNote :
+                  item.type === 'note' || item.type === 'image' ? StickyNote :
                   ImageIcon;
 
   const typeName = item.type === 'place' ? 'Ort' :
+                   item.type === 'image' ? 'Bild' :
                    item.type === 'note' ? 'Notiz' :
                    'Artikel';
 
-  // Optimized thumbnail URL for articles/places
-  const thumbnailUrl = image ? getListThumbnailUrl(image) : null;
-  const srcset = image ? generateSrcset(image) : undefined;
+  // Get thumbnail URL from item or extract it
+  const thumbnailUrl = item.thumbnailUrl || image ? getListThumbnailUrl(image) : null;
+  const srcset = thumbnailUrl ? generateSrcset(image) : undefined;
   const sizes = generateSizes('card');
   const placeholderColor = image ? getImagePlaceholder(image) : undefined;
 
@@ -306,7 +356,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
               src={thumbnailUrl}
               srcSet={srcset}
               sizes={sizes}
-              alt={title}
+              alt={title || typeName}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               loading="lazy"
               decoding="async"
