@@ -38,7 +38,7 @@ export function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-primary/10 via-background to-background py-20 md:py-32">
+      <section className="relative bg-gradient-to-b from-primary/10 via-background to-background pt-[60px] pb-20 md:pb-32">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <div className="flex justify-center mb-6">
