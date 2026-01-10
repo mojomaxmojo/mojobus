@@ -4,10 +4,6 @@
  */
 
 import { type Theme } from '@/contexts/AppContext';
-import { RELAY_PRESETS, DEFAULT_APP_CONFIG } from './relays';
-
-// Re-export DEFAULT_APP_CONFIG aus relays.ts für Kompatibilität
-export { DEFAULT_APP_CONFIG } from './relays';
 
 // ============================================================================
 // THEME-KONFIGURATION
@@ -110,5 +106,3 @@ export const CONFIG_LIMITS = {
 // ============================================================================
 // EXPORTS
 // ============================================================================
-
-export default DEFAULT_APP_CONFIG;

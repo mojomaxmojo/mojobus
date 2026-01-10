@@ -13,5 +13,5 @@ export * from './relays';
 
 // Legacy exports for backward compatibility
 export { NOSTR_CONFIG, AUTHORS, DEFAULT_RELAYS } from './nostr';
-export { DEFAULT_APP_CONFIG, APP_SETTINGS } from './app';
-export { DEFAULT_APP_CONFIG as DEFAULT_APP_CONFIG_RELAYS } from './relays';
+export { APP_SETTINGS } from './app';
+export { DEFAULT_APP_CONFIG } from './relays';
