@@ -10,7 +10,7 @@ import { NOSTR_CONFIG } from '@/config/nostr';
 import { extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { Waves, Compass, Sun, Anchor, MapPin, Image as ImageIcon, StickyNote } from 'lucide-react';
+import { Waves, Compass, Sun, Anchor } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -327,16 +327,6 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
     link = `/${note}`;
   }
 
-  // Get type icon
-  const TypeIcon = item.type === 'place' ? MapPin :
-                  item.type === 'note' || item.type === 'image' ? StickyNote :
-                  ImageIcon;
-
-  const typeName = item.type === 'place' ? 'Ort' :
-                   item.type === 'image' ? 'Bild' :
-                   item.type === 'note' ? 'Notiz' :
-                   'Artikel';
-
   // Get thumbnail URL from item or extract it
   const thumbnailUrl = item.thumbnailUrl || image ? getListThumbnailUrl(image) : null;
   const srcset = thumbnailUrl ? generateSrcset(image) : undefined;
@@ -348,7 +338,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
       <Link to={link}>
         {thumbnailUrl && (
           <div
-            className="aspect-video overflow-hidden bg-muted relative"
+            className="aspect-video overflow-hidden bg-muted"
             style={{
               backgroundColor: placeholderColor,
             }}
@@ -357,24 +347,14 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
               src={thumbnailUrl}
               srcSet={srcset}
               sizes={sizes}
-              alt={title || typeName}
+              alt={title}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               loading="lazy"
               decoding="async"
             />
-            <div className="absolute top-2 right-2 bg-primary text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-              <TypeIcon className="h-3 w-3" />
-              {typeName}
-            </div>
           </div>
         )}
         <CardHeader>
-          {!thumbnailUrl && (
-            <div className="flex items-center gap-2 mb-2">
-              <TypeIcon className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium text-primary">{typeName}</span>
-            </div>
-          )}
           <CardTitle className="line-clamp-2">{title || content.substring(0, 80)}</CardTitle>
           {summary && (
             <CardDescription className="line-clamp-3">{summary}</CardDescription>
