@@ -73,55 +73,6 @@ export function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardHeader>
-                <div className="flex justify-center mb-4">
-                  <Sun className="h-12 w-12 text-primary" />
-                </div>
-                <CardTitle className="text-center">Freiheit</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-muted-foreground">
-                  Das Rauschen der Wellen ist unser Wecker, Sonnenuntergänge sind unser Alltag.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardHeader>
-                <div className="flex justify-center mb-4">
-                  <Compass className="h-12 w-12 text-primary" />
-                </div>
-                <CardTitle className="text-center">Abenteuer</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-muted-foreground">
-                  Jeder Tag bringt neue Orte, neue Begegnungen und das Gefühl, wirklich frei zu sein.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardHeader>
-                <div className="flex justify-center mb-4">
-                  <Anchor className="h-12 w-12 text-primary" />
-                </div>
-                <CardTitle className="text-center">Einfachheit</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-muted-foreground">
-                  Minimalistisch unterwegs mit Solarstrom – autark und unabhängig.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
       {/* Recent Articles Section */}
       <section className="py-16 md:py-24 bg-muted/30">
         <div className="container mx-auto px-4">
@@ -168,6 +119,55 @@ export function Home() {
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <Card className="border-2 hover:border-primary transition-colors">
+              <CardHeader>
+                <div className="flex justify-center mb-4">
+                  <Sun className="h-12 w-12 text-primary" />
+                </div>
+                <CardTitle className="text-center">Freiheit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-center text-muted-foreground">
+                  Das Rauschen der Wellen ist unser Wecker, Sonnenuntergänge sind unser Alltag.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 hover:border-primary transition-colors">
+              <CardHeader>
+                <div className="flex justify-center mb-4">
+                  <Compass className="h-12 w-12 text-primary" />
+                </div>
+                <CardTitle className="text-center">Abenteuer</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-center text-muted-foreground">
+                  Jeder Tag bringt neue Orte, neue Begegnungen und das Gefühl, wirklich frei zu sein.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 hover:border-primary transition-colors">
+              <CardHeader>
+                <div className="flex justify-center mb-4">
+                  <Anchor className="h-12 w-12 text-primary" />
+                </div>
+                <CardTitle className="text-center">Einfachheit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-center text-muted-foreground">
+                  Minimalistisch unterwegs mit Solarstrom – autark und unabhängig.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
