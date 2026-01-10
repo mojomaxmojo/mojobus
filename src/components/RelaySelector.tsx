@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { RELAY_PRESETS } from "@/config/relays";
-import { useNostr } from "@nostrify/react";
+import { useAppContext } from "@/hooks/useAppContext";
+import { useToast } from "@/hooks/useToast";
 
 interface PresetOption {
 value: string;
@@ -29,53 +30,48 @@ description: "Maximale Zuverlässigkeit mit mehreren Relays",
 ];
 
 export function RelaySelector() {
-const { nostr } = useNostr();
-const [selectedPreset, setSelectedPreset] = useState<string>("fast");
-const [customRelays, setCustomRelays] = useState<string[]>([]);
-const [autoApply, setAutoApply] = useState<boolean>(true);
+  const { config, updateConfig } = useAppContext();
+  const { toast } = useToast();
+  const [selectedPreset, setSelectedPreset] = useState<string>(config.relayUrls.length === 1 && config.relayUrls[0] === RELAY_PRESETS.fast.relayUrls[0] ? 'fast' :
+    config.relayUrls.length === 2 && config.relayUrls[0] === RELAY_PRESETS.balanced.relayUrls[0] ? 'balanced' :
+    config.relayUrls.length === 3 ? 'reliable' : 'fast');
 
-const applyPreset = async (preset: string) => {
-const presetConfig = RELAY_PRESETS[preset as keyof typeof RELAY_PRESETS];
+  const applyPreset = async (preset: string) => {
+    const presetConfig = RELAY_PRESETS[preset as keyof typeof RELAY_PRESETS];
 
-if (presetConfig) {
-try {
-const currentRelays = nostr.getRelays();
-const newRelays = presetConfig.relayUrls;
+    if (presetConfig) {
+      try {
+        console.log("Applying relay preset:", preset);
+        console.log("New relay configuration:", presetConfig);
 
-console.log("Replacing relays...");
-console.log("Current:", currentRelays);
-console.log("New:", newRelays);
+        updateConfig((currentConfig) => ({
+          ...currentConfig,
+          relayUrls: presetConfig.relayUrls,
+          activeRelay: presetConfig.relayUrls[0],
+          maxRelays: presetConfig.maxRelays,
+          queryTimeout: presetConfig.queryTimeout,
+        }));
 
-currentRelays.forEach(relay => {
-nostr.removeRelay(relay.url);
-});
+        setSelectedPreset(preset);
+        toast({
+          title: 'Relay-Preset angewendet',
+          description: `${presetConfig.name} wurde aktiviert.`,
+        });
+      } catch (error) {
+        console.error("Failed to apply preset:", error);
+        toast({
+          title: 'Fehler',
+          description: 'Konnte Relay-Preset nicht anwenden.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
 
-newRelays.forEach(url => {
-nostr.addRelay({ url, read: true, write: true });
-});
-
-localStorage.setItem("nostr:app-config", JSON.stringify({
-...JSON.parse(localStorage.getItem("nostr:app-config") || "{}"),
-relayUrls: newRelays,
-activeRelay: newRelays[0],
-maxRelays: presetConfig.maxRelays,
-queryTimeout: presetConfig.queryTimeout,
-preset: preset,
-}));
-
-setSelectedPreset(preset);
-} catch (error) {
-console.error("Failed to apply preset:", error);
-}
-}
-};
-
-const handlePresetChange = (preset: string) => {
-setSelectedPreset(preset);
-if (autoApply) {
-applyPreset(preset);
-}
-};
+  const handlePresetChange = (preset: string) => {
+    setSelectedPreset(preset);
+    applyPreset(preset);
+  };
 
 return (
 <div className="space-y-6">
@@ -110,18 +106,6 @@ Wähle einen Relay-Preset für optimale Performance
 Automatische Anpassung aller Relay-Einstellungen
 </p>
 
-<div className="space-y-2">
-<label className="flex items-center space-x-2">
-<input
-type="checkbox"
-checked={autoApply}
-onChange={(e) => setAutoApply(e.target.checked)}
-className="h-4 w-4"
-/>
-<span className="text-sm">Preset automatisch anwenden</span>
-</label>
-</div>
-
 {selectedPreset && (
 <div className="bg-muted/50 rounded-lg p-4 space-y-3">
 <h4 className="text-sm font-medium mb-2">Gewähltes Preset: {selectedPreset}</h4>
@@ -151,7 +135,7 @@ className="h-4 w-4"
 <div>
 <span className="font-medium">Deduplizierung:</span>
 <div className="text-muted-foreground">
-{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.enableDeduplication ? "Aktiv" : "Inaktiv"}
+Aktiv
 </div>
 </div>
 </div>

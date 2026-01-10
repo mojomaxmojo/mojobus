@@ -18,7 +18,6 @@ import { nip19 } from 'nostr-tools';
 import { RelaySelector } from '@/components/RelaySelector';
 import { RELAY_PRESETS } from '@/config/relays';
 import { THEME_CONFIG } from '@/config';
-import { useNostr } from '@nostrify/react';
 import {
   Palette,
   Server,
@@ -46,7 +45,6 @@ export function Settings() {
   const { logout, logoutAll } = useLoginActions();
   const { user, users } = useCurrentUser();
   const { toast } = useToast();
-  const { nostr } = useNostr();
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string>('fast');
@@ -57,39 +55,19 @@ export function Settings() {
 
     if (presetConfig) {
       try {
-        const currentRelays = nostr.getRelays();
         const newRelays = presetConfig.relayUrls;
 
         console.log("Applying relay preset:", preset);
-        console.log("Replacing relays...");
-        console.log("Current:", currentRelays);
-        console.log("New:", newRelays);
+        console.log("New relay configuration:", presetConfig);
 
-        // Remove old relays
-        currentRelays.forEach(relay => {
-          nostr.removeRelay(relay.url);
-        });
-
-        // Add new relays
-        newRelays.forEach(url => {
-          nostr.addRelay({ url, read: true, write: true });
-        });
-
-        // Update app config
-        const appConfig = JSON.parse(localStorage.getItem("nostr:app-config") || "{}");
-        localStorage.setItem("nostr:app-config", JSON.stringify({
-          ...appConfig,
+        // Update app config via updateConfig - this will trigger NostrProvider to update
+        updateConfig((currentConfig) => ({
+          ...currentConfig,
           relayUrls: newRelays,
           activeRelay: newRelays[0],
           maxRelays: presetConfig.maxRelays,
           queryTimeout: presetConfig.queryTimeout,
-          preset: preset,
         }));
-
-        // Update context config
-        updateConfig({
-          relayUrl: newRelays[0],
-        });
 
         setSelectedPreset(preset);
         toast({
@@ -146,6 +124,20 @@ export function Settings() {
   const handlePresetChange = (preset: string) => {
     setSelectedPreset(preset);
     applyPreset(preset);
+  };
+
+  const handleSingleRelayChange = (relayUrl: string) => {
+    // Update to use only this single relay
+    updateConfig((currentConfig) => ({
+      ...currentConfig,
+      relayUrls: [relayUrl],
+      activeRelay: relayUrl,
+    }));
+
+    toast({
+      title: 'Relay aktualisiert',
+      description: `Aktiver Relay: ${relayUrl}`,
+    });
   };
 
   return (
@@ -340,7 +332,7 @@ export function Settings() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="relay-select">Aktueller Relay</Label>
-                    <Select value={config.relayUrl} onValueChange={handleRelayChange}>
+                    <Select value={config.activeRelay} onValueChange={handleSingleRelayChange}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder="Wähle einen Relay-Server" />
                       </SelectTrigger>
