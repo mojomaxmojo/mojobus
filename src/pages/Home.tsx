@@ -3,15 +3,34 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLongformArticles } from '@/hooks/useLongformArticles';
+import { useNotes } from '@/hooks/useNotes';
 import { extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { Waves, Compass, Sun, Anchor } from 'lucide-react';
+import { Waves, Compass, Sun, Anchor, MapPin, Image as ImageIcon, StickyNote } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
+
+type ContentItem = {
+  type: 'article' | 'place' | 'note';
+  event: NostrEvent;
+  date: number;
+};
+
+/**
+ * Prüft ob ein Event ein Platz ist (hat type=place, #t place, #t places, oder identifier beginnt mit "place-")
+ */
+function isPlaceEvent(event: NostrEvent): boolean {
+  const typeTag = event.tags.find(([name]) => name === 'type')?.[1];
+  const placeTag = event.tags.some(([name, value]) => name === 't' && ['place', 'places'].includes(value));
+  const identifier = event.tags.find(([name]) => name === 'd')?.[1] || '';
+  const hasPlaceIdentifier = identifier.startsWith('place-');
+
+  return typeTag === 'place' || placeTag || hasPlaceIdentifier;
+}
 
 export function Home() {
   // SEO Meta Tags
@@ -32,8 +51,41 @@ export function Home() {
       { rel: 'canonical', href: 'https://mojobus.cc/' }
     ]
   });
-  const { data: articles, isLoading } = useLongformArticles();
-  const recentArticles = articles?.slice(0, 6) || [];
+  const { data: longformEvents, isLoading: isLoadingLongform } = useLongformArticles();
+  const { data: noteEvents, isLoading: isLoadingNotes } = useNotes();
+
+  // Combine and categorize content
+  const isLoading = isLoadingLongform || isLoadingNotes;
+
+  const contentItems: ContentItem[] = [];
+
+  // Process longform events (articles and places)
+  if (longformEvents) {
+    longformEvents.forEach((event) => {
+      const isPlace = isPlaceEvent(event);
+      contentItems.push({
+        type: isPlace ? 'place' : 'article',
+        event,
+        date: event.created_at,
+      });
+    });
+  }
+
+  // Process notes
+  if (noteEvents) {
+    noteEvents.forEach((event) => {
+      contentItems.push({
+        type: 'note',
+        event,
+        date: event.created_at,
+      });
+    });
+  }
+
+  // Sort by date (newest first) and take top 6
+  const recentItems = contentItems
+    .sort((a, b) => b.date - a.date)
+    .slice(0, 6);
 
   return (
     <div className="min-h-screen">
@@ -95,10 +147,10 @@ export function Home() {
                   </Card>
                 ))}
               </div>
-            ) : recentArticles.length > 0 ? (
+            ) : recentItems.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {recentArticles.map((article) => (
-                  <ArticleCard key={article.id} article={article} />
+                {recentItems.map((item) => (
+                  <ContentCard key={item.event.id} item={item} />
                 ))}
               </div>
             ) : (
@@ -196,29 +248,56 @@ export function Home() {
   );
 }
 
-const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent }) {
-  const metadata = extractArticleMetadata(article);
-  const author = useAuthor(article.pubkey);
-  const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
+const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
+  const author = useAuthor(item.event.pubkey);
+  const authorName = author.data?.metadata?.name || genUserName(item.event.pubkey);
 
-  const naddr = nip19.naddrEncode({
-    kind: article.kind,
-    pubkey: article.pubkey,
-    identifier: metadata.identifier,
-  });
+  let content = '';
+  let image = '';
+  let title = '';
+  let summary = '';
+  let link = '';
 
-  // Optimized thumbnail URL (200px, quality 80) with srcset
-  const thumbnailUrl = metadata.image ? getListThumbnailUrl(metadata.image) : null;
-  const srcset = metadata.image ? generateSrcset(metadata.image) : undefined;
+  if (item.type === 'article' || item.type === 'place') {
+    const metadata = extractArticleMetadata(item.event);
+    title = metadata.title;
+    summary = metadata.summary;
+    image = metadata.image;
+    content = metadata.summary || item.event.content.substring(0, 200);
+
+    const naddr = nip19.naddrEncode({
+      kind: item.event.kind,
+      pubkey: item.event.pubkey,
+      identifier: metadata.identifier,
+    });
+    link = `/${naddr}`;
+  } else if (item.type === 'note') {
+    content = item.event.content.substring(0, 200);
+    const note = nip19.noteEncode(item.event.id);
+    link = `/${note}`;
+  }
+
+  // Get type icon
+  const TypeIcon = item.type === 'place' ? MapPin :
+                  item.type === 'note' ? StickyNote :
+                  ImageIcon;
+
+  const typeName = item.type === 'place' ? 'Ort' :
+                   item.type === 'note' ? 'Notiz' :
+                   'Artikel';
+
+  // Optimized thumbnail URL for articles/places
+  const thumbnailUrl = image ? getListThumbnailUrl(image) : null;
+  const srcset = image ? generateSrcset(image) : undefined;
   const sizes = generateSizes('card');
-  const placeholderColor = metadata.image ? getImagePlaceholder(metadata.image) : undefined;
+  const placeholderColor = image ? getImagePlaceholder(image) : undefined;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      <Link to={`/${naddr}`}>
+      <Link to={link}>
         {thumbnailUrl && (
           <div
-            className="aspect-video overflow-hidden bg-muted"
+            className="aspect-video overflow-hidden bg-muted relative"
             style={{
               backgroundColor: placeholderColor,
             }}
@@ -227,24 +306,34 @@ const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent
               src={thumbnailUrl}
               srcSet={srcset}
               sizes={sizes}
-              alt={metadata.title}
+              alt={title}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               loading="lazy"
               decoding="async"
             />
+            <div className="absolute top-2 right-2 bg-primary text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+              <TypeIcon className="h-3 w-3" />
+              {typeName}
+            </div>
           </div>
         )}
         <CardHeader>
-          <CardTitle className="line-clamp-2">{metadata.title}</CardTitle>
-          {metadata.summary && (
-            <CardDescription className="line-clamp-3">{metadata.summary}</CardDescription>
+          {!thumbnailUrl && (
+            <div className="flex items-center gap-2 mb-2">
+              <TypeIcon className="h-5 w-5 text-primary" />
+              <span className="text-sm font-medium text-primary">{typeName}</span>
+            </div>
+          )}
+          <CardTitle className="line-clamp-2">{title || content.substring(0, 80)}</CardTitle>
+          {summary && (
+            <CardDescription className="line-clamp-3">{summary}</CardDescription>
           )}
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{authorName}</span>
             <span>•</span>
-            <time>{new Date(metadata.publishedAt * 1000).toLocaleDateString('de-DE')}</time>
+            <time>{new Date(item.date * 1000).toLocaleDateString('de-DE')}</time>
           </div>
         </CardContent>
       </Link>
