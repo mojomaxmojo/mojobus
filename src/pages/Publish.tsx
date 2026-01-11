@@ -259,7 +259,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       // Create content with file URLs
       const content = `${title ? `# ${title}\n\n` : ''}${description ? `${description}\n\n` : ''}${uploadedUrls.join('\n\n')}`;
 
-      // Collect all tags from different sources for createRequiredTags
+      // Collect all tags from different sources
       const allTags = [
         ...selectedSubTags,
         ...detailedTags,
@@ -267,11 +267,12 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         ...(getCountryTag(selectedCountry).filter(tag => !tag.startsWith('#'))) // Nur Land-Codes, keine #Tags
       ];
 
-      // Create tags from config (includes required media tags + all additional tags)
-      const baseTags = createRequiredTags('media', allTags);
+      // Always add #mojobus as mandatory tag for /veroeffentlichen
+      const mojobusTag = 'mojobus';
+      const tagsWithMojobus = [...allTags, mojobusTag];
 
       // Additional special tags
-      const additionalTags = [['type', 'media']]; // Explicit type marker
+      const additionalTags = [['type', 'media']];
 
       if (mainCategory) additionalTags.push(['t', mainCategory]);
 
@@ -279,9 +280,9 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       if (location) additionalTags.push(['location', location]);
       if (date) additionalTags.push(['published_at', date]);
 
-      // Final tag array
+      // Final tag array - includes #mojobus
       const tags = [
-        ...baseTags,
+        ...tagsWithMojobus.map(tag => ['t', tag]),
         ...additionalTags
       ];
 
@@ -859,9 +860,9 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       return;
     }
 
-    // Create event tags with country tags
+    // Create event tags with country tags and #mojobus
     const baseTags = createRequiredTags('notes', tags);
-    const additionalTags = [['type', 'note']]; // Explicit type marker
+    const additionalTags = [['type', 'note'], ['t', 'mojobus']]; // Explicit type marker + #mojobus
 
     // Add country tags
     const countryTags = getCountryTag(selectedCountry);

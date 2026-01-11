@@ -28,7 +28,7 @@ export const CONTENT_CATEGORIES: Record<string, ContentCategory> = {
     route: '/notes',
     kind: 1, // Short text note
     tags: {
-      required: ['notes', 'note'],
+      required: ['notes', 'note', 'mojobus'], // Always include #mojobus
       optional: [
         // Vanlife-spezifische Tags
         'vanlife', 'camping', 'wildcamping', 'stellplatz',
@@ -53,7 +53,7 @@ export const CONTENT_CATEGORIES: Record<string, ContentCategory> = {
     route: '/plaetze',
     kind: 30023, // Long-form addressable event
     tags: {
-      required: ['location', 'places', 'place'],
+      required: ['location', 'places', 'place', 'mojobus'], // Always include #mojobus
       optional: [
         // Ortstypen
         'campingplatz', 'wildcamping', 'stellplatz', 'aussichtspunkt',
@@ -82,7 +82,7 @@ export const CONTENT_CATEGORIES: Record<string, ContentCategory> = {
     route: '/artikel',
     kind: 30023, // Long-form addressable event
     tags: {
-      required: ['artikel', 'article'],
+      required: ['artikel', 'article', 'mojobus'], // Always include #mojobus
       optional: [
         // Kategorien
         'vanlife', 'technik', 'reisen', 'leben', 'anleitung', 'erfahrung',
@@ -110,7 +110,7 @@ export const CONTENT_CATEGORIES: Record<string, ContentCategory> = {
     route: '/artikel/leon',
     kind: 30023, // Long-form addressable event
     tags: {
-      required: ['leon', 'artikel', 'article', 'hund', 'dog', 'lion', 'dogo'],
+      required: ['leon', 'artikel', 'article', 'hund', 'dog', 'lion', 'dogo', 'mojobus'], // Always include #mojobus
       optional: ['vanlife', 'technik', 'reisen', 'leben', 'anleitung', 'erfahrung'],
       filter: ['leon', 'artikel', 'article', 'hund', 'dog', 'lion', 'dogo'] // Tags zum Anzeigen unter /artikel/leon
     },
@@ -128,7 +128,7 @@ export const CONTENT_CATEGORIES: Record<string, ContentCategory> = {
     route: '/bilder',
     kind: 1, // Text note with media attachments
     tags: {
-      required: ['medien', 'media', 'bilder', 'images'],
+      required: ['medien', 'media', 'bilder', 'images', 'mojobus'], // Always include #mojobus
       optional: [
         // Media-Typen
         'photo', 'video', 'audio', 'panorama', 'timelapse',
