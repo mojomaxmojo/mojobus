@@ -1,39 +1,17 @@
-/**
- * Central Configuration Exports
- */
+// Re-export aller Konfigurationen für einfachen Import
+export * from './types';
+export * from './menu';
+export * from './countries';
+export * from './diy';
+export * from './articles';
+export * from './nature';
+export * from './tags';
 
-export { NOSTR_CONFIG } from './nostr';
-export { APP_CONFIG } from './app';
-export { RELAYS_CONFIG } from './relays';
-export { MAIN_MENU } from './menu';
-export { TAG_GROUPS, ALL_TAGS } from './tags';
-export { CONTENT_CATEGORIES, createRequiredTags, getOptionalTags, getTabConfig } from './contentCategories';
-export { TAG_CONFIGS, getTabTagConfig, getTabCategories, getTabDefaults, isTagAllowedForTab, validateTabTags } from './tagConfigs';
-export { ARTICLE_CATEGORIES } from './articles';
-export { DIY_CATEGORIES, DIY_TAGS } from './diy';
-export { NATURE_CATEGORIES, NATURE_TAGS } from './nature';
-export { COUNTRIES } from './countries';
+// Neue zentrale Konfigurationen
+export * from './app';
+export * from './relays';
 
-export * from './rvLife';
-
-export * from './extendedContentCategories';
-
-export * from './extendedMenu';
-
-export type { NostrEvent } from '@nostrify/nostrify';
-export type { ContentCategory } from './contentCategories';
-export type { MenuCategory } from './menu';
-
-export { PERFORMANCE_CONFIG } from './performance';
-
-export default {
-  nostr: NOSTR_CONFIG,
-  app: APP_CONFIG,
-  relays: RELAYS_CONFIG,
-  menu: MAIN_MENU,
-  tags: TAG_GROUPS,
-  contentCategories: CONTENT_CATEGORIES,
-  tagConfigs: TAG_CONFIGS,
-  rvLife: RV_LIFE_CATEGORIES,
-  performance: PERFORMANCE_CONFIG,
-};
+// Legacy exports for backward compatibility
+export { NOSTR_CONFIG, AUTHORS, DEFAULT_RELAYS } from './nostr';
+export { APP_SETTINGS } from './app';
+export { DEFAULT_APP_CONFIG } from './relays';
