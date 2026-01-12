@@ -12,6 +12,7 @@ import { filterEventsByCountry } from '@/lib/countryDetection';
 import { COUNTRIES } from '@/config';
 import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
 import { useState, useMemo, memo, useEffect, useRef } from 'react';
+import { useDebouncedValue } from '@/hooks/useDebounce';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
@@ -27,6 +28,7 @@ function Articles() {
   const { country } = useParams();
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteLongformArticles();
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
   const [selectedTag, setSelectedTag] = useState(null);
   const [selectedAuthor, setSelectedAuthor] = useState(null);
 
@@ -103,9 +105,9 @@ function Articles() {
       });
     }
 
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    // Search filter (verwende debounced value für bessere Performance)
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
       filtered = filtered.filter(article => {
         const metadata = extractArticleMetadata(article);
 
@@ -134,7 +136,7 @@ function Articles() {
     });
 
     return filtered.sort((a, b) => b.created_at - a.created_at);
-  }, [allArticles, searchQuery, selectedTag, selectedAuthor, currentCountry, country]);
+  }, [allArticles, debouncedSearchQuery, selectedTag, selectedAuthor, currentCountry, country]);
 
   const articleCount = allArticles.length;
 
