@@ -20,7 +20,7 @@ export const RV_LIFE_CONFIG = {
       path: '/artikel/rvlife/kueche-essen',
       tags: {
         primary: ['kueche', 'essen', 'cooking', 'food', 'kochen'],
-        optional: ['backen', 'rezepte', 'kochgeraete', 'kuechenausstattung', 'camping-kueche', 'kuechen-inspiration']
+        optional: ['backen', 'rezepte', 'kochgeraete', 'kuechenausstattung', 'ersatznahrung', 'camping-kueche', 'kuechen-inspiration']
       },
       color: {
         light: 'text-orange-600',
