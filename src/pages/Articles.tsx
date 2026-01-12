@@ -5,16 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
-import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { RelaySelector } from '@/components/RelaySelector';
 import { filterEventsByCountry } from '@/lib/countryDetection';
 import { COUNTRIES } from '@/config';
 import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
+import { useAuthorsBatch } from '@/hooks/useAuthorsBatch';
 import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import { useDebouncedValue } from '@/hooks/useDebounce';
 import { nip19 } from 'nostr-tools';
-import type { NostrEvent } from '@nostrify/nostrify';
+import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
 import { useInView } from 'react-intersection-observer';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
@@ -67,6 +67,14 @@ function Articles() {
     });
     return flattened;
   }, [data, hasNextPage, isFetchingNextPage]);
+
+  // Hole alle Autoren in einem einzigen Query statt für jede ArticleCard einzeln!
+  // Das reduziert die Anzahl an Queries massiv: statt 100 Queries nur 1!
+  const uniquePubkeys = useMemo(() => {
+    return Array.from(new Set(allArticles.map(a => a.pubkey)));
+  }, [allArticles]);
+
+  const { data: authorsMap, isLoading: isLoadingAuthors } = useAuthorsBatch(uniquePubkeys);
 
   // Filter articles mit intelligenter Ländererkennung
   const filteredArticles = useMemo(() => {
@@ -338,7 +346,11 @@ function Articles() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredArticles.map((article) => (
-                  <ArticleCard key={article.id} article={article} />
+                  <ArticleCard
+                    key={article.id}
+                    article={article}
+                    authorMetadata={authorsMap?.[article.pubkey]}
+                  />
                 ))}
               </div>
 
@@ -402,10 +414,15 @@ function Articles() {
   );
 }
 
-const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent }) {
+const ArticleCard = memo(function ArticleCard({
+  article,
+  authorMetadata
+}: {
+  article: NostrEvent;
+  authorMetadata?: NostrMetadata;
+}) {
   const metadata = extractArticleMetadata(article);
-  const author = useAuthor(article.pubkey);
-  const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
+  const authorName = authorMetadata?.name || genUserName(article.pubkey);
 
   // Generate naddr identifier for article
   const naddr = nip19.naddrEncode({
@@ -472,6 +489,22 @@ const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent
         </CardContent>
       </Link>
     </Card>
+  );
+}, (prevProps, nextProps) => {
+  // Vergleichsfunktion für React.memo
+  // Re-render nur wenn sich diese Properties ändern:
+  // - article.id
+  // - image URL
+  // - authorMetadata.name
+  const prevImage = prevProps.article.tags.find(([name]) => name === 'image')?.[1];
+  const nextImage = nextProps.article.tags.find(([name]) => name === 'image')?.[1];
+  const prevAuthorName = prevProps.authorMetadata?.name;
+  const nextAuthorName = nextProps.authorMetadata?.name;
+
+  return (
+    prevProps.article.id === nextProps.article.id &&
+    prevImage === nextImage &&
+    prevAuthorName === nextAuthorName
   );
 });
 
