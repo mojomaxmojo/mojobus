@@ -304,6 +304,7 @@ function extractFirstImageUrl(content) {
   return matches && matches.length > 0 ? matches[0] : null;
 }
 
+// ContentCard component - optimized with batch author loading
 const ContentCard = memo(function ContentCard({
   item,
   authorMetadata
