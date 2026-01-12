@@ -21,6 +21,7 @@ import { MAIN_MENU } from '@/config/menu';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
+import { logger } from '@/utils/logger';
 
 function Articles() {
   const { country } = useParams();
@@ -37,7 +38,7 @@ function Articles() {
 
   // Fetch more articles when scroll trigger is visible
   useEffect(() => {
-    console.log('👀 Infinite Scroll Trigger:', {
+    logger.log('👀 Infinite Scroll Trigger:', {
       inView,
       hasNextPage,
       isFetchingNextPage,
@@ -45,7 +46,7 @@ function Articles() {
     });
 
     if (inView && hasNextPage && !isFetchingNextPage) {
-      console.log('📥 Fetching next page...');
+      logger.log('📥 Fetching next page...');
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -55,7 +56,7 @@ function Articles() {
   // Flatten all pages
   const allArticles = useMemo(() => {
     const flattened = data?.pages.flat() || [];
-    console.log('📚 Articles Page State:', {
+    logger.log('📚 Articles Page State:', {
       totalPages: data?.pages.length || 0,
       totalArticles: flattened.length,
       articlesPerPage: data?.pages.map(p => p.length) || [],
@@ -70,7 +71,7 @@ function Articles() {
     let filtered = [...allArticles];
 
     // Debug: Alle Autoren und Artikel anzeigen
-    console.log('🔍 Debug Articles:', {
+    logger.log('🔍 Debug Articles:', {
       totalArticles: allArticles.length,
       selectedAuthor,
       allAuthors: allArticles.map(a => ({
@@ -86,14 +87,14 @@ function Articles() {
 
     // Author filter (auch wenn keine Suche!)
     if (selectedAuthor) {
-      console.log('👤 Author Filter Applied:', {
+      logger.log('👤 Author Filter Applied:', {
         selectedAuthor,
         beforeFilter: filtered.length,
         susannePubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
         matchingArticles: allArticles.filter(a => a.pubkey === selectedAuthor).length
       });
       filtered = filtered.filter(article => article.pubkey === selectedAuthor);
-      console.log('👤 After Author Filter:', {
+      logger.log('👤 After Author Filter:', {
         afterFilter: filtered.length,
         susanneArticles: filtered.map(a => ({
           title: a.tags.find(([name]) => name === 'title')?.[1] || 'No title',
@@ -123,7 +124,7 @@ function Articles() {
       });
     }
 
-    console.log('🎯 Final Filtered Articles:', {
+    logger.log('🎯 Final Filtered Articles:', {
       count: filtered.length,
       articles: filtered.map(a => ({
         title: a.tags.find(([name]) => name === 'title')?.[1],
