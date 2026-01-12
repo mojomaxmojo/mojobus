@@ -76,10 +76,19 @@ export function ImageDetail() {
   const author = useAuthor(events?.pubkey);
   const metadata = author.data?.metadata;
 
-  const extractImages = (content: string): string[] => {
+  const extractImages = (content: string, tags?: string[][]): string[] => {
+    // Extract images from content
     const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
-    const matches = content.match(urlRegex) || [];
-    return matches;
+    const contentImages = content.match(urlRegex) || [];
+
+    // Also extract from 'url' tags (Nostr standard for file attachments)
+    const tagImages = tags
+      ?.filter(tag => tag[0] === 'url')
+      ?.map(tag => tag[1])
+      ?.filter(url => /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) || [];
+
+    // Combine and remove duplicates
+    return [...new Set([...contentImages, ...tagImages])];
   };
 
   const extractTags = (event: ImageEvent): string[] => {
@@ -91,12 +100,12 @@ export function ImageDetail() {
     return result;
   };
 
-  const images = events ? extractImages(events.content) : [];
+  const images = events ? extractImages(events.content, events.tags) : [];
   const tags = events ? extractTags(events) : [];
 
   // Determine if this should be treated as an image event
   const isValidImageEvent = events && (images.length > 0 || tags.some(tag =>
-    ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
+    ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio', 'reise', 'travel', 'photography', 'nature', 'landscape', 'ocean', 'strand', 'beach', 'vanlife', 'offgrid'].includes(tag)
   ));
 
   console.log('Image validation:', {
