@@ -10,6 +10,7 @@ import {
 import { MoreHorizontal, Edit, Trash2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { useNostr } from '@nostrify/react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { nip19 } from 'nostr-tools';
 import {
   AlertDialog,
@@ -54,7 +55,7 @@ export function PostActions({
       const typeTag = event.tags?.find((tag: any) => tag[0] === 'type')?.[1];
       const identifier = event.tags?.find((tag: any) => tag[0] === 'd')?.[1] || '';
       const nameTag = event.tags?.find((tag: any) => tag[0] === 'name')?.[1];
-      
+
       // Most reliable check: identifier starts with "place-"
       if (identifier.startsWith('place-')) {
         type = 'place';
@@ -76,6 +77,17 @@ export function PostActions({
           type = 'article'; // Default to article if no place indicators found
         }
       }
+    } else if (kind === 1) {
+      // Kind 1 - Check if it's a note or media
+      const tTags = event.tags?.filter((tag: any) => tag[0] === 't')?.map((tag: any) => tag[1]) || [];
+
+      if (tTags.includes('medien') || tTags.includes('media') || tTags.includes('bilder') || tTags.includes('images') ||
+          tTags.includes('photo') || tTags.includes('image') || tTags.includes('video') || tTags.includes('audio')) {
+        type = 'media';
+      } else if (tTags.includes('location') || tTags.includes('places') || tTags.includes('place')) {
+        type = 'place';
+      }
+      // Default to note for kind 1
     }
 
     navigate(`/veroeffentlichen?edit=${eventId}&type=${type}`);
@@ -128,11 +140,19 @@ export function PostActions({
   };
 
   // Check if current user is the author
-  const { useCurrentUser } = require('@/hooks/useCurrentUser');
   const { user } = useCurrentUser();
   const isAuthor = user?.pubkey === event.pubkey;
 
+  console.log('PostActions Debug:', {
+    userPubkey: user?.pubkey,
+    eventPubkey: event.pubkey,
+    isAuthor,
+    eventId: event.id,
+    eventKind: event.kind
+  });
+
   if (!isAuthor) {
+    console.log('PostActions: Not showing actions - user is not the author');
     return null; // Don't show actions for other users' posts
   }
 
