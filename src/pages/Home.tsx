@@ -2,20 +2,19 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLongformArticles } from '@/hooks/useLongformArticles';
-import { useNotes } from '@/hooks/useNotes';
+import { useRecentArticles } from '@/hooks/useRecentArticles';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { extractArticleMetadata } from '@/hooks/useLongformArticles';
-import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { Waves, Compass, Sun, Anchor } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
-import { memo } from 'react';
-import type { NostrEvent } from '@nostrify/nostrify';
+import { memo, useMemo } from 'react';
+import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
+import { useAuthorsBatch } from '@/hooks/useAuthorsBatch';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image';
@@ -41,37 +40,58 @@ export function Home() {
     link: [{ rel: 'canonical', href: 'https://mojobus.cc/' }]
   });
 
-  const { data: articles, isLoading } = useLongformArticles();
-  const notesQuery = useNotes();
+  // Lade nur die 6 neuesten Artikel statt alle (100+)!
+  const { data: recentArticles, isLoading } = useRecentArticles(6);
   const { nostr } = useNostr();
 
-  const noteEvents = notesQuery.data?.pages?.flat() || [];
+  // Lade nur die 6 neuesten Notes statt Infinite Scroll
+  const { data: recentNotes = [], isLoading: isLoadingNotes } = useQuery({
+    queryKey: ['home-notes'],
+    queryFn: async ({ signal }) => {
+      const events = await nostr.query([
+        {
+          kinds: [NOSTR_CONFIG.kinds.note],
+          authors: NOSTR_CONFIG.authorPubkeys,
+          limit: 6, // Nur 6 Notes für Home
+        }
+      ], {
+        signal: AbortSignal.any([signal!, AbortSignal.timeout(1500)])
+      });
 
-  const { data: imageEvents = [] } = useQuery({
-    queryKey: ['home-media'],
+      return events;
+    },
+    staleTime: 1000 * 60 * 5, // 5 Minuten Cache
+    gcTime: 1000 * 60 * 30,
+  });
+
+  // Lade nur die 6 neuesten Bilder statt 20
+  const { data: recentImages = [] } = useQuery({
+    queryKey: ['home-images'],
     queryFn: async ({ signal }) => {
       const events = await nostr.query([
         {
           kinds: [1],
           authors: NOSTR_CONFIG.authorPubkeys,
           '#t': ['medien', 'media', 'bilder', 'images'],
-          limit: 20, // Reduziert von 50 auf 20 für schnellere Ladezeiten
+          limit: 6, // Reduziert von 20 auf 6
         }
-      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(1500)]) }); // Timeout reduziert
+      ], {
+        signal: AbortSignal.any([signal!, AbortSignal.timeout(1500)])
+      });
 
       return events.filter((event) => {
         const content = event.content.toLowerCase();
         return content.includes('.jpg') || content.includes('.png');
       });
     },
-    staleTime: 1000 * 60 * 30, // 30 Minuten Cache
-    gcTime: 1000 * 60 * 60, // 1 Stunde Cache
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 
   const contentItems: ContentItem[] = [];
 
-  if (articles && Array.isArray(articles)) {
-    articles.forEach((event) => {
+  if (recentArticles && Array.isArray(recentArticles)) {
+    recentArticles.forEach((event) => {
       const metadata = extractArticleMetadata(event);
       contentItems.push({
         type: 'article',
@@ -82,8 +102,8 @@ export function Home() {
     });
   }
 
-  if (noteEvents && Array.isArray(noteEvents)) {
-    noteEvents.forEach((event) => {
+  if (recentNotes && Array.isArray(recentNotes)) {
+    recentNotes.forEach((event) => {
       const imageUrl = extractFirstImageUrl(event.content);
       contentItems.push({
         type: 'note',
@@ -94,8 +114,8 @@ export function Home() {
     });
   }
 
-  if (imageEvents && Array.isArray(imageEvents)) {
-    imageEvents.forEach((event) => {
+  if (recentImages && Array.isArray(recentImages)) {
+    recentImages.forEach((event) => {
       const imageUrl = extractFirstImageUrl(event.content);
       contentItems.push({
         type: 'image',
@@ -109,6 +129,13 @@ export function Home() {
   const recentItems = contentItems
     .sort((a, b) => b.date - a.date)
     .slice(0, 6);
+
+  // Hole alle Autoren in einem einzigen Query statt für jede Card einzeln!
+  const uniquePubkeys = useMemo(() => {
+    return Array.from(new Set(recentItems.map(item => item.event.pubkey)));
+  }, [recentItems]);
+
+  const { data: authorsMap } = useAuthorsBatch(uniquePubkeys);
 
   return (
     <div className="min-h-screen">
@@ -171,7 +198,11 @@ export function Home() {
             ) : recentItems.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {recentItems.map((item) => (
-                  <ContentCard key={item.event.id} item={item} />
+                  <ContentCard
+                    key={item.event.id}
+                    item={item}
+                    authorMetadata={authorsMap?.[item.event.pubkey]}
+                  />
                 ))}
               </div>
             ) : (
@@ -273,9 +304,14 @@ function extractFirstImageUrl(content) {
   return matches && matches.length > 0 ? matches[0] : null;
 }
 
-const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
-  const author = useAuthor(item.event.pubkey);
-  const authorName = author.data?.metadata?.name || genUserName(item.event.pubkey);
+const ContentCard = memo(function ContentCard({
+  item,
+  authorMetadata
+}: {
+  item: ContentItem;
+  authorMetadata?: NostrMetadata;
+}) {
+  const authorName = authorMetadata?.name || genUserName(item.event.pubkey);
 
   let title = '';
   let summary = '';
@@ -343,5 +379,19 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
         </CardContent>
       </Link>
     </Card>
+  });
+}, (prevProps, nextProps) => {
+  // Vergleichsfunktion für React.memo
+  // Re-render nur wenn sich diese Properties ändern:
+  // - item.event.id
+  // - item.thumbnailUrl
+  // - authorMetadata.name
+  const prevAuthorName = prevProps.authorMetadata?.name;
+  const nextAuthorName = nextProps.authorMetadata?.name;
+
+  return (
+    prevProps.item.event.id === nextProps.item.event.id &&
+    prevProps.item.thumbnailUrl === nextProps.item.thumbnailUrl &&
+    prevAuthorName === nextAuthorName
   );
 });
