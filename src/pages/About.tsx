@@ -9,7 +9,7 @@ import { Mail, Globe, Zap, Key, Waves, Sun, Compass } from 'lucide-react';
 import { getValidAuthors } from '@/lib/authors';
 import { useHead } from '@unhead/react';
 
-export function About() {
+export default function About() {
   // SEO Meta Tags
   useHead({
     title: 'Über Uns - MojoBus Perpetual Traveler Blog',

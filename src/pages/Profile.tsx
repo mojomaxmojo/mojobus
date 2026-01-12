@@ -7,12 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  User, 
-  Edit, 
-  FileText, 
-  MessageSquare, 
-  MapPin, 
+import {
+  User,
+  Edit,
+  FileText,
+  MessageSquare,
+  MapPin,
   ExternalLink,
   Mail,
   Globe,
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { genUserName } from '@/lib/genUserName';
 
-export function Profile() {
+export default function Profile() {
   const { user } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -61,7 +61,7 @@ export function Profile() {
                   {user.metadata?.name?.charAt(0) || genUserName(user.pubkey).charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              
+
               <div className="flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
@@ -77,7 +77,7 @@ export function Profile() {
                     Profil bearbeiten
                   </Button>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2 mt-2">
                   {user.metadata?.nip05 && (
                     <Badge variant="secondary" className="flex items-center gap-1">
@@ -92,7 +92,7 @@ export function Profile() {
               </div>
             </div>
           </CardHeader>
-          
+
           {user.metadata?.about && (
             <>
               <Separator />
@@ -103,7 +103,7 @@ export function Profile() {
               </CardContent>
             </>
           )}
-          
+
           {(user.metadata?.website || user.metadata?.banner) && (
             <>
               <Separator />
@@ -139,7 +139,7 @@ export function Profile() {
             <TabsTrigger value="info">Informationen</TabsTrigger>
             <TabsTrigger value="edit">Profil bearbeiten</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="stats" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
@@ -149,7 +149,7 @@ export function Profile() {
                   <p className="text-muted-foreground">Artikel</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="p-6 text-center">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 text-ocean-600" />
@@ -157,7 +157,7 @@ export function Profile() {
                   <p className="text-muted-foreground">Notes</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="p-6 text-center">
                   <MapPin className="h-8 w-8 mx-auto mb-2 text-ocean-600" />
@@ -167,7 +167,7 @@ export function Profile() {
               </Card>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="info" className="mt-6">
             <Card>
               <CardHeader>
@@ -187,13 +187,13 @@ export function Profile() {
                     <p className="text-sm font-mono break-all">{user.pubkey}</p>
                   </div>
                 </div>
-                
+
                 {user.metadata?.banner && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Banner Image</p>
-                    <img 
-                      src={user.metadata.banner} 
-                      alt="Profile Banner" 
+                    <img
+                      src={user.metadata.banner}
+                      alt="Profile Banner"
                       className="w-full h-32 object-cover rounded-lg"
                     />
                   </div>
@@ -201,7 +201,7 @@ export function Profile() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="edit" className="mt-6">
             <Card>
               <CardHeader>

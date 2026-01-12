@@ -18,7 +18,7 @@ interface ContentEditorMinimalProps {
  * Minimalistischer Content Editor mit Replaceable Content
  * Solve 5x Events Problem with simplest approach
  */
-export function ContentEditorMinimal({ dTag, initialContent = '', onSave, mode = 'create' }: ContentEditorMinimalProps) {
+export default function ContentEditorMinimal({ dTag, initialContent = '', onSave, mode = 'create' }: ContentEditorMinimalProps) {
   const [content, setContent] = useState(initialContent);
   const { updateContent, isLoading } = useReplaceableContentSimple({ dTag });
   const { toast } = useToast();
@@ -36,7 +36,7 @@ export function ContentEditorMinimal({ dTag, initialContent = '', onSave, mode =
 
     try {
       await updateContent(content);
-      
+
       if (onSave) {
         onSave(content);
       }
@@ -84,7 +84,7 @@ export function ContentEditorMinimal({ dTag, initialContent = '', onSave, mode =
           </div>
         </CardTitle>
         <CardDescription>
-          {mode === 'create' 
+          {mode === 'create'
             ? 'Erstelle neuen replaceable Inhalt. 1 Event pro Inhalt.'
             : 'Bearbe bestehenden Inhalt. Alte Version wird überschrieben.'
           }

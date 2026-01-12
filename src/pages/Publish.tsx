@@ -2354,7 +2354,7 @@ function useEditData(editEventId: string | null) {
   });
 }
 
-export function Publish() {
+export default function Publish() {
   const { user } = useCurrentUser();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

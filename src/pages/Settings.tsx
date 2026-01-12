@@ -39,7 +39,7 @@ import {
   Gauge
 } from 'lucide-react';
 
-export function Settings() {
+export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { config, updateConfig } = useAppContext();
   const { logout, logoutAll } = useLoginActions();
