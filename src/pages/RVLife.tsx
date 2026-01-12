@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { useLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { Search, Calendar, User, Home, Cooking, Compass, Van } from 'lucide-react';
+import { Search, Calendar, User, Home, ChefHat, Compass, Truck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
@@ -64,10 +64,10 @@ export function RVLife() {
   // Icon mapping for RV Life categories
   const getRVLifeIcon = (iconName: string) => {
     switch (iconName) {
-      case 'Cooking': return Cooking;
+      case 'Cooking': return ChefHat;
       case 'Home': return Home;
       case 'Compass': return Compass;
-      default: return Van;
+      default: return Truck;
     }
   };
 
@@ -113,7 +113,7 @@ export function RVLife() {
 
         <div className="flex items-center gap-3 mt-4">
           <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-full">
-            <Van className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+            <Truck className="h-6 w-6 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
@@ -215,7 +215,7 @@ export function RVLife() {
         {!isLoading && !error && filteredArticles.length === 0 && (
           <Card className="border-dashed">
             <CardContent className="py-12 px-8 text-center">
-              <Van className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <Truck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 {searchTerm ? 'Keine Suchergebnisse gefunden' :
                  isDemoMode ? 'Noch keine RV Life Artikel vorhanden (Demo-Modus)' : 'Noch keine RV Life Artikel vorhanden'}
