@@ -150,6 +150,33 @@ export function Header() {
                     Leon Story
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    🚐 RV Life
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link to="/artikel/rvlife/kueche-essen" className="flex items-center gap-2">
+                        <span>🍳</span>
+                        Küche & Essen
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/artikel/rvlife/ausstattung" className="flex items-center gap-2">
+                        <span>🏠</span>
+                        Ausstattung
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/artikel/rvlife/freeliving" className="flex items-center gap-2">
+                        <span>🕊️</span>
+                        Freeliving
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               </DropdownMenuContent>
             </DropdownMenu>
 

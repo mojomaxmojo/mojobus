@@ -10,13 +10,14 @@ import { genUserName } from '@/lib/genUserName';
 import { RelaySelector } from '@/components/RelaySelector';
 import { filterEventsByCountry } from '@/lib/countryDetection';
 import { COUNTRIES } from '@/config';
-import { Search, Calendar, User, Loader2 } from 'lucide-react';
+import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
 import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
 import { useInView } from 'react-intersection-observer';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
+import { MAIN_MENU } from '@/config/menu';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
@@ -226,6 +227,83 @@ function Articles() {
               )}
             </div>
           </div>
+
+          {/* Artikel-Kategorien Untermenü (nur auf Hauptseite anzeigen) */}
+          {!currentCountry && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* DIY */}
+              <Link to="/artikel/diy" className="group">
+                <Card className="hover:shadow-md transition-all hover:border-ocean-300">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg group-hover:bg-orange-200 dark:group-hover:bg-orange-800 transition-colors">
+                        <Wrench className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          DIY Anleitungen
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          Solar, Batterie, Reparatur, Ausbau
+                        </p>
+                      </div>
+                      <svg className="h-4 w-4 text-gray-400 group-hover:text-ocean-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              {/* Leon */}
+              <Link to="/artikel/leon" className="group">
+                <Card className="hover:shadow-md transition-all hover:border-ocean-300">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg group-hover:bg-amber-200 dark:group-hover:bg-amber-800 transition-colors">
+                        <Dog className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          🦁 Leon Stories
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          Abenteuer mit unserem Hund
+                        </p>
+                      </div>
+                      <svg className="h-4 w-4 text-gray-400 group-hover:text-ocean-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              {/* RV Life */}
+              <Link to="/artikel/rvlife" className="group">
+                <Card className="hover:shadow-md transition-all hover:border-ocean-300">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg group-hover:bg-orange-200 dark:group-hover:bg-orange-800 transition-colors">
+                        <MapPin className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          🚐 RV Life
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          Küche & Essen, Ausstattung, Freeliving
+                        </p>
+                      </div>
+                      <svg className="h-4 w-4 text-gray-400 group-hover:text-ocean-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
+          )}
 
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
             <div className="relative flex-1 w-full md:w-auto">
