@@ -6,6 +6,7 @@ import { Home } from "./pages/Home";
 import Articles from "./pages/Articles";
 import { DIY } from "./pages/DIY";
 import { Leon } from "./pages/Leon";
+import { RVLife } from "./pages/RVLife";
 import { Notes } from "./pages/Notes";
 import { About } from "./pages/About";
 import Places from "./pages/Places";
@@ -32,6 +33,8 @@ function App() {
             <Route path="/artikel/diy" element={<DIY />} />
             <Route path="/artikel/diy/:category" element={<DIY />} />
             <Route path="/artikel/leon" element={<Leon />} />
+            <Route path="/artikel/rvlife" element={<RVLife />} />
+            <Route path="/artikel/rvlife/:category" element={<RVLife />} />
             <Route path="/plaetze" element={<Places />} />
             <Route path="/plaetze/:country" element={<Places />} />
             <Route path="/bilder" element={<Images />} />

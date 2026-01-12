@@ -56,6 +56,7 @@ export interface ArticleCategory {
   emoji: string;
   isDIY?: boolean;
   isLeon?: boolean;
+  isRVLife?: boolean;
   tags: {
     primary: string[];
     optional: string[];

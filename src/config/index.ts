@@ -6,6 +6,7 @@ export * from './diy';
 export * from './articles';
 export * from './nature';
 export * from './tags';
+export * from './rvlife';
 
 // Neue zentrale Konfigurationen
 export * from './app';

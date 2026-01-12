@@ -8,6 +8,8 @@ export const ROUTES: Route[] = [
   { path: '/artikel/diy/:category', component: 'DIY', title: 'DIY Kategorie', category: 'diy' },
   { path: '/artikel/leon', component: 'Leon', title: 'Leon Stories', category: 'leon' },
   { path: '/artikel/leon/:category', component: 'Leon', title: 'Leon Kategorie', category: 'leon' },
+  { path: '/artikel/rvlife', component: 'RVLife', title: 'RV Life', category: 'rvlife' },
+  { path: '/artikel/rvlife/:category', component: 'RVLife', title: 'RV Life Kategorie', category: 'rvlife' },
   { path: '/plaetze', component: 'Places', title: 'Plätze', category: 'places' },
   { path: '/plaetze/:country', component: 'Places', title: 'Plätze in Land', category: 'places' },
   { path: '/bilder', component: 'Images', title: 'Bilder', category: 'media' },

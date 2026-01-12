@@ -122,6 +122,33 @@ export const CONTENT_CATEGORIES: Record<string, ContentCategory> = {
     }
   },
 
+  rvlife: {
+    id: 'rvlife',
+    name: 'RV Life',
+    route: '/artikel/rvlife',
+    kind: 30023, // Long-form addressable event
+    tags: {
+      required: ['rvlife', 'artikel', 'article', 'mojobus'], // Always include #mojobus
+      optional: [
+        // RV Life Basis-Tags
+        'rv-life', 'wohnmobil', 'camper',
+        // Küche & Essen
+        'kueche-essen', 'kueche', 'essen', 'cooking', 'food', 'kochen', 'backen', 'rezepte', 'kochgeraete', 'kuechenausstattung',
+        // Ausstattung
+        'ausstattung', 'equipment', 'ausruestung', 'wohnen', 'storage', 'stauraum', 'moebel', 'interieur', 'innenausbau',
+        // Freeliving
+        'freeliving', 'nomad', 'freedom', 'nomadenleben', 'digital-nomad', 'ortsunabhaengig', 'minimalismus'
+      ],
+      filter: ['rvlife', 'artikel', 'article'] // Tags zum Anzeigen unter /artikel/rvlife
+    },
+    metadata: {
+      title: 'RV Life',
+      description: 'Leben im Wohnmobil - Küche & Essen, Ausstattung, Freeliving',
+      icon: '🚐',
+      color: '#EA580C' // Orange
+    }
+  },
+
   media: {
     id: 'media',
     name: 'Medien',

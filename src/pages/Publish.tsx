@@ -20,6 +20,7 @@ import { CONTENT_CATEGORIES, createRequiredTags, getOptionalTags, getTabConfig }
 import { CountrySelector, getCountryTag } from '@/components/CountrySelector';
 import { ARTICLE_CATEGORIES, DIY_CATEGORIES, DIY_TAGS, NATURE_CATEGORIES, NATURE_TAGS, TAG_GROUPS } from '@/config';
 import MAIN_MENU from '@/config/menu';
+import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 
 // Media Types Configuration
@@ -1740,7 +1741,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
   // Get available tags from config (excluding DIY & Leon tags which are shown separately)
   const availableTags = TAG_GROUPS
-    .filter(group => !['Technik', 'Pets'].includes(group.name)) // DIY & Leon tags are shown separately
+    .filter(group => !['Technik', 'Pets', 'RV Life', 'Küche & Essen', 'Ausstattung', 'Freeliving'].includes(group.name)) // DIY, Leon & RV Life tags are shown separately
     .flatMap(group => group.tags)
     .filter(tag => !DIY_TAGS.includes(tag.id))
     .map(tag => tag.id); // Remove # - it will be added in JSX
@@ -1780,12 +1781,24 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   // Prueft ob Leon-Kategorie
   const isLeonCategory = tags.includes('leon') || currentCategoryConfig?.isLeon || false;
 
+  // Prueft ob RV Life-Kategorie
+  const isRVLifeCategory = currentCategoryConfig?.isRVLife || false;
+
   // Automatische Tags zu manuellen Tags hinzufügen
   const updateTagsWithAuto = (currentTags: string[]) => {
     let updatedTags = [...currentTags];
 
     // Leon-spezifische Tags hinzufügen
     if (isLeonCategory && currentCategoryConfig?.autoTags) {
+      currentCategoryConfig.autoTags.forEach(autoTag => {
+        if (!updatedTags.includes(autoTag)) {
+          updatedTags.push(autoTag);
+        }
+      });
+    }
+
+    // RV Life-spezifische Tags hinzufügen
+    if (isRVLifeCategory && currentCategoryConfig?.autoTags) {
       currentCategoryConfig.autoTags.forEach(autoTag => {
         if (!updatedTags.includes(autoTag)) {
           updatedTags.push(autoTag);
@@ -1974,6 +1987,11 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
                           🦁️ Leon
                         </Badge>
                       )}
+                      {cat.isRVLife && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          🚐 RV Life
+                        </Badge>
+                      )}
                     </span>
                   </SelectItem>
                 ))}
@@ -2085,7 +2103,7 @@ Dein Artikel in Markdown-Format...
         </div>
 
         {/* Automatisch generierte Tags anzeigen */}
-        {(isDIYCategory || isLeonCategory) && (
+        {(isDIYCategory || isLeonCategory || isRVLifeCategory) && (
           <div className="space-y-3">
             <Label>Automatische Tags</Label>
             <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -2152,6 +2170,42 @@ Dein Artikel in Markdown-Format...
                     </Badge>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RV Life-spezifische Tags */}
+        {isRVLifeCategory && (
+          <div className="space-y-3">
+            <Label>RV Life Kategorien</Label>
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+              <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
+                🚐 Dieser Artikel erscheint im RV Life Bereich. Wähle spezifische Kategorien:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[
+                  { id: 'kueche-essen', emoji: '🍳', name: 'Küche & Essen' },
+                  { id: 'ausstattung', emoji: '🏠', name: 'Ausstattung' },
+                  { id: 'freeliving', emoji: '🕊️', name: 'Freeliving' }
+                ].map(rvCat => (
+                  <Badge
+                    key={rvCat.id}
+                    variant={displayTags.includes(rvCat.id) ? "default" : "outline"}
+                    className="cursor-pointer justify-start p-2"
+                    onClick={() => {
+                      // Toggle RV Life Kategorie-Tag
+                      setTags(prev =>
+                        prev.includes(rvCat.id)
+                          ? prev.filter(t => t !== rvCat.id)
+                          : [...prev, rvCat.id]
+                      );
+                    }}
+                  >
+                    <span className="mr-2">{rvCat.emoji}</span>
+                    {rvCat.name}
+                  </Badge>
+                ))}
               </div>
             </div>
           </div>

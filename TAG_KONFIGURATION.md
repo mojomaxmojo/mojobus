@@ -16,6 +16,47 @@ Diese Übersicht zeigt, welche Tags für welche Untermenüpunkte zuständig sind
 
 ## 📌 Untermenüpunkte und ihre Tag-Kategorien
 
+### 0️⃣ **RV Life** (Wohnmobil-Leben)
+**Route**: `/artikel/rvlife`, `/artikel/rvlife/:category`
+
+**Verantwortliche Tag-Gruppen**:
+- ✅ **RV Life** (TAG_GROUPS[1])
+- ✅ **Küche & Essen** (TAG_GROUPS[2])
+- ✅ **Ausstattung** (TAG_GROUPS[3])
+- ✅ **Freeliving** (TAG_GROUPS[4])
+
+**Automatische Tags** (für alle RV Life Inhalte):
+```javascript
+['rv-life', 'wohnmobil', 'rvlife', 'camper']
+```
+
+**Verfügbare Tags**:
+```javascript
+// RV Life Basis-Tags
+🚐 RV Life, RV-Life, Wohnmobil, Camper
+
+// Küche & Essen
+🍳 Küche, Essen, Kochen, Food, Backen, Rezepte, Kochgeräte, Küchenausstattung
+
+// Ausstattung
+🏠 Ausstattung, Equipment, Ausrüstung, Wohnen, Storage, Stauraum, Möbel, Interieur
+
+// Freeliving
+🕊️ Freeliving, Nomad, Freedom, Nomadenleben, Digital Nomad, Minimalismus
+```
+
+**Untermenüpunkte**:
+- **Küche & Essen**: Kochen, Backen und alles rund um das Essen im Wohnmobil
+- **Ausstattung**: Wohnen, Küche, Bad und Storage im Wohnmobil
+- **Freeliving**: Nomadenleben, Freiheit und Unabhängigkeit
+
+**Beschreibung**:
+- Alle RV Life Inhalte erhalten automatisch die Tags: `['rv-life', 'wohnmobil', 'rvlife', 'camper']`
+- Zusätzlich werden kategorienspezifische Tags basierend auf dem gewählten Untermenü hinzugefügt
+- Beispiel: `/artikel/rvlife/kueche-essen` → Auto-Tags + `['kueche', 'essen', 'kochen']`
+
+---
+
 ### 1️⃣ **Länder** (Countries)
 **Route**: `/plaetze/:country`, `/bilder/:country`, `/notes/:country`
 
@@ -26,7 +67,7 @@ Diese Übersicht zeigt, welche Tags für welche Untermenüpunkte zuständig sind
 ```javascript
 // Länder-Tags
 🇵🇹 Portugal
-🇪🇸 Spanien  
+🇪🇸 Spanien
 🇮🇹 Italien
 🇫🇷 Frankreich
 🇩🇪 Deutschland
@@ -36,7 +77,7 @@ Diese Übersicht zeigt, welche Tags für welche Untermenüpunkte zuständig sind
 🇱🇺 Luxemburg
 ```
 
-**Beschreibung**: 
+**Beschreibung**:
 - Tags werden automatisch basierend auf der gewählten Route hinzugefügt
 - Werden für geografische Filterung auf allen Seiten (Plätze, Bilder, Notes) verwendet
 - Beispiel: `/plaetze/portugal` → Filtert Plätze in Portugal
@@ -114,46 +155,70 @@ Diese Übersicht zeigt, welche Tags für welche Untermenüpunkte zuständig sind
 
 ## 🏷️ Tag-Gruppenstruktur
 
-Die Tags sind in 7 Hauptgruppen organisiert:
+Die Tags sind in 11 Hauptgruppen organisiert:
 
-### 1. 🌍 Länder (Countries)
+### 0. 🚐 RV Life
+- **Gruppen-ID**: `TAG_GROUPS[1]`
+- **Zweck**: Wohnmobil-Leben spezifische Tags
+- **Anzahl Tags**: 4
+- **Beispiel-Tags**: `rvlife`, `rv-life`, `wohnmobil`, `camper`
+
+### 1. 🍳 Küche & Essen
+- **Gruppen-ID**: `TAG_GROUPS[2]`
+- **Zweck**: Kochen, Backen und Essen
+- **Anzahl Tags**: 12
+- **Beispiel-Tags**: `kueche`, `essen`, `kochen`, `backen`, `rezepte`
+
+### 2. 🏠 Ausstattung
+- **Gruppen-ID**: `TAG_GROUPS[3]`
+- **Zweck**: Wohnen, Küche, Bad und Storage
+- **Anzahl Tags**: 14
+- **Beispiel-Tags**: `ausstattung`, `equipment`, `storage`, `stauraum`, `moebel`
+
+### 3. 🕊️ Freeliving
+- **Gruppen-ID**: `TAG_GROUPS[4]`
+- **Zweck**: Nomadenleben und Freiheit
+- **Anzahl Tags**: 13
+- **Beispiel-Tags**: `freeliving`, `nomad`, `freedom`, `digital-nomad`, `minimalismus`
+
+### 4. 🌍 Länder (Countries)
 - **Gruppen-ID**: `TAG_GROUPS[0]`
 - **Zweck**: Geografische Kategorisierung
 - **Anzahl Tags**: 12
 - **Beispiel-Tags**: `portugal`, `spanien`, `italien`, `deutschland`
 
-### 2. 🚐 Vanlife
-- **Gruppen-ID**: `TAG_GROUPS[1]`
+### 5. 🚐 Vanlife
+- **Gruppen-ID**: `TAG_GROUPS[5]`
 - **Zweck**: Wohnform- und Reiseart
 - **Anzahl Tags**: 8
 - **Beispiel-Tags**: `camping`, `wildcamping`, `stellplatz`, `vanlife`
 
-### 3. ⚡ Technik
-- **Gruppen-ID**: `TAG_GROUPS[2]`
+### 6. ⚡ Technik
+- **Gruppen-ID**: `TAG_GROUPS[6]`
 - **Zweck**: Technische Ausrüstung und Systeme
 - **Anzahl Tags**: 8
 - **Beispiel-Tags**: `solarenergie`, `batterie`, `strom`, `internet`
 
-### 4. 🧘 Lifestyle
-- **Gruppen-ID**: `TAG_GROUPS[3]`
+### 7. 🧘 Lifestyle
+- **Gruppen-ID**: `TAG_GROUPS[7]`
 - **Zweck**: Lebensstil und Interessen
 - **Anzahl Tags**: 8
 - **Beispiel-Tags**: `kochen`, `fitness`, `freedom`, `minimalismus`
 
-### 5. 🌲 Natur & Umwelt
-- **Gruppen-ID**: `TAG_GROUPS[4]`
+### 8. 🌲 Natur & Umwelt
+- **Gruppen-ID**: `TAG_GROUPS[8]`
 - **Zweck**: Naturlandschaften und Aktivitäten
 - **Anzahl Tags**: 10
 - **Beispiel-Tags**: `strand`, `berg`, `natur`, `offgrid`
 
-### 6. 🏸️ Aktivitäten
-- **Gruppen-ID**: `TAG_GROUPS[5]`
+### 9. 🏸️ Aktivitäten
+- **Gruppen-ID**: `TAG_GROUPS[9]`
 - **Zweck**: Freizeitaktivitäten und Hobbys
 - **Anzahl Tags**: 8
 - **Beispiel-Tags**: `wandern`, `surfen`, `klettern`, `fotografie`
 
-### 7. 🐾 Pets
-- **Gruppen-ID**: `TAG_GROUPS[6]`
+### 10. 🐾 Pets
+- **Gruppen-ID**: `TAG_GROUPS[10]`
 - **Zweck**: Haustiere und Reisebegleiter
 - **Anzahl Tags**: 6
 - **Beispiel-Tags**: `leon`, `hund`, `camper-hund`
@@ -198,19 +263,73 @@ Tags, die **vom User beim Veröffentlichen ausgewählt** werden:
 #artikel, #article
 
 // Optionale Tags (Auswahlmöglichkeit)
-#vanlife, #technik, #reisen, #leben, #anleitung, #erfahrung,
-#solar, #4x4, #navigation, #reparatur, #outdoor,
-#europa, #portugal, #spanien, #italien, #griechenland
+// RV Life
+#rvlife, #rv-life, #wohnmobil, #camper,
+#kueche-essen, #kueche, #essen, #kochen, #backen, #rezepte,
+#ausstattung, #equipment, #storage, #stauraum,
+#freeliving, #nomad, #freedom, #digital-nomad,
+
+// Vanlife
+#vanlife, #camping, #wildcamping, #stellplatz,
+
+// Technik
+#technik, #solar, #4x4, #navigation, #reparatur, #outdoor,
+
+// Reisen
+#reisen, #europa, #portugal, #spanien, #italien, #griechenland,
+
+// Lifestyle
+#leben, #lifestyle, #minimalismus, #community
 
 // Defaults (werden automatisch hinzugefügt)
 #story, #travel
 ```
 
 **Tag-Gruppen**:
+- 🚐 RV Life (auswählbar) - inkl. Küchen & Essen, Ausstattung, Freeliving
 - 🚐 Vanlife (auswählbar)
 - ⚡ Technik (auswählbar)
 - 🌍 Länder (auswählbar)
 - 🧘 Lifestyle (auswählbar)
+
+**Untermenüpunkte**:
+- **DIY**: Anleitungen und Projekte
+- **Leon**: Stories und Abenteuer von Leon
+- **RV Life**: Küche & Essen, Ausstattung, Freeliving
+
+---
+
+### 📖 RV Life Tab
+**Route**: `/artikel/rvlife`
+
+**Verwendete Tags**:
+```javascript
+// Pflicht-Tags (werden automatisch hinzugefügt)
+#rvlife, #rv-life, #wohnmobil, #camper, #artikel, #article
+
+// Untermenü-spezifische Tags
+// Küche & Essen
+#kueche-essen, #kueche, #essen, #cooking, #food, #kochen,
+#backen, #rezepte, #kochgeraete, #kuechenausstattung,
+
+// Ausstattung
+#ausstattung, #equipment, #ausruestung, #wohnen, #storage,
+#stauraum, #moebel, #interieur, #innenausbau,
+
+// Freeliving
+#freeliving, #nomad, #freedom, #nomadenleben, #digital-nomad,
+#ortsunabhaengig, #minimalismus
+```
+
+**Untermenüpunkte**:
+- **Küche & Essen** (`/artikel/rvlife/kueche-essen`): Kochen, Backen und alles rund um das Essen im Wohnmobil
+- **Ausstattung** (`/artikel/rvlife/ausstattung`): Wohnen, Küche, Bad und Storage im Wohnmobil
+- **Freeliving** (`/artikel/rvlife/freeliving`): Nomadenleben, Freiheit und Unabhängigkeit
+
+**Tag-Gruppen**:
+- 🍳 Küche & Essen (auswählbar)
+- 🏠 Ausstattung (auswählbar)
+- 🕊️ Freeliving (auswählbar)
 
 ---
 
@@ -370,15 +489,32 @@ Alle Tags werden in der Form `#tagname` ohne Leerzeichen gespeichert.
 
 ## 📊 Zusammenfassung der Tag-Organisation
 
-### Alle Tag-Gruppen: 7
-### Alle Tags gesamt: ~60
-### Untermenüpunkte: 3
+### Alle Tag-Gruppen: 11
+### Alle Tags gesamt: ~100
+### Untermenüpunkte: 4 (DIY, Leon, RV Life, Nature)
 ### Haupt-Tabs: 4 (Artikel, Plätze, Bilder, Notes)
 
 ### Tag-Hierarchie
 
 ```
 Tag-System
+├── RV Life Tags (4) - Wohnmobil-Leben
+│   ├── rvlife, rv-life, wohnmobil, camper
+│   ├── Küche & Essen (12)
+│   │   ├── Küche, Essen, Kochen, Food
+│   │   ├── Backen, Rezepte, Kochgeräte
+│   │   └── Küchenausstattung
+│   ├── Ausstattung (14)
+│   │   ├── Ausstattung, Equipment, Ausrüstung
+│   │   ├── Storage, Stauraum
+│   │   ├── Möbel, Interieur, Innenausbau
+│   │   └── Wohnzimmer, Schlafbereich
+│   └── Freeliving (13)
+│       ├── Freeliving, Nomad, Freedom
+│       ├── Digital Nomad, Ortsunabhängig
+│       ├── Minimalismus, Community
+│       └── Unabhängigkeit
+│
 ├── Länder-Tags (12) - Geografisch
 │   ├── Portugal
 │   ├── Spanien
@@ -387,21 +523,22 @@ Tag-System
 │   ├── Deutschland
 │   └── ...
 │
-├── Untermenü-Tags (3) - Navigation
+├── Untermenü-Tags (4) - Navigation
 │   ├── DIY
-│   ├── Nature
-│   └── ...
+│   ├── Leon
+│   ├── RV Life
+│   └── Nature
 │
 ├── Inhaltstyp-Tags (4) - Klassifikation
 │   #artikel, #place, #medien, #note
 │
-└── Themen-Tags (~40) - Inhalt
+└── Themen-Tags (~60) - Inhalt
     ├── Vanlife (8)
     ├── Technik (8)
     ├── Lifestyle (8)
     ├── Natur (10)
     ├── Aktivitäten (8)
-    └── ...
+    └── Pets (6)
 ```
 
 ### Verwendung im Code
@@ -410,13 +547,25 @@ Tag-System
 // Tag-Konfiguration importieren
 import { TAG_GROUPS } from '@/config/tags';
 import { getTabCategories } from '@/config/tagConfigs';
+import {
+  RV_LIFE_CONFIG,
+  getRVLifeAutoTags,
+  getRVLifeCategoryTags,
+  createRVLifeTags
+} from '@/config/rvlife';
 
 // Alle verfügbaren Tags für einen Tab
 const availableTags = getTabCategories('article');
 
+// RV Life Tags
+const autoTags = getRVLifeAutoTags(); // ['rv-life', 'wohnmobil', 'rvlife', 'camper']
+const categoryTags = getRVLifeCategoryTags('kueche-essen');
+const completeTags = createRVLifeTags('kueche-essen', ['portugal']);
+// Result: ['rv-life', 'wohnmobil', 'rvlife', 'camper', 'kueche-essen', 'kueche', 'essen', 'kochen', 'portugal']
+
 // Tags validieren
 import { validateTabTags } from '@/config/tagConfigs';
-const result = validateTabTags(['#vanlife', '#portugal'], 'article');
+const result = validateTabTags(['#rvlife', '#kochen', '#portugal'], 'article');
 // Returns: { isValid: true, errors: [], warnings: [] }
 
 // Tags gruppieren für UI

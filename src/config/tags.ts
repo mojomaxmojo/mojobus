@@ -17,6 +17,73 @@ export const TAG_GROUPS: TagGroup[] = [
     ]
   },
   {
+    name: 'RV Life',
+    description: 'RV Life spezifische Tags für Wohnmobil-Leben',
+    tags: [
+      { id: 'rvlife', label: 'RV Life', icon: '🚐' },
+      { id: 'rv-life', label: 'RV Life', icon: '🚐' },
+      { id: 'wohnmobil', label: 'Wohnmobil', icon: '🏠' },
+      { id: 'camper', label: 'Camper', icon: '🚐' }
+    ]
+  },
+  {
+    name: 'Küche & Essen',
+    description: 'Kochen, Backen und Essen',
+    tags: [
+      { id: 'kueche', label: 'Küche', icon: '🍳' },
+      { id: 'essen', label: 'Essen', icon: '🍽️' },
+      { id: 'cooking', label: 'Kochen', icon: '🍳' },
+      { id: 'food', label: 'Food', icon: '🍕' },
+      { id: 'kochen', label: 'Kochen', icon: '🍳' },
+      { id: 'backen', label: 'Backen', icon: '🧁' },
+      { id: 'rezepte', label: 'Rezepte', icon: '📖' },
+      { id: 'kochgeraete', label: 'Kochgeräte', icon: '🍳' },
+      { id: 'kuechenausstattung', label: 'Küchenausstattung', icon: '🔪' },
+      { id: 'ersatznahrung', label: 'Ersatznahrung', icon: '🥫' },
+      { id: 'camping-kueche', label: 'Camping-Küche', icon: '🏕️' },
+      { id: 'kuechen-inspiration', label: 'Küchen-Inspiration', icon: '✨' }
+    ]
+  },
+  {
+    name: 'Ausstattung',
+    description: 'Wohnen, Küche, Bad und Storage',
+    tags: [
+      { id: 'ausstattung', label: 'Ausstattung', icon: '🏠' },
+      { id: 'equipment', label: 'Equipment', icon: '⚙️' },
+      { id: 'ausruestung', label: 'Ausrüstung', icon: '🎒' },
+      { id: 'wohnen', label: 'Wohnen', icon: '🏡' },
+      { id: 'kuechenausstattung', label: 'Küchenausstattung', icon: '🍳' },
+      { id: 'badausstattung', label: 'Badausstattung', icon: '🚿' },
+      { id: 'storage', label: 'Storage', icon: '📦' },
+      { id: 'stauraum', label: 'Stauraum', icon: '📦' },
+      { id: 'moebel', label: 'Möbel', icon: '🪑' },
+      { id: 'interieur', label: 'Interieur', icon: '🖼️' },
+      { id: 'innenausbau', label: 'Innenausbau', icon: '🔨' },
+      { id: 'wohnzimmer', label: 'Wohnzimmer', icon: '🛋️' },
+      { id: 'schlafbereich', label: 'Schlafbereich', icon: '🛏️' },
+      { id: 'aufbewahrung', label: 'Aufbewahrung', icon: '🗃️' }
+    ]
+  },
+  {
+    name: 'Freeliving',
+    description: 'Nomadenleben und Freiheit',
+    tags: [
+      { id: 'freeliving', label: 'Freeliving', icon: '🕊️' },
+      { id: 'nomad', label: 'Nomad', icon: '🧭' },
+      { id: 'freedom', label: 'Freedom', icon: '🕊️' },
+      { id: 'nomadenleben', label: 'Nomadenleben', icon: '🌍' },
+      { id: 'digital-nomad', label: 'Digital Nomad', icon: '💻' },
+      { id: 'ortsunabhaengig', label: 'Ortsunabhängig', icon: '🌏' },
+      { id: 'reisen', label: 'Reisen', icon: '✈️' },
+      { id: 'freiheit', label: 'Freiheit', icon: '🦅' },
+      { id: 'abenteuer', label: 'Abenteuer', icon: '🏔️' },
+      { id: 'minimalismus', label: 'Minimalismus', icon: '🧘' },
+      { id: 'community', label: 'Community', icon: '👥' },
+      { id: 'unabhaengigkeit', label: 'Unabhängigkeit', icon: '🚀' },
+      { id: 'leben-auf-radiern', label: 'Leben auf Rädern', icon: '🚐' }
+    ]
+  },
+  {
     name: 'Vanlife',
     description: 'Vanlife-spezifische Tags',
     tags: [
