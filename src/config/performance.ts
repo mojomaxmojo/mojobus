@@ -17,7 +17,7 @@ export const INFINITE_SCROLL_CONFIG = {
   // Anzahl der Artikel pro Seite (Batch-Size)
   // Empfehlung: 20-30 für gute Balance zwischen Performance und UX
   // Höhere Werte = mehr JS im Speicher, aber weniger Requests
-  itemsPerPage: 25,
+  itemsPerPage: 20, // Reduziert von 25 auf 20 für bessere Performance
 
   // Max. Anzahl an Artikeln, die im DOM gerendert werden (für Virtualisierung)
   // Nur relevant wenn virtualization: true
@@ -25,7 +25,7 @@ export const INFINITE_SCROLL_CONFIG = {
 
   // Abstand in Pixeln, um nächste Seite vorzuladen (Preloading)
   // Kleinere Werte = früheres Laden, aber mehr Requests
-  preloadThreshold: 100,
+  preloadThreshold: 200, // Erhöht von 100 auf 200 Pixel
 
   // Aktiviere Virtualisierung für extrem lange Listen (1000+ Artikel)
   // Reduziert DOM-Elemente drastisch für bessere Performance
@@ -44,30 +44,30 @@ export const CACHE_CONFIG = {
   // Stale Time - Zeit in Millisekunden, wie lange Daten als "fresh" gelten
   // Kurzere Zeiten = frischere Daten, aber mehr Requests
   // Längere Zeiten = weniger Requests, aber evtl. veraltete Daten
-  staleTime: 1000 * 60 * 10, // 10 Minuten
+  staleTime: 1000 * 60 * 15, // 15 Minuten (erhöht von 10 Min)
 
   // GC Time - Zeit in Millisekunden, bis Cache geleert wird
   // Sollte immer >= staleTime sein
-  gcTime: 1000 * 60 * 60, // 1 Stunde
+  gcTime: 1000 * 60 * 60 * 2, // 2 Stunden (erhöht von 1 Stunde)
 
   // Aktiviere Cache für Artikel
   enabled: true,
 
-  // Anzahl der gecachten Artikel pro Cache-Key
+  // Anzahl der gecached Artikel pro Cache-Key
   // Empfehlung: 50-100 für gute Balance
-  maxCachedItems: 100,
+  maxCachedItems: 80, // Reduziert von 100
 
   // Cache-Strategie für Nostr Queries
   // 'network-first': Immer Netzwerk zuerst, dann Cache
   // 'cache-first': Cache zuerst, dann Netzwerk wenn stale
   // 'stale-while-revalidate': Cache sofort, im Hintergrund aktualisieren
-  strategy: 'stale-while-revalidate' as const,
+  strategy: 'cache-first' as const, // Geändert zu cache-first für schnellere Ladezeiten
 
   // Pre-fetching: Lade Artikel vorab, die wahrscheinlich als nächstes angezeigt werden
   prefetchNextPage: true,
 
   // Pre-fetching Timeout in Millisekunden
-  prefetchTimeout: 3000,
+  prefetchTimeout: 2000, // Reduziert von 3000ms
 } as const;
 
 // ============================================================================
@@ -79,7 +79,7 @@ export const RELAY_PERFORMANCE_CONFIG = {
   // Empfehlung: 2000-3000ms für gute Balance
   // Kürzere Werte = schnellere Fehlerbehandlung, aber mehr Timeouts
   // Längere Werte = mehr成功率, aber längere Ladezeiten
-  queryTimeout: 2000,
+  queryTimeout: 1500, // Reduziert von 2000ms für schnellere Fehlerbehandlung
 
   // Aktiviere Event-Deduplizierung
   // Reduziert doppelte Events von mehreren Relays
@@ -95,7 +95,7 @@ export const RELAY_PERFORMANCE_CONFIG = {
 
   // Max. Anzahl an Events pro Batch-Query
   // Empfehlung: 50-100, abhängig von Relay-Kapazität
-  maxEventsPerBatch: 100,
+  maxEventsPerBatch: 75, // Reduziert von 100
 
   // Retry-Strategie bei fehlgeschlagenen Queries
   retry: {
