@@ -91,6 +91,7 @@ export function ImageDetail() {
   };
 
   const contentHasImages = (content: string): boolean => {
+    if (!content) return false;
     const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|mp4|webm))/gi;
     return urlRegex.test(content);
   };
@@ -99,23 +100,19 @@ export function ImageDetail() {
   const tags = events ? extractTags(events) : [];
 
   // Determine if this should be treated as an image event
-  // Validiere lockerer - wenn wir Bilder haben oder es sieht nach einem Bild-Event aus
-  const isValidImageEvent = events && (images.length > 0 ||
-    tags.some(tag =>
-      ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
-    ) ||
-    contentHasImages(events.content)
+  // Zuerst Bilder im Content prüfen, dann Tags prüfen
+  const hasImagesInContent = events && contentHasImages(events.content);
+  const hasMediaTags = tags.some(tag =>
+    ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
   );
+
+  const isValidImageEvent = events && (hasImagesInContent || hasMediaTags || images.length > 0);
 
   console.log('Image validation:', {
     eventExists: !!events,
     imagesCount: images.length,
-    tagsFound: tags,
-    isValid: isValidImageEvent
-  });
-
-  console.log('Image validation:', {
-    imagesFound: images.length,
+    hasImagesInContent,
+    hasMediaTags,
     tagsFound: tags,
     isValid: isValidImageEvent
   });
@@ -169,8 +166,78 @@ export function ImageDetail() {
       event: events,
       imagesCount: images.length,
       tags: tags,
-      isValid: isValidImageEvent
+      isValid: isValidImageEvent,
+      eventId: eventId
     });
+
+    // Zeige das Event an, auch wenn die Validierung fehlschlägt
+    // Aber zeige eine Warnung an
+    return (
+      <div className="min-h-screen py-8">
+        <div className="container mx-auto px-4 max-w-6xl">
+          {/* Warnung wenn nicht als Bild erkannt */}
+          {!isValidImageEvent && (
+            <Card className="mb-6 border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800">
+              <CardContent className="py-4 px-6">
+                <div className="flex items-start gap-3">
+                  <div className="text-orange-600 dark:text-orange-400 mt-0.5">
+                    ⚠️
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-orange-900 dark:text-orange-200">
+                      Event nicht als Bild klassifiziert
+                    </p>
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                      Dieses Event enthält möglicherweise keine Bild-Tags, wird aber trotzdem angezeigt.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Zeige das Event an */}
+          {renderEventContent()}
+
+        </div>
+      </div>
+    );
+  }
+
+  // Helper-Funktion um den Event-Content zu rendern
+  const renderEventContent = () => {
+    return (
+      <>
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/bilder')}
+          className="mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Zurück zu Bilder
+        </Button>
+
+        {/* Event Content */}
+        <div className="space-y-6">
+          {/* ... Event rendering ... */}
+          <div className="text-center py-20">
+            <Card className="border-dashed">
+              <CardContent className="py-12 px-8">
+                <p>Event ID: {events?.id?.substring(0, 8)}...</p>
+                <p>Pubkey: {events?.pubkey?.substring(0, 8)}...</p>
+                <p>Content Length: {events?.content?.length}</p>
+                <p>Tags: {tags.length}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  if (error) {
+    console.log('Error occurred:', error);
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">
@@ -187,17 +254,54 @@ export function ImageDetail() {
             <CardContent className="py-12 px-8 text-center">
               <div className="max-w-sm mx-auto space-y-6">
                 <h3 className="text-lg font-semibold text-red-600">
-                  Kein gültiges Bild
+                  Fehler beim Laden
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  Dieses Event wurde nicht als Bild-Ereignis klassifiziert.
-                </p>
-                <p className="text-sm text-gray-600">
-                  Bitte navigieren Sie zur Bildergalerie, um gültige Bilder zu finden.
+                  Beim Laden des Bildes ist ein Fehler aufgetreten.
                 </p>
                 <div className="space-y-2">
                   <Button onClick={() => navigate('/bilder')}>
-                    Zur Bildergalerie
+                    Zurück zur Bildergalerie
+                  </Button>
+                  <RelaySelector className="w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!events) {
+    console.log('No events found');
+    return (
+      <div className="min-h-screen py-12">
+        <div className="container mx-auto px-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/bilder')}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Zurück zu Bilder
+          </Button>
+
+          <Card className="border-dashed">
+            <CardContent className="py-12 px-8 text-center">
+              <div className="max-w-sm mx-auto space-y-6">
+                <h3 className="text-lg font-semibold text-red-600">
+                  Bild nicht gefunden
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Das angegebene Bild konnte nicht geladen werden oder wurde bereits gelöscht.
+                </p>
+                <p className="text-sm text-gray-600">
+                  Möglicherweise ist die ID ungültig oder das Bild wurde entfernt.
+                </p>
+                <div className="space-y-2">
+                  <Button onClick={() => navigate('/bilder')}>
+                    Zurück zur Bildergalerie
                   </Button>
                   <RelaySelector className="w-full" />
                 </div>
