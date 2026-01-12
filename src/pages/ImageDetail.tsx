@@ -58,7 +58,6 @@ export function ImageDetail() {
       ], { signal: abortSignal });
 
       console.log('Found events:', allEvents.length);
-      console.log('Events data:', allEvents);
 
       const event = allEvents[0];
 
@@ -100,12 +99,10 @@ export function ImageDetail() {
   const tags = events ? extractTags(events) : [];
 
   // Determine if this should be treated as an image event
-  // Zuerst Bilder im Content prüfen, dann Tags prüfen
   const hasImagesInContent = events && contentHasImages(events.content);
   const hasMediaTags = tags.some(tag =>
     ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
   );
-
   const isValidImageEvent = events && (hasImagesInContent || hasMediaTags || images.length > 0);
 
   console.log('Image validation:', {
@@ -117,125 +114,40 @@ export function ImageDetail() {
     isValid: isValidImageEvent
   });
 
-  // Handle keyboard navigation for fullscreen
-  useEffect(() => {
-    if (!isImageFullscreen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsImageFullscreen(false);
-      } else if (e.key === 'ArrowLeft') {
-        setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
-      } else if (e.key === 'ArrowRight') {
-        setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isImageFullscreen, images.length]);
-
-  // Prevent body scroll when fullscreen
-  useEffect(() => {
-    if (isImageFullscreen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [isImageFullscreen]);
-
-  const openFullscreen = (index: number) => {
-    setCurrentImageIndex(index);
-    setIsImageFullscreen(true);
-  };
-
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
-  };
-
-  if (!isValidImageEvent) {
-    console.log('Event does not contain images or media tags, showing error');
-    console.log('Debug info:', {
-      event: events,
-      imagesCount: images.length,
-      tags: tags,
-      isValid: isValidImageEvent,
-      eventId: eventId
-    });
-
-    // Zeige das Event an, auch wenn die Validierung fehlschlägt
-    // Aber zeige eine Warnung an
+  // Render loading state
+  if (isLoading) {
     return (
-      <div className="min-h-screen py-8">
-        <div className="container mx-auto px-4 max-w-6xl">
-          {/* Warnung wenn nicht als Bild erkannt */}
-          {!isValidImageEvent && (
-            <Card className="mb-6 border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800">
-              <CardContent className="py-4 px-6">
-                <div className="flex items-start gap-3">
-                  <div className="text-orange-600 dark:text-orange-400 mt-0.5">
-                    ⚠️
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-orange-900 dark:text-orange-200">
-                      Event nicht als Bild klassifiziert
-                    </p>
-                    <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
-                      Dieses Event enthält möglicherweise keine Bild-Tags, wird aber trotzdem angezeigt.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+      <div className="min-h-screen py-12">
+        <div className="container mx-auto px-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/bilder')}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Zurück zu Bilder
+          </Button>
 
-          {/* Zeige das Event an */}
-          {renderEventContent()}
-
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
-  // Helper-Funktion um den Event-Content zu rendern
-  const renderEventContent = () => {
-    return (
-      <>
-        {/* Back Button */}
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/bilder')}
-          className="mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Zurück zu Bilder
-        </Button>
-
-        {/* Event Content */}
-        <div className="space-y-6">
-          {/* ... Event rendering ... */}
-          <div className="text-center py-20">
-            <Card className="border-dashed">
-              <CardContent className="py-12 px-8">
-                <p>Event ID: {events?.id?.substring(0, 8)}...</p>
-                <p>Pubkey: {events?.pubkey?.substring(0, 8)}...</p>
-                <p>Content Length: {events?.content?.length}</p>
-                <p>Tags: {tags.length}</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </>
-    );
-  };
-
+  // Render error state
   if (error) {
     console.log('Error occurred:', error);
     return (
@@ -273,6 +185,7 @@ export function ImageDetail() {
     );
   }
 
+  // Render no event found state
   if (!events) {
     console.log('No events found');
     return (
@@ -313,78 +226,7 @@ export function ImageDetail() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen py-12">
-        <div className="container mx-auto px-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/bilder')}
-            className="mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zurück zu Bilder
-          </Button>
-
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !events) {
-    console.log('Error or no events found');
-    return (
-      <div className="min-h-screen py-12">
-        <div className="container mx-auto px-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/bilder')}
-            className="mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zurück zu Bilder
-          </Button>
-
-          <Card className="border-dashed">
-            <CardContent className="py-12 px-8 text-center">
-              <div className="max-w-sm mx-auto space-y-6">
-                <h3 className="text-lg font-semibold text-red-600">
-                  Bild nicht gefunden
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Das angegebene Bild konnte nicht geladen werden oder wurde bereits gelöscht.
-                </p>
-                <p className="text-sm text-gray-600">
-                  Möglicherweise ist die ID ungültig oder das Bild wurde entfernt.
-                </p>
-                <div className="space-y-2">
-                  <Button onClick={() => navigate('/bilder')}>
-                    Zurück zur Bildergalerie
-                  </Button>
-                  <RelaySelector className="w-full" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
+  // Render the event detail page
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4 max-w-6xl">
@@ -398,333 +240,177 @@ export function ImageDetail() {
           Zurück zu Bilder
         </Button>
 
-        <div className="grid grid-cols-1 grid-cols-1 gap-8">
-          {/* Main Content */}
-          <div className="space-y-6">
-            {/* Image Display */}
-            <Card className="overflow-hidden">
-              <CardContent className="p-0">
-                <div
-                  className="relative group cursor-pointer"
-                  onClick={() => openFullscreen(0)}
-                >
-                  <img
-                    src={images[0]}
-                    alt="Reisebild"
-                    className="w-full object-cover bg-gray-100 dark:bg-gray-900 max-h-[800px]"
-                    loading="lazy"
-                  />
-
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-4 flex flex-col items-center gap-2">
-                      <ZoomIn className="h-8 w-8 text-gray-800 dark:text-white" />
-                      <div className="text-gray-800 dark:text-white font-medium">
-                        Klick für Vollbild
-                      </div>
-                    </div>
-                  </div>
+        {/* Warning if not classified as image */}
+        {!isValidImageEvent && (
+          <Card className="mb-6 border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800">
+            <CardContent className="py-4 px-6">
+              <div className="flex items-start gap-3">
+                <div className="text-orange-600 dark:text-orange-400 mt-0.5">
+                  ⚠️
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Multiple Images Gallery */}
-            {images.length > 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Weitere Bilder ({images.length - 1})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {images.slice(1).map((img, index) => (
-                      <div
-                        key={index}
-                        className="relative group cursor-pointer rounded-lg overflow-hidden"
-                        onClick={() => openFullscreen(index + 1)}
-                      >
-                        <img
-                          src={img}
-                          alt={`Bild ${index + 2}`}
-                          className="w-full h-32 object-cover transition-transform group-hover:scale-105"
-                          loading="lazy"
-                        />
-
-                        {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <ZoomIn className="h-6 w-6 text-white" />
-                            <span className="text-xs text-white">Vollbild</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Content and Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-ocean-600" />
-                  Beschreibung
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-gray dark:prose-invert max-w-none">
-                  <NoteContent event={events} className="text-base" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Comments Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-ocean-600" />
-                  Kommentare
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CommentsSection root={events} />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Author Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-red-500" />
-                  Autor
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  {metadata?.picture ? (
-                    <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                      <img
-                        src={metadata.picture}
-                        alt={metadata.name || 'Autor'}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-500" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {metadata?.nip05 || 'Kein NIP-05'}
-                    </p>
-                  </div>
-                </div>
-
-                {metadata?.about && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {metadata.about}
+                <div className="flex-1">
+                  <p className="font-medium text-orange-900 dark:text-orange-200">
+                    Event nicht als Bild klassifiziert
                   </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Image Metadata */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-ocean-600" />
-                  Bild-Informationen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{new Date(events.created_at * 1000).toLocaleDateString('de-DE', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}</span>
+                  <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                    Dieses Event enthält möglicherweise keine Bild-Tags, wird aber trotzdem angezeigt.
+                  </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                <div className="text-sm">
-                  <span className="font-medium">Anzahl Bilder:</span> {images.length}
-                </div>
+        {/* Debug Info */}
+        <Card className="mb-6">
+          <CardContent className="py-4 px-6">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Debug Info:</p>
+              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+                <li>Event ID: {events.id?.substring(0, 12)}...</li>
+                <li>Pubkey: {events.pubkey?.byteLength} bytes</li>
+                <li>Kind: {events.kind}</li>
+                <li>Bilder gefunden: {images.length}</li>
+                <li>Tags gefunden: {tags.length}</li>
+                <li>Validiert: {isValidImageEvent ? '✅' : '❌'}</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
 
-                {images.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="font-medium text-sm">Download-Optionen:</div>
-                    {images.map((img, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(img, '_blank')}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Bild {index + 1}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Tags */}
-            {tags.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Share2 className="h-5 w-5 text-ocean-600" />
-                    Tags
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="gap-1">
-                        #{tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Share2 className="h-5 w-5 text-ocean-600" />
-                  Aktionen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (navigator.share) {
-                      navigator.share?.({
-                        title: 'Bild von MojoBus',
-                        text: events.content,
-                        url: window.location.href
-                      });
-                    }
-                  }}
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Teilen
-                </Button>
-
-                {/* Debug: Teste ob PostActions gerendert wird */}
-                <div className="text-xs text-yellow-600 mt-2 border border-yellow-300 p-2 rounded">
-                  Debug PostActions:
-                  <ul className="list-disc ml-4 mt-1">
-                    <li>Has event: {!!events}</li>
-                    <li>Event ID: {events?.id?.substring(0, 8)}...</li>
-                    <li>Event pubkey: {events?.pubkey?.byteLength} bytes</li>
-                  </ul>
-                </div>
-
-                {/* PostActions nur rendern wenn events existiert */}
-                {events && (
-                  <PostActions
-                    event={events}
-                    onDelete={() => {
-                      setTimeout(() => navigate('/bilder'), 1000);
-                    }}
+        {/* Event Content */}
+        <div className="space-y-6">
+          {/* Author Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-ocean-600" />
+                Autor
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                {metadata?.picture ? (
+                  <img
+                    src={metadata.picture}
+                    alt={metadata.name || 'Anonymous'}
+                    className="w-10 h-10 rounded-full object-cover"
                   />
+                ) : (
+                  <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <User className="h-4 w-4 text-gray-500" />
+                  </div>
                 )}
+                <div className="flex-1">
+                  <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {metadata?.nip05 || 'Kein NIP-05'}
+                  </p>
+                </div>
+              </div>
+
+              {metadata?.about && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {metadata.about}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Image Metadata */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-ocean-600" />
+                Bild-Informationen
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span>{new Date(events.created_at * 1000).toLocaleDateString('de-DE', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}</span>
+              </div>
+
+              <div className="text-sm">
+                <span className="font-medium">Anzahl Bilder:</span> {images.length}
+              </div>
+
+              {images.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Bilder:</div>
+                  {images.map((img, index) => (
+                    <div key={index} className="text-xs text-ocean-600 hover:text-ocean-700 cursor-pointer truncate">
+                      {img}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tags */}
+          {tags.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Badge className="text-xs">Tags</Badge>
+                  Bild-Tags
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map(tag => (
+                    <Badge key={tag} variant="secondary" className="gap-1">
+                      #{tag}
+                    </Badge>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          </div>
+          )}
+
+          {/* Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Share2 className="h-5 w-5 text-ocean-600" />
+                Aktionen
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share?.({
+                      title: 'Bild von MojoBus',
+                      text: events.content,
+                      url: window.location.href
+                    });
+                  }
+                }}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Teilen
+              </Button>
+
+              <PostActions
+                event={events}
+                onDelete={() => {
+                  setTimeout(() => navigate('/bilder'), 1000);
+                }}
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      {/* Fullscreen Image Viewer */}
-      {isImageFullscreen && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
-          {/* Close button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 z-50 text-white hover:bg-white/20"
-            onClick={() => setIsImageFullscreen(false)}
-          >
-            <X className="h-6 w-6" />
-          </Button>
-
-          {/* Image counter */}
-          <div className="absolute top-4 left-4 z-50 text-white bg-black/50 px-3 py-1 rounded-md">
-            {currentImageIndex + 1} / {images.length}
-          </div>
-
-          {/* Download button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-16 z-50 text-white hover:bg-white/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(images[currentImageIndex], '_blank');
-            }}
-          >
-            <ExternalLink className="h-6 w-6" />
-          </Button>
-
-          {/* Previous button */}
-          {images.length > 1 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-50 text-white hover:bg-white/20 h-12 w-12"
-              onClick={(e) => {
-                e.stopPropagation();
-                prevImage();
-              }}
-            >
-              <ChevronLeft className="h-8 w-8" />
-            </Button>
-          )}
-
-          {/* Next button */}
-          {images.length > 1 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-50 text-white hover:bg-white/20 h-12 w-12"
-              onClick={(e) => {
-                e.stopPropagation();
-                nextImage();
-              }}
-            >
-              <ChevronRight className="h-8 w-8" />
-            </Button>
-          )}
-
-          {/* Main image */}
-          <img
-            src={images[currentImageIndex]}
-            alt={`Bild ${currentImageIndex + 1}`}
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-            onClick={() => setIsImageFullscreen(false)}
-          />
-
-          {/* Keyboard hint */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 text-white/70 text-sm bg-black/50 px-4 py-2 rounded-md">
-            ESC zum Schließen {images.length > 1 && '• ← → zum Navigieren'}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
