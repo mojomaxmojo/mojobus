@@ -77,18 +77,46 @@ export function ImageDetail() {
   const metadata = author.data?.metadata;
 
   const extractImages = (content: string, tags?: string[][]): string[] => {
-    // Extract images from content
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
+    // Extract images from content - improved regex that handles URLs with query parameters
+    const urlRegex = /(https?:\/\/[^\s<>]+\.(?:jpg|jpeg|png|gif|webp))/gi;
     const contentImages = content.match(urlRegex) || [];
+
+    // Also look for common image hosting patterns
+    const hostingPatterns = [
+      /https?:\/\/(?:www\.)?imgur\.com\/[a-zA-Z0-9]+(?:\.(?:jpg|jpeg|png|gif|webp))?/gi,
+      /https?:\/\/i\.imgur\.com\/[a-zA-Z0-9]+\.(?:jpg|jpeg|png|gif|webp)/gi,
+      /https?:\/\/cdn\.blossom\.[^\/\s]+\//gi,
+      /https?:\/\/nostr\.build\/[^\/\s]+\.(?:jpg|jpeg|png|gif|webp)/gi,
+      /https?:\/\/(?:www\.)?nostr\.img\.com\//gi,
+    ];
+
+    for (const pattern of hostingPatterns) {
+      const matches = content.match(pattern) || [];
+      contentImages.push(...matches);
+    }
 
     // Also extract from 'url' tags (Nostr standard for file attachments)
     const tagImages = tags
       ?.filter(tag => tag[0] === 'url')
       ?.map(tag => tag[1])
-      ?.filter(url => /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) || [];
+      ?.filter(url => /\.(jpg|jpeg|png|gif|webp)/i.test(url)) || [];
+
+    // Also extract from 'imeta' tags and get url
+    const imetaImages: string[] = [];
+    if (tags) {
+      for (const tag of tags) {
+        if (tag[0] === 'imeta' && tag.length > 1) {
+          const imetaContent = tag[1];
+          const urlMatch = imetaContent.match(/url\s+([^\s]+)/i);
+          if (urlMatch && urlMatch[1]) {
+            imetaImages.push(urlMatch[1]);
+          }
+        }
+      }
+    }
 
     // Combine and remove duplicates
-    return [...new Set([...contentImages, ...tagImages])];
+    return [...new Set([...contentImages, ...tagImages, ...imetaImages])];
   };
 
   const extractTags = (event: ImageEvent): string[] => {
