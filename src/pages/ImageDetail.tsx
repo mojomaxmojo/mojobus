@@ -90,13 +90,22 @@ export function ImageDetail() {
     return result;
   };
 
+  const contentHasImages = (content: string): boolean => {
+    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|mp4|webm))/gi;
+    return urlRegex.test(content);
+  };
+
   const images = events ? extractImages(events.content) : [];
   const tags = events ? extractTags(events) : [];
 
   // Determine if this should be treated as an image event
-  const isValidImageEvent = events && (images.length > 0 || tags.some(tag =>
-    ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
-  ));
+  // Validiere lockerer - wenn wir Bilder haben oder es sieht nach einem Bild-Event aus
+  const isValidImageEvent = events && (images.length > 0 ||
+    tags.some(tag =>
+      ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
+    ) ||
+    contentHasImages(events.content)
+  );
 
   console.log('Image validation:', {
     eventExists: !!events,
@@ -512,12 +521,25 @@ export function ImageDetail() {
                   Teilen
                 </Button>
 
-                <PostActions
-                  event={events}
-                  onDelete={() => {
-                    setTimeout(() => navigate('/bilder'), 1000);
-                  }}
-                />
+                {/* Debug: Teste ob PostActions gerendert wird */}
+                <div className="text-xs text-yellow-600 mt-2 border border-yellow-300 p-2 rounded">
+                  Debug PostActions:
+                  <ul className="list-disc ml-4 mt-1">
+                    <li>Has event: {!!events}</li>
+                    <li>Event ID: {events?.id?.substring(0, 8)}...</li>
+                    <li>Event pubkey: {events?.pubkey?.byteLength} bytes</li>
+                  </ul>
+                </div>
+
+                {/* PostActions nur rendern wenn events existiert */}
+                {events && (
+                  <PostActions
+                    event={events}
+                    onDelete={() => {
+                      setTimeout(() => navigate('/bilder'), 1000);
+                    }}
+                  />
+                )}
               </CardContent>
             </Card>
           </div>

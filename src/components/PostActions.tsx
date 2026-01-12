@@ -168,17 +168,21 @@ export function PostActions({
     showDelete
   });
 
-  // Always show the menu, but conditionally show edit/delete options
+  // Always show the dropdown menu
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative"
+            style={{ position: 'relative', zIndex: 50 }}
+          >
             <MoreHorizontal className="h-4 w-4" />
-            {console.log('PostActions: DropdownMenu rendered')}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="relative z-50">
           {showEdit && isAuthor && (
             <DropdownMenuItem onClick={handleEdit}>
               <Edit className="mr-2 h-4 w-4" />
@@ -197,6 +201,11 @@ export function PostActions({
               <Trash2 className="mr-2 h-4 w-4" />
               Löschen
             </DropdownMenuItem>
+          )}
+          {!isAuthor && (
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+              Nur für Autoren
+            </div>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
