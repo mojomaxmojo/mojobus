@@ -44,6 +44,14 @@ export function PostActions({
   const { toast } = useToast();
   const { nostr } = useNostr();
 
+  console.log('PostActions Component - Event received:', {
+    event,
+    eventId: event?.id,
+    eventPubkey: event?.pubkey,
+    eventKind: event?.kind,
+    eventTags: event?.tags?.filter(t => t[0] === 't').map(t => t[1])
+  });
+
   const handleEdit = () => {
     // Navigate to edit page with event details
     const eventId = nip19.noteEncode(event.id);
@@ -89,6 +97,13 @@ export function PostActions({
       }
       // Default to note for kind 1
     }
+
+    console.log('PostActions - handleEdit:', {
+      eventId,
+      kind,
+      type,
+      url: `/veroeffentlichen?edit=${eventId}&type=${type}`
+    });
 
     navigate(`/veroeffentlichen?edit=${eventId}&type=${type}`);
     if (onEdit) onEdit();
@@ -139,7 +154,7 @@ export function PostActions({
     window.open(`https://nostr.com/${eventId}`, '_blank');
   };
 
-  // Check if current user is the author
+  // Check if current user is author
   const { user } = useCurrentUser();
   const isAuthor = user?.pubkey === event.pubkey;
 
@@ -148,24 +163,23 @@ export function PostActions({
     eventPubkey: event.pubkey,
     isAuthor,
     eventId: event.id,
-    eventKind: event.kind
+    eventKind: event.kind,
+    showEdit,
+    showDelete
   });
 
-  if (!isAuthor) {
-    console.log('PostActions: Not showing actions - user is not the author');
-    return null; // Don't show actions for other users' posts
-  }
-
+  // Always show the menu, but conditionally show edit/delete options
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm">
             <MoreHorizontal className="h-4 w-4" />
+            {console.log('PostActions: DropdownMenu rendered')}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {showEdit && (
+          {showEdit && isAuthor && (
             <DropdownMenuItem onClick={handleEdit}>
               <Edit className="mr-2 h-4 w-4" />
               Bearbeiten
@@ -175,7 +189,7 @@ export function PostActions({
             <ExternalLink className="mr-2 h-4 w-4" />
             Externe Ansicht
           </DropdownMenuItem>
-          {showDelete && (
+          {showDelete && isAuthor && (
             <DropdownMenuItem
               onClick={() => setIsDeleteDialogOpen(true)}
               className="text-red-600 focus:text-red-600"
@@ -187,29 +201,32 @@ export function PostActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Post löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchtest du diesen Post wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-              Der Post wird aus deinem Nostr-Account gelöscht.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              Abbrechen
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isDeleting ? 'Lösche...' : 'Ja, löschen'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Dialog - nur für Autor */}
+      {isAuthor && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Post löschen?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Möchtest du diesen Post wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                Der Post wird aus deinem Nostr-Account gelöscht.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>
+                Abbrechen
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isDeleting ? 'Lösche...' : 'Ja, löschen'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }

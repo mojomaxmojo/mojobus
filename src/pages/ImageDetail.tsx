@@ -54,7 +54,6 @@ export function ImageDetail() {
       const allEvents = await nostr.query([
         {
           ids: [eventId],
-          authors: NOSTR_CONFIG.authorPubkeys,
         }
       ], { signal: abortSignal });
 
