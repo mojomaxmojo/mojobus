@@ -185,7 +185,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
         className={cn("max-w-[95vw] sm:max-w-md max-h-[90vh] max-h-[90dvh] p-0 overflow-hidden rounded-2xl overflow-y-scroll")}
       >
         <DialogHeader className={cn('px-6 pt-6 pb-1 relative')}>
-
+            <DialogTitle className="sr-only">Login</DialogTitle>
             <DialogDescription className="text-center">
               Sign up or log in to continue
             </DialogDescription>
