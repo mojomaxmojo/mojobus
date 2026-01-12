@@ -143,14 +143,6 @@ export function Header() {
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/artikel/leon" className="flex items-center gap-2">
-                    <Dog className="h-4 w-4" />
-                    <span>🦁</span>
-                    Leon Story
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
@@ -177,6 +169,14 @@ export function Header() {
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/artikel/leon" className="flex items-center gap-2">
+                    <Dog className="h-4 w-4" />
+                    <span>🦁</span>
+                    Leon Story
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
