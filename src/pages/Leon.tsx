@@ -19,7 +19,7 @@ export function Leon() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Alle Leon-Artikel abrufen mit Infinite Scroll
-  const { data: articles, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteLongformArticles({
+  const { data: articles, isLoading, error, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteLongformArticles({
     kinds: [30023],
     '#t': ['leon'],
   });
