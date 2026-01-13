@@ -77,9 +77,24 @@ export function ImageDetail() {
   const metadata = author.data?.metadata;
 
   const extractImages = (content: string): string[] => {
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
+    // Match image URLs with extensions OR from known image hosting services
+    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
     const matches = content.match(urlRegex) || [];
-    return matches;
+
+    // Filter out URLs that are not actually image files
+    const imageUrls = matches.filter(url => {
+      const lower = url.toLowerCase();
+      return lower.includes('.jpg') ||
+             lower.includes('.jpeg') ||
+             lower.includes('.png') ||
+             lower.includes('.gif') ||
+             lower.includes('.webp') ||
+             lower.includes('imgur.com') ||
+             lower.includes('cdn.blossom') ||
+             lower.includes('nostr.build');
+    });
+
+    return imageUrls;
   };
 
   const extractTags = (event: ImageEvent): string[] => {
@@ -102,12 +117,6 @@ export function ImageDetail() {
   console.log('Image validation:', {
     eventExists: !!events,
     imagesCount: images.length,
-    tagsFound: tags,
-    isValid: isValidImageEvent
-  });
-
-  console.log('Image validation:', {
-    imagesFound: images.length,
     tagsFound: tags,
     isValid: isValidImageEvent
   });
