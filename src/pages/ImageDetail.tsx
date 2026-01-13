@@ -77,8 +77,10 @@ export function ImageDetail() {
   const metadata = author.data?.metadata;
 
   const extractImages = (content: string): string[] => {
+    if (!content) return [];
+
     // Match image URLs with extensions OR from known image hosting services
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
+    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/blossom\.primal\.net\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
     const matches = content.match(urlRegex) || [];
 
     // Filter out URLs that are not actually image files
@@ -90,31 +92,34 @@ export function ImageDetail() {
              lower.includes('.gif') ||
              lower.includes('.webp') ||
              lower.includes('imgur.com') ||
-             lower.includes('cdn.blossom') ||
-             lower.includes('nostr.build');
+             lower.includes('blossom');
     });
 
     return imageUrls;
   };
 
   const extractTags = (event: ImageEvent): string[] => {
-    console.log('Extracting tags from event:', event?.tags);
-    const result = event.tags
+    if (!event?.tags) return [];
+    return event.tags
       ?.filter(tag => tag[0] === 't')
       ?.map(tag => tag[1]) || [];
-    console.log('Extracted tags:', result);
-    return result;
   };
 
+  // Only compute these if events is loaded
   const images = events ? extractImages(events.content) : [];
   const tags = events ? extractTags(events) : [];
 
   // Determine if this should be treated as an image event
-  const isValidImageEvent = events && (images.length > 0 || tags.some(tag =>
-    ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
-  ));
+  // Only check if we're not loading and have an event
+  const isValidImageEvent = !isLoading && events && (
+    images.length > 0 ||
+    tags.some(tag =>
+      ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
+    )
+  );
 
   console.log('Image validation:', {
+    isLoading,
     eventExists: !!events,
     imagesCount: images.length,
     tagsFound: tags,
@@ -164,7 +169,8 @@ export function ImageDetail() {
     setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
   };
 
-  if (!isValidImageEvent) {
+  // Only show invalid image error if NOT loading and NOT an image event
+  if (!isLoading && !isValidImageEvent) {
     console.log('Event does not contain images or media tags, showing error');
     console.log('Debug info:', {
       event: events,
