@@ -2,20 +2,19 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLongformArticles } from '@/hooks/useLongformArticles';
-import { useNotes } from '@/hooks/useNotes';
-import { useNostr } from '@nostrify/react';
+import { useRecentArticles } from '@/hooks/useRecentArticles';
 import { useQuery } from '@tanstack/react-query';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { extractArticleMetadata } from '@/hooks/useLongformArticles';
-import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { Waves, Compass, Sun, Anchor } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
-import type { NostrEvent } from '@nostrify/nostrify';
+import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
+import { logger } from '@/utils/logger';
+import { useAuthorsBatch } from '@/hooks/useAuthorsBatch';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image';
@@ -41,7 +40,8 @@ export function Home() {
     link: [{ rel: 'canonical', href: 'https://mojobus.cc/' }]
   });
 
-  const { data: articles, isLoading } = useLongformArticles();
+  // LOAD ONLY 6 RECENT ARTICLES INSTEAD OF ALL (100+)
+  const { data: articles, isLoading } = useRecentArticles(6);
   const notesQuery = useNotes();
   const { nostr } = useNostr();
 
@@ -109,6 +109,13 @@ export function Home() {
   const recentItems = contentItems
     .sort((a, b) => b.date - a.date)
     .slice(0, 6);
+
+  // Batch-Load alle Autoren in EINEM Query statt für jede Card einzeln!
+  const uniquePubkeys = useMemo(() => {
+    return Array.from(new Set(recentItems.map(item => item.event.pubkey)));
+  }, [recentItems]);
+
+  const { data: authorsMap } = useAuthorsBatch(uniquePubkeys);
 
   return (
     <div className="min-h-screen">
