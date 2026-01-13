@@ -112,7 +112,7 @@ export function Home() {
 
   // Batch-Load alle Autoren in EINEM Query statt für jede Card einzeln!
   const uniquePubkeys = useMemo(() => {
-    return Array.from(new Set(recentItems.map(item => item.event.pubkey)));
+  return Array.from(new Set(recentItems.map(item => item.event.pubkey)));
   }, [recentItems]);
 
   const { data: authorsMap } = useAuthorsBatch(uniquePubkeys);
