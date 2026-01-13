@@ -41,39 +41,36 @@ export default defineConfig(() => ({
       // Optimized chunking strategy for better caching
       manualChunks: (id) => {
         // Vendor chunks - rarely change
-        if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+        if (id.includes('react') || id.includes('react-dom')) {
           return 'react-vendor';
         }
-        if (id.includes('node_modules/nostr') || id.includes('node_modules/@nostrify') || id.includes('node_modules/nostr-tools')) {
+        if (id.includes('nostr') || id.includes('nostrify')) {
           return 'nostr-vendor';
         }
-        if (id.includes('node_modules/@tanstack')) {
+        if (id.includes('@tanstack') || id.includes('tanstack')) {
           return 'query-vendor';
         }
-        if (id.includes('node_modules/lucide-react')) {
+        if (id.includes('lucide') || id.includes('lucide-react')) {
           return 'icons-vendor';
         }
-        if (id.includes('node_modules/@radix-ui')) {
-          return 'radix-vendor';
-        }
-        if (id.includes('node_modules/date-fns')) {
-          return 'date-vendor';
-        }
-        if (id.includes('node_modules/')) {
-          return 'vendor';
+        if (id.includes('radix') || id.includes('@radix-ui')) {
+          return 'ui-vendor';
         }
 
         // App-specific chunks
-        if (id.includes('/hooks/')) {
+        if (id.includes('hooks') || id.includes('useNostr') || id.includes('useAuthor')) {
           return 'hooks';
         }
-        if (id.includes('/components/')) {
-          return 'components';
+        if (id.includes('components') && !id.includes('ui')) {
+          return 'app-components';
         }
-        if (id.includes('/pages/')) {
+        if (id.includes('ui')) {
+          return 'ui-components';
+        }
+        if (id.includes('pages')) {
           return 'pages';
         }
-        if (id.includes('/lib/') || id.includes('/utils')) {
+        if (id.includes('lib') || id.includes('utils')) {
           return 'utils';
         }
 
@@ -96,15 +93,11 @@ export default defineConfig(() => ({
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
       },
       mangle: {
         safari10: true,
       },
     },
-    // Optimize chunk splitting
-    chunkSizeWarningLimit: 800,
-    minChunkSize: 10000,
   },
   test: {
     globals: true,

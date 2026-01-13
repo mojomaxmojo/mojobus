@@ -77,46 +77,18 @@ export function ImageDetail() {
   const metadata = author.data?.metadata;
 
   const extractImages = (content: string, tags?: string[][]): string[] => {
-    // Extract images from content - improved regex that handles URLs with query parameters
-    const urlRegex = /(https?:\/\/[^\s<>]+\.(?:jpg|jpeg|png|gif|webp))/gi;
+    // Extract images from content
+    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
     const contentImages = content.match(urlRegex) || [];
-
-    // Also look for common image hosting patterns
-    const hostingPatterns = [
-      /https?:\/\/(?:www\.)?imgur\.com\/[a-zA-Z0-9]+(?:\.(?:jpg|jpeg|png|gif|webp))?/gi,
-      /https?:\/\/i\.imgur\.com\/[a-zA-Z0-9]+\.(?:jpg|jpeg|png|gif|webp)/gi,
-      /https?:\/\/cdn\.blossom\.[^\/\s]+\//gi,
-      /https?:\/\/nostr\.build\/[^\/\s]+\.(?:jpg|jpeg|png|gif|webp)/gi,
-      /https?:\/\/(?:www\.)?nostr\.img\.com\//gi,
-    ];
-
-    for (const pattern of hostingPatterns) {
-      const matches = content.match(pattern) || [];
-      contentImages.push(...matches);
-    }
 
     // Also extract from 'url' tags (Nostr standard for file attachments)
     const tagImages = tags
       ?.filter(tag => tag[0] === 'url')
       ?.map(tag => tag[1])
-      ?.filter(url => /\.(jpg|jpeg|png|gif|webp)/i.test(url)) || [];
-
-    // Also extract from 'imeta' tags and get url
-    const imetaImages: string[] = [];
-    if (tags) {
-      for (const tag of tags) {
-        if (tag[0] === 'imeta' && tag.length > 1) {
-          const imetaContent = tag[1];
-          const urlMatch = imetaContent.match(/url\s+([^\s]+)/i);
-          if (urlMatch && urlMatch[1]) {
-            imetaImages.push(urlMatch[1]);
-          }
-        }
-      }
-    }
+      ?.filter(url => /\.(jpg|jpeg|png|gif|webp)$/i.test(url)) || [];
 
     // Combine and remove duplicates
-    return [...new Set([...contentImages, ...tagImages, ...imetaImages])];
+    return [...new Set([...contentImages, ...tagImages])];
   };
 
   const extractTags = (event: ImageEvent): string[] => {
@@ -192,83 +164,8 @@ export function ImageDetail() {
     setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
   };
 
-  // Check loading state first
-  if (isLoading) {
-    return (
-      <div className="min-h-screen py-12">
-        <div className="container mx-auto px-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/bilder')}
-            className="mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zurück zu Bilder
-          </Button>
-
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // Check if event not found (error or null events)
-  if (error || !events) {
-    console.log('Error or no events found');
-    return (
-      <div className="min-h-screen py-12">
-        <div className="container mx-auto px-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/bilder')}
-            className="mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zurück zu Bilder
-          </Button>
-
-          <Card className="border-dashed">
-            <CardContent className="py-12 px-8 text-center">
-              <div className="max-w-sm mx-auto space-y-6">
-                <h3 className="text-lg font-semibold text-red-600">
-                  Bild nicht gefunden
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Das angegebene Bild konnte nicht geladen werden oder wurde bereits gelöscht.
-                </p>
-                <p className="text-sm text-gray-600">
-                  Möglicherweise ist die ID ungültig oder das Bild wurde entfernt.
-                </p>
-                <div className="space-y-2">
-                  <Button onClick={() => navigate('/bilder')}>
-                    Zurück zur Bildergalerie
-                  </Button>
-                  <RelaySelector className="w-full" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // Check if event exists but is not a valid image event
   if (!isValidImageEvent) {
-    console.log('Event exists but is not a valid image event');
+    console.log('Event does not contain images or media tags, showing error');
     console.log('Debug info:', {
       event: events,
       imagesCount: images.length,
@@ -302,6 +199,78 @@ export function ImageDetail() {
                 <div className="space-y-2">
                   <Button onClick={() => navigate('/bilder')}>
                     Zur Bildergalerie
+                  </Button>
+                  <RelaySelector className="w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="container mx-auto px-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/bilder')}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Zurück zu Bilder
+          </Button>
+
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !events) {
+    console.log('Error or no events found');
+    return (
+      <div className="min-h-screen py-12">
+        <div className="container mx-auto px-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/bilder')}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Zurück zu Bilder
+          </Button>
+
+          <Card className="border-dashed">
+            <CardContent className="py-12 px-8 text-center">
+              <div className="max-w-sm mx-auto space-y-6">
+                <h3 className="text-lg font-semibold text-red-600">
+                  Bild nicht gefunden
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Das angegebene Bild konnte nicht geladen werden oder wurde bereits gelöscht.
+                </p>
+                <p className="text-sm text-gray-600">
+                  Möglicherweise ist die ID ungültig oder das Bild wurde entfernt.
+                </p>
+                <div className="space-y-2">
+                  <Button onClick={() => navigate('/bilder')}>
+                    Zurück zur Bildergalerie
                   </Button>
                   <RelaySelector className="w-full" />
                 </div>

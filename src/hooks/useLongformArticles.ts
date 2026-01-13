@@ -101,12 +101,26 @@ export function useLongformArticles(options?: {
 
       const events = await nostr.query([filter], { signal });
 
+      console.log('Found longform events:', events.length);
+
       // Validiere und filtere Artikel (Plätze ausschließen)
       const validArticles = events.filter(event => {
         const isValid = validateLongformArticle(event);
         const isPlace = isPlaceEvent(event);
+
+        console.log('Event:', event.id, {
+          kind: event.kind,
+          identifier: event.tags.find(([name]) => name === 'd')?.[1],
+          type: event.tags.find(([name]) => name === 'type')?.[1],
+          isValid,
+          isPlace,
+          willInclude: isValid && !isPlace
+        });
+
         return isValid && !isPlace;
       });
+
+      console.log('Valid articles after filtering:', validArticles.length);
 
       // Sortiere nach Datum (neueste zuerst)
       return validArticles.sort((a, b) => b.created_at - a.created_at);
@@ -143,6 +157,9 @@ export function useInfiniteLongformArticles(options?: {
       // Timestamp-basierte Pagination
       if (pageParam) {
         filter.until = pageParam;
+        console.log('🔄 Infinite Scroll: Fetching next page', { until: pageParam });
+      } else {
+        console.log('📄 Infinite Scroll: Fetching first page');
       }
 
       // Füge Tag-Filter hinzu wenn vorhanden
@@ -152,6 +169,8 @@ export function useInfiniteLongformArticles(options?: {
 
       const events = await nostr.query([filter], { signal: abortSignal });
 
+      console.log('📦 Infinite Scroll: Received', events.length, 'events from relay (limit was 25)');
+
       // Validiere und filtere Artikel (Plätze ausschließen)
       const validArticles = events.filter(event => {
         const isValid = validateLongformArticle(event);
@@ -159,9 +178,15 @@ export function useInfiniteLongformArticles(options?: {
         return isValid && !isPlace;
       });
 
+      console.log('✅ Infinite Scroll: After filtering', validArticles.length, 'valid articles');
+
       // Wenn der Relay zu viele Events zurückgibt, auf max itemsPerPage pro Seite beschränken
       const MAX_PER_PAGE = DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage;
       const paginatedArticles = validArticles.slice(0, MAX_PER_PAGE);
+
+      if (validArticles.length > MAX_PER_PAGE) {
+        console.log(`⚠️ Infinite Scroll: Limiting to ${MAX_PER_PAGE} articles (received ${validArticles.length})`);
+      }
 
       // Sortiere nach Datum (neueste zuerst)
       const sorted = paginatedArticles.sort((a, b) => b.created_at - a.created_at);
@@ -169,11 +194,18 @@ export function useInfiniteLongformArticles(options?: {
     },
     getNextPageParam: (lastPage) => {
       if (lastPage.length === 0) {
+        console.log('🚫 Infinite Scroll: No more articles (empty page)');
         return undefined;
       }
 
       const lastCreated = lastPage[lastPage.length - 1].created_at;
       const nextPageParam = lastCreated - 1;
+
+      console.log('➡️ Infinite Scroll: Next page param', {
+        lastPageLength: lastPage.length,
+        lastCreated,
+        nextPageParam
+      });
 
       return nextPageParam;
     },
@@ -196,6 +228,7 @@ export function usePlaces() {
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
 
+      console.log('Querying for places...');
       const events = await nostr.query(
         [
           {
@@ -207,12 +240,27 @@ export function usePlaces() {
         { signal }
       );
 
+      console.log('Found total longform events:', events.length);
+
       // Validiere und filtere Plätze
       const validPlaces = events.filter(event => {
         const isValid = validateLongformArticle(event);
         const isPlace = isPlaceEvent(event);
+
+        console.log('Place check for event:', event.id, {
+          kind: event.kind,
+          identifier: event.tags.find(([name]) => name === 'd')?.[1],
+          type: event.tags.find(([name]) => name === 'type')?.[1],
+          name: event.tags.find(([name]) => name === 'name')?.[1],
+          isValid,
+          isPlace,
+          willInclude: isValid && isPlace
+        });
+
         return isValid && isPlace;
       });
+
+      console.log('Valid places after filtering:', validPlaces.length);
 
       // Sortiere nach Datum (neueste zuerst)
       return validPlaces.sort((a, b) => b.created_at - a.created_at);

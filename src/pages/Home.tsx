@@ -55,17 +55,15 @@ export function Home() {
           kinds: [1],
           authors: NOSTR_CONFIG.authorPubkeys,
           '#t': ['medien', 'media', 'bilder', 'images'],
-          limit: 20, // Reduziert von 50 auf 20 für schnellere Ladezeiten
+          limit: 50,
         }
-      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(1500)]) }); // Timeout reduziert
-
+      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(2000)]) });
+      
       return events.filter((event) => {
         const content = event.content.toLowerCase();
         return content.includes('.jpg') || content.includes('.png');
       });
     },
-    staleTime: 1000 * 60 * 30, // 30 Minuten Cache
-    gcTime: 1000 * 60 * 60, // 1 Stunde Cache
   });
 
   const contentItems: ContentItem[] = [];
