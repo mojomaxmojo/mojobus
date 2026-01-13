@@ -40,7 +40,7 @@ export function Home() {
     link: [{ rel: 'canonical', href: 'https://mojobus.cc/' }]
   });
 
-  // LOAD ONLY 6 RECENT ARTICLES INSTEAD OF ALL (100+)
+  // FORCE REBUILD - Batch author loading optimization
   const { data: articles, isLoading } = useRecentArticles(6);
   const notesQuery = useNotes();
   const { nostr } = useNostr();
