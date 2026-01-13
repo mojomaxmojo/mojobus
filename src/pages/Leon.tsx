@@ -1,42 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
+import { useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { Search, Calendar, User, Dog } from 'lucide-react';
+import { Search, Calendar, User, Dog, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { memo } from 'react';
+import { useInView } from 'react-intersection-observer';
 
 export function Leon() {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Alle Leon-Artikel abrufen mit automatischen Tags
-  const { data: articles, isLoading, error } = useLongformArticles({
+  // Alle Leon-Artikel abrufen mit Infinite Scroll
+  const { data: articles, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteLongformArticles({
     kinds: [30023],
     '#t': ['leon'],
-    limit: 50
   });
 
-  // Zusätzliche Leon-relevante Artikel mit automatischen Tags abrufen
-  const { data: leonAutoArticles } = useLongformArticles({
-    kinds: [30023],
-    '#t': ['lion', 'dog'],
-    limit: 50
+  // Infinite Scroll trigger
+  const { ref, inView } = useInView({
+    threshold: 0.1,
+    rootMargin: '100px',
   });
 
-  // Kombiniere beide Ergebnisse und entferne Duplikate
+  // Fetch more articles when scroll trigger is visible
+  useEffect(() => {
+    console.log('👀 Leon Infinite Scroll Trigger:', {
+      inView,
+      hasNextPage,
+      isFetchingNextPage,
+      shouldFetch: inView && hasNextPage && !isFetchingNextPage
+    });
+
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      console.log('📥 Leon: Fetching next page...');
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Kombiniere alle Seiten und entferne Duplikate
   const allLeonArticles = () => {
-    if (!articles && !leonAutoArticles) return [];
+    if (!articles) return [];
 
-    const combined = [...(articles || []), ...(leonAutoArticles || [])];
-    const unique = combined.filter((article, index, self) =>
+    const flattened = articles.pages.flat();
+    const unique = flattened.filter((article, index, self) =>
       index === self.findIndex((a) => a.id === article.id)
     );
 
@@ -82,8 +96,13 @@ export function Leon() {
             {displayArticles.length > 0 && (
               <div className="mt-2">
                 <Badge variant="outline" className="text-xs">
-                  🦁 {displayArticles.length} Leon-Geschichte{displayArticles.length !== 1 ? 'n' : ''}
+                  🦁 {filteredArticles.length}/{displayArticles.length} Leon-Geschichte{displayArticles.length !== 1 ? 'n' : ''}
                 </Badge>
+                {filteredArticles.length < displayArticles.length && (
+                  <Badge variant="secondary" className="text-xs ml-2">
+                    Suchergebnis
+                  </Badge>
+                )}
               </div>
             )}
           </div>
@@ -158,11 +177,25 @@ export function Leon() {
 
         {/* Articles Grid */}
         {filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredArticles.map((article) => (
-              <LeonArticleCard key={article.id} article={article} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredArticles.map((article) => (
+                <LeonArticleCard key={article.id} article={article} />
+              ))}
+            </div>
+
+            {/* Infinite Scroll Loader */}
+            {hasNextPage && !searchTerm && (
+              <div ref={ref} className="py-8 flex justify-center">
+                {isFetchingNextPage && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Lade mehr Leon-Geschichten...</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

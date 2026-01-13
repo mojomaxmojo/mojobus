@@ -169,7 +169,7 @@ export function useInfiniteLongformArticles(options?: {
 
       const events = await nostr.query([filter], { signal: abortSignal });
 
-      console.log('📦 Infinite Scroll: Received', events.length, 'events from relay (limit was 25)');
+      console.log('📦 Infinite Scroll: Received', events.length, 'events from relay (limit was', DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage, ')');
 
       // Validiere und filtere Artikel (Plätze ausschließen)
       const validArticles = events.filter(event => {
@@ -180,31 +180,53 @@ export function useInfiniteLongformArticles(options?: {
 
       console.log('✅ Infinite Scroll: After filtering', validArticles.length, 'valid articles');
 
-      // Wenn der Relay zu viele Events zurückgibt, auf max itemsPerPage pro Seite beschränken
-      const MAX_PER_PAGE = DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage;
-      const paginatedArticles = validArticles.slice(0, MAX_PER_PAGE);
+      // Sortiere nach Datum (neueste zuerst)
+      const sorted = validArticles.sort((a, b) => b.created_at - a.created_at);
 
-      if (validArticles.length > MAX_PER_PAGE) {
-        console.log(`⚠️ Infinite Scroll: Limiting to ${MAX_PER_PAGE} articles (received ${validArticles.length})`);
+      // Log pagination info
+      if (sorted.length > 0) {
+        const firstCreated = sorted[0].created_at;
+        const lastCreated = sorted[sorted.length - 1].created_at;
+        console.log('📊 Infinite Scroll: Date range', {
+          first: new Date(firstCreated * 1000).toISOString(),
+          last: new Date(lastCreated * 1000).toISOString(),
+          count: sorted.length
+        });
       }
 
-      // Sortiere nach Datum (neueste zuerst)
-      const sorted = paginatedArticles.sort((a, b) => b.created_at - a.created_at);
       return sorted;
     },
-    getNextPageParam: (lastPage) => {
+    getNextPageParam: (lastPage, allPages) => {
+      // Wenn keine Artikel mehr zurückgegeben wurden, sind wir fertig
       if (lastPage.length === 0) {
         console.log('🚫 Infinite Scroll: No more articles (empty page)');
         return undefined;
       }
 
+      // Wenn wir weniger als 50% der erwarteten Anzahl erhalten, könnte das das Ende sein
+      const expectedCount = DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage;
+      const isPartialPage = lastPage.length < expectedCount * 0.5;
+
+      if (isPartialPage) {
+        console.log('⚠️ Infinite Scroll: Partial page received', {
+          received: lastPage.length,
+          expected: expectedCount,
+          ratio: lastPage.length / expectedCount
+        });
+        // Wir versuchen trotzdem noch eine Seite mehr, falls es noch mehr Artikel gibt
+      }
+
+      // Berechne nächsten Timestamp (1 Sekunde vor dem letzten Event)
       const lastCreated = lastPage[lastPage.length - 1].created_at;
       const nextPageParam = lastCreated - 1;
 
       console.log('➡️ Infinite Scroll: Next page param', {
         lastPageLength: lastPage.length,
-        lastCreated,
-        nextPageParam
+        lastCreated: lastCreated,
+        lastCreatedDate: new Date(lastCreated * 1000).toISOString(),
+        nextPageParam,
+        totalPagesSoFar: allPages.length,
+        totalArticles: allPages.reduce((sum, page) => sum + page.length, 0)
       });
 
       return nextPageParam;
