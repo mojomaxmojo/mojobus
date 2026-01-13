@@ -171,7 +171,11 @@ export function Home() {
             ) : recentItems.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {recentItems.map((item) => (
-                  <ContentCard key={item.event.id} item={item} />
+                  <ContentCard
+                    key={item.event.id}
+                    item={item}
+                    authorMetadata={authorsMap?.[item.event.pubkey]}
+                  />
                 ))}
               </div>
             ) : (
@@ -273,9 +277,16 @@ function extractFirstImageUrl(content) {
   return matches && matches.length > 0 ? matches[0] : null;
 }
 
-const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
-  const author = useAuthor(item.event.pubkey);
-  const authorName = author.data?.metadata?.name || genUserName(item.event.pubkey);
+const ContentCard = memo(function ContentCard({
+  item,
+  authorMetadata
+}: {
+  item: ContentItem;
+  authorMetadata?: NostrMetadata;
+}) {
+  // Verwende authorMetadata aus useAuthorsBatch statt useAuthor
+  // Das reduziert die Anzahl an Queries massiv!
+  const authorName = authorMetadata?.name || genUserName(item.event.pubkey);
 
   let title = '';
   let summary = '';
