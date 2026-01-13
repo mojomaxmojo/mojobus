@@ -15,7 +15,7 @@ import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { memo } from 'react';
 
-export default function RVLife() {
+export function RVLife() {
   const { category } = useParams<{ category: string }>();
   const [searchTerm, setSearchTerm] = useState('');
 

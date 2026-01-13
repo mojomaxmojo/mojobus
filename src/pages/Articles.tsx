@@ -5,16 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
+import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { RelaySelector } from '@/components/RelaySelector';
 import { filterEventsByCountry } from '@/lib/countryDetection';
 import { COUNTRIES } from '@/config';
 import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
-import { useAuthorsBatch } from '@/hooks/useAuthorsBatch';
 import { useState, useMemo, memo, useEffect, useRef } from 'react';
-import { useDebouncedValue } from '@/hooks/useDebounce';
 import { nip19 } from 'nostr-tools';
-import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
+import type { NostrEvent } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
 import { useInView } from 'react-intersection-observer';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
@@ -22,13 +21,11 @@ import { MAIN_MENU } from '@/config/menu';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
-import { logger } from '@/utils/logger';
 
 function Articles() {
   const { country } = useParams();
   const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteLongformArticles();
   const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
   const [selectedTag, setSelectedTag] = useState(null);
   const [selectedAuthor, setSelectedAuthor] = useState(null);
 
@@ -40,7 +37,7 @@ function Articles() {
 
   // Fetch more articles when scroll trigger is visible
   useEffect(() => {
-    logger.log('👀 Infinite Scroll Trigger:', {
+    console.log('👀 Infinite Scroll Trigger:', {
       inView,
       hasNextPage,
       isFetchingNextPage,
@@ -48,7 +45,7 @@ function Articles() {
     });
 
     if (inView && hasNextPage && !isFetchingNextPage) {
-      logger.log('📥 Fetching next page...');
+      console.log('📥 Fetching next page...');
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -58,7 +55,7 @@ function Articles() {
   // Flatten all pages
   const allArticles = useMemo(() => {
     const flattened = data?.pages.flat() || [];
-    logger.log('📚 Articles Page State:', {
+    console.log('📚 Articles Page State:', {
       totalPages: data?.pages.length || 0,
       totalArticles: flattened.length,
       articlesPerPage: data?.pages.map(p => p.length) || [],
@@ -68,20 +65,12 @@ function Articles() {
     return flattened;
   }, [data, hasNextPage, isFetchingNextPage]);
 
-  // Hole alle Autoren in einem einzigen Query statt für jede ArticleCard einzeln!
-  // Das reduziert die Anzahl an Queries massiv: statt 100 Queries nur 1!
-  const uniquePubkeys = useMemo(() => {
-    return Array.from(new Set(allArticles.map(a => a.pubkey)));
-  }, [allArticles]);
-
-  const { data: authorsMap, isLoading: isLoadingAuthors } = useAuthorsBatch(uniquePubkeys);
-
   // Filter articles mit intelligenter Ländererkennung
   const filteredArticles = useMemo(() => {
     let filtered = [...allArticles];
 
     // Debug: Alle Autoren und Artikel anzeigen
-    logger.log('🔍 Debug Articles:', {
+    console.log('🔍 Debug Articles:', {
       totalArticles: allArticles.length,
       selectedAuthor,
       allAuthors: allArticles.map(a => ({
@@ -97,14 +86,14 @@ function Articles() {
 
     // Author filter (auch wenn keine Suche!)
     if (selectedAuthor) {
-      logger.log('👤 Author Filter Applied:', {
+      console.log('👤 Author Filter Applied:', {
         selectedAuthor,
         beforeFilter: filtered.length,
         susannePubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
         matchingArticles: allArticles.filter(a => a.pubkey === selectedAuthor).length
       });
       filtered = filtered.filter(article => article.pubkey === selectedAuthor);
-      logger.log('👤 After Author Filter:', {
+      console.log('👤 After Author Filter:', {
         afterFilter: filtered.length,
         susanneArticles: filtered.map(a => ({
           title: a.tags.find(([name]) => name === 'title')?.[1] || 'No title',
@@ -113,9 +102,9 @@ function Articles() {
       });
     }
 
-    // Search filter (verwende debounced value für bessere Performance)
-    if (debouncedSearchQuery.trim()) {
-      const query = debouncedSearchQuery.toLowerCase();
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(article => {
         const metadata = extractArticleMetadata(article);
 
@@ -134,7 +123,7 @@ function Articles() {
       });
     }
 
-    logger.log('🎯 Final Filtered Articles:', {
+    console.log('🎯 Final Filtered Articles:', {
       count: filtered.length,
       articles: filtered.map(a => ({
         title: a.tags.find(([name]) => name === 'title')?.[1],
@@ -144,7 +133,7 @@ function Articles() {
     });
 
     return filtered.sort((a, b) => b.created_at - a.created_at);
-  }, [allArticles, debouncedSearchQuery, selectedTag, selectedAuthor, currentCountry, country]);
+  }, [allArticles, searchQuery, selectedTag, selectedAuthor, currentCountry, country]);
 
   const articleCount = allArticles.length;
 
@@ -346,11 +335,7 @@ function Articles() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredArticles.map((article) => (
-                  <ArticleCard
-                    key={article.id}
-                    article={article}
-                    authorMetadata={authorsMap?.[article.pubkey]}
-                  />
+                  <ArticleCard key={article.id} article={article} />
                 ))}
               </div>
 
@@ -414,15 +399,10 @@ function Articles() {
   );
 }
 
-const ArticleCard = memo(function ArticleCard({
-  article,
-  authorMetadata
-}: {
-  article: NostrEvent;
-  authorMetadata?: NostrMetadata;
-}) {
+const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent }) {
   const metadata = extractArticleMetadata(article);
-  const authorName = authorMetadata?.name || genUserName(article.pubkey);
+  const author = useAuthor(article.pubkey);
+  const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
 
   // Generate naddr identifier for article
   const naddr = nip19.naddrEncode({
@@ -489,22 +469,6 @@ const ArticleCard = memo(function ArticleCard({
         </CardContent>
       </Link>
     </Card>
-  );
-}, (prevProps, nextProps) => {
-  // Vergleichsfunktion für React.memo
-  // Re-render nur wenn sich diese Properties ändern:
-  // - article.id
-  // - image URL
-  // - authorMetadata.name
-  const prevImage = prevProps.article.tags.find(([name]) => name === 'image')?.[1];
-  const nextImage = nextProps.article.tags.find(([name]) => name === 'image')?.[1];
-  const prevAuthorName = prevProps.authorMetadata?.name;
-  const nextAuthorName = nextProps.authorMetadata?.name;
-
-  return (
-    prevProps.article.id === nextProps.article.id &&
-    prevImage === nextImage &&
-    prevAuthorName === nextAuthorName
   );
 });
 

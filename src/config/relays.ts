@@ -148,7 +148,7 @@ export const RELAY_PRESETS = {
   fast: {
     name: 'Fast',
     description: 'Ein schneller Relay für maximale Performance',
-    relayUrls: ['wss://relay.primal.net'],
+    relayUrls: ['wss://relay.nostr.band'],
     maxRelays: 1,
     queryTimeout: 2000,
   },
@@ -158,7 +158,7 @@ export const RELAY_PRESETS = {
     name: 'Balanced',
     description: 'Ausgewogene Konfiguration für gute Performance und Zuverlässigkeit',
     relayUrls: [
-      'wss://relay.primal.net',
+      'wss://relay.nostr.band',
       'wss://relay.damus.io',
     ],
     maxRelays: 2,

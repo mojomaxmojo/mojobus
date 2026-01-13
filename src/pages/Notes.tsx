@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from 'lucide-react';
 
-export default function Notes() {
+export function Notes() {
   const { country } = useParams();
 
   const currentCountry = country ? countries[country as keyof typeof countries] : null;

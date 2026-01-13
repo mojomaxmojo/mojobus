@@ -14,7 +14,7 @@ import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { memo } from 'react';
 
-export default function Leon() {
+export function Leon() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Alle Leon-Artikel abrufen mit automatischen Tags

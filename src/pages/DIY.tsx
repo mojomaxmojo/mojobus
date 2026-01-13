@@ -16,7 +16,7 @@ import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { memo } from 'react';
 
-export default function DIY() {
+export function DIY() {
   const { category } = useParams<{ category: string }>();
   const [searchTerm, setSearchTerm] = useState('');
 

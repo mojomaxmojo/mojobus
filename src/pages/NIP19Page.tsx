@@ -297,7 +297,7 @@ const EventView = ({ eventId, authorPubkey }: { eventId: string; authorPubkey?: 
   );
 };
 
-export default function NIP19Page() {
+export function NIP19Page() {
   const { nip19: identifier } = useParams<{ nip19: string }>();
 
   if (!identifier) {

@@ -23,7 +23,7 @@ interface ImageEvent {
   tags: string[][];
 }
 
-export default function ImageDetail() {
+export function ImageDetail() {
   const { nip19: noteId } = useParams();
   const navigate = useNavigate();
   const { nostr } = useNostr();

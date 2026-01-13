@@ -2,19 +2,20 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useRecentArticles } from '@/hooks/useRecentArticles';
+import { useLongformArticles } from '@/hooks/useLongformArticles';
+import { useNotes } from '@/hooks/useNotes';
+import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { extractArticleMetadata } from '@/hooks/useLongformArticles';
+import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { Waves, Compass, Sun, Anchor } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
-import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
+import type { NostrEvent } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
-import { logger } from '@/utils/logger';
-import { useAuthorsBatch } from '@/hooks/useAuthorsBatch';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image';
@@ -40,8 +41,7 @@ export function Home() {
     link: [{ rel: 'canonical', href: 'https://mojobus.cc/' }]
   });
 
-  // FORCE REBUILD - Batch author loading optimization
-  const { data: articles, isLoading } = useRecentArticles(6);
+  const { data: articles, isLoading } = useLongformArticles();
   const notesQuery = useNotes();
   const { nostr } = useNostr();
 
@@ -110,13 +110,6 @@ export function Home() {
     .sort((a, b) => b.date - a.date)
     .slice(0, 6);
 
-  // Batch-Load alle Autoren in EINEM Query statt für jede Card einzeln!
-  const uniquePubkeys = useMemo(() => {
-  return Array.from(new Set(recentItems.map(item => item.event.pubkey)));
-  }, [recentItems]);
-
-  const { data: authorsMap } = useAuthorsBatch(uniquePubkeys);
-
   return (
     <div className="min-h-screen">
       <section className="relative bg-gradient-to-b from-primary/10 via-background to-background pt-[60px] pb-2 md:pb-16">
@@ -178,11 +171,7 @@ export function Home() {
             ) : recentItems.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {recentItems.map((item) => (
-                  <ContentCard
-                    key={item.event.id}
-                    item={item}
-                    authorMetadata={authorsMap?.[item.event.pubkey]}
-                  />
+                  <ContentCard key={item.event.id} item={item} />
                 ))}
               </div>
             ) : (
@@ -284,16 +273,9 @@ function extractFirstImageUrl(content) {
   return matches && matches.length > 0 ? matches[0] : null;
 }
 
-const ContentCard = memo(function ContentCard({
-  item,
-  authorMetadata
-}: {
-  item: ContentItem;
-  authorMetadata?: NostrMetadata;
-}) {
-  // Verwende authorMetadata aus useAuthorsBatch statt useAuthor
-  // Das reduziert die Anzahl an Queries massiv!
-  const authorName = authorMetadata?.name || genUserName(item.event.pubkey);
+const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
+  const author = useAuthor(item.event.pubkey);
+  const authorName = author.data?.metadata?.name || genUserName(item.event.pubkey);
 
   let title = '';
   let summary = '';
