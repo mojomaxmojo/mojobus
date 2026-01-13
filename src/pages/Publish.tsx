@@ -22,6 +22,7 @@ import { ARTICLE_CATEGORIES, DIY_CATEGORIES, DIY_TAGS, NATURE_CATEGORIES, NATURE
 import MAIN_MENU from '@/config/menu';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
+import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -1708,7 +1709,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       // Bei bearbeiteten Beiträgen: Daten aus dem Event laden
       setTitle(editEvent.tags?.find((tag: any) => tag[0] === 'title')?.[1] || '');
       setSummary(editEvent.tags?.find((tag: any) => tag[0] === 'summary')?.[1] || '');
-      setContent(editEvent.content || '');
+      setContent(markdownToHtml(editEvent.content || '')); // Konvertiere Markdown zu HTML für Editor
       setImage(editEvent.tags?.find((tag: any) => tag[0] === 'image')?.[1] || '');
       setCategory(editEvent.tags?.find((tag: any) => tag[0] === 'category')?.[1] || '');
 
@@ -1905,7 +1906,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
     publishEvent({
       kind: 30023, // Long-form article
-      content: content.trim(),
+      content: htmlToMarkdown(content).trim(), // Konvertiere HTML zu Markdown für Nostr
       tags: finalTags
     });
 
@@ -2079,26 +2080,38 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="article-content">Inhalt (Markdown unterstützt)</Label>
-          <Textarea
-            id="article-content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="# Ueberschrift
+          <Label htmlFor="article-content">Inhalt</Label>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            WYSIWYG Editor - Schreibe deinen Artikel mit Formatierung, Bildern und Links
+          </div>
+          <WysiwygEditor
+            content={content}
+            onChange={setContent}
+            placeholder={`# Überschrift
 
-Dein Artikel in Markdown-Format...
+Schreibe deinen Artikel hier...
+
+- Verwende die Toolbar für Formatierung
+- Fett oder kursiv
 
 ## Unterüberschrift
 
-### Markdown-Format
+### Listen
+- Listenpunkte
+- Weitere Punkte
 
-*Listenpunkte*
-**Fett** oder *kursiv*
+### Links und Bilder
+- Füge Links über das Link-Icon ein
+- Lade Bilder direkt in den Editor
 
-### Noch mehr
-"
-            rows={12}
-            className="font-mono text-sm"
+### Noch mehr...
+`}
+            minHeight="400px"
+            maxLength={50000}
+            onImageUpload={(url) => {
+              // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
+              console.log('Image uploaded:', url);
+            }}
           />
         </div>
 
