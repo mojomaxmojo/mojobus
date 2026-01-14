@@ -26,6 +26,7 @@ import {
   Calendar,
   Lightbulb,
   Sun,
+  ChevronDown,
 } from '@/lib/icons';
 import {
   DropdownMenu,
@@ -37,14 +38,6 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from '@/components/ui/navigation-menu';
 import { MAIN_MENU } from '@/config';
 
 export function Header() {
@@ -92,228 +85,250 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <NavigationMenu className="hidden md:flex flex-1 justify-end">
-            <NavigationMenuList>
-              {/* Home */}
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link to="/" className="flex items-center gap-2">
-                    <Home className="h-4 w-4" />
-                    Home
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
+          <nav className="hidden md:flex items-center gap-3 flex-1 justify-end">
+            {/* Home */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors"
+            >
+              <Home className="h-4 w-4" />
+              Home
+            </Link>
 
-              {/* Artikel mit Hover-Menü */}
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className="flex items-center gap-2">
+            {/* Artikel mit Dropdown-Menü */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors">
                   <FileText className="h-4 w-4" />
                   Artikel
-                </NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="w-56 p-2">
-                    <NavigationMenuLink asChild className="block p-2 rounded-md hover:bg-accent">
-                      <Link to="/artikel" className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Alle Artikel
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuItem asChild>
+                  <Link to="/artikel" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Alle Artikel
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2">
+                    <Flag className="h-4 w-4" />
+                    Nach Länder
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-48">
+                    {Object.values(MAIN_MENU.countries).map((country) => (
+                      <DropdownMenuItem key={country.code} asChild>
+                        <Link to={`/artikel/${country.code}`} className="flex items-center gap-2">
+                          <span className="text-lg">{country.flag}</span>
+                          {country.name}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2">
+                    <Wrench className="h-4 w-4" />
+                    🛠️ DIY
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-56">
+                    {Object.values(MAIN_MENU.diy).map((category) => (
+                      <DropdownMenuItem key={category.id} asChild>
+                        <Link to={`/artikel/diy/${category.id}`} className="flex items-center gap-2">
+                          <span>{category.emoji}</span>
+                          {category.name}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    🚐 RV Life
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link to="/artikel/rvlife/kueche-essen" className="flex items-center gap-2">
+                        <span>🍳</span>
+                        Küche & Essen
                       </Link>
-                    </NavigationMenuLink>
-                    <div className="my-1 border-t"></div>
-                    <div className="py-1">
-                      <div className="px-2 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Nach Länder
-                      </div>
-                      {Object.values(MAIN_MENU.countries).map((country) => (
-                        <NavigationMenuLink key={country.code} asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
-                          <Link to={`/artikel/${country.code}`} className="flex items-center gap-2">
-                            <span className="text-lg">{country.flag}</span>
-                            {country.name}
-                          </Link>
-                        </NavigationMenuLink>
-                      ))}
-                    </div>
-                    <div className="my-1 border-t"></div>
-                    <div className="py-1">
-                      <div className="px-2 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        🛠️ DIY
-                      </div>
-                      {Object.values(MAIN_MENU.diy).map((category) => (
-                        <NavigationMenuLink key={category.id} asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
-                          <Link to={`/artikel/diy/${category.id}`} className="flex items-center gap-2">
-                            <span>{category.emoji}</span>
-                            {category.name}
-                          </Link>
-                        </NavigationMenuLink>
-                      ))}
-                    </div>
-                    <div className="my-1 border-t"></div>
-                    <div className="py-1">
-                      <NavigationMenuLink asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
-                        <Link to="/artikel/rvlife/kueche-essen" className="flex items-center gap-2">
-                          <span>🍳</span>
-                          Küche & Essen
-                        </Link>
-                      </NavigationMenuLink>
-                      <NavigationMenuLink asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
-                        <Link to="/artikel/rvlife/ausstattung" className="flex items-center gap-2">
-                          <span>🏠</span>
-                          Ausstattung
-                        </Link>
-                      </NavigationMenuLink>
-                      <NavigationMenuLink asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
-                        <Link to="/artikel/rvlife/freeliving" className="flex items-center gap-2">
-                          <span>🕊️</span>
-                          Freeliving
-                        </Link>
-                      </NavigationMenuLink>
-                    </div>
-                    <div className="my-1 border-t"></div>
-                    <NavigationMenuLink asChild className="block p-2 rounded-md hover:bg-accent">
-                      <Link to="/artikel/leon" className="flex items-center gap-2">
-                        <Dog className="h-4 w-4" />
-                        <span>🦁</span>
-                        Leon Story
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/artikel/rvlife/ausstattung" className="flex items-center gap-2">
+                        <span>🏠</span>
+                        Ausstattung
                       </Link>
-                    </NavigationMenuLink>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/artikel/rvlife/freeliving" className="flex items-center gap-2">
+                        <span>🕊️</span>
+                        Freeliving
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/artikel/leon" className="flex items-center gap-2">
+                    <Dog className="h-4 w-4" />
+                    <span>🦁</span>
+                    Leon Story
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
               {/* Plätze */}
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className="flex items-center gap-2 text-ocean-600 dark:text-ocean-300 font-semibold">
-                  <MapPin className="h-4 w-4" />
-                  Plätze
-                </NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="w-48 p-2">
-                    <NavigationMenuLink asChild className="block p-2 rounded-md hover:bg-accent">
-                      <Link to="/plaetze" className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        Alle Plätze
-                      </Link>
-                    </NavigationMenuLink>
-                    <div className="my-1 border-t"></div>
-                    <div className="py-1">
-                      <div className="px-2 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Nach Länder
-                      </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 text-ocean-600 dark:text-ocean-300 hover:text-ocean-700 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-semibold transition-colors">
+                    <MapPin className="h-4 w-4" />
+                    Plätze
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/plaetze" className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Alle Plätze
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="flex items-center gap-2">
+                      <Flag className="h-4 w-4" />
+                      Nach Länder
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-48">
                       {Object.values(MAIN_MENU.countries).map((country) => (
-                        <NavigationMenuLink key={country.code} asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
+                        <DropdownMenuItem key={country.code} asChild>
                           <Link to={`/plaetze/${country.code}`} className="flex items-center gap-2">
                             <span className="text-lg">{country.flag}</span>
                             {country.name}
                           </Link>
-                        </NavigationMenuLink>
+                        </DropdownMenuItem>
                       ))}
-                    </div>
-                    <div className="my-1 border-t"></div>
-                    <div className="py-1">
-                      <div className="px-2 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Nach Typen
-                      </div>
-                      <NavigationMenuLink asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Nach Typen
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-56">
+                      <DropdownMenuItem asChild>
                         <Link to="/plaetze/campingplatz" className="flex items-center gap-2">
                           <span className="text-lg">🏕️</span>
                           <span className="text-gray-900 dark:text-gray-100">Campingplatz</span>
                         </Link>
-                      </NavigationMenuLink>
-                      <NavigationMenuLink asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link to="/plaetze/wildcamping" className="flex items-center gap-2">
                           <span className="text-lg">🌲</span>
                           <span className="text-gray-900 dark:text-gray-100">Wildcamping</span>
                         </Link>
-                      </NavigationMenuLink>
-                      <NavigationMenuLink asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link to="/plaetze/stellplatz" className="flex items-center gap-2">
                           <span className="text-lg">🅿️</span>
                           <span className="text-gray-900 dark:text-gray-100">Stellplatz</span>
                         </Link>
-                      </NavigationMenuLink>
-                      <NavigationMenuLink asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link to="/plaetze/aussichtspunkt" className="flex items-center gap-2">
                           <span className="text-lg">👁️</span>
                           <span className="text-gray-900 dark:text-gray-100">Aussichtspunkt</span>
                         </Link>
-                      </NavigationMenuLink>
-                      <NavigationMenuLink asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link to="/plaetze/strand" className="flex items-center gap-2">
                           <span className="text-lg">🏖️</span>
                           <span className="text-gray-900 dark:text-gray-100">Strand</span>
                         </Link>
-                      </NavigationMenuLink>
-                    </div>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Bilder */}
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className="flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  Bilder
-                </NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="w-56 p-2">
-                    <NavigationMenuLink asChild className="block p-2 rounded-md hover:bg-accent">
-                      <Link to="/bilder" className="flex items-center gap-2">
-                        <Images className="h-4 w-4" />
-                        Alle Bilder
-                      </Link>
-                    </NavigationMenuLink>
-                    <div className="my-1 border-t"></div>
-                    <div className="py-1">
-                      <div className="px-2 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Nach Länder
-                      </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors">
+                    <Camera className="h-4 w-4" />
+                    Bilder
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link to="/bilder" className="flex items-center gap-2">
+                      <Images className="h-4 w-4" />
+                      Alle Bilder
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="flex items-center gap-2">
+                      <Flag className="h-4 w-4" />
+                      Nach Länder
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-48">
                       {Object.values(MAIN_MENU.countries).map((country) => (
-                        <NavigationMenuLink key={country.code} asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
+                        <DropdownMenuItem key={country.code} asChild>
                           <Link to={`/bilder/${country.code}`} className="flex items-center gap-2">
                             <span className="text-lg">{country.flag}</span>
                             {country.name}
                           </Link>
-                        </NavigationMenuLink>
+                        </DropdownMenuItem>
                       ))}
-                    </div>
-                    <div className="my-1 border-t"></div>
-                    <div className="py-1">
-                      <div className="px-2 py-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Natur
-                      </div>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" />
+                      Natur
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-56">
                       {Object.values(MAIN_MENU.nature).map((category) => (
-                        <NavigationMenuLink key={category.id} asChild className="block px-2 py-1.5 rounded-md hover:bg-accent">
+                        <DropdownMenuItem key={category.id} asChild>
                           <Link to={`/bilder/natur/${category.id}`} className="flex items-center gap-2">
                             <span>{category.emoji}</span>
                             {category.name}
                           </Link>
-                        </NavigationMenuLink>
+                        </DropdownMenuItem>
                       ))}
-                    </div>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Notes */}
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link to="/notes" className="flex items-center gap-2">
-                    <StickyNote className="h-4 w-4" />
-                    Notes
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
+              <Link
+                to="/notes"
+                className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors"
+              >
+                <StickyNote className="h-4 w-4" />
+                Notes
+              </Link>
 
               {/* About */}
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link to="/about" className="flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    About
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
+              <Link
+                to="/about"
+                className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors"
+              >
+                <Info className="h-4 w-4" />
+                About
+              </Link>
+            </nav>
 
           {/* User Actions - Desktop */}
           <div className="hidden md:flex items-center gap-3">
