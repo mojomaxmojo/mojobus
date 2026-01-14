@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Key, UserPlus, Shield, User, Sparkles, LogIn, CheckCircle, Upload, Globe } from '@/lib/icons';
+import { Download, Key, UserPlus, Shield, User, Sparkles, LogIn, CheckCircle, Upload, Globe, FileText } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
