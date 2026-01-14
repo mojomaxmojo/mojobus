@@ -1,7 +1,7 @@
 import { useComments } from '@/hooks/useComments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { CommentForm } from './CommentForm';
@@ -16,7 +16,7 @@ interface CommentsSectionProps {
   limit?: number;
 }
 
-export function CommentsSection({ 
+export function CommentsSection({
   root,
   title = "Comments",
   emptyStateMessage = "No comments yet",

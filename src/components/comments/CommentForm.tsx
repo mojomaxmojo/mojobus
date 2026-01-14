@@ -6,7 +6,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { usePostComment } from '@/hooks/usePostComment';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { NostrEvent } from '@nostrify/nostrify';
-import { MessageSquare, Send } from 'lucide-react';
+import { MessageSquare, Send } from '@/lib/icons';
 
 interface CommentFormProps {
   root: NostrEvent | URL;
@@ -19,9 +19,9 @@ interface CommentFormProps {
 export function CommentForm({
   root,
   reply,
-  onSuccess, 
+  onSuccess,
   placeholder = "Write a comment...",
-  compact = false 
+  compact = false
 }: CommentFormProps) {
   const [content, setContent] = useState('');
   const { user } = useCurrentUser();
@@ -29,7 +29,7 @@ export function CommentForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!content.trim() || !user) return;
 
     postComment(
@@ -74,8 +74,8 @@ export function CommentForm({
             <span className="text-sm text-muted-foreground">
               {reply ? 'Replying to comment' : 'Adding to the discussion'}
             </span>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={!content.trim() || isPending}
               size={compact ? "sm" : "default"}
             >

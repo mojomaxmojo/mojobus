@@ -26,7 +26,7 @@ import {
   Calendar,
   Lightbulb,
   Sun,
-} from 'lucide-react';
+} from '@/lib/icons';
 import {
   DropdownMenu,
   DropdownMenuContent,

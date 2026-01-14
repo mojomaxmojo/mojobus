@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Shield, Upload, AlertTriangle, UserPlus, KeyRound, Sparkles, Cloud } from 'lucide-react';
+import { Shield, Upload, AlertTriangle, UserPlus, KeyRound, Sparkles, Cloud } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";

@@ -41,20 +41,36 @@ export default defineConfig(() => ({
       // Optimized chunking strategy for better caching
       manualChunks: (id) => {
         // Vendor chunks - rarely change
+
+        // React & React DOM zusammen
         if (id.includes('react') || id.includes('react-dom')) {
           return 'react-vendor';
         }
-        if (id.includes('nostr') || id.includes('nostrify')) {
-          return 'nostr-vendor';
-        }
-        if (id.includes('@tanstack') || id.includes('tanstack')) {
-          return 'query-vendor';
-        }
+
+        // 🔥 PERFORMANCE: Icons separater Chunk (klein, selten ändert sich)
+        // Besseres Caching - Icons werden nicht bei jedem Build neu heruntergeladen
         if (id.includes('lucide') || id.includes('lucide-react')) {
           return 'icons-vendor';
         }
-        if (id.includes('radix') || id.includes('@radix-ui')) {
-          return 'ui-vendor';
+
+        // Nostr-Bibliotheken separat
+        if (id.includes('@nostrify') || id.includes('nostr-tools')) {
+          return 'nostr-vendor';
+        }
+
+        // TanStack Query separat (klein, selten ändert sich)
+        if (id.includes('@tanstack') || id.includes('tanstack')) {
+          return 'query-vendor';
+        }
+
+        // 🔥 PERFORMANCE: Radix UI zusammen (wird oft gemeinsam verwendet)
+        if (id.includes('@radix-ui')) {
+          return 'radix-vendor';
+        }
+
+        // 🔥 PERFORMANCE: Tiptap separater Chunk (nur im Editor benötigt)
+        if (id.includes('@tiptap')) {
+          return 'tiptap-vendor';
         }
 
         // App-specific chunks
