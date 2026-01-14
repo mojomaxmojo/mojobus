@@ -7,12 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  User,
-  Edit,
-  FileText,
-  MessageSquare,
-  MapPin,
+import { 
+  User, 
+  Edit, 
+  FileText, 
+  MessageSquare, 
+  MapPin, 
   ExternalLink,
   Mail,
   Globe,
@@ -28,7 +28,7 @@ export function Profile() {
   const { user, metadata, picture, name, display_name, nip05, bot, about, website, banner, lud16 } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
 
-  // Fetch statistics for the logged-in user
+  // Fetch statistics for logged-in user
   const { nostr } = useNostr();
   const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['profile-stats', user?.pubkey],
@@ -37,7 +37,7 @@ export function Profile() {
 
       const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(3000)]);
 
-      // Query all events from the user
+      // Query all events from user
       const events = await nostr.query(
         [
           {
@@ -55,7 +55,7 @@ export function Profile() {
       // Count places (longform articles with place tags)
       const places = events.filter(e => {
         const isLongform = e.kind === NOSTR_CONFIG.kinds.longform;
-        const hasPlaceTags = e.tags.some(t =>
+        const hasPlaceTags = e.tags.some(t => 
           t[0] === 't' && ['place', 'places'].includes(t[1])
         );
         const isPlace = e.tags.some(t => t[0] === 'type' && t[1] === 'place');
@@ -69,6 +69,7 @@ export function Profile() {
     enabled: !!user?.pubkey,
   });
 
+  // Determine display name and image
   const displayName = name || genUserName(user?.pubkey || '');
   const profileImage = picture;
 
@@ -105,13 +106,13 @@ export function Profile() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Avatar className="h-20 w-20">
                 {profileImage ? (
-                  <AvatarImage src={profileImage} alt="Profile" />
+                  <AvatarImage src={profileImage} alt="Profil" />
                 ) : null}
                 <AvatarFallback className="text-2xl">
                   {displayName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-
+              
               <div className="flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
@@ -127,7 +128,7 @@ export function Profile() {
                     Profil bearbeiten
                   </Button>
                 </div>
-
+                
                 <div className="flex flex-wrap gap-2 mt-2">
                   {nip05 && (
                     <Badge variant="secondary" className="flex items-center gap-1">
@@ -142,7 +143,7 @@ export function Profile() {
               </div>
             </div>
           </CardHeader>
-
+          
           {about && (
             <>
               <Separator />
@@ -153,7 +154,7 @@ export function Profile() {
               </CardContent>
             </>
           )}
-
+          
           {(website || banner) && (
             <>
               <Separator />
@@ -189,7 +190,7 @@ export function Profile() {
             <TabsTrigger value="info">Informationen</TabsTrigger>
             <TabsTrigger value="edit">Profil bearbeiten</TabsTrigger>
           </TabsList>
-
+          
           <TabsContent value="stats" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
@@ -203,7 +204,7 @@ export function Profile() {
                   <p className="text-muted-foreground">Artikel</p>
                 </CardContent>
               </Card>
-
+              
               <Card>
                 <CardContent className="p-6 text-center">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 text-ocean-600" />
@@ -215,7 +216,7 @@ export function Profile() {
                   <p className="text-muted-foreground">Notes</p>
                 </CardContent>
               </Card>
-
+              
               <Card>
                 <CardContent className="p-6 text-center">
                   <MapPin className="h-8 w-8 mx-auto mb-2 text-ocean-600" />
@@ -229,7 +230,7 @@ export function Profile() {
               </Card>
             </div>
           </TabsContent>
-
+          
           <TabsContent value="info" className="mt-6">
             <Card>
               <CardHeader>
@@ -249,13 +250,13 @@ export function Profile() {
                     <p className="text-sm font-mono break-all">{user.pubkey}</p>
                   </div>
                 </div>
-
+                
                 {banner && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Banner Image</p>
-                    <img
-                      src={banner}
-                      alt="Profile Banner"
+                    <img 
+                      src={banner} 
+                      alt="Profil Banner" 
                       className="w-full h-32 object-cover rounded-lg"
                     />
                   </div>
@@ -263,7 +264,7 @@ export function Profile() {
               </CardContent>
             </Card>
           </TabsContent>
-
+          
           <TabsContent value="edit" className="mt-6">
             <Card>
               <CardHeader>
@@ -288,3 +289,5 @@ export function Profile() {
     </div>
   );
 }
+
+export default Profile;

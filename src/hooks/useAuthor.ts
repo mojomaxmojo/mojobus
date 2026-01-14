@@ -29,5 +29,7 @@ export function useAuthor(pubkey: string | undefined) {
       }
     },
     retry: 3,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }
