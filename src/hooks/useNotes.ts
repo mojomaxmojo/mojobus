@@ -6,6 +6,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 /**
  * Hook zum Laden von Notes mit Infinite Scroll
+ * Filtert nur Notes mit #t note oder #t notiz Tags
  */
 export function useNotes() {
   const { nostr } = useNostr();
@@ -15,6 +16,7 @@ export function useNotes() {
     queryFn: async ({ pageParam, signal }) => {
       const filter: any = {
         kinds: [NOSTR_CONFIG.kinds.note],
+        '#t': ['note', 'notiz'], // Nur Notes mit #t note oder #t notiz
         limit: 30, // Reduziert - Relays geben oft mehr zurück als angefordert
       };
 
@@ -75,6 +77,7 @@ export function useNotes() {
 
 /**
  * Hook zum Laden eines einzelnen Note anhand seiner Event ID
+ * Validiert, dass das Event die #t note oder #t notiz Tags hat
  */
 export function useNote(eventId: string) {
   const { nostr } = useNostr();
@@ -94,7 +97,18 @@ export function useNote(eventId: string) {
         }
       );
 
-      return events[0] || null;
+      const event = events[0] || null;
+
+      // Validiere, dass das Event die #t note oder #t notiz Tags hat
+      if (event && event.kind === NOSTR_CONFIG.kinds.note) {
+        const tags = extractNoteTags(event);
+        if (!tags.includes('note') && !tags.includes('notiz')) {
+          console.warn('⚠️ Note ohne #t note oder #t notiz ignoriert:', eventId);
+          return null;
+        }
+      }
+
+      return event;
     },
     staleTime: NOSTR_CONFIG.cache.staleTime,
     gcTime: NOSTR_CONFIG.cache.maxAge,

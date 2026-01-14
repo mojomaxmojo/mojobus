@@ -18,6 +18,23 @@ function validateLongformArticle(event: NostrEvent): boolean {
   // Content sollte vorhanden sein
   if (!event.content || event.content.trim().length === 0) return false;
 
+  // STRIKTERE VALIDIERUNG: Prüfe auf MojoBus-spezifische Tags
+  // Option 1: title-Tag muss vorhanden sein
+  const title = event.tags.find(([name]) => name === 'title')?.[1];
+  if (!title) {
+    console.log('⚠️ Event ohne title-Tag ignoriert:', event.id);
+    return false;
+  }
+
+  // Option 2: type=article oder #t artikel Tag
+  const typeTag = event.tags.find(([name]) => name === 'type')?.[1];
+  const articleTag = event.tags.some(([name, value]) => name === 't' && value === 'artikel');
+
+  if (typeTag !== 'article' && !articleTag) {
+    console.log('⚠️ Event ohne type=article oder #t artikel ignoriert:', event.id);
+    return false;
+  }
+
   return true;
 }
 

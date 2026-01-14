@@ -864,7 +864,12 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
     // Create event tags with country tags and #mojobus
     const baseTags = createRequiredTags('notes', tags);
-    const additionalTags = [['type', 'note'], ['t', 'mojobus']]; // Explicit type marker + #mojobus
+    const additionalTags = [
+      ['type', 'note'],      // Explicit type marker
+      ['t', 'mojobus'],     // #mojobus tag
+      ['t', 'note'],        // Standard tag #note
+      ['t', 'notiz']        // Standard tag #notiz
+    ];
 
     // Add country tags
     const countryTags = getCountryTag(selectedCountry);
