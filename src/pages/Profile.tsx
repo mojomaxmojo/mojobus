@@ -7,22 +7,70 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  User, 
-  Edit, 
-  FileText, 
-  MessageSquare, 
-  MapPin, 
+import {
+  User,
+  Edit,
+  FileText,
+  MessageSquare,
+  MapPin,
   ExternalLink,
   Mail,
   Globe,
   Zap
 } from 'lucide-react';
 import { genUserName } from '@/lib/genUserName';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useQuery } from '@tanstack/react-query';
+import { useNostr } from '@nostrify/react';
+import { NOSTR_CONFIG } from '@/config/nostr';
 
 export function Profile() {
-  const { user } = useCurrentUser();
+  const { user, metadata, picture, name, display_name, nip05, bot, about, website, banner, lud16 } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
+
+  // Fetch statistics for the logged-in user
+  const { nostr } = useNostr();
+  const { data: stats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['profile-stats', user?.pubkey],
+    queryFn: async ({ signal }) => {
+      if (!user?.pubkey) return { articles: 0, notes: 0, places: 0 };
+
+      const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(3000)]);
+
+      // Query all events from the user
+      const events = await nostr.query(
+        [
+          {
+            authors: [user.pubkey],
+            limit: 500,
+          },
+        ],
+        { signal: abortSignal }
+      );
+
+      // Count by kind
+      const articles = events.filter(e => e.kind === NOSTR_CONFIG.kinds.longform).length;
+      const notes = events.filter(e => e.kind === NOSTR_CONFIG.kinds.note).length;
+
+      // Count places (longform articles with place tags)
+      const places = events.filter(e => {
+        const isLongform = e.kind === NOSTR_CONFIG.kinds.longform;
+        const hasPlaceTags = e.tags.some(t =>
+          t[0] === 't' && ['place', 'places'].includes(t[1])
+        );
+        const isPlace = e.tags.some(t => t[0] === 'type' && t[1] === 'place');
+        const dTag = e.tags.find(t => t[0] === 'd')?.[1] || '';
+        const hasPlaceIdentifier = dTag.startsWith('place-');
+        return isLongform && (hasPlaceTags || isPlace || hasPlaceIdentifier);
+      }).length;
+
+      return { articles, notes, places };
+    },
+    enabled: !!user?.pubkey,
+  });
+
+  const displayName = name || genUserName(user?.pubkey || '');
+  const profileImage = picture;
 
   if (!user) {
     return (
@@ -56,20 +104,22 @@ export function Profile() {
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user.metadata?.picture} alt="Profile" />
+                {profileImage ? (
+                  <AvatarImage src={profileImage} alt="Profile" />
+                ) : null}
                 <AvatarFallback className="text-2xl">
-                  {user.metadata?.name?.charAt(0) || genUserName(user.pubkey).charAt(0)}
+                  {displayName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              
+
               <div className="flex-1">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <h1 className="text-2xl font-bold">
-                      {user.metadata?.name || genUserName(user.pubkey)}
+                      {displayName}
                     </h1>
-                    {user.metadata?.display_name && user.metadata.display_name !== user.metadata.name && (
-                      <p className="text-muted-foreground">{user.metadata.display_name}</p>
+                    {display_name && display_name !== name && (
+                      <p className="text-muted-foreground">{display_name}</p>
                     )}
                   </div>
                   <Button onClick={() => setIsEditing(false)} className="w-full sm:w-auto">
@@ -77,53 +127,53 @@ export function Profile() {
                     Profil bearbeiten
                   </Button>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {user.metadata?.nip05 && (
+                  {nip05 && (
                     <Badge variant="secondary" className="flex items-center gap-1">
                       <Mail className="h-3 w-3" />
-                      {user.metadata.nip05}
+                      {nip05}
                     </Badge>
                   )}
-                  {user.metadata?.bot && (
+                  {bot && (
                     <Badge variant="outline">Bot</Badge>
                   )}
                 </div>
               </div>
             </div>
           </CardHeader>
-          
-          {user.metadata?.about && (
+
+          {about && (
             <>
               <Separator />
               <CardContent className="pt-4">
                 <p className="text-muted-foreground whitespace-pre-wrap">
-                  {user.metadata.about}
+                  {about}
                 </p>
               </CardContent>
             </>
           )}
-          
-          {(user.metadata?.website || user.metadata?.banner) && (
+
+          {(website || banner) && (
             <>
               <Separator />
               <CardContent className="pt-4">
                 <div className="flex flex-wrap gap-4">
-                  {user.metadata?.website && (
+                  {website && (
                     <a
-                      href={user.metadata.website}
+                      href={website}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-ocean-600 hover:text-ocean-700 transition-colors"
                     >
                       <Globe className="h-4 w-4" />
-                      {user.metadata.website.replace(/^https?:\/\//, '')}
+                      {website.replace(/^https?:\/\//, '')}
                     </a>
                   )}
-                  {user.metadata?.lud16 && (
+                  {lud16 && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Zap className="h-4 w-4" />
-                      {user.metadata.lud16}
+                      {lud16}
                     </div>
                   )}
                 </div>
@@ -139,35 +189,47 @@ export function Profile() {
             <TabsTrigger value="info">Informationen</TabsTrigger>
             <TabsTrigger value="edit">Profil bearbeiten</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="stats" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-6 text-center">
                   <FileText className="h-8 w-8 mx-auto mb-2 text-ocean-600" />
-                  <div className="text-2xl font-bold">-</div>
+                  {isLoadingStats ? (
+                    <Skeleton className="h-8 w-16 mx-auto" />
+                  ) : (
+                    <div className="text-2xl font-bold">{stats?.articles || 0}</div>
+                  )}
                   <p className="text-muted-foreground">Artikel</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="p-6 text-center">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 text-ocean-600" />
-                  <div className="text-2xl font-bold">-</div>
+                  {isLoadingStats ? (
+                    <Skeleton className="h-8 w-16 mx-auto" />
+                  ) : (
+                    <div className="text-2xl font-bold">{stats?.notes || 0}</div>
+                  )}
                   <p className="text-muted-foreground">Notes</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="p-6 text-center">
                   <MapPin className="h-8 w-8 mx-auto mb-2 text-ocean-600" />
-                  <div className="text-2xl font-bold">-</div>
+                  {isLoadingStats ? (
+                    <Skeleton className="h-8 w-16 mx-auto" />
+                  ) : (
+                    <div className="text-2xl font-bold">{stats?.places || 0}</div>
+                  )}
                   <p className="text-muted-foreground">Plätze</p>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="info" className="mt-6">
             <Card>
               <CardHeader>
@@ -187,13 +249,13 @@ export function Profile() {
                     <p className="text-sm font-mono break-all">{user.pubkey}</p>
                   </div>
                 </div>
-                
-                {user.metadata?.banner && (
+
+                {banner && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Banner Image</p>
-                    <img 
-                      src={user.metadata.banner} 
-                      alt="Profile Banner" 
+                    <img
+                      src={banner}
+                      alt="Profile Banner"
                       className="w-full h-32 object-cover rounded-lg"
                     />
                   </div>
@@ -201,7 +263,7 @@ export function Profile() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="edit" className="mt-6">
             <Card>
               <CardHeader>
