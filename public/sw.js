@@ -277,9 +277,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 8. Network-First für HTML-Seiten
+  // 8. Stale-While-Revalidate für HTML-Seiten (bessere Performance, aber mit Cache-Invalidierung)
   if (url.pathname.endsWith('.html') || url.pathname === '/') {
-    event.respondWith(networkFirst(request));
+    // Verwende networkFirst wenn der Cache veraltet ist (durch Versionierung)
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(request);
+    const cachedDate = cachedResponse?.headers.get('date');
+
+    // Wenn Cache älter als 5 Minuten ist, networkFirst verwenden
+    if (cachedDate) {
+      const cacheAge = Date.now() - new Date(cachedDate).getTime();
+      const maxAge = 5 * 60 * 1000; // 5 Minuten
+
+      if (cacheAge > maxAge) {
+        event.respondWith(networkFirst(request));
+        return;
+      }
+    }
+
+    // Sonst: Stale-While-Revalidate für Performance
+    event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
