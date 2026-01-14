@@ -1,4 +1,5 @@
 // Ort speichern Button Fix - Korrigiert name.trim() zu title.trim()
+// Version 3 - Force Cache Invalidation
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
