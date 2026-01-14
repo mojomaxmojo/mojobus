@@ -6,35 +6,52 @@ import { useAppContext } from "@/hooks/useAppContext";
 import { useToast } from "@/hooks/useToast";
 
 interface PresetOption {
-value: string;
-label: string;
-description: string;
+  value: string;
+  label: string;
+  description: string;
 }
 
 const PRESET_OPTIONS: PresetOption[] = [
-{
-value: "fast",
-label: "Fast",
-description: "Schnelle Ladezeiten, minimale Latency",
-},
-{
-value: "balanced",
-label: "Balanced",
-description: "Ausgewogene Performance und Zuverlässigkeit",
-},
-{
-value: "reliable",
-label: "Reliable",
-description: "Maximale Zuverlässigkeit mit mehreren Relays",
-},
+  {
+    value: "ultrafast",
+    label: "Ultra Fast",
+    description: "Schnellster einzelner Relay (READ)",
+  },
+  {
+    value: "fast",
+    label: "Fast",
+    description: "Schnelle Ladezeiten, minimale Latency",
+  },
+  {
+    value: "balanced",
+    label: "Balanced",
+    description: "Ausgewogene Performance und Zuverlässigkeit",
+  },
+  {
+    value: "reliable",
+    label: "Reliable",
+    description: "Maximale Zuverlässigkeit mit mehreren Relays",
+  },
+  {
+    value: "ultrareliable",
+    label: "Ultra Reliable",
+    description: "Maximale Redundanz mit 4 Relays (WRITE)",
+  },
 ];
 
 export function RelaySelector() {
   const { config, updateConfig } = useAppContext();
   const { toast } = useToast();
-  const [selectedPreset, setSelectedPreset] = useState<string>(config.relayUrls.length === 1 && config.relayUrls[0] === RELAY_PRESETS.fast.relayUrls[0] ? 'fast' :
-    config.relayUrls.length === 2 && config.relayUrls[0] === RELAY_PRESETS.balanced.relayUrls[0] ? 'balanced' :
-    config.relayUrls.length === 3 ? 'reliable' : 'fast');
+
+  // Detect current preset from read configuration
+  const [selectedPreset, setSelectedPreset] = useState<string>(
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.ultrafast.relayUrls[0] ? 'ultrafast' :
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.fast.relayUrls[0] ? 'fast' :
+    config.read?.relayUrls?.length === 2 && config.read?.relayUrls?.[0] === RELAY_PRESETS.balanced.relayUrls[0] ? 'balanced' :
+    config.read?.relayUrls?.length === 3 ? 'reliable' :
+    config.write?.relayUrls?.length === 4 ? 'ultrareliable' :
+    'balanced' // Default
+  );
 
   const applyPreset = async (preset: string) => {
     const presetConfig = RELAY_PRESETS[preset as keyof typeof RELAY_PRESETS];
@@ -44,8 +61,20 @@ export function RelaySelector() {
         console.log("Applying relay preset:", preset);
         console.log("New relay configuration:", presetConfig);
 
+        // Apply preset to both READ and WRITE configuration
         updateConfig((currentConfig) => ({
           ...currentConfig,
+          read: {
+            relayUrls: presetConfig.relayUrls,
+            maxRelays: presetConfig.maxRelays,
+            queryTimeout: presetConfig.queryTimeout,
+          },
+          write: {
+            relayUrls: presetConfig.relayUrls,
+            maxRelays: presetConfig.maxRelays,
+            activeRelay: presetConfig.relayUrls[0],
+          },
+          // Update legacy fields for backward compatibility
           relayUrls: presetConfig.relayUrls,
           activeRelay: presetConfig.relayUrls[0],
           maxRelays: presetConfig.maxRelays,
@@ -115,7 +144,7 @@ Automatische Anpassung aller Relay-Einstellungen
 
 <div className="grid grid-cols-2 gap-4 text-xs">
 <div>
-<span className="font-medium">Relays:</span>
+<span className="font-medium">Relays (READ):</span>
 <div className="text-muted-foreground">
 {RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.relayUrls.join(", ") || "-"}
 </div>
@@ -129,13 +158,13 @@ Automatische Anpassung aller Relay-Einstellungen
 <div>
 <span className="font-medium">Timeout:</span>
 <div className="text-muted-foreground">
-{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.queryTimeout ? `${RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS].queryTimeout / 1000}s` : "-"} ms
+{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.queryTimeout ? `${RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS].queryTimeout / 1000}s` : "-"}
 </div>
 </div>
 <div>
 <span className="font-medium">Deduplizierung:</span>
 <div className="text-muted-foreground">
-Aktiv
+{config.enableDeduplication ? "Aktiv" : "Inaktiv"}
 </div>
 </div>
 </div>

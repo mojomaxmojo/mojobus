@@ -148,7 +148,7 @@ export const RELAY_PRESETS = {
   fast: {
     name: 'Fast',
     description: 'Ein schneller Relay für maximale Performance',
-    relayUrls: ['wss://relay.nostr.band'],
+    relayUrls: ['wss://nos.lol'],
     maxRelays: 1,
     queryTimeout: 2000,
   },
@@ -158,8 +158,8 @@ export const RELAY_PRESETS = {
     name: 'Balanced',
     description: 'Ausgewogene Konfiguration für gute Performance und Zuverlässigkeit',
     relayUrls: [
-      'wss://relay.nostr.band',
-      'wss://relay.damus.io',
+      'wss://nos.lol',
+      'wss://relay.primal.net',
     ],
     maxRelays: 2,
     queryTimeout: 3000,
@@ -170,7 +170,7 @@ export const RELAY_PRESETS = {
     name: 'Reliable',
     description: 'Mehrere Relays für maximale Zuverlässigkeit',
     relayUrls: [
-      'wss://relay.nostr.band',
+      'wss://nos.lol',
       'wss://relay.damus.io',
       'wss://relay.primal.net',
     ],
@@ -183,11 +183,51 @@ export const RELAY_PRESETS = {
     name: 'Search Optimized',
     description: 'Optimiert für Such-Queries mit Search-Relays',
     relayUrls: [
-      'wss://relay.nostr.band',
+      'wss://nos.lol',
       'wss://nostr.bitcoiner.social',
     ],
     maxRelays: 2,
     queryTimeout: 5000,
+  },
+
+  // ========================================================================
+  // NEUE PRESETS - Ohne relay.nostr.band
+  // ========================================================================
+
+  // Ultra-Fast (schnellster einzelner Relay)
+  ultrafast: {
+    name: 'Ultra Fast',
+    description: 'Schnellster Relay für maximale Performance',
+    relayUrls: ['wss://nos.lol'],
+    maxRelays: 1,
+    queryTimeout: 1500,
+  },
+
+  // Ultra-Reliable (maximale Redundanz - 4 Relays)
+  ultrareliable: {
+    name: 'Ultra Reliable',
+    description: 'Maximale Redundanz mit 4 zuverlässigen Relays',
+    relayUrls: [
+      'wss://nos.lol',           // Ditto - schnell, zuverlässig
+      'wss://relay.damus.io',    // Damus - etabliert, zuverlässig
+      'wss://relay.primal.net',  // Primal - Enterprise-Grade
+      'wss://nostr.strfry.net', // Strfry - High-Performance
+    ],
+    maxRelays: 4,
+    queryTimeout: 3000,
+  },
+
+  // Storage-Optimiert (beste Langzeit-Speicherung)
+  storage: {
+    name: 'Storage Optimized',
+    description: 'Optimiert für Langzeit-Speicherung der Events',
+    relayUrls: [
+      'wss://relay.damus.io',    // Damus - gute Speicherung
+      'wss://relay.le.nos.social', // Relayer - spezialisiert auf Speicherung
+      'wss://nos.lol',           // Ditto - zuverlässige Speicherung
+    ],
+    maxRelays: 3,
+    queryTimeout: 4000,
   },
 } as const;
 
@@ -247,21 +287,41 @@ export const getSearchRelays = (): RelayConfig[] => {
  * Default Konfiguration für MojoBus Blog (Relay-spezifisch)
  * Kann durch localStorage überschrieben werden
  *
+ * KONFIGURATION:
+ * - READ (Abrufen/Queries): FAST Preset - maximale Performance beim Lesen
+ * - WRITE (Veröffentlichen): ULTRA RELIABLE Preset - maximale Redundanz beim Posten
+ *
  * ÄNDERUNGEN HIER:
- * - relayUrls: Liste der Relays, die für Queries verwendet werden
- * - activeRelay: Relay für das Publishen (aus relayUrls)
- * - maxRelays: Max. Anzahl an Relays für Queries (1 = nur ein Relay)
- * - queryTimeout: Timeout in Millisekunden für Queries
+ * - readRelayUrls: Liste der Relays für Queries (Lesen)
+ * - readMaxRelays: Max. Anzahl Relays für Queries
+ * - readQueryTimeout: Timeout in ms für Queries
+ * - writeRelayUrls: Liste der Relays für Publishing (Schreiben)
+ * - writeMaxRelays: Max. Anzahl Relays für Publishing
+ * - activeRelay: Relay für das aktive Publishing (aus writeRelayUrls)
  */
 export const DEFAULT_APP_CONFIG = {
-  // Relay-Einstellungen (Performance-optimiert - Fast Preset)
-  relayUrls: RELAY_PRESETS.fast.relayUrls, // Nur ein schneller Relay für maximale Performance
-  activeRelay: RELAY_PRESETS.fast.relayUrls[0], // Erster Relay wird für Publishing verwendet
+  // ============================================================================
+  // READ KONFIGURATION (Abrufen/Queries) - FAST Preset
+  // ============================================================================
+  read: {
+    relayUrls: RELAY_PRESETS.ultrafast.relayUrls, // Nur nos.lol (Ditto) für maximale Performance
+    maxRelays: RELAY_PRESETS.ultrafast.maxRelays, // Nur einen Relay verwenden
+    queryTimeout: RELAY_PRESETS.ultrafast.queryTimeout, // 1500ms - schneller Timeout
+  },
 
-  // Relay-Performance-Optionen
-  maxRelays: RELAY_PRESETS.fast.maxRelays, // Nur einen Relay verwenden
+  // ============================================================================
+  // WRITE KONFIGURATION (Veröffentlichen) - ULTRA RELIABLE Preset
+  // ============================================================================
+  write: {
+    relayUrls: RELAY_PRESETS.ultrareliable.relayUrls, // 4 Relays für maximale Redundanz
+    maxRelays: RELAY_PRESETS.ultrareliable.maxRelays, // Alle 4 Relays verwenden
+    activeRelay: RELAY_PRESETS.ultrareliable.relayUrls[0], // nos.lol als aktiver Relay
+  },
+
+  // ============================================================================
+  // GEMEINSAME OPTIONEN
+  // ============================================================================
   enableDeduplication: true, // Deduplizierung von Events aktivieren
-  queryTimeout: RELAY_PRESETS.fast.queryTimeout, // Timeout in ms
 } as const;
 
 // ============================================================================

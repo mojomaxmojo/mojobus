@@ -6,16 +6,52 @@ export type Theme = "dark" | "light" | "system";
 export interface AppConfig {
   /** Current theme */
   theme: Theme;
-  /** Selected relay URLs (multi-relay support) */
-  relayUrls: string[];
-  /** Active relay for publishing */
-  activeRelay: string;
-  /** Maximum number of relays to query from */
-  maxRelays: number;
+
+  /** ============================================================================
+   * READ Configuration (Queries/Abrufen)
+   * ============================================================================
+   */
+  read: {
+    /** Relay URLs for queries (reading) */
+    relayUrls: string[];
+    /** Maximum number of relays for queries */
+    maxRelays: number;
+    /** Query timeout in milliseconds for reading */
+    queryTimeout: number;
+  };
+
+  /** ============================================================================
+   * WRITE Configuration (Publishing/Veröffentlichen)
+   * ============================================================================
+   */
+  write: {
+    /** Relay URLs for publishing (writing) */
+    relayUrls: string[];
+    /** Maximum number of relays for publishing */
+    maxRelays: number;
+    /** Active relay for publishing */
+    activeRelay: string;
+  };
+
+  /** ============================================================================
+   * Shared Configuration
+   * ============================================================================
+   */
   /** Enable event deduplication */
   enableDeduplication: boolean;
-  /** Query timeout in milliseconds */
-  queryTimeout: number;
+
+  /** ============================================================================
+   * LEGACY FIELDS (for backward compatibility)
+   * ============================================================================
+   */
+  /** @deprecated Use read.relayUrls instead */
+  relayUrls?: string[];
+  /** @deprecated Use write.activeRelay instead */
+  activeRelay?: string;
+  /** @deprecated Use read.maxRelays instead */
+  maxRelays?: number;
+  /** @deprecated Use read.queryTimeout instead */
+  queryTimeout?: number;
 }
 
 export interface AppContextType {

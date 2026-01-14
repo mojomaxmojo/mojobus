@@ -140,6 +140,20 @@ export interface Author {
   nip05: string;
 }
 
+export interface RelayConfig {
+  read?: {
+    relayUrls: string[];
+    maxRelays: number;
+    queryTimeout: number;
+  };
+  write?: {
+    relayUrls: string[];
+    maxRelays: number;
+    activeRelay?: string;
+  };
+  enableDeduplication?: boolean;
+}
+
 // Export type guards
 export const isMenuItem = (item: any): item is MenuItem => {
   return item && typeof item === 'object' && 'id' in item && 'label' in item && 'icon' in item;

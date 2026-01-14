@@ -15,11 +15,29 @@ interface AppProviderProps {
 // Zod schema for AppConfig validation
 const AppConfigSchema: z.ZodType<AppConfig, z.ZodTypeDef, unknown> = z.object({
   theme: z.enum(['dark', 'light', 'system']),
-  relayUrls: z.array(z.string().url()).min(1),
-  activeRelay: z.string().url(),
-  maxRelays: z.number().int().min(1).max(10),
+
+  // READ Configuration
+  read: z.object({
+    relayUrls: z.array(z.string().url()).min(1),
+    maxRelays: z.number().int().min(1).max(10),
+    queryTimeout: z.number().int().min(1000).max(30000),
+  }),
+
+  // WRITE Configuration
+  write: z.object({
+    relayUrls: z.array(z.string().url()).min(1),
+    maxRelays: z.number().int().min(1).max(10),
+    activeRelay: z.string().url(),
+  }),
+
+  // Shared Configuration
   enableDeduplication: z.boolean(),
-  queryTimeout: z.number().int().min(1000).max(30000),
+
+  // LEGACY fields (for backward compatibility)
+  relayUrls: z.array(z.string().url()).min(1).optional(),
+  activeRelay: z.string().url().optional(),
+  maxRelays: z.number().int().min(1).max(10).optional(),
+  queryTimeout: z.number().int().min(1000).max(30000).optional(),
 });
 
 export function AppProvider(props: AppProviderProps) {
@@ -43,6 +61,38 @@ export function AppProvider(props: AppProviderProps) {
           if (!parsed.theme || !['dark', 'light', 'system'].includes(parsed.theme)) {
             console.warn('Invalid theme in localStorage, using default:', parsed.theme);
             parsed.theme = defaultConfig.theme;
+          }
+
+          // BACKWARD COMPATIBILITY: Migrate old config to new config structure
+          // If old config structure (relayUrls, activeRelay, etc.) exists, migrate to new structure
+          if (parsed.relayUrls && !parsed.read) {
+            console.log('[AppProvider] Migrating old config to new structure');
+
+            // Convert old config to new structure
+            parsed.read = {
+              relayUrls: parsed.relayUrls,
+              maxRelays: parsed.maxRelays || 3,
+              queryTimeout: parsed.queryTimeout || 3000,
+            };
+
+            parsed.write = {
+              relayUrls: parsed.relayUrls,
+              maxRelays: parsed.maxRelays || 3,
+              activeRelay: parsed.activeRelay || parsed.relayUrls[0],
+            };
+
+            console.log('[AppProvider] Migrated config:', {
+              old: {
+                relayUrls: parsed.relayUrls,
+                activeRelay: parsed.activeRelay,
+                maxRelays: parsed.maxRelays,
+                queryTimeout: parsed.queryTimeout,
+              },
+              new: {
+                read: parsed.read,
+                write: parsed.write,
+              },
+            });
           }
 
           return AppConfigSchema.parse(parsed);
