@@ -26,6 +26,7 @@ import {
   Calendar,
   Lightbulb,
   Sun,
+  ChevronDown,
 } from '@/lib/icons';
 import {
   NavigationMenu,
