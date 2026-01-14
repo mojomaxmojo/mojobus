@@ -1136,7 +1136,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
             <Label htmlFor="note-public">Öffentlich sichtbar</Label>
           </div>
 
-          <Button onClick={handleSubmit} disabled={!content.trim()}>
+          <Button onClick={handleSubmit} disabled={!content}>
             <MessageSquare className="h-4 w-4 mr-2" />
             Note veroeffentlichen
           </Button>
