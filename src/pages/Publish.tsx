@@ -1685,7 +1685,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
           )}
         </div>
 
-        <Button onClick={handleSubmit} className="w-full" disabled={!title.trim()}>
+        <Button onClick={handleSubmit} className="w-full" disabled={!name.trim()}>
           <Map className="h-4 w-4 mr-2" />
           Ort speichern
         </Button>
