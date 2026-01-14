@@ -11,10 +11,15 @@ const PlacesPage = () => {
     queryKey: ['places'],
     queryFn: async () => {
       try {
-        const filters = [{ kinds: [30023], '#t': ['place'], limit: 100 }];
+        const filters = [
+          { kinds: [30023], '#t': ['place'], limit: 100 }
+        ];
         const results = await nostr.query(filters);
+        console.log('[PlacesPage] Queried events:', results?.length);
+        console.log('[PlacesPage] Filter:', filters);
         return results || [];
       } catch (error) {
+        console.error('[PlacesPage] Error querying places:', error);
         return [];
       }
     },
@@ -23,20 +28,28 @@ const PlacesPage = () => {
 
   const places = useMemo(() => {
     if (!events || !Array.isArray(events)) return [];
-    
+
+    console.log('[PlacesPage] Processing events:', events.length);
+
     return events.map((event: any) => {
       const titleTag = event.tags.find((tag: any) => tag[0] === 'title');
       const imageTag = event.tags.find((tag: any) => tag[0] === 'image');
       const locationTag = event.tags.find((tag: any) => tag[0] === 'location');
-      
-      return {
+      const typeTag = event.tags.find((tag: any) => tag[0] === 'type');
+
+      const place = {
         id: event.id,
         title: titleTag?.[1] || 'Unbenannt',
         image: imageTag?.[1] || '',
         location: locationTag?.[1] || '',
         created_at: event.created_at,
-        author: event.pubkey
+        author: event.pubkey,
+        type: typeTag?.[1]
       };
+
+      console.log('[PlacesPage] Processed place:', place);
+
+      return place;
     });
   }, [events]);
 
@@ -80,8 +93,8 @@ const PlacesPage = () => {
             {places.map((place) => (
               <div key={place.id} className="bg-white rounded-xl p-6 shadow-md border border-gray-200">
                 {place.image && (
-                  <img 
-                    src={place.image} 
+                  <img
+                    src={place.image}
                     alt={place.title}
                     className="w-full h-48 object-cover rounded-lg mb-4"
                   />
@@ -93,7 +106,7 @@ const PlacesPage = () => {
                 <p className="text-sm text-gray-500 mb-4">
                   Erstellt am: {new Date(place.created_at * 1000).toLocaleDateString()}
                 </p>
-                <Link 
+                <Link
                   to={`/naddr1${place.id}`}
                   className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                 >

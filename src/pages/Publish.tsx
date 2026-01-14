@@ -1325,7 +1325,10 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   };
 
   const handleSubmit = () => {
+    console.log('[PlaceForm] handleSubmit called');
+
     if (!name.trim()) {
+      console.log('[PlaceForm] Name is empty, showing error');
       toast({
         title: 'Fehler',
         description: 'Bitte gib einen Namen fuer den Ort ein.',
@@ -1333,6 +1336,8 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       });
       return;
     }
+
+    console.log('[PlaceForm] Creating place event with name:', name.trim());
 
     // Create NIP-23 compliant content for place
     let content = `# ${name.trim()}\n\n`;
@@ -1377,6 +1382,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     const baseTags = createRequiredTags('places', manualTags);
     const additionalTags = [
       ['d', `place-${Date.now()}`], // Unique identifier
+      ['t', 'place'], // Content type tag for filtering
       ['type', 'place'], // Explicit type marker
       ['title', name.trim()], // Place name (important for display)
       ['name', name.trim()], // Place name (important for display)
@@ -1406,11 +1412,16 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     const countryTags = getCountryTag(selectedCountry);
     countryTags.forEach(tag => tags.push(['t', tag]));
 
+    console.log('[PlaceForm] Publishing event with kind:', 30023);
+    console.log('[PlaceForm] Tags:', tags);
+
     publishEvent({
       kind: 30023, // Long-form event for places
       content,
       tags
     });
+
+    console.log('[PlaceForm] Event published, showing toast');
 
     toast({
       title: 'Erfolg!',
@@ -1430,6 +1441,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
     // Redirect to plaetze page after successful publish
     setTimeout(() => {
+      console.log('[PlaceForm] Redirecting to /plaetze');
       navigate('/plaetze');
     }, 1000);
   };
