@@ -11,13 +11,24 @@ const PlacesPage = () => {
     queryKey: ['places'],
     queryFn: async () => {
       try {
+        // Query both events with #place tag and type=place tag for maximum compatibility
         const filters = [
           { kinds: [30023], '#t': ['place'], limit: 100 }
         ];
         const results = await nostr.query(filters);
         console.log('[PlacesPage] Queried events:', results?.length);
         console.log('[PlacesPage] Filter:', filters);
-        return results || [];
+
+        // Filter events by checking for either #place tag or type=place tag
+        const filteredResults = (results || []).filter((event: any) => {
+          const hasPlaceTag = event.tags?.some((tag: any) => tag[0] === 't' && tag[1] === 'place');
+          const hasTypeTag = event.tags?.some((tag: any) => tag[0] === 'type' && tag[1] === 'place');
+          return hasPlaceTag || hasTypeTag;
+        });
+
+        console.log('[PlacesPage] Filtered events:', filteredResults.length);
+
+        return filteredResults;
       } catch (error) {
         console.error('[PlacesPage] Error querying places:', error);
         return [];

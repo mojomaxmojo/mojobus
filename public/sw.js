@@ -3,8 +3,8 @@
  * Offline-Fähigkeit und verbessertes Caching mit Workbox
  */
 
-const CACHE_NAME = 'mojobus-v3'; // Version erhöht für Cache-Invalidierung
-const CACHE_VERSION = 3; // Version erhöht
+const CACHE_NAME = 'mojobus-v4'; // Version erhöht für Cache-Invalidierung
+const CACHE_VERSION = 4; // Version erhöht
 
 // ============================================================================
 // CACHE-STRATEGIEN
@@ -277,9 +277,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 8. Stale-While-Revalidate für HTML-Seiten
+  // 8. Network-First für HTML-Seiten
   if (url.pathname.endsWith('.html') || url.pathname === '/') {
-    event.respondWith(staleWhileRevalidate(request));
+    event.respondWith(networkFirst(request));
     return;
   }
 
