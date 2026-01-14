@@ -3,8 +3,8 @@
  * Offline-Fähigkeit und verbessertes Caching mit Workbox
  */
 
-const CACHE_NAME = 'mojobus-v2'; // Version erhöht für Cache-Invalidierung
-const CACHE_VERSION = 2; // Version erhöht
+const CACHE_NAME = 'mojobus-v3'; // Version erhöht für Cache-Invalidierung
+const CACHE_VERSION = 3; // Version erhöht
 
 // ============================================================================
 // CACHE-STRATEGIEN

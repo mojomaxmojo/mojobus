@@ -3,7 +3,7 @@
  * Registriert und verwaltet den Service Worker
  */
 
-const SW_VERSION = '2.0.0';
+const SW_VERSION = '3.0.0';
 const SW_URL = `/sw.js?v=${SW_VERSION}`;
 
 let registration: ServiceWorkerRegistration | null = null;
