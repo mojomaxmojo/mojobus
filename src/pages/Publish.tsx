@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, Image as ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Calendar as CalendarIcon, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2 } from 'lucide-react';
+import { FileText, MessageSquare, Map, Upload, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2 } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -1683,7 +1683,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
           )}
         </div>
 
-        <Button onClick={handleSubmit} className="w-full" disabled={!name.trim()}>
+        <Button onClick={handleSubmit} className="w-full" disabled={!title.trim()}>
           <Map className="h-4 w-4 mr-2" />
           Ort speichern
         </Button>

@@ -40,7 +40,7 @@ export { MapPin, Flag } from 'lucide-react';
 // MEDIA ICONS
 // ============================================================================
 
-export { Camera, Images } from 'lucide-react';
+export { Camera, Images, Image as ImageIcon, Video, Music, File, Eye, Loader2 } from 'lucide-react';
 
 // ============================================================================
 // UI ICONS
@@ -52,7 +52,7 @@ export { ChevronDown, ChevronRight, ChevronLeft, MoreHorizontal, Send, RefreshCw
 // CATEGORY ICONS
 // ============================================================================
 
-export { Mountain, Sun, Dog, Wrench, Wifi, WifiOff, CheckCircle2 } from 'lucide-react';
+export { Mountain, Sun, Dog, Wrench, Wifi, WifiOff, CheckCircle2, Map, Tag, Battery, Hammer, Cpu, Trees, Droplets, Waves } from 'lucide-react';
 
 // ============================================================================
 // COMMENT ICONS
