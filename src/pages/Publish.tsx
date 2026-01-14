@@ -1374,7 +1374,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     }
 
     // Create tags from config
-    const baseTags = createRequiredTags('places', tags);
+    const baseTags = createRequiredTags('places', manualTags);
     const additionalTags = [
       ['d', `place-${Date.now()}`], // Unique identifier
       ['type', 'place'], // Explicit type marker
@@ -1400,11 +1400,6 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     if (image) tags.push(['image', image]);
     additionalImages.forEach((img, index) => {
       tags.push(['image', img]);
-    });
-
-    // Add manual tags
-    manualTags.forEach(tag => {
-      tags.push(['t', tag]);
     });
 
     // Add country tags
