@@ -22,7 +22,7 @@ export { FileText, PenSquare, StickyNote, Calendar, Lightbulb } from 'lucide-rea
 // USER ICONS
 // ============================================================================
 
-export { User, UserPlus, UserIcon, Settings, LogOut, LogIn } from 'lucide-react';
+export { User, UserPlus, UserIcon, Settings, Settings as SettingsIcon, LogOut, LogIn, Trash2, AlertCircle } from 'lucide-react';
 
 // ============================================================================
 // AUTH ICONS
@@ -46,13 +46,13 @@ export { Camera, Images } from 'lucide-react';
 // UI ICONS
 // ============================================================================
 
-export { ChevronDown, ChevronRight, ChevronLeft, MoreHorizontal, Send } from 'lucide-react';
+export { ChevronDown, ChevronRight, ChevronLeft, MoreHorizontal, Send, RefreshCw, ArrowLeft, Info } from 'lucide-react';
 
 // ============================================================================
 // CATEGORY ICONS
 // ============================================================================
 
-export { Mountain, Sun, Dog, Wrench } from 'lucide-react';
+export { Mountain, Sun, Dog, Wrench, Wifi, WifiOff, CheckCircle2 } from 'lucide-react';
 
 // ============================================================================
 // COMMENT ICONS
@@ -64,7 +64,7 @@ export { MessageSquare } from 'lucide-react';
 // OTHER ICONS
 // ============================================================================
 
-export { Info, Download } from 'lucide-react';
+export { Download, Database, Palette, Server, Users, Moon, Copy, Zap, Gauge } from 'lucide-react';
 
 // ============================================================================
 // WALLET ICONS

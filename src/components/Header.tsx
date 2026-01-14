@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoginActions } from '@/hooks/useLoginActions';
+import { OfflineBanner } from '@/components/ServiceWorkerStatus';
 import {
   Menu,
   X,
@@ -68,7 +69,9 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white dark:bg-gray-900/95">
+    <>
+      <OfflineBanner />
+      <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white dark:bg-gray-900/95">
       <div className="container mx-auto px-4">
         <div className="flex h-14 items-center">
           <Link to="/" className="inline-flex items-center">
@@ -557,5 +560,6 @@ export function Header() {
         </div>
       )}
     </header>
+    </>
   );
 }

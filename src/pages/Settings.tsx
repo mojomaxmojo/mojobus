@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -18,6 +19,7 @@ import { nip19 } from 'nostr-tools';
 import { RelaySelector } from '@/components/RelaySelector';
 import { RELAY_PRESETS } from '@/config/relays';
 import { THEME_CONFIG } from '@/config';
+import { CacheManager } from '@/components/ServiceWorkerStatus';
 import {
   Palette,
   Server,
@@ -36,8 +38,9 @@ import {
   WifiOff,
   Zap,
   Shield,
-  Gauge
-} from 'lucide-react';
+  Gauge,
+  Database
+} from '@/lib/icons';
 
 export function Settings() {
   const { theme, setTheme } = useTheme();
@@ -154,10 +157,11 @@ export function Settings() {
         </div>
 
         <Tabs defaultValue="appearance" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="appearance">Aussehen</TabsTrigger>
             <TabsTrigger value="relays">Relays</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="service-worker">Service Worker</TabsTrigger>
             <TabsTrigger value="advanced">Erweitert</TabsTrigger>
           </TabsList>
 
@@ -474,6 +478,58 @@ export function Settings() {
                   </CardContent>
                 </Card>
               )}
+            </div>
+          </TabsContent>
+
+          {/* Service Worker Tab */}
+          <TabsContent value="service-worker" className="mt-6">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    Cache Management
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Hier kannst du den Cache leeren. Dies kann nützlich sein, wenn du Probleme mit alten Daten hast.
+                    </p>
+                    <CacheManager />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wifi className="h-5 w-5" />
+                    Service Worker
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      Der Service Worker ermöglicht Offline-Fähigkeit und verbessertes Caching.
+                      Für detaillierte Einstellungen und Status-Informationen besuche die Service Worker Settings Page.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">Detaillierte Einstellungen</div>
+                      <div className="text-xs text-muted-foreground">
+                        Verwalte Caches, Updates und mehr
+                      </div>
+                    </div>
+                    <Button asChild variant="outline">
+                      <Link to="/settings/service-worker">
+                        Öffnen
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 

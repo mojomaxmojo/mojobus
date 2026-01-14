@@ -7,6 +7,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import App from './App.tsx';
 import './index.css';
 
+// Register Service Worker
+import '@/lib/serviceWorker';
+
 import '@fontsource-variable/inter';
 import '@fontsource-variable/playfair-display';
 
