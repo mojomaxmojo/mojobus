@@ -1447,8 +1447,13 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
     // Create tags from config
     const baseTags = createRequiredTags('places', manualTagsWithoutCountry);
+
+    // Get original d-tag for edit, or create new one
+    const originalDTag = editEvent?.tags?.find((tag: any) => tag[0] === 'd')?.[1];
+    const dTag = originalDTag || `place-${Date.now()}`;
+
     const additionalTags = [
-      ['d', `place-${Date.now()}`], // Unique identifier
+      ['d', dTag], // Use existing d-tag for edit, create new for new places
       ['t', 'place'], // Content type tag for filtering
       ['type', 'place'], // Explicit type marker
       ['title', name.trim()], // Place name (important for display)
