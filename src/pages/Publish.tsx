@@ -1189,27 +1189,23 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     if (editEvent) {
       setName(editEvent.tags?.find((tag: any) => tag[0] === 'name')?.[1] || '');
 
-      // Bestimme das Event-Format basierend auf dem type-Tag
-      // Neue Plätze haben type=place und HTML-Content
-      // Alte Plätze haben type=article und Markdown-Content
-      const eventType = editEvent.tags?.find((tag: any) => tag[0] === 'type')?.[1];
-      const isPlaceType = eventType === 'place';
-
-      console.log('[PlaceForm] Event type:', eventType, 'isPlaceType:', isPlaceType);
-
       // Wenn es ein place-Event ist, den Content bereinigen und verwenden (HTML)
       // Wenn es ein altes article-Event ist, Markdown zu HTML konvertieren
       let contentToSet = '';
       if (isPlaceType) {
         console.log('[PlaceForm] Neuer Platz (type=place) mit HTML-Content, bereinigen und verwenden');
 
-        // Content bereinigen - Titel entfernen, da er im name-Tag steht
+        // Content bereinigen - ALLE strukturierten Daten entfernen
         let cleanContent = editEvent.content || '';
 
         // Remove h1 title (wird aus name-Tag geholt)
         cleanContent = cleanContent.replace(/^<h1[^>]*>.*?<\/h1>\s*/gi, '');
 
-        // Remove structured lines that are stored in tags (HTML format)
+        // Remove structured sections (alles was in Tags steht, nicht im Content!)
+        // Bilder-Sektion
+        cleanContent = cleanContent.replace(/<h2[^>]*>Bilder<\/h2>.*?(?=<h[2-6]>|<p><strong>|$)/gis, '');
+
+        // Strukturierte Felder (Kategorie, Bewertung, Standort, etc.)
         cleanContent = cleanContent.replace(/<p><strong>Kategorie:<\/strong>.*?<\/p>/gi, '');
         cleanContent = cleanContent.replace(/<p><strong>Bewertung:<\/strong>.*?<\/p>/gi, '');
         cleanContent = cleanContent.replace(/<p><strong>Standort:<\/strong>.*?<\/p>/gi, '');
@@ -1217,9 +1213,6 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         cleanContent = cleanContent.replace(/<p><strong>Einrichtungen:<\/strong>.*?<\/p>/gi, '');
         cleanContent = cleanContent.replace(/<p><strong>Geeignet für:<\/strong>.*?<\/p>/gi, '');
         cleanContent = cleanContent.replace(/<p><strong>Preis:<\/strong>.*?<\/p>/gi, '');
-
-        // Remove "Bilder" section if present
-        cleanContent = cleanContent.replace(/<h2>Bilder<\/h2>.*?(?=<h[2-6]>|$)/gis, '');
 
         // Clean up extra whitespace
         cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
@@ -1629,6 +1622,56 @@ Beschreibe hier den Ort, was macht ihn besonders...
               console.log('Image uploaded:', url);
             }}
           />
+        </div>
+
+        {/* Vorschau: Strukturierte Daten, die veröffentlicht werden */}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+          <h3 className="font-semibold mb-3 text-sm text-muted-foreground">📋 Vorschau: Strukturierte Daten</h3>
+          <div className="space-y-2 text-sm">
+            {category && (
+              <div className="flex justify-between">
+                <span className="font-medium">Kategorie:</span>
+                <span>{category}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="font-medium">Bewertung:</span>
+              <span>{'⭐'.repeat(rating)} ({rating}/5)</span>
+            </div>
+            {location.trim() && (
+              <div className="flex justify-between">
+                <span className="font-medium">Standort:</span>
+                <span>{location.trim()}</span>
+              </div>
+            )}
+            {coordinates.lat && coordinates.lng && (
+              <div className="flex justify-between">
+                <span className="font-medium">Koordinaten:</span>
+                <span>{coordinates.lat}, {coordinates.lng}</span>
+              </div>
+            )}
+            {facilities.length > 0 && (
+              <div className="flex justify-between">
+                <span className="font-medium">Einrichtungen:</span>
+                <span>{facilities.join(', ')}</span>
+              </div>
+            )}
+            {bestFor.length > 0 && (
+              <div className="flex justify-between">
+                <span className="font-medium">Geeignet für:</span>
+                <span>{bestFor.join(', ')}</span>
+              </div>
+            )}
+            {price.trim() && (
+              <div className="flex justify-between">
+                <span className="font-medium">Preis:</span>
+                <span>{price.trim()}</span>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            ℹ️ Diese Daten werden automatisch als strukturierte Felder im Event veröffentlicht und erscheinen beim nächsten Bearbeiten nicht erneut im Content.
+          </p>
         </div>
 
         {/* Title Image */}
