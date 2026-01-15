@@ -1189,6 +1189,14 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     if (editEvent) {
       setName(editEvent.tags?.find((tag: any) => tag[0] === 'name')?.[1] || '');
 
+      // Bestimme das Event-Format basierend auf dem type-Tag
+      // Neue Plätze haben type=place und HTML-Content
+      // Alte Plätze haben type=article und Markdown-Content
+      const eventType = editEvent.tags?.find((tag: any) => tag[0] === 'type')?.[1];
+      const isPlaceType = eventType === 'place';
+
+      console.log('[PlaceForm] Event type:', eventType, 'isPlaceType:', isPlaceType);
+
       // Wenn es ein place-Event ist, den Content bereinigen und verwenden (HTML)
       // Wenn es ein altes article-Event ist, Markdown zu HTML konvertieren
       let contentToSet = '';
