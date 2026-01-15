@@ -26,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useUploadFile } from '@/hooks/useUploadFile';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface WysiwygEditorProps {
   content: string;
@@ -109,7 +109,16 @@ export function WysiwygEditor({
         class: 'prose prose-sm sm:prose lg:prose-lg dark:prose-invert max-w-none focus:outline-none min-h-[400px] p-4',
       },
     },
+    // Automatisch auf content-Änderungen reagieren (z.B. beim Bearbeiten)
+    immediatelyRender: false,
   });
+
+  // Editor-Inhalt aktualisieren, wenn sich content prop ändert
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content, false);
+    }
+  }, [content, editor]);
 
   const handleImageUpload = async (file: File) => {
     if (!editor) return;
