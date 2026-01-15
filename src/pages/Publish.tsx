@@ -2497,7 +2497,7 @@ export function Publish() {
   const [searchParams] = useSearchParams();
   const editEventId = searchParams.get('edit');
   const editType = searchParams.get('type');
-  const [activeTab, setActiveTab] = useState(editType || 'note');
+  const [activeTab, setActiveTab] = useState(editType || 'media');
   const { data: editEvent } = useEditData(editEventId);
 
   // Debug logs
@@ -2557,38 +2557,38 @@ export function Publish() {
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="note" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Note
+            <TabsTrigger value="media" className="gap-2">
+              <Upload className="h-4 w-4" />
+              Medien
             </TabsTrigger>
             <TabsTrigger value="place" className="gap-2">
               <Map className="h-4 w-4" />
               Plätze
             </TabsTrigger>
-            <TabsTrigger value="media" className="gap-2">
-              <Upload className="h-4 w-4" />
-              Medien
-            </TabsTrigger>
             <TabsTrigger value="article" className="gap-2">
               <FileText className="h-4 w-4" />
               Artikel
             </TabsTrigger>
+            <TabsTrigger value="note" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Note
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="note">
-            <NoteForm editEvent={editType === 'note' ? editEvent : undefined} />
+          <TabsContent value="media">
+            <MediaUploadForm editEvent={editType === 'media' ? editEvent : undefined} />
           </TabsContent>
 
           <TabsContent value="place">
             <PlaceForm editEvent={editType === 'place' ? editEvent : undefined} />
           </TabsContent>
 
-          <TabsContent value="media">
-            <MediaUploadForm editEvent={editType === 'media' ? editEvent : undefined} />
-          </TabsContent>
-
           <TabsContent value="article">
             <ArticleForm editEvent={editType === 'article' ? editEvent : undefined} />
+          </TabsContent>
+
+          <TabsContent value="note">
+            <NoteForm editEvent={editType === 'note' ? editEvent : undefined} />
           </TabsContent>
         </Tabs>
       </div>
