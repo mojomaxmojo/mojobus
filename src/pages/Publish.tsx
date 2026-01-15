@@ -2567,7 +2567,7 @@ export function Publish() {
             </TabsTrigger>
             <TabsTrigger value="article" className="gap-2">
               <FileText className="h-4 w-4" />
-              Artikel
+              Berichte
             </TabsTrigger>
             <TabsTrigger value="note" className="gap-2">
               <MessageSquare className="h-4 w-4" />
