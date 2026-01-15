@@ -2036,7 +2036,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
     toast({
       title: 'Erfolg!',
-      description: editEvent ? 'Artikel erfolgreich aktualisiert.' : 'Artikel erfolgreich veroeffentlicht.'
+      description: editEvent ? 'Bericht erfolgreich aktualisiert.' : 'Bericht erfolgreich veroeffentlicht.'
     });
 
     // Reset form and redirect
@@ -2060,7 +2060,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          Artikel veroeffentlichen
+          Berichte veroeffentlichen
         </CardTitle>
         <CardDescription>
           Ausfuehrliche Geschichten, Guides und Erfahrungsberichte fuer die Vanlife-Community
@@ -2445,7 +2445,7 @@ Schreibe deinen Artikel hier...
 
         <Button onClick={handleSubmit} className="w-full" disabled={!title.trim() || !content.trim()}>
           <FileText className="h-4 w-4 mr-2" />
-          Artikel veroeffentlichen
+          Berichte veroeffentlichen
         </Button>
       </CardContent>
     </Card>
