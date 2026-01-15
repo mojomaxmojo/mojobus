@@ -1178,6 +1178,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   const [additionalImagesUrlInput, setAdditionalImagesUrlInput] = useState('');
   const [manualTags, setManualTags] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1213,7 +1214,8 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       // Clean up extra whitespace
       cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
 
-      setDescription(cleanContent || '');
+      // Konvertiere Markdown zu HTML für WysiwygEditor
+      setDescription(markdownToHtml(cleanContent || ''));
       setLocation(editEvent.tags?.find((tag: any) => tag[0] === 'location')?.[1] || '');
       const latTag = editEvent.tags?.find((tag: any) => tag[0] === 'lat')?.[1];
       const lngTag = editEvent.tags?.find((tag: any) => tag[0] === 'lng')?.[1];
@@ -1291,15 +1293,22 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   };
 
   const handleImageFile = async (file: File) => {
+    setIsUploading(true);
     try {
       const [urlTag] = await uploadFile(file);
       setImage(urlTag[1]); // URL is in second position
+      toast({
+        title: 'Upload erfolgreich!',
+        description: 'Titelbild wurde hochgeladen.',
+      });
     } catch (error) {
       toast({
         title: 'Fehler',
         description: 'Bild-Upload fehlgeschlagen.',
         variant: 'destructive'
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -1358,9 +1367,9 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     // Create NIP-23 compliant content for place
     let content = `# ${name.trim()}\n\n`;
 
-    // Add summary if description exists
+    // Konvertiere HTML zu Markdown für Nostr und füge Beschreibung hinzu
     if (description.trim()) {
-      content += `${description.trim()}\n\n`;
+      content += `${htmlToMarkdown(description).trim()}\n\n`;
     }
 
     // Add additional images if present (title image handled separately)
@@ -1535,12 +1544,42 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
         <div className="space-y-2">
           <Label htmlFor="place-description">Beschreibung</Label>
-          <Textarea
-            id="place-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Beschreibe den Ort, was macht ihn besonders..."
-            rows={3}
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            WYSIWYG Editor - Beschreibe den Ort mit Formatierung, Bildern und Links
+          </div>
+          <WysiwygEditor
+            content={description}
+            onChange={setDescription}
+            placeholder={`# Erlebnis-Bericht
+
+Beschreibe hier den Ort, was macht ihn besonders...
+
+- Verwende die Toolbar für Formatierung
+- Fett oder kursiv
+
+## Was erwartet dich
+
+### Highlights
+- Der Ort bietet einen tollen Blick auf das Meer
+- Perfekt für Vanlife mit Solarstrom
+- Ruah und Natur
+
+### Tipps und Tricks
+- Beste Zeit für einen Besuch: Frühling/Herbst
+- Versorgungsmöglichkeiten in der Nähe
+
+### Bilder und Videos
+- Füge Bilder über das Bild-Icon ein
+- Oder lade Bilder direkt in den Editor
+
+### Noch mehr...
+`}
+            minHeight="300px"
+            maxLength={30000}
+            onImageUpload={(url) => {
+              // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
+              console.log('Image uploaded:', url);
+            }}
           />
         </div>
 
@@ -1549,41 +1588,64 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
           <Label>Titelbild</Label>
           <div className="space-y-2">
             {image ? (
-              <div className="relative group border rounded-lg p-3">
-                <img
-                  src={image}
-                  alt="Titelbild"
-                  className="w-full h-48 object-cover rounded-lg"
-                />
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="absolute top-2 right-2"
-                  onClick={() => setImage('')}
-                >
-                  Entfernen
-                </Button>
+              <div className="relative">
+                <div className="relative group border rounded-lg p-3">
+                  <img
+                    src={image}
+                    alt="Titelbild"
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                      <div className="text-white text-center">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                        <p className="text-sm">Wird hochgeladen...</p>
+                      </div>
+                    </div>
+                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => setImage('')}
+                    disabled={isUploading}
+                  >
+                    Entfernen
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleImageFile(file);
-                  }}
-                  className="mb-2"
-                />
-                <p className="text-xs text-muted-foreground">
-                  oder
-                </p>
-                <Input
-                  placeholder="https://... (Bild-URL)"
-                  value={image}
-                  onChange={(e) => setImage(e.target.value)}
-                  className="mt-2"
-                />
+              <div className="relative">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageFile(file);
+                    }}
+                    className="mb-2 disabled:opacity-50"
+                    disabled={isUploading}
+                  />
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-white/80 rounded-md flex items-center justify-center">
+                      <div className="text-center">
+                        <Loader2 className="w-4 h-4 animate-spin mx-auto mb-1 text-ocean-600" />
+                        <p className="text-xs text-ocean-600">Upload läuft...</p>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    oder
+                  </p>
+                  <Input
+                    placeholder="https://... (Bild-URL)"
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                    className="mt-2 disabled:opacity-50"
+                    disabled={isUploading}
+                  />
+                </div>
               </div>
             )}
           </div>
