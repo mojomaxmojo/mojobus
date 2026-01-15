@@ -2,15 +2,14 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLongformArticles } from '@/hooks/useLongformArticles';
+import { useLongformArticles, usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useNotes } from '@/hooks/useNotes';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { NOSTR_CONFIG } from '@/config/nostr';
-import { extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { Waves, Compass, Sun, Anchor } from 'lucide-react';
+import { Waves, Compass, Sun, Anchor, MapPin } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -18,7 +17,7 @@ import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes
 import { useHead } from '@unhead/react';
 
 type ContentItem = {
-  type: 'article' | 'note' | 'image';
+  type: 'article' | 'note' | 'image' | 'place';
   event: NostrEvent;
   date: number;
   thumbnailUrl?: string;
@@ -42,6 +41,7 @@ export function Home() {
   });
 
   const { data: articles, isLoading } = useLongformArticles();
+  const { data: places } = usePlaces();
   const notesQuery = useNotes();
   const { nostr } = useNostr();
 
@@ -58,7 +58,7 @@ export function Home() {
           limit: 50,
         }
       ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(2000)]) });
-      
+
       return events.filter((event) => {
         const content = event.content.toLowerCase();
         return content.includes('.jpg') || content.includes('.png');
@@ -73,6 +73,18 @@ export function Home() {
       const metadata = extractArticleMetadata(event);
       contentItems.push({
         type: 'article',
+        event,
+        date: event.created_at,
+        thumbnailUrl: metadata.image ? getListThumbnailUrl(metadata.image) : undefined
+      });
+    });
+  }
+
+  if (places && Array.isArray(places)) {
+    places.forEach((event) => {
+      const metadata = extractArticleMetadata(event);
+      contentItems.push({
+        type: 'place',
         event,
         date: event.created_at,
         thumbnailUrl: metadata.image ? getListThumbnailUrl(metadata.image) : undefined
@@ -279,7 +291,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
   let summary = '';
   let link = '';
 
-  if (item.type === 'article') {
+  if (item.type === 'article' || item.type === 'place') {
     const metadata = extractArticleMetadata(item.event);
     title = metadata.title;
     summary = metadata.summary;
@@ -327,10 +339,17 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
           </div>
         )}
         <CardHeader>
-          <CardTitle className="line-clamp-2">{title}</CardTitle>
-          {summary && (
-            <CardDescription className="line-clamp-3">{summary}</CardDescription>
-          )}
+          <div className="flex items-start gap-2">
+            {item.type === 'place' && (
+              <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <CardTitle className="line-clamp-2">{title}</CardTitle>
+              {summary && (
+                <CardDescription className="line-clamp-3">{summary}</CardDescription>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
