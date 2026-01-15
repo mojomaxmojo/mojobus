@@ -5,7 +5,7 @@ import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 /**
- * Validiert ein Longform Artikel Event (NIP-23)
+ * Validiert ein Longform Artikel Event (NIP-23) oder Platz Event
  */
 function validateLongformArticle(event: NostrEvent): boolean {
   if (event.kind !== NOSTR_CONFIG.kinds.longform) return false;
@@ -20,18 +20,28 @@ function validateLongformArticle(event: NostrEvent): boolean {
 
   // STRIKTERE VALIDIERUNG: Prüfe auf MojoBus-spezifische Tags
   // Option 1: title-Tag muss vorhanden sein
-  const title = event.tags.find(([name]) => name === 'title')?.[1];
+  const title = event.tags.find(([name]) => name === 'title')?.[1] ||
+                event.tags.find(([name]) => name === 'name')?.[1]; // Auch name-Tag akzeptieren für Plätze
+
   if (!title) {
-    console.log('⚠️ Event ohne title-Tag ignoriert:', event.id);
+    console.log('⚠️ Event ohne title- oder name-Tag ignoriert:', event.id);
     return false;
   }
 
-  // Option 2: type=article oder #t artikel Tag
+  // Option 2: type=article, type=place oder #t artikel/places Tag
   const typeTag = event.tags.find(([name]) => name === 'type')?.[1];
   const articleTag = event.tags.some(([name, value]) => name === 't' && value === 'artikel');
+  const placesTag = event.tags.some(([name, value]) => name === 't' && value === 'places');
 
-  if (typeTag !== 'article' && !articleTag) {
-    console.log('⚠️ Event ohne type=article oder #t artikel ignoriert:', event.id);
+  // Akzeptiere Artikel (type=article oder #t artikel) ODER Plätze (type=place oder #t places)
+  const isValidType = typeTag === 'article' || articleTag || typeTag === 'place' || placesTag;
+
+  if (!isValidType) {
+    console.log('⚠️ Event ohne gültigen type ignoriert:', event.id, {
+      typeTag,
+      hasArticleTag: articleTag,
+      hasPlacesTag: placesTag
+    });
     return false;
   }
 
@@ -118,26 +128,36 @@ export function useLongformArticles(options?: {
 
       const events = await nostr.query([filter], { signal });
 
-      console.log('Found longform events:', events.length);
+      console.log('🔍 useLongformArticles: Found total events:', events.length);
 
       // Validiere und filtere Artikel (Plätze ausschließen)
       const validArticles = events.filter(event => {
         const isValid = validateLongformArticle(event);
         const isPlace = isPlaceEvent(event);
 
-        console.log('Event:', event.id, {
+        const eventInfo = {
           kind: event.kind,
           identifier: event.tags.find(([name]) => name === 'd')?.[1],
           type: event.tags.find(([name]) => name === 'type')?.[1],
+          title: event.tags.find(([name]) => name === 'title')?.[1],
+          name: event.tags.find(([name]) => name === 'name')?.[1],
           isValid,
           isPlace,
           willInclude: isValid && !isPlace
-        });
+        };
+
+        if (!isValid) {
+          console.log('❌ Event failed validation:', event.id, eventInfo);
+        } else if (isPlace) {
+          console.log('📍 Event is a place (excluded from articles):', event.id, eventInfo);
+        } else {
+          console.log('✅ Event included in articles:', event.id, eventInfo);
+        }
 
         return isValid && !isPlace;
       });
 
-      console.log('Valid articles after filtering:', validArticles.length);
+      console.log('📦 useLongformArticles: Valid articles after filtering:', validArticles.length);
 
       // Sortiere nach Datum (neueste zuerst)
       return validArticles.sort((a, b) => b.created_at - a.created_at);
@@ -279,27 +299,38 @@ export function usePlaces() {
         { signal }
       );
 
-      console.log('Found total longform events:', events.length);
+      console.log('🔍 usePlaces: Found total longform events:', events.length);
 
       // Validiere und filtere Plätze
       const validPlaces = events.filter(event => {
         const isValid = validateLongformArticle(event);
         const isPlace = isPlaceEvent(event);
 
-        console.log('Place check for event:', event.id, {
+        const eventInfo = {
           kind: event.kind,
           identifier: event.tags.find(([name]) => name === 'd')?.[1],
           type: event.tags.find(([name]) => name === 'type')?.[1],
           name: event.tags.find(([name]) => name === 'name')?.[1],
+          title: event.tags.find(([name]) => name === 'title')?.[1],
+          tTags: event.tags.filter(([name]) => name === 't').map(([, value]) => value),
           isValid,
           isPlace,
           willInclude: isValid && isPlace
-        });
+        };
+
+        console.log('📍 Place check for event:', event.id, eventInfo);
 
         return isValid && isPlace;
       });
 
-      console.log('Valid places after filtering:', validPlaces.length);
+      console.log('✅ usePlaces: Valid places after filtering:', validPlaces.length);
+      if (validPlaces.length > 0) {
+        console.log('📋 Places:', validPlaces.map(e => ({
+          id: e.id,
+          name: e.tags.find(([name]) => name === 'name')?.[1],
+          type: e.tags.find(([name]) => name === 'type')?.[1]
+        })));
+      }
 
       // Sortiere nach Datum (neueste zuerst)
       return validPlaces.sort((a, b) => b.created_at - a.created_at);
