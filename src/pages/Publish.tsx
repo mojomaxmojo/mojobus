@@ -1400,6 +1400,21 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       !countryList.includes(tag.toLowerCase()) && !tag.startsWith('#') && !countryList.includes(tag.replace('#', '').toLowerCase())
     );
 
+    // Erstelle summary für Vorschau auf Startseite
+    let placeSummary = '';
+    if (description.trim()) {
+      // Verwende die Beschreibung als summary, gekürzt auf 200 Zeichen
+      placeSummary = description.trim().length > 200
+        ? description.trim().substring(0, 197) + '...'
+        : description.trim();
+    } else if (location.trim()) {
+      // Fallback: Verwende Standort als summary
+      placeSummary = `Ort in ${location.trim()}`;
+    } else {
+      // Fallback: Kurze Beschreibung basierend auf Kategorie
+      placeSummary = `Ein ${category} für Vanlife-Abenteurer`;
+    }
+
     // Create tags from config
     const baseTags = createRequiredTags('places', manualTagsWithoutCountry);
     const additionalTags = [
@@ -1408,6 +1423,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       ['type', 'place'], // Explicit type marker
       ['title', name.trim()], // Place name (important for display)
       ['name', name.trim()], // Place name (important for display)
+      ['summary', placeSummary], // Summary for preview on homepage
       ['category', category],
       ['rating', rating.toString()],
       ...facilities.map(f => ['facility', f]),

@@ -68,7 +68,31 @@ export function extractArticleMetadata(event: NostrEvent) {
   const title = event.tags.find(([name]) => name === 'title')?.[1] ||
                 event.tags.find(([name]) => name === 'name')?.[1] ||
                 extractTitleFromContent(event.content) || 'Ohne Titel';
-  const summary = event.tags.find(([name]) => name === 'summary')?.[1] || '';
+
+  // Versuche summary-Tag zu extrahieren, wenn nicht vorhanden, generiere aus Content
+  let summary = event.tags.find(([name]) => name === 'summary')?.[1] || '';
+
+  // Wenn kein summary-Tag existiert, generiere aus dem Content (nach dem Titel)
+  if (!summary) {
+    const contentLines = event.content.split('\n');
+    // Entferne die erste Zeile (Titel)
+    const contentAfterTitle = contentLines.slice(1).join('\n').trim();
+
+    // Entferne strukturierte Zeilen (Kategorie, Bewertung, etc.)
+    const cleanedContent = contentAfterTitle
+      .replace(/^\*\*[^:]+:\*\*.*$/gm, '') // Entferne **Kategorie:** etc.
+      .replace(/^## .+$/gm, '')           // Entferne ## Bilder etc.
+      .replace(/\n\s*\n/g, '\n')          // Entferne doppelte Zeilenumbrüche
+      .trim();
+
+    // Nimm die ersten 150-200 Zeichen als summary
+    summary = cleanedContent.length > 0
+      ? cleanedContent.length > 200
+        ? cleanedContent.substring(0, 197) + '...'
+        : cleanedContent
+      : '';
+  }
+
   const image = event.tags.find(([name]) => name === 'image')?.[1] || '';
   const published_at = event.tags.find(([name]) => name === 'published_at')?.[1];
   const tags = event.tags.filter(([name]) => name === 't').map(([, value]) => value);
