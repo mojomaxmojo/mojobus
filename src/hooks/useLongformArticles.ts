@@ -74,12 +74,19 @@ export function extractArticleMetadata(event: NostrEvent) {
 
   // Wenn kein summary-Tag existiert, generiere aus dem Content (nach dem Titel)
   if (!summary) {
-    const contentLines = event.content.split('\n');
-    // Entferne die erste Zeile (Titel)
-    const contentAfterTitle = contentLines.slice(1).join('\n').trim();
+    let contentToExtract = event.content || '';
 
-    // Entferne strukturierte Zeilen (Kategorie, Bewertung, etc.)
-    const cleanedContent = contentAfterTitle
+    // Entferne HTML-Tags und konvertiere zu Text
+    contentToExtract = contentToExtract
+      .replace(/<h1[^>]*>.*?<\/h1>/gi, '') // Entferne h1 Titel
+      .replace(/<h2[^>]*>.*?<\/h2>/gi, '') // Entferne h2 (Bilder etc.)
+      .replace(/<p><strong>.*?<\/strong>.*?<\/p>/gis, '') // Entferne strukturierte Zeilen (HTML)
+      .replace(/<[^>]+>/g, '') // Entferne alle verbleibenden HTML-Tags
+      .replace(/&nbsp;/g, ' ') // Ersetze &nbsp; mit Leerzeichen
+      .trim();
+
+    // Entferne strukturierte Zeilen (Markdown-Format als Fallback)
+    const cleanedContent = contentToExtract
       .replace(/^\*\*[^:]+:\*\*.*$/gm, '') // Entferne **Kategorie:** etc.
       .replace(/^## .+$/gm, '')           // Entferne ## Bilder etc.
       .replace(/\n\s*\n/g, '\n')          // Entferne doppelte Zeilenumbrüche
