@@ -1411,9 +1411,25 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     // Create NIP-23 compliant content for place
     let content = `# ${name.trim()}\n\n`;
 
-    // Konvertiere HTML zu Markdown für Nostr und füge Beschreibung hinzu
+    // Konvertiere HTML zu Markdown für Nostr und füge BESCHREIBUNG hinzu
+    // WICHTIG: Strukturierte Daten (Kategorie, Bewertung, etc.) werden NICHT in den Content aufgenommen!
+    // Sie werden als Tags gespeichert, um Duplikate beim Bearbeiten zu vermeiden.
     if (description.trim()) {
-      content += `${htmlToMarkdown(description).trim()}\n\n`;
+      // Entferne bereits vorhandene strukturierte Zeilen aus der Beschreibung
+      const cleanDescription = description.trim()
+        .replace(/<p><strong>Kategorie:<\/strong>.*?<\/p>/gis, '')
+        .replace(/<p><strong>Bewertung:<\/strong>.*?<\/p>/gis, '')
+        .replace(/<p><strong>Standort:<\/strong>.*?<\/p>/gis, '')
+        .replace(/<p><strong>Koordinaten:<\/strong>.*?<\/p>/gis, '')
+        .replace(/<p><strong>Einrichtungen:<\/strong>.*?<\/p>/gis, '')
+        .replace(/<p><strong>Geeignet für:<\/strong>.*?<\/p>/gis, '')
+        .replace(/<p><strong>Preis:<\/strong>.*?<\/p>/gis, '')
+        .replace(/<h2[^>]*>Bilder<\/h2>.*?(?=<h[2-6]>|<p><strong>|$)/gis, '');
+
+      const descriptionMarkdown = htmlToMarkdown(cleanDescription).trim();
+      if (descriptionMarkdown) {
+        content += `${descriptionMarkdown}\n\n`;
+      }
     }
 
     // Add additional images if present (title image handled separately)
@@ -1424,28 +1440,8 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       });
     }
 
-    content += `**Kategorie:** ${category}\n`;
-    content += `**Bewertung:** ${'⭐'.repeat(rating)} (${rating}/5)\n`;
-
-    if (location.trim()) {
-      content += `**Standort:** ${location.trim()}\n`;
-    }
-
-    if (coordinates.lat && coordinates.lng) {
-      content += `**Koordinaten:** ${coordinates.lat}, ${coordinates.lng}\n`;
-    }
-
-    if (facilities.length > 0) {
-      content += `**Einrichtungen:** ${facilities.join(', ')}\n`;
-    }
-
-    if (bestFor.length > 0) {
-      content += `**Geeignet fuer:** ${bestFor.join(', ')}\n`;
-    }
-
-    if (price.trim()) {
-      content += `**Preis:** ${price.trim()}\n`;
-    }
+    // WICHTIG: Strukturierte Daten werden NUR als Tags gespeichert, nicht im Content!
+    // Das verhindert Duplikate beim Bearbeiten und saubert den Content.
 
     // Entferne Country-Tags aus manualTags, um Duplikate zu vermeiden
     const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
