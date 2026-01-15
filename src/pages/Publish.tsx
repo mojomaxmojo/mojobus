@@ -1197,12 +1197,34 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
       console.log('[PlaceForm] Event type:', eventType, 'isPlaceType:', isPlaceType);
 
-      // Wenn es ein place-Event ist, den Content direkt verwenden (HTML)
+      // Wenn es ein place-Event ist, den Content bereinigen und verwenden (HTML)
       // Wenn es ein altes article-Event ist, Markdown zu HTML konvertieren
       let contentToSet = '';
       if (isPlaceType) {
-        console.log('[PlaceForm] Neuer Platz (type=place) mit HTML-Content, direkt verwenden');
-        contentToSet = editEvent.content || '';
+        console.log('[PlaceForm] Neuer Platz (type=place) mit HTML-Content, bereinigen und verwenden');
+
+        // Content bereinigen - Titel entfernen, da er im name-Tag steht
+        let cleanContent = editEvent.content || '';
+
+        // Remove h1 title (wird aus name-Tag geholt)
+        cleanContent = cleanContent.replace(/^<h1[^>]*>.*?<\/h1>\s*/gi, '');
+
+        // Remove structured lines that are stored in tags (HTML format)
+        cleanContent = cleanContent.replace(/<p><strong>Kategorie:<\/strong>.*?<\/p>/gi, '');
+        cleanContent = cleanContent.replace(/<p><strong>Bewertung:<\/strong>.*?<\/p>/gi, '');
+        cleanContent = cleanContent.replace(/<p><strong>Standort:<\/strong>.*?<\/p>/gi, '');
+        cleanContent = cleanContent.replace(/<p><strong>Koordinaten:<\/strong>.*?<\/p>/gi, '');
+        cleanContent = cleanContent.replace(/<p><strong>Einrichtungen:<\/strong>.*?<\/p>/gi, '');
+        cleanContent = cleanContent.replace(/<p><strong>Geeignet für:<\/strong>.*?<\/p>/gi, '');
+        cleanContent = cleanContent.replace(/<p><strong>Preis:<\/strong>.*?<\/p>/gi, '');
+
+        // Remove "Bilder" section if present
+        cleanContent = cleanContent.replace(/<h2>Bilder<\/h2>.*?(?=<h[2-6]>|$)/gis, '');
+
+        // Clean up extra whitespace
+        cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+
+        contentToSet = cleanContent || '';
       } else {
         console.log('[PlaceForm] Alter Platz (type=article) mit Markdown-Content, konvertiere zu HTML');
 
