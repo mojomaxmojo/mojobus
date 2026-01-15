@@ -263,12 +263,20 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       // Create content with file URLs
       const content = `${title ? `# ${title}\n\n` : ''}${description ? `${description}\n\n` : ''}${uploadedUrls.join('\n\n')}`;
 
+      // Entferne Country-Tags aus customTags, um Duplikate zu vermeiden
+      const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
+      const customTagsArray = (customTags || '').split(' ').filter(Boolean);
+      const customTagsWithoutCountry = customTagsArray.filter(tag =>
+        !countryList.includes(tag.toLowerCase()) &&
+        !countryList.includes(tag.replace('#', '').toLowerCase())
+      );
+
       // Collect all tags from different sources
       const allTags = [
         ...selectedSubTags,
         ...detailedTags,
-        ...(customTags ? customTags.split(' ').filter(Boolean) : []),
-        ...(getCountryTag(selectedCountry).filter(tag => !tag.startsWith('#'))) // Nur Land-Codes, keine #Tags
+        ...customTagsWithoutCountry,
+        ...(selectedCountry ? getCountryTag(selectedCountry) : []) // Country-Tags nur hinzufügen, wenn gewählt
       ];
 
       // Always add #mojobus as mandatory tag for /veroeffentlichen
@@ -864,8 +872,14 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       return;
     }
 
+    // Entferne Country-Tags aus tags, um Duplikate zu vermeiden
+    const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
+    const tagsWithoutCountry = tags.filter(tag =>
+      !countryList.includes(tag.toLowerCase()) && !tag.startsWith('#') && !countryList.includes(tag.replace('#', '').toLowerCase())
+    );
+
     // Create event tags with country tags and #mojobus
-    const baseTags = createRequiredTags('notes', tags);
+    const baseTags = createRequiredTags('notes', tagsWithoutCountry);
     const additionalTags = [
       ['type', 'note'],      // Explicit type marker
       ['t', 'mojobus'],     // #mojobus tag
@@ -873,9 +887,11 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       ['t', 'notiz']        // Standard tag #notiz
     ];
 
-    // Add country tags
-    const countryTags = getCountryTag(selectedCountry);
-    countryTags.forEach(tag => additionalTags.push(['t', tag]));
+    // Add country tags (nur wenn selectedCountry gewählt wurde)
+    if (selectedCountry) {
+      const countryTags = getCountryTag(selectedCountry);
+      countryTags.forEach(tag => additionalTags.push(['t', tag]));
+    }
 
     // Add image tags if images exist
     imageUrls.forEach(url => {
@@ -1378,8 +1394,14 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       content += `**Preis:** ${price.trim()}\n`;
     }
 
+    // Entferne Country-Tags aus manualTags, um Duplikate zu vermeiden
+    const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
+    const manualTagsWithoutCountry = manualTags.filter(tag =>
+      !countryList.includes(tag.toLowerCase()) && !tag.startsWith('#') && !countryList.includes(tag.replace('#', '').toLowerCase())
+    );
+
     // Create tags from config
-    const baseTags = createRequiredTags('places', manualTags);
+    const baseTags = createRequiredTags('places', manualTagsWithoutCountry);
     const additionalTags = [
       ['d', `place-${Date.now()}`], // Unique identifier
       ['t', 'place'], // Content type tag for filtering
@@ -1408,9 +1430,11 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       tags.push(['image', img]);
     });
 
-    // Add country tags
-    const countryTags = getCountryTag(selectedCountry);
-    countryTags.forEach(tag => tags.push(['t', tag]));
+    // Add country tags (nur wenn selectedCountry gewählt wurde)
+    if (selectedCountry) {
+      const countryTags = getCountryTag(selectedCountry);
+      countryTags.forEach(tag => tags.push(['t', tag]));
+    }
 
     console.log('[PlaceForm] Publishing event with kind:', 30023);
     console.log('[PlaceForm] Tags:', tags);
@@ -1888,10 +1912,16 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       author: 'MojoBus Team'
     };
 
-
+    // Entferne Country-Tags aus displayTags, um Duplikate zu vermeiden
+    const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
+    const displayTagsWithoutCountry = displayTags.filter(tag =>
+      !countryList.includes(tag.toLowerCase()) &&
+      !tag.startsWith('#') &&
+      !countryList.includes(tag.replace('#', '').toLowerCase())
+    );
 
     // Create tags from config (mit allen Tags inkl. automatischen!)
-    const baseTags = createRequiredTags('articles', displayTags);
+    const baseTags = createRequiredTags('articles', displayTagsWithoutCountry);
 
     // Get the original d-tag for edit, or create new one
     const originalDTag = editEvent?.tags?.find((tag: any) => tag[0] === 'd')?.[1];
@@ -1909,9 +1939,11 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     if (category) additionalTags.push(['category', category]);
     if (image) additionalTags.push(['image', image]);
 
-    // Add country tags
-    const countryTags = getCountryTag(selectedCountry);
-    countryTags.forEach(tag => additionalTags.push(['t', tag]));
+    // Add country tags (nur wenn selectedCountry gewählt wurde)
+    if (selectedCountry) {
+      const countryTags = getCountryTag(selectedCountry);
+      countryTags.forEach(tag => additionalTags.push(['t', tag]));
+    }
 
     const finalTags = [
       ...baseTags,
