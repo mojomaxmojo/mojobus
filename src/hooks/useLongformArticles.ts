@@ -76,28 +76,61 @@ export function extractArticleMetadata(event: NostrEvent) {
   if (!summary) {
     let contentToExtract = event.content || '';
 
-    // Entferne HTML-Tags und konvertiere zu Text
-    contentToExtract = contentToExtract
-      .replace(/<h1[^>]*>.*?<\/h1>/gi, '') // Entferne h1 Titel
-      .replace(/<h2[^>]*>.*?<\/h2>/gi, '') // Entferne h2 (Bilder etc.)
-      .replace(/<p><strong>.*?<\/strong>.*?<\/p>/gis, '') // Entferne strukturierte Zeilen (HTML)
-      .replace(/<[^>]+>/g, '') // Entferne alle verbleibenden HTML-Tags
-      .replace(/&nbsp;/g, ' ') // Ersetze &nbsp; mit Leerzeichen
-      .trim();
+    // Schritt 1: Entferne HTML-Elemente mit strukturierten Daten
+    // H1 Titel
+    contentToExtract = contentToExtract.replace(/<h1[^>]*>.*?<\/h1>/gis, '');
 
-    // Entferne strukturierte Zeilen (Markdown-Format als Fallback)
+    // H2 Überschriften (Bilder etc.)
+    contentToExtract = contentToExtract.replace(/<h2[^>]*>.*?<\/h2>/gis, '');
+
+    // Strukturierte Absätze mit fettgedruckten Labels (HTML-Format)
+    // z.B. <p><strong>Kategorie:</strong> wildcamping</p>
+    const structuredPatterns = [
+      /<p><strong>Kategorie:<\/strong>.*?<\/p>/gis,
+      /<p><strong>Bewertung:<\/strong>.*?<\/p>/gis,
+      /<p><strong>Standort:<\/strong>.*?<\/p>/gis,
+      /<p><strong>Koordinaten:<\/strong>.*?<\/p>/gis,
+      /<p><strong>Einrichtungen:<\/strong>.*?<\/p>/gis,
+      /<p><strong>Geeignet für:<\/strong>.*?<\/p>/gis,
+      /<p><strong>Preis:<\/strong>.*?<\/p>/gis,
+    ];
+
+    structuredPatterns.forEach(pattern => {
+      contentToExtract = contentToExtract.replace(pattern, '');
+    });
+
+    // Schritt 2: Entferne alle verbleibenden HTML-Tags
+    // Das entfernt auch <p>, </p>, <strong>, </strong> etc.
+    contentToExtract = contentToExtract.replace(/<[^>]+>/g, '');
+
+    // Schritt 3: Entferne HTML-Entities
+    contentToExtract = contentToExtract.replace(/&nbsp;/g, ' ');
+    contentToExtract = contentToExtract.replace(/&amp;/g, '&');
+    contentToExtract = contentToExtract.replace(/&lt;/g, '<');
+    contentToExtract = contentToExtract.replace(/&gt;/g, '>');
+
+    // Schritt 4: Entferne Markdown-formatierte Zeilen (Fallback für alte Events)
     const cleanedContent = contentToExtract
-      .replace(/^\*\*[^:]+:\*\*.*$/gm, '') // Entferne **Kategorie:** etc.
-      .replace(/^## .+$/gm, '')           // Entferne ## Bilder etc.
+      .replace(/^\*\*[^:]+:\*\*.*$/gm, '') // **Kategorie:** etc.
+      .replace(/^## .+$/gm, '')           // ## Bilder etc.
+      .replace(/!\[.*?\]\(.*?\)/g, '')   // Bilder-Markdown
       .replace(/\n\s*\n/g, '\n')          // Entferne doppelte Zeilenumbrüche
       .trim();
 
-    // Nimm die ersten 150-200 Zeichen als summary
-    summary = cleanedContent.length > 0
-      ? cleanedContent.length > 200
+    // Schritt 5: Nimm die ersten 200 Zeichen als summary
+    if (cleanedContent.length > 0) {
+      summary = cleanedContent.length > 200
         ? cleanedContent.substring(0, 197) + '...'
-        : cleanedContent
-      : '';
+        : cleanedContent;
+    }
+  }
+
+  // Fallback: Falls die Summary immer noch HTML enthält, nochmal bereinigen
+  if (summary && summary.includes('<')) {
+    summary = summary
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .trim();
   }
 
   const image = event.tags.find(([name]) => name === 'image')?.[1] || '';
