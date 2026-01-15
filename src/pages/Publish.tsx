@@ -1214,8 +1214,19 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       // Clean up extra whitespace
       cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
 
-      // Konvertiere Markdown zu HTML für WysiwygEditor
-      setDescription(markdownToHtml(cleanContent || ''));
+      // Prüfe, ob der Content bereits HTML enthält (vom WysiwygEditor)
+      // Wenn HTML-Tags vorhanden sind, Content direkt verwenden, sonst Markdown zu HTML konvertieren
+      const hasHtmlTags = /<[a-z][\s\S]*>/i.test(cleanContent || '');
+      if (hasHtmlTags) {
+        // Content ist bereits HTML - direkt verwenden
+        console.log('[PlaceForm] Content ist bereits HTML, wird nicht konvertiert');
+        setDescription(cleanContent || '');
+      } else {
+        // Content ist Markdown - zu HTML konvertieren
+        console.log('[PlaceForm] Content ist Markdown, wird zu HTML konvertiert');
+        setDescription(markdownToHtml(cleanContent || ''));
+      }
+
       setLocation(editEvent.tags?.find((tag: any) => tag[0] === 'location')?.[1] || '');
       const latTag = editEvent.tags?.find((tag: any) => tag[0] === 'lat')?.[1];
       const lngTag = editEvent.tags?.find((tag: any) => tag[0] === 'lng')?.[1];
@@ -1825,7 +1836,20 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       // Bei bearbeiteten Beiträgen: Daten aus dem Event laden
       setTitle(editEvent.tags?.find((tag: any) => tag[0] === 'title')?.[1] || '');
       setSummary(editEvent.tags?.find((tag: any) => tag[0] === 'summary')?.[1] || '');
-      setContent(markdownToHtml(editEvent.content || '')); // Konvertiere Markdown zu HTML für Editor
+
+      // Prüfe, ob der Content bereits HTML enthält (vom WysiwygEditor)
+      // Wenn HTML-Tags vorhanden sind, Content direkt verwenden, sonst Markdown zu HTML konvertieren
+      const hasHtmlTags = /<[a-z][\s\S]*>/i.test(editEvent.content || '');
+      if (hasHtmlTags) {
+        // Content ist bereits HTML - direkt verwenden
+        console.log('[ArticleForm] Content ist bereits HTML, wird nicht konvertiert');
+        setContent(editEvent.content || '');
+      } else {
+        // Content ist Markdown - zu HTML konvertieren
+        console.log('[ArticleForm] Content ist Markdown, wird zu HTML konvertiert');
+        setContent(markdownToHtml(editEvent.content || ''));
+      }
+
       setImage(editEvent.tags?.find((tag: any) => tag[0] === 'image')?.[1] || '');
       setCategory(editEvent.tags?.find((tag: any) => tag[0] === 'category')?.[1] || '');
 
