@@ -1189,43 +1189,53 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     if (editEvent) {
       setName(editEvent.tags?.find((tag: any) => tag[0] === 'name')?.[1] || '');
 
-      // Clean content by removing structured information that's stored in tags
-      let cleanContent = editEvent.content || '';
+      // Bestimme das Event-Format basierend auf dem type-Tag
+      // Neue Plätze haben type=place und HTML-Content
+      // Alte Plätze haben type=article und Markdown-Content
+      const eventType = editEvent.tags?.find((tag: any) => tag[0] === 'type')?.[1];
+      const isPlaceType = eventType === 'place';
 
-      // Remove title line
-      cleanContent = cleanContent.replace(/^# .+?\n\n/, '');
+      console.log('[PlaceForm] Event type:', eventType, 'isPlaceType:', isPlaceType);
 
-      // Remove structured lines that are stored in tags
-      const structuredPatterns = [
-        /^## Bilder\n\n.*$/gm, // Images section (multiline)
-        /^\*\*Kategorie:\*\*.*$/gm, // Category line
-        /^\*\*Bewertung:\*\*.*$/gm, // Rating line
-        /^\*\*Standort:\*\*.*$/gm, // Location line
-        /^\*\*Koordinaten:\*\*.*$/gm, // Coordinates line
-        /^\*\*Einrichtungen:\*\*.*$/gm, // Facilities line
-        /^\*\*Geeignet für:\*\*.*$/gm, // Best for line
-        /\*\*Preis:\*\*.*/
-      ];
-
-      structuredPatterns.forEach(pattern => {
-        cleanContent = cleanContent.replace(pattern, '');
-      });
-
-      // Clean up extra whitespace
-      cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
-
-      // Prüfe, ob der Content bereits HTML enthält (vom WysiwygEditor)
-      // Wenn HTML-Tags vorhanden sind, Content direkt verwenden, sonst Markdown zu HTML konvertieren
-      const hasHtmlTags = /<[a-z][\s\S]*>/i.test(cleanContent || '');
-      if (hasHtmlTags) {
-        // Content ist bereits HTML - direkt verwenden
-        console.log('[PlaceForm] Content ist bereits HTML, wird nicht konvertiert');
-        setDescription(cleanContent || '');
+      // Wenn es ein place-Event ist, den Content direkt verwenden (HTML)
+      // Wenn es ein altes article-Event ist, Markdown zu HTML konvertieren
+      let contentToSet = '';
+      if (isPlaceType) {
+        console.log('[PlaceForm] Neuer Platz (type=place) mit HTML-Content, direkt verwenden');
+        contentToSet = editEvent.content || '';
       } else {
-        // Content ist Markdown - zu HTML konvertieren
-        console.log('[PlaceForm] Content ist Markdown, wird zu HTML konvertiert');
-        setDescription(markdownToHtml(cleanContent || ''));
+        console.log('[PlaceForm] Alter Platz (type=article) mit Markdown-Content, konvertiere zu HTML');
+
+        // Content bereinigen
+        let cleanContent = editEvent.content || '';
+
+        // Remove title line
+        cleanContent = cleanContent.replace(/^# .+?\n\n/, '');
+
+        // Remove structured lines that are stored in tags
+        const structuredPatterns = [
+          /^## Bilder\n\n.*$/gm, // Images section (multiline)
+          /^\*\*Kategorie:\*\*.*$/gm, // Category line
+          /^\*\*Bewertung:\*\*.*$/gm, // Rating line
+          /^\*\*Standort:\*\*.*$/gm, // Location line
+          /^\*\*Koordinaten:\*\*.*$/gm, // Coordinates line
+          /^\*\*Einrichtungen:\*\*.*$/gm, // Facilities line
+          /^\*\*Geeignet für:\*\*.*$/gm, // Best for line
+          /\*\*Preis:\*\*.*/
+        ];
+
+        structuredPatterns.forEach(pattern => {
+          cleanContent = cleanContent.replace(pattern, '');
+        });
+
+        // Clean up extra whitespace
+        cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+
+        // Markdown zu HTML konvertieren
+        contentToSet = markdownToHtml(cleanContent || '');
       }
+
+      setDescription(contentToSet);
 
       setLocation(editEvent.tags?.find((tag: any) => tag[0] === 'location')?.[1] || '');
       const latTag = editEvent.tags?.find((tag: any) => tag[0] === 'lat')?.[1];

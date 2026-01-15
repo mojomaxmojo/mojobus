@@ -3,8 +3,9 @@ import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import CharacterCount from '@tiptap/extension-character-count';
 import {
   Bold,
@@ -16,15 +17,11 @@ import {
   Heading3,
   List,
   ListOrdered,
-  Quote,
+  CheckSquare,
   Link as LinkIcon,
   Image as ImageIcon,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Undo,
   Redo,
-  Code,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -42,7 +39,7 @@ interface WysiwygEditorProps {
 
 /**
  * WYSIWYG Editor basierend auf Tiptap
- * Unterstützt Markdown-Export, Bild-Upload und alle wichtigen Formatierungen
+ * Unterstützt nur Markdown-kompatible Funktionen
  */
 export function WysiwygEditor({
   content,
@@ -69,7 +66,8 @@ export function WysiwygEditor({
           keepMarks: true,
           keepAttributes: false,
         },
-        code: false, // Disable default code block, can add custom later
+        blockquote: false, // Blockquote ist nicht Markdown-kompatibel
+        code: false, // Code-Block ist nicht Markdown-kompatibel
       }),
       Image.configure({
         inline: true,
@@ -92,8 +90,9 @@ export function WysiwygEditor({
           return placeholder;
         },
       }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
+      TaskList,
+      TaskItem.configure({
+        nested: true,
       }),
       Underline,
       CharacterCount.configure({
@@ -134,9 +133,13 @@ export function WysiwygEditor({
   const addLink = () => {
     if (!editor) return;
 
-    const url = window.prompt('Link URL eingeben:');
-    if (url) {
-      editor.chain().focus().setLink({ href: url }).run();
+    if (editor.isActive('link')) {
+      editor.chain().focus().unsetLink().run();
+    } else {
+      const url = window.prompt('Link URL eingeben:');
+      if (url) {
+        editor.chain().focus().setLink({ href: url }).run();
+      }
     }
   };
 
@@ -266,49 +269,13 @@ export function WysiwygEditor({
             >
               <ListOrdered className="h-4 w-4" />
             </Button>
-          </div>
-
-          <Separator orientation="vertical" className="h-6" />
-
-          {/* Alignment */}
-          <div className="flex items-center gap-1 px-2">
             <Button
-              variant={editor.isActive({ textAlign: 'left' }) ? 'secondary' : 'ghost'}
+              variant={editor.isActive('taskList') ? 'secondary' : 'ghost'}
               size="sm"
-              onClick={() => editor.chain().focus().setTextAlign('left').run()}
-              title="Links ausrichten"
+              onClick={() => editor.chain().focus().toggleTaskList().run()}
+              title="Checkliste"
             >
-              <AlignLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={editor.isActive({ textAlign: 'center' }) ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => editor.chain().focus().setTextAlign('center').run()}
-              title="Zentrieren"
-            >
-              <AlignCenter className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={editor.isActive({ textAlign: 'right' }) ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => editor.chain().focus().setTextAlign('right').run()}
-              title="Rechts ausrichten"
-            >
-              <AlignRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <Separator orientation="vertical" className="h-6" />
-
-          {/* Quote */}
-          <div className="flex items-center gap-1 px-2">
-            <Button
-              variant={editor.isActive('blockquote') ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => editor.chain().focus().toggleBlockquote().run()}
-              title="Zitat"
-            >
-              <Quote className="h-4 w-4" />
+              <CheckSquare className="h-4 w-4" />
             </Button>
           </div>
 
@@ -320,7 +287,7 @@ export function WysiwygEditor({
               variant={editor.isActive('link') ? 'secondary' : 'ghost'}
               size="sm"
               onClick={addLink}
-              title="Link einfügen"
+              title={editor.isActive('link') ? 'Link entfernen' : 'Link einfügen'}
             >
               <LinkIcon className="h-4 w-4" />
             </Button>
@@ -420,6 +387,16 @@ export function htmlToMarkdown(html: string): string {
   markdown = markdown.replace(/<\/ol>/gi, '\n');
   markdown = markdown.replace(/<li[^>]*>(.*?)<\/li>/gis, '* $1\n');
 
+  // Task Lists
+  markdown = markdown.replace(/<ul[^>]*data-type="taskList"[^>]*>/gi, '');
+  markdown = markdown.replace(/<\/ul>/gi, '\n');
+  markdown = markdown.replace(/<li[^>]*data-type="taskItem"[^>]*>(.*?)<\/li>/gis, (match, content) => {
+    // Prüfen, ob checked vorhanden ist
+    const isChecked = /<input[^>]*checked[^>]*>/.test(content);
+    const textContent = content.replace(/<input[^>]*>/, '').trim();
+    return isChecked ? `- [x] ${textContent}\n` : `- [ ] ${textContent}\n`;
+  });
+
   // Zeilenumbrüche
   markdown = markdown.replace(/<br[^>]*>/gi, '\n');
   markdown = markdown.replace(/<\/p[^>]*>/gi, '\n\n');
@@ -464,6 +441,11 @@ export function markdownToHtml(markdown: string): string {
   // Listen
   html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
   html = html.replace(/(<li>.*<\/li>\n?)+/gim, '<ul>$&</ul>');
+
+  // Task Lists
+  html = html.replace(/^- \[ \] (.*$)/gim, '<li data-type="taskItem"><input type="checkbox">$1</li>');
+  html = html.replace(/^- \[x\] (.*$)/gim, '<li data-type="taskItem"><input type="checkbox" checked>$1</li>');
+  html = html.replace(/(<li data-type="taskItem">.*<\/li>\n?)+/gim, '<ul data-type="taskList">$&</ul>');
 
   // Zeilenumbrüche
   html = html.replace(/\n\n/gim, '</p><p>');
