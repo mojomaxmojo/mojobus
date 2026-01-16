@@ -23,16 +23,10 @@ export function getThumbnailUrl(
   if (!imageUrl) return '';
 
   try {
-    const encodedUrl = encodeURIComponent(imageUrl);
-    const weservParams = new URLSearchParams({
-      url: encodedUrl,
-      w: width.toString(),
-      q: quality.toString(),
-      fit: 'cover',
-      output: 'webp', // Prefer WebP for better compression
-    });
-
-    return `https://images.weserv.nl/?${weservParams.toString()}`;
+    // Build URL without URLSearchParams to avoid double-encoding
+    // The imageUrl is already properly encoded (it's a valid URL)
+    const params = `url=${imageUrl}&w=${width}&q=${quality}&fit=cover&output=webp`;
+    return `https://images.weserv.nl/?${params}`;
   } catch (error) {
     // Fallback to original URL if encoding fails
     return imageUrl;
