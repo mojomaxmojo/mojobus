@@ -78,19 +78,12 @@ export function CountrySelector({
 export const countryOptions = countries;
 
 // Hilfsfunktion: Konvertiert Land-Code zu Tag
-// Gibt nur eindeutige Tags zurück (ohne Duplikate)
 export function getCountryTag(countryCode?: string): string[] {
   if (!countryCode) return [];
 
   const country = countries.find(c => c.value === countryCode);
   if (!country) return [];
 
-  // Erstelle Tags und entferne Duplikate mit Set
-  const tags = [
-    country.value,      // portugal
-    `#${country.value}`, // #portugal
-  ];
-
-  // Verwende Set, um Duplikate zu entfernen, dann wieder in Array umwandeln
-  return Array.from(new Set(tags));
+  // Nur das Land ohne # zurückgeben (wird beim Anzeigen als Hashtag gerendert)
+  return [country.value];
 }
