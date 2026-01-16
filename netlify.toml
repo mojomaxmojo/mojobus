@@ -17,6 +17,41 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+[[headers]]
+  # Cache static assets (CSS, JS, fonts) for 1 year
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  # Cache images for 1 month
+  for = "/*.{png,jpg,jpeg,webp,gif,svg}"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+[[headers]]
+  # Cache fonts for 1 year
+  for = "/*.{woff,woff2,ttf}"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  # HTML - short cache, always check for updates
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  # Service Worker - very short cache
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0"
+
 [context.production.environment]
   # Custom domain configuration
   SITE_URL = "https://mojobus.cc"
