@@ -406,10 +406,16 @@ export function ArticleView({ naddr }: ArticleViewProps) {
 
             {/* Author Info */}
             <Link to={`/${nip19.npubEncode(article.pubkey)}`} className="flex items-center gap-3 pt-2 hover:bg-muted/50 rounded-lg p-2 transition-colors">
-              <Avatar className="h-10 w-10 flex-shrink-0">
-                {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
-                <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
+              <div className="relative h-10 w-10 flex-shrink-0 rounded-full overflow-hidden bg-muted">
+                <img
+                  src={authorAvatar || ''}
+                  alt={authorName}
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                  {authorName.slice(0, 2).toUpperCase()}
+                </span>
+              </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-1 font-semibold">
