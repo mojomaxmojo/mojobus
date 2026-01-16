@@ -53,7 +53,7 @@ export const CONTENT_CATEGORIES: Record<string, ContentCategory> = {
     route: '/plaetze',
     kind: 30023, // Long-form addressable event
     tags: {
-      required: ['location', 'places', 'place', 'mojobus'], // Always include #mojobus
+      required: ['location', 'places', 'mojobus'], // Always include #mojobus, place nicht in required (wird beim Speichern als type=place hinzugefügt)
       optional: [
         // Ortstypen
         'campingplatz', 'wildcamping', 'stellplatz', 'aussichtspunkt',
@@ -66,7 +66,7 @@ export const CONTENT_CATEGORIES: Record<string, ContentCategory> = {
         // Geeignet für
         'familien', 'paare', 'single', 'wohnmobil', 'zelt'
       ],
-      filter: ['location', 'places', 'place'] // Tags zum Anzeigen unter /plaetze
+      filter: ['location', 'places'] // Tags zum Anzeigen unter /plaetze
     },
     metadata: {
       title: 'Plätze',
