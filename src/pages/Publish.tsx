@@ -1409,13 +1409,14 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     console.log('[PlaceForm] Creating place event with name:', name.trim());
 
     // Create NIP-23 compliant content for place
+    // WICHTIG: Strukturierte Daten werden NUR als Tags gespeichert, nicht im Content!
+    // - Content: Nur Titel und Beschreibung
+    // - Tags: Alle strukturierten Daten
     let content = `# ${name.trim()}\n\n`;
 
     // Konvertiere HTML zu Markdown für Nostr und füge BESCHREIBUNG hinzu
-    // WICHTIG: Strukturierte Daten (Kategorie, Bewertung, etc.) werden NICHT in den Content aufgenommen!
-    // Sie werden als Tags gespeichert, um Duplikate beim Bearbeiten zu vermeiden.
+    // Bereinige die Beschreibung, falls sie strukturierte Daten enthält
     if (description.trim()) {
-      // Entferne bereits vorhandene strukturierte Zeilen aus der Beschreibung
       const cleanDescription = description.trim()
         .replace(/<p><strong>Kategorie:<\/strong>.*?<\/p>/gis, '')
         .replace(/<p><strong>Bewertung:<\/strong>.*?<\/p>/gis, '')
@@ -1440,32 +1441,8 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       });
     }
 
-    // WICHTIG: Strukturierte Daten werden BEIDES im Content und in Tags gespeichert!
-    // - Content: Für die Anzeige im Post
-    // - Tags: Für die Strukturierung und Filterung
-    // - Beim Bearbeiten werden sie aus dem Content entfernt, um Duplikate zu vermeiden
-    content += `**Kategorie:** ${category}\n`;
-    content += `**Bewertung:** ${'⭐'.repeat(rating)} (${rating}/5)\n`;
-
-    if (location.trim()) {
-      content += `**Standort:** ${location.trim()}\n`;
-    }
-
-    if (coordinates.lat && coordinates.lng) {
-      content += `**Koordinaten:** ${coordinates.lat}, ${coordinates.lng}\n`;
-    }
-
-    if (facilities.length > 0) {
-      content += `**Einrichtungen:** ${facilities.join(', ')}\n`;
-    }
-
-    if (bestFor.length > 0) {
-      content += `**Geeignet fuer:** ${bestFor.join(', ')}\n`;
-    }
-
-    if (price.trim()) {
-      content += `**Preis:** ${price.trim()}\n`;
-    }
+    // WICHTIG: Strukturierte Daten werden NUR als Tags gespeichert, nicht im Content!
+    // Das verhindert Duplikate beim Bearbeiten.
 
     // Entferne Country-Tags aus manualTags, um Duplikate zu vermeiden
     const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
@@ -1611,47 +1588,6 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
           placeholder="Land auswaehlen"
         />
 
-        <div className="space-y-2">
-          <Label htmlFor="place-description">Beschreibung</Label>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            WYSIWYG Editor - Beschreibe den Ort mit Formatierung, Bildern und Links
-          </div>
-          <WysiwygEditor
-            content={description}
-            onChange={setDescription}
-            placeholder={`# Erlebnis-Bericht
-
-Beschreibe hier den Ort, was macht ihn besonders...
-
-- Verwende die Toolbar für Formatierung
-- Fett oder kursiv
-
-## Was erwartet dich
-
-### Highlights
-- Der Ort bietet einen tollen Blick auf das Meer
-- Perfekt für Vanlife mit Solarstrom
-- Ruah und Natur
-
-### Tipps und Tricks
-- Beste Zeit für einen Besuch: Frühling/Herbst
-- Versorgungsmöglichkeiten in der Nähe
-
-### Bilder und Videos
-- Füge Bilder über das Bild-Icon ein
-- Oder lade Bilder direkt in den Editor
-
-### Noch mehr...
-`}
-            minHeight="300px"
-            maxLength={30000}
-            onImageUpload={(url) => {
-              // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
-              console.log('Image uploaded:', url);
-            }}
-          />
-        </div>
-
         {/* Vorschau: Strukturierte Daten, die veröffentlicht werden */}
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <h3 className="font-semibold mb-3 text-sm text-muted-foreground">📋 Vorschau: Strukturierte Daten</h3>
@@ -1698,8 +1634,49 @@ Beschreibe hier den Ort, was macht ihn besonders...
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-3">
-            ℹ️ Diese Daten werden automatisch als strukturierte Felder im Event veröffentlicht und erscheinen beim nächsten Bearbeiten nicht erneut im Content.
+            ℹ️ Diese Daten werden automatisch als strukturierte Tags im Event veröffentlicht und erscheinen im Post unter der Beschreibung.
           </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="place-description">Beschreibung</Label>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            WYSIWYG Editor - Beschreibe den Ort mit Formatierung, Bildern und Links
+          </div>
+          <WysiwygEditor
+            content={description}
+            onChange={setDescription}
+            placeholder={`# Erlebnis-Bericht
+
+Beschreibe hier den Ort, was macht ihn besonders...
+
+- Verwende die Toolbar für Formatierung
+- Fett oder kursiv
+
+## Was erwartet dich
+
+### Highlights
+- Der Ort bietet einen tollen Blick auf das Meer
+- Perfekt für Vanlife mit Solarstrom
+- Ruah und Natur
+
+### Tipps und Tricks
+- Beste Zeit für einen Besuch: Frühling/Herbst
+- Versorgungsmöglichkeiten in der Nähe
+
+### Bilder und Videos
+- Füge Bilder über das Bild-Icon ein
+- Oder lade Bilder direkt in den Editor
+
+### Noch mehr...
+`}
+            minHeight="300px"
+            maxLength={30000}
+            onImageUpload={(url) => {
+              // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
+              console.log('Image uploaded:', url);
+            }}
+          />
         </div>
 
         {/* Title Image */}
