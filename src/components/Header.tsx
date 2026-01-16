@@ -44,28 +44,10 @@ export function Header() {
   const { user, isLoading } = useCurrentUser();
   const { logout } = useLoginActions();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchParams] = useSearchParams();
-  const editEventId = searchParams.get('edit');
-  const editType = searchParams.get('type');
-  const [activeTab, setActiveTab] = useState(editType || 'note');
 
   const handleMobileMenuClick = () => {
     setMobileMenuOpen(false);
     document.body.style.overflow = '';
-  };
-
-  // Icon mapping for Nature categories
-  const getNatureIcon = (categoryName: string) => {
-    switch (categoryName) {
-      case 'strand': return Camera; // temporarily use Camera
-      case 'berge': return Mountain;
-      case 'see': return Camera; // temporarily use Camera
-      case 'wald': return Camera; // temporarily use Camera
-      case 'wasserfall': return Camera; // temporarily use Camera
-      case 'wiese': return Sun;
-      case 'tiere': return Camera;
-      default: return Camera;
-    }
   };
 
   return (
