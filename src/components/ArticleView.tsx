@@ -114,26 +114,26 @@ function generateStructuredDataMarkdown(article: any, metadata: any): string {
   let markdown = '';
 
   if (category) {
-    markdown += `**Kategorie:** ${category}\n`;
+    markdown += `**Kategorie:** ${category}  \n`;
   }
   if (rating) {
     const stars = '⭐'.repeat(parseInt(rating));
-    markdown += `**Bewertung:** ${stars} (${rating}/5)\n`;
+    markdown += `**Bewertung:** ${stars} (${rating}/5)  \n`;
   }
   if (location) {
-    markdown += `**Standort:** ${location}\n`;
+    markdown += `**Standort:** ${location}  \n`;
   }
   if (lat && lng) {
-    markdown += `**Koordinaten:** ${lat}, ${lng}\n`;
+    markdown += `**Koordinaten:** ${lat}, ${lng}  \n`;
   }
   if (facilities.length > 0) {
-    markdown += `**Einrichtungen:** ${facilities.join(', ')}\n`;
+    markdown += `**Einrichtungen:** ${facilities.join(', ')}  \n`;
   }
   if (bestFor.length > 0) {
-    markdown += `**Geeignet für:** ${bestFor.join(', ')}\n`;
+    markdown += `**Geeignet für:** ${bestFor.join(', ')}  \n`;
   }
   if (price) {
-    markdown += `**Preis:** ${price}\n`;
+    markdown += `**Preis:** ${price}`;
   }
 
   return markdown;
