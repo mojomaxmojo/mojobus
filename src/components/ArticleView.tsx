@@ -97,6 +97,48 @@ const generateOSMSearchUrl = (position: string) => {
   return `https://www.openstreetmap.org/search?query=${searchQuery}`;
 };
 
+/**
+ * Generiert Markdown für strukturierte Daten aus Tags
+ * Für Plätze, die die strukturierten Daten im Post anzeigen
+ */
+function generateStructuredDataMarkdown(article: any, metadata: any): string {
+  const category = article.tags.find(([name]) => name === 'category')?.[1];
+  const rating = article.tags.find(([name]) => name === 'rating')?.[1];
+  const location = article.tags.find(([name]) => name === 'location')?.[1];
+  const lat = article.tags.find(([name]) => name === 'lat')?.[1];
+  const lng = article.tags.find(([name]) => name === 'lng')?.[1];
+  const facilities = article.tags.filter(([name]) => name === 'facility').map(([, value]) => value);
+  const bestFor = article.tags.filter(([name]) => name === 'best_for').map(([, value]) => value);
+  const price = article.tags.find(([name]) => name === 'price')?.[1];
+
+  let markdown = '';
+
+  if (category) {
+    markdown += `**Kategorie:** ${category}\n`;
+  }
+  if (rating) {
+    const stars = '⭐'.repeat(parseInt(rating));
+    markdown += `**Bewertung:** ${stars} (${rating}/5)\n`;
+  }
+  if (location) {
+    markdown += `**Standort:** ${location}\n`;
+  }
+  if (lat && lng) {
+    markdown += `**Koordinaten:** ${lat}, ${lng}\n`;
+  }
+  if (facilities.length > 0) {
+    markdown += `**Einrichtungen:** ${facilities.join(', ')}\n`;
+  }
+  if (bestFor.length > 0) {
+    markdown += `**Geeignet für:** ${bestFor.join(', ')}\n`;
+  }
+  if (price) {
+    markdown += `**Preis:** ${price}\n`;
+  }
+
+  return markdown;
+}
+
 // Custom component for rendering text with links and videos while preserving markdown
 function MarkdownWithLinks({ content }: { content: string }) {
   return (
@@ -417,7 +459,7 @@ export function ArticleView({ naddr }: ArticleViewProps) {
             )}
 
             {/* Article Body */}
-            <MarkdownWithLinks content={displayContent} />
+            <MarkdownWithLinks content={displayContent + (isPlace ? `\n\n${generateStructuredDataMarkdown(article, metadata)}` : '')} />
 
             {/* Position Display */}
             {position && (
