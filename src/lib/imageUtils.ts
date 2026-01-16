@@ -1,6 +1,6 @@
 /**
  * Image Utility Functions for Performance Optimization
- * 
+ *
  * Provides thumbnail generation, responsive image handling, and
  * image optimization utilities for the MojoBus blog.
  */
@@ -8,7 +8,7 @@
 /**
  * Generates a thumbnail URL from a Blossom image URL
  * Blossom servers support image processing via query parameters
- * 
+ *
  * @param imageUrl - Original image URL
  * @param width - Target width in pixels
  * @param quality - Image quality (1-100)
@@ -28,6 +28,8 @@ export function getThumbnailUrl(
     url.searchParams.set('w', width.toString());
     url.searchParams.set('q', quality.toString());
     url.searchParams.set('fit', 'cover');
+    // Force WebP format for better compression
+    url.searchParams.set('output', 'webp');
 
     return url.toString();
   } catch (error) {
@@ -38,7 +40,7 @@ export function getThumbnailUrl(
 
 /**
  * Generates a responsive image URL for different breakpoints
- * 
+ *
  * @param imageUrl - Original image URL
  * @param breakpoint - Size breakpoint: 'sm', 'md', 'lg', 'xl', '2xl'
  * @returns Resized image URL
@@ -61,17 +63,17 @@ export function getResponsiveImageUrl(
 
 /**
  * Generates a thumbnail URL optimized for list/article cards
- * 
+ *
  * @param imageUrl - Original image URL
- * @returns Thumbnail URL (200x200, quality 80)
+ * @returns Thumbnail URL (120x120, quality 60) - Very small for fast loading
  */
 export function getListThumbnailUrl(imageUrl: string): string {
-  return getThumbnailUrl(imageUrl, 200, 80);
+  return getThumbnailUrl(imageUrl, 120, 60);
 }
 
 /**
  * Generates a thumbnail URL optimized for article headers
- * 
+ *
  * @param imageUrl - Original image URL
  * @returns Thumbnail URL (1200x630, quality 90)
  */
@@ -81,7 +83,7 @@ export function getArticleHeaderUrl(imageUrl: string): string {
 
 /**
  * Generates a set of srcset URLs for responsive images
- * 
+ *
  * @param imageUrl - Original image URL
  * @returns srcset string for img element
  */
@@ -106,7 +108,7 @@ export function generateSrcset(imageUrl: string): string {
 /**
  * Generates sizes attribute for responsive images
  * Based on the Tailwind breakpoints
- * 
+ *
  * @param type - Image type: 'card', 'header', 'hero'
  * @returns sizes string for img element
  */
@@ -122,7 +124,7 @@ export function generateSizes(type: 'card' | 'header' | 'hero' = 'card'): string
 
 /**
  * Extracts image dimensions from a URL if available
- * 
+ *
  * @param imageUrl - Image URL
  * @returns Image dimensions { width, height } or null
  */
@@ -148,7 +150,7 @@ export function getImageDimensions(imageUrl: string): { width: number; height: n
 /**
  * Generates a placeholder color for image loading
  * Uses a blurred version of the dominant color
- * 
+ *
  * @param imageUrl - Image URL (for consistent hashing)
  * @returns CSS background color
  */
@@ -168,7 +170,7 @@ export function getImagePlaceholder(imageUrl: string): string {
 
 /**
  * Checks if an image is from a Blossom server
- * 
+ *
  * @param imageUrl - Image URL
  * @returns True if image is from a Blossom server
  */
@@ -196,7 +198,7 @@ export function isBlossomImage(imageUrl: string): boolean {
  * - Converts to WebP if supported
  * - Adds thumbnail parameters for list views
  * - Preserves high quality for article views
- * 
+ *
  * @param imageUrl - Original image URL
  * @param context - Context: 'list' or 'article'
  * @returns Optimized image URL
