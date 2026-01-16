@@ -7,30 +7,31 @@
 
 /**
  * Generates a thumbnail URL from a Blossom image URL
- * Uses wsrv.nl for actual image resizing since Blossom servers
- * don't support query parameters for resizing.
+ *
+ * Note: Blossom servers don't support query-based resizing.
+ * External services (wsrv.nl, images.weserv.nl) block Blossom/Nostr domains with error 400.
+ *
+ * For proper image optimization, you can:
+ * 1. Use Cloudflare Images (already configured in cloudflare-images-worker.js)
+ * 2. Self-host imgproxy (Open Source: https://github.com/imgproxy/imgproxy)
+ * 3. Use a commercial service with custom domain (imgix, Cloudinary)
+ *
+ * Currently returns original Blossom URL without optimization.
  *
  * @param imageUrl - Original image URL
- * @param width - Target width in pixels
- * @param quality - Image quality (1-100)
- * @returns Thumbnail URL via wsrv.nl
+ * @param width - Target width in pixels (not supported by Blossom)
+ * @param quality - Image quality (not supported by Blossom)
+ * @returns Original Blossom URL
  */
 export function getThumbnailUrl(
   imageUrl: string,
   width = 300,
   quality = 80
 ): string {
+  // Return original URL since Blossom doesn't support resizing
+  // External services block Blossom domains (400 error)
   if (!imageUrl) return '';
-
-  try {
-    // Build URL without URLSearchParams to avoid double-encoding
-    // The imageUrl is already properly encoded (it's a valid URL)
-    const params = `url=${imageUrl}&w=${width}&q=${quality}&fit=cover&output=webp`;
-    return `https://wsrv.nl/?${params}`;
-  } catch (error) {
-    // Fallback to original URL if encoding fails
-    return imageUrl;
-  }
+  return imageUrl;
 }
 
 /**
