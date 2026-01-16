@@ -65,10 +65,10 @@ export function getResponsiveImageUrl(
  * Generates a thumbnail URL optimized for list/article cards
  *
  * @param imageUrl - Original image URL
- * @returns Thumbnail URL (120x120, quality 60) - Very small for fast loading
+ * @returns Thumbnail URL (200x200, quality 80)
  */
 export function getListThumbnailUrl(imageUrl: string): string {
-  return getThumbnailUrl(imageUrl, 120, 60);
+  return getThumbnailUrl(imageUrl, 200, 80);
 }
 
 /**
