@@ -7,13 +7,13 @@
 
 /**
  * Generates a thumbnail URL from a Blossom image URL
- * Uses images.weserv.nl for actual image resizing since Blossom servers
+ * Uses wsrv.nl for actual image resizing since Blossom servers
  * don't support query parameters for resizing.
  *
  * @param imageUrl - Original image URL
  * @param width - Target width in pixels
  * @param quality - Image quality (1-100)
- * @returns Thumbnail URL via images.weserv.nl
+ * @returns Thumbnail URL via wsrv.nl
  */
 export function getThumbnailUrl(
   imageUrl: string,
@@ -26,7 +26,7 @@ export function getThumbnailUrl(
     // Build URL without URLSearchParams to avoid double-encoding
     // The imageUrl is already properly encoded (it's a valid URL)
     const params = `url=${imageUrl}&w=${width}&q=${quality}&fit=cover&output=webp`;
-    return `https://images.weserv.nl/?${params}`;
+    return `https://wsrv.nl/?${params}`;
   } catch (error) {
     // Fallback to original URL if encoding fails
     return imageUrl;
