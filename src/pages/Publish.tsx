@@ -370,18 +370,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
           >
             <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">Dateien hochladen</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Drag & Drop oder klicken zum Auswaehlen
-            </p>
-
-            <div className="flex flex-wrap justify-center gap-2 mb-4">
-              {mediaTypes.map(mediaType => (
-                <Badge key={mediaType.type} variant="outline" className="gap-1">
-                  <mediaType.icon className="h-3 w-3" />
-                  {mediaType.label}
-                </Badge>
-              ))}
-            </div>
 
             <input
               type="file"
@@ -978,9 +966,6 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
           >
             <Upload className="mx-auto h-8 w-8 text-gray-400 mb-3" />
             <h4 className="text-sm font-medium mb-2">Bilder hinzufuegen</h4>
-            <p className="text-xs text-gray-500 mb-3">
-              Drag & Drop oder klicken zum Auswaehlen
-            </p>
             <input
               type="file"
               multiple
