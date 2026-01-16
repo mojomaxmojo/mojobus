@@ -488,7 +488,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
           {/* Categories */}
           <div className="space-y-4">
-            <Label>Kategorien</Label>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -2367,7 +2366,6 @@ Schreibe deinen Artikel hier...
         {/* DIY-spezifische Tags */}
         {isDIYCategory && (
           <div className="space-y-3">
-            <Label>DIY-Kategorien</Label>
             <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
               <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
                 ⚠️ Dieser Artikel erscheint im DIY-Bereich. Wähle spezifische Kategorien:
@@ -2409,7 +2407,6 @@ Schreibe deinen Artikel hier...
         {/* RV Life-spezifische Tags */}
         {isRVLifeCategory && (
           <div className="space-y-3">
-            <Label>RV Life Kategorien</Label>
             <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
               <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
                 🚐 Dieser Artikel erscheint im RV Life Bereich. Wähle spezifische Kategorien:
