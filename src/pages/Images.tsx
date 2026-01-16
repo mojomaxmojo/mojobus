@@ -16,7 +16,7 @@ import { MAIN_MENU } from '@/config/menu';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrDelete } from '@/hooks/useNostrDelete';
 import { useToast } from '@/hooks/useToast';
-import { generateSrcset, generateSizes } from '@/lib/imageUtils';
+import { getThumbnailUrl } from '@/lib/imageUtils';
 import { useState } from 'react';
 import {
   AlertDialog,
@@ -410,7 +410,7 @@ function ImageCardComponent({
         {images.length > 0 && (
           <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
             <img
-              src={images[0]}
+              src={getThumbnailUrl(images[0], 800, 85)}
               alt="Reisebild"
               className="w-full h-full object-cover"
               loading="lazy"

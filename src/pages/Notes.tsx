@@ -13,6 +13,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
 import { Calendar, Search, Trash2 } from 'lucide-react';
+import { getListThumbnailUrl } from '@/lib/imageUtils';
 import { Input } from '@/components/ui/input';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -374,7 +375,7 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
               {images.slice(0, 2).map((img, idx) => (
                 <div key={idx} className="rounded-lg overflow-hidden">
                   <img
-                    src={img}
+                    src={getListThumbnailUrl(img)}
                     alt=""
                     className="w-full h-24 object-cover"
                     loading="lazy"
