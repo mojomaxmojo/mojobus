@@ -412,10 +412,8 @@ const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent
     relays: ['wss://relay.nostr.band']
   });
 
-  // Optimized thumbnail URL (200px, quality 80) with srcset
+  // Optimized thumbnail URL (200px, quality 80)
   const thumbnailUrl = metadata.image ? getListThumbnailUrl(metadata.image) : null;
-  const srcset = metadata.image ? generateSrcset(metadata.image) : undefined;
-  const sizes = generateSizes('card');
   const placeholderColor = metadata.image ? getImagePlaceholder(metadata.image) : undefined;
 
   return (
@@ -430,8 +428,6 @@ const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent
           >
             <img
               src={thumbnailUrl}
-              srcSet={srcset}
-              sizes={sizes}
               alt={metadata.title}
               className="w-full h-full object-cover"
               loading="lazy"

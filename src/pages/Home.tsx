@@ -309,8 +309,6 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
   }
 
   const thumbnailUrl = item.thumbnailUrl;
-  const srcset = thumbnailUrl ? generateSrcset(thumbnailUrl) : undefined;
-  const sizes = generateSizes('card');
   const placeholderColor = thumbnailUrl ? getImagePlaceholder(thumbnailUrl) : undefined;
 
   return (
@@ -325,8 +323,6 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
           >
             <img
               src={thumbnailUrl}
-              srcSet={srcset}
-              sizes={sizes}
               alt={title}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               loading="lazy"

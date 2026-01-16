@@ -411,8 +411,6 @@ function ImageCardComponent({
           <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
             <img
               src={images[0]}
-              srcSet={generateSrcset(images[0])}
-              sizes="100vw"
               alt="Reisebild"
               className="w-full h-full object-cover"
               loading="lazy"

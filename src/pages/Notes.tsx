@@ -375,8 +375,6 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
                 <div key={idx} className="rounded-lg overflow-hidden">
                   <img
                     src={img}
-                    srcSet={generateSrcset(img)}
-                    sizes={generateSizes('card')}
                     alt=""
                     className="w-full h-24 object-cover"
                     loading="lazy"
