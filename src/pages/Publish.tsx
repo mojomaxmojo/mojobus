@@ -1588,55 +1588,6 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
           placeholder="Land auswaehlen"
         />
 
-        {/* Vorschau: Strukturierte Daten, die veröffentlicht werden */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-          <h3 className="font-semibold mb-3 text-sm text-muted-foreground">📋 Vorschau: Strukturierte Daten</h3>
-          <div className="space-y-2 text-sm">
-            {category && (
-              <div className="flex justify-between">
-                <span className="font-medium">Kategorie:</span>
-                <span>{category}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="font-medium">Bewertung:</span>
-              <span>{'⭐'.repeat(rating)} ({rating}/5)</span>
-            </div>
-            {location.trim() && (
-              <div className="flex justify-between">
-                <span className="font-medium">Standort:</span>
-                <span>{location.trim()}</span>
-              </div>
-            )}
-            {coordinates.lat && coordinates.lng && (
-              <div className="flex justify-between">
-                <span className="font-medium">Koordinaten:</span>
-                <span>{coordinates.lat}, {coordinates.lng}</span>
-              </div>
-            )}
-            {facilities.length > 0 && (
-              <div className="flex justify-between">
-                <span className="font-medium">Einrichtungen:</span>
-                <span>{facilities.join(', ')}</span>
-              </div>
-            )}
-            {bestFor.length > 0 && (
-              <div className="flex justify-between">
-                <span className="font-medium">Geeignet für:</span>
-                <span>{bestFor.join(', ')}</span>
-              </div>
-            )}
-            {price.trim() && (
-              <div className="flex justify-between">
-                <span className="font-medium">Preis:</span>
-                <span>{price.trim()}</span>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            ℹ️ Diese Daten werden automatisch als strukturierte Tags im Event veröffentlicht und erscheinen im Post unter der Beschreibung.
-          </p>
-        </div>
 
         <div className="space-y-2">
           <Label htmlFor="place-description">Beschreibung</Label>
