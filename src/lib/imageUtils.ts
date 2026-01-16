@@ -1,26 +1,18 @@
 /**
- * Image Utility Functions for Performance Optimization
+ * Image Utility Functions for MojoBus Blog
  *
- * Provides thumbnail generation, responsive image handling, and
- * image optimization utilities for the MojoBus blog.
+ * Note: Blossom servers don't support query-based image resizing.
+ * External image optimization services block Blossom/Nostr domains.
+ * All functions return original Blossom URLs without optimization.
  */
 
 /**
- * Generates a thumbnail URL from a Blossom image URL
+ * Returns the original Blossom image URL without any resizing.
+ * Blossom servers don't support query parameters for image optimization.
  *
- * Note: Blossom servers don't support query-based resizing.
- * External services (wsrv.nl, images.weserv.nl) block Blossom/Nostr domains with error 400.
- *
- * For proper image optimization, you can:
- * 1. Use Cloudflare Images (already configured in cloudflare-images-worker.js)
- * 2. Self-host imgproxy (Open Source: https://github.com/imgproxy/imgproxy)
- * 3. Use a commercial service with custom domain (imgix, Cloudinary)
- *
- * Currently returns original Blossom URL without optimization.
- *
- * @param imageUrl - Original image URL
- * @param width - Target width in pixels (not supported by Blossom)
- * @param quality - Image quality (not supported by Blossom)
+ * @param imageUrl - Original Blossom image URL
+ * @param width - Not used (Blossom doesn't support resizing)
+ * @param quality - Not used (Blossom doesn't support resizing)
  * @returns Original Blossom URL
  */
 export function getThumbnailUrl(
@@ -28,77 +20,56 @@ export function getThumbnailUrl(
   width = 300,
   quality = 80
 ): string {
-  // Return original URL since Blossom doesn't support resizing
-  // External services block Blossom domains (400 error)
+  // Return original URL - no resizing supported by Blossom
   if (!imageUrl) return '';
   return imageUrl;
 }
 
 /**
- * Generates a responsive image URL for different breakpoints
+ * Returns original Blossom image URL (no resizing).
  *
- * @param imageUrl - Original image URL
- * @param breakpoint - Size breakpoint: 'sm', 'md', 'lg', 'xl', '2xl'
- * @returns Resized image URL
+ * @param imageUrl - Original Blossom image URL
+ * @param breakpoint - Not used (Blossom doesn't support resizing)
+ * @returns Original Blossom URL
  */
 export function getResponsiveImageUrl(
   imageUrl: string,
   breakpoint: 'sm' | 'md' | 'lg' | 'xl' | '2xl' = 'md'
 ): string {
-  const sizes = {
-    sm: { width: 300, quality: 80 },  // ~15KB
-    md: { width: 600, quality: 85 },  // ~50KB
-    lg: { width: 900, quality: 85 },  // ~100KB
-    xl: { width: 1200, quality: 90 }, // ~180KB
-    '2xl': { width: 1600, quality: 90 }, // ~300KB
-  };
-
-  const { width, quality } = sizes[breakpoint];
-  return getThumbnailUrl(imageUrl, width, quality);
+  return getThumbnailUrl(imageUrl);
 }
 
 /**
- * Generates a thumbnail URL optimized for list/article cards
+ * Returns original Blossom image URL (no resizing).
  *
- * @param imageUrl - Original image URL
- * @returns Thumbnail URL (200x200, quality 80)
+ * @param imageUrl - Original Blossom image URL
+ * @returns Original Blossom URL
  */
 export function getListThumbnailUrl(imageUrl: string): string {
-  return getThumbnailUrl(imageUrl, 200, 80);
+  return getThumbnailUrl(imageUrl);
 }
 
 /**
- * Generates a thumbnail URL optimized for article headers
+ * Returns original Blossom image URL (no resizing).
  *
- * @param imageUrl - Original image URL
- * @returns Thumbnail URL (1200x630, quality 90)
+ * @param imageUrl - Original Blossom image URL
+ * @returns Original Blossom URL
  */
 export function getArticleHeaderUrl(imageUrl: string): string {
-  return getThumbnailUrl(imageUrl, 1200, 90);
+  return getThumbnailUrl(imageUrl);
 }
 
 /**
- * Generates a set of srcset URLs for responsive images
+ * Generates srcset string (returns same URL for all sizes since no resizing).
  *
- * @param imageUrl - Original image URL
- * @returns srcset string for img element
+ * @param imageUrl - Original Blossom image URL
+ * @returns srcset string for img element (all same URL)
  */
 export function generateSrcset(imageUrl: string): string {
   if (!imageUrl) return '';
 
-  const sizes = [
-    { width: 300, descriptor: '300w' },
-    { width: 600, descriptor: '600w' },
-    { width: 900, descriptor: '900w' },
-    { width: 1200, descriptor: '1200w' },
-  ];
-
-  return sizes
-    .map(({ width, descriptor }) => {
-      const url = getThumbnailUrl(imageUrl, width, 85);
-      return `${url} ${descriptor}`;
-    })
-    .join(', ');
+  const url = getThumbnailUrl(imageUrl);
+  return `${url} 300w, ${url} 600w, ${url} 900w, ${url} 1200w`;
 }
 
 /**
