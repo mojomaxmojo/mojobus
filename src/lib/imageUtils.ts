@@ -7,12 +7,13 @@
 
 /**
  * Generates a thumbnail URL from a Blossom image URL
- * Blossom servers support image processing via query parameters
+ * Uses images.weserv.nl for actual image resizing since Blossom servers
+ * don't support query parameters for resizing.
  *
  * @param imageUrl - Original image URL
  * @param width - Target width in pixels
  * @param quality - Image quality (1-100)
- * @returns Thumbnail URL
+ * @returns Thumbnail URL via images.weserv.nl
  */
 export function getThumbnailUrl(
   imageUrl: string,
@@ -22,18 +23,18 @@ export function getThumbnailUrl(
   if (!imageUrl) return '';
 
   try {
-    const url = new URL(imageUrl);
+    const encodedUrl = encodeURIComponent(imageUrl);
+    const weservParams = new URLSearchParams({
+      url: encodedUrl,
+      w: width.toString(),
+      q: quality.toString(),
+      fit: 'cover',
+      output: 'webp', // Prefer WebP for better compression
+    });
 
-    // Blossom server image processing parameters
-    url.searchParams.set('w', width.toString());
-    url.searchParams.set('q', quality.toString());
-    url.searchParams.set('fit', 'cover');
-    // Force WebP format for better compression
-    url.searchParams.set('output', 'webp');
-
-    return url.toString();
+    return `https://images.weserv.nl/?${weservParams.toString()}`;
   } catch (error) {
-    // Fallback to original URL if parsing fails
+    // Fallback to original URL if encoding fails
     return imageUrl;
   }
 }
