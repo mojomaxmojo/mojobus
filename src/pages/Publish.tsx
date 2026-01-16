@@ -1440,8 +1440,32 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       });
     }
 
-    // WICHTIG: Strukturierte Daten werden NUR als Tags gespeichert, nicht im Content!
-    // Das verhindert Duplikate beim Bearbeiten und saubert den Content.
+    // WICHTIG: Strukturierte Daten werden BEIDES im Content und in Tags gespeichert!
+    // - Content: Für die Anzeige im Post
+    // - Tags: Für die Strukturierung und Filterung
+    // - Beim Bearbeiten werden sie aus dem Content entfernt, um Duplikate zu vermeiden
+    content += `**Kategorie:** ${category}\n`;
+    content += `**Bewertung:** ${'⭐'.repeat(rating)} (${rating}/5)\n`;
+
+    if (location.trim()) {
+      content += `**Standort:** ${location.trim()}\n`;
+    }
+
+    if (coordinates.lat && coordinates.lng) {
+      content += `**Koordinaten:** ${coordinates.lat}, ${coordinates.lng}\n`;
+    }
+
+    if (facilities.length > 0) {
+      content += `**Einrichtungen:** ${facilities.join(', ')}\n`;
+    }
+
+    if (bestFor.length > 0) {
+      content += `**Geeignet fuer:** ${bestFor.join(', ')}\n`;
+    }
+
+    if (price.trim()) {
+      content += `**Preis:** ${price.trim()}\n`;
+    }
 
     // Entferne Country-Tags aus manualTags, um Duplikate zu vermeiden
     const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
