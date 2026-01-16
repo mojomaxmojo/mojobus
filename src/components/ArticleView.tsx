@@ -341,7 +341,7 @@ export function ArticleView({ naddr }: ArticleViewProps) {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <div className="bg-muted/30 py-12 md:py-20">
+      <div className="bg-muted/30 py-12 md:py-5">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
