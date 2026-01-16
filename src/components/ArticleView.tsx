@@ -406,7 +406,7 @@ export function ArticleView({ naddr }: ArticleViewProps) {
 
             {/* Author Info */}
             <Link to={`/${nip19.npubEncode(article.pubkey)}`} className="flex items-center gap-3 pt-2 hover:bg-muted/50 rounded-lg p-2 transition-colors">
-              <Avatar className="h-12 w-12">
+              <Avatar className="h-10 w-10">
                 {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
                 <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
