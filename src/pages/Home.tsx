@@ -302,6 +302,10 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
       identifier: metadata.identifier,
     });
     link = `/${naddr}`;
+  } else if (item.type === 'image') {
+    title = item.event.content.substring(0, 80);
+    const note = nip19.noteEncode(item.event.id);
+    link = `/bild/${note}`;
   } else {
     title = item.event.content.substring(0, 80);
     const note = nip19.noteEncode(item.event.id);
