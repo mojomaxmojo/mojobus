@@ -374,7 +374,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
               id="file-upload"
             />
             <Button asChild>
-              <label htmlFor="file-upload" className="cursor-pointer">
+              <label htmlFor="file-upload" className="cursor-pointer px-3 py-1">
                 <Camera className="h-4 w-4 mr-2" />
                 Dateien auswaehlen
               </label>
