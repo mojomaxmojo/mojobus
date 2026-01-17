@@ -34,11 +34,12 @@ export default defineConfig(() => ({
     rollupOptions: {
       output: {
         // Add hash to filenames for cache busting
-        entryFileNames: `assets/[name]-[hash].js`,
-        chunkFileNames: `assets/[name]-[hash].js`,
-        assetFileNames: `assets/[name]-[hash].[ext]`,
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
-      // 🔥 PERFORMANCE: Detaillierte Vendor-Chunk Optimierung
+    },
+    // 🔥 PERFORMANCE: Detaillierte Vendor-Chunk Optimierung
       // Strategie: Gruppieren nach Änderungshäufigkeit für maximales Caching
       manualChunks: (id) => {
         // ============================================================================
