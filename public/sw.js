@@ -1,15 +1,16 @@
 /**
  * Service Worker für MojoBus
- * Offline-Fähigkeit und verbessertes Caching mit Workbox
+ * Offline-Fähigkeit und verbessertes Caching
  */
 
-import { DEFAULT_PERFORMANCE_CONFIG } from '../src/config/performance.config';
-
-const CACHE_NAME = `mojobus-v${DEFAULT_PERFORMANCE_CONFIG.serviceWorkerCacheVersion}`; // Version aus Konfiguration
-const CACHE_VERSION = DEFAULT_PERFORMANCE_CONFIG.serviceWorkerCacheVersion; // Version aus Konfiguration
+// ============================================================================
+// CACHE-KONFIGURATION
+// ============================================================================
+const CACHE_VERSION = 6; // Cache Version erhöhen (war 5, jetzt 6)
+const CACHE_NAME = `mojobus-v${CACHE_VERSION}`; // Version aus Konfiguration
 
 console.log('[Service Worker] Cache Version:', CACHE_VERSION);
-console.log('[Service Worker] Cache Strategy:', DEFAULT_PERFORMANCE_CONFIG.serviceWorkerCacheStrategy);
+console.log('[Service Worker] Cache Name:', CACHE_NAME);
 
 // ============================================================================
 // CACHE-STRATEGIEN
@@ -49,7 +50,7 @@ async function cacheFirst(request) {
 /**
  * Network-First Strategie
  * Versucht zuerst Network, dann Cache
- * Für dynamische Inhalte und API-Requests
+ * Für HTML und API-Requests (immer frische Daten)
  */
 async function networkFirst(request) {
   const cache = await caches.open(CACHE_NAME);
@@ -61,13 +62,11 @@ async function networkFirst(request) {
     }
     return networkResponse;
   } catch (error) {
-    // Network fehlschlägt, versuche Cache
     const cachedResponse = await cache.match(request);
     if (cachedResponse) {
       return cachedResponse;
     }
-
-    // Kein Cache verfügbar, return offline fallback
+    // Wenn Network fehlschlägt und nichts im Cache, return offline fallback
     return new Response('Offline - Keine Verbindung', {
       status: 503,
       statusText: 'Service Unavailable',
@@ -80,297 +79,279 @@ async function networkFirst(request) {
 
 /**
  * Stale-While-Revalidate Strategie
- * Gibt sofort Cache zurück, aktualisiert im Hintergrund
- * Für dynamische Inhalte die schnell geladen werden sollen
+ * Liefert sofort aus Cache, aktualisiert im Hintergrund
+ * Für dynamische Inhalte (HTML-Seiten)
  */
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE_NAME);
   const cachedResponse = await cache.match(request);
 
-  // Asynchrones Update im Hintergrund
   const fetchPromise = fetch(request).then(networkResponse => {
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
+    cache.put(request, networkResponse.clone());
     return networkResponse;
+  }).catch(error => {
+    console.log('[Service Worker] Fetch error:', error);
+    return cachedResponse || new Response('Offline - Keine Verbindung', {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: new Headers({
+        'Content-Type': 'text/plain'
+      })
+    });
   });
 
-  // Return sofort den Cache, falls vorhanden
   if (cachedResponse) {
     return cachedResponse;
   }
 
-  // Warte auf Network wenn kein Cache
   return fetchPromise;
 }
 
 /**
  * Network-Only Strategie
- * Nur Network, kein Cache
- * Für Nostr-Queries und WebSocket-Verbindungen
+ * Lädt immer frisch vom Network
+ * Für Nostr-Relays und WebSockets
  */
-function networkOnly(request) {
-  return fetch(request);
+async function networkOnly(request) {
+  try {
+    return await fetch(request);
+  } catch (error) {
+    return new Response('Offline - Keine Verbindung', {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: new Headers({
+        'Content-Type': 'text/plain'
+      })
+    });
+  }
 }
 
 // ============================================================================
-// INSTALLATION
+// INSTALL EVENT (Cache-Invalidierung)
 // ============================================================================
 
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installation gestartet');
+  console.log('[Service Worker] Install Event - Cache Version:', CACHE_VERSION);
 
   event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      console.log('[Service Worker] Cache geöffnet:', CACHE_NAME);
-
-      // Kritische Assets vorab cachen
-      const criticalAssets = [
-        '/',
-        '/index.html',
-        '/mojobuslogo.png',
-      ];
-
-      // Versuche Assets zu cachen, aber nicht blockieren
-      const cachePromises = criticalAssets.map(async (asset) => {
-        try {
-          await cache.add(asset);
-          console.log('[Service Worker] Gecacht:', asset);
-        } catch (error) {
-          console.warn('[Service Worker] Konnte nicht cachen:', asset, error);
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[Service Worker] Cache opened:', cache);
+      // Cache Version speichern
+      const cacheVersionRequest = new Request('/api/cache-version');
+      const cacheVersionResponse = new Response(
+        JSON.stringify({ version: CACHE_VERSION, name: CACHE_NAME }),
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Cache-Version': CACHE_VERSION.toString(),
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+          }
         }
-      });
-
-      await Promise.allSettled(cachePromises);
+      );
+      return cache.put(cacheVersionRequest, cacheVersionResponse);
+    }).catch((error) => {
+      console.error('[Service Worker] Install failed:', error);
     })
   );
-
-  // Service Worker sofort aktivieren
-  self.skipWaiting();
-
-  console.log('[Service Worker] Installation abgeschlossen');
 });
 
 // ============================================================================
-// AKTIVIERUNG
+// ACTIVATE EVENT
 // ============================================================================
 
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Aktivierung gestartet');
+  console.log('[Service Worker] Activate Event - Cache Version:', CACHE_VERSION);
 
+  // Alte Caches leeren
   event.waitUntil(
-    caches.keys().then(async (cacheNames) => {
-      // Lösche alte Caches
-      const oldCaches = cacheNames.filter(
-        (cacheName) => cacheName !== CACHE_NAME
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .map((cacheName) => {
+            // Nur alte Caches leeren (nicht den aktuellen)
+            if (cacheName !== CACHE_NAME) {
+              console.log('[Service Worker] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+            return Promise.resolve();
+          })
       );
-
-      await Promise.all(
-        oldCaches.map((cacheName) => {
-          console.log('[Service Worker] Lösche alten Cache:', cacheName);
-          return caches.delete(cacheName);
-        })
-      );
-
-      console.log('[Service Worker] Alle Caches bereinigt');
+    }).then(() => {
+      // Alle Clients benachrichtigen
+      return self.clients.claim();
+    }).catch((error) => {
+      console.error('[Service Worker] Activate failed:', error);
     })
   );
-
-  // Service Worker sofort kontrollieren
-  self.clients.claim();
-
-  console.log('[Service Worker] Aktivierung abgeschlossen');
 });
 
 // ============================================================================
-// FETCH HANDLING
+// FETCH EVENT (Cache-Strategien)
 // ============================================================================
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  console.log('[Service Worker] Fetch:', url.pathname);
+
   // ============================================================================
-  // STRATEGIE-AUSWAHL
+  // CACHE-STRATEGIE AUSWAHL
   // ============================================================================
 
-  // 1. Cache-First für Assets (sehr selten ändernde Dateien)
-  if (
-    url.pathname.startsWith('/assets/') ||
-    url.pathname.endsWith('.css') ||
-    url.pathname.endsWith('.js')
-  ) {
-    // CSS/JS Files und Assets
+  // 1. Cache-First für Assets (CSS, JS, Icons, Fonts)
+  if (url.pathname.match(/\.(css|js|woff|woff2|ttf|eot|otf)$/i)) {
+    console.log('[Service Worker] Cache-First:', url.pathname);
     event.respondWith(cacheFirst(request));
     return;
   }
 
-  // 2. Cache-First für statische Images
-  if (
-    url.pathname.endsWith('.png') ||
-    url.pathname.endsWith('.jpg') ||
-    url.pathname.endsWith('.jpeg') ||
-    url.pathname.endsWith('.webp') ||
-    url.pathname.endsWith('.gif') ||
-    url.pathname.endsWith('.svg')
-  ) {
-    // Bilder (außer Nostr Profile Images die dynamisch sind)
-    if (!url.hostname.includes('blossom') && !url.hostname.includes('primal')) {
-      event.respondWith(cacheFirst(request));
-      return;
-    }
-  }
-
-  // 3. Cache-First für Font-Dateien
-  if (
-    url.pathname.endsWith('.woff') ||
-    url.pathname.endsWith('.woff2') ||
-    url.pathname.endsWith('.ttf') ||
-    url.pathname.endsWith('.eot')
-  ) {
+  // 2. Cache-First für Assets-Verzeichnis
+  if (url.pathname.startsWith('/assets/')) {
+    console.log('[Service Worker] Cache-First:', url.pathname);
     event.respondWith(cacheFirst(request));
     return;
   }
 
-  // 4. Cache-First für Vendor Chunks
-  if (
-    url.pathname.includes('react-vendor') ||
-    url.pathname.includes('icons-vendor') ||
-    url.pathname.includes('query-vendor') ||
-    url.pathname.includes('radix-vendor') ||
-    url.pathname.includes('cv-vendor') ||
-    url.pathname.includes('css-utils-vendor') ||
-    url.pathname.includes('polyfills')
-  ) {
-    event.respondWith(cacheFirst(request));
-    return;
-  }
-
-  // 5. Network-First für App Code Chunks
-  if (
-    url.pathname.includes('hooks') ||
-    url.pathname.includes('app-components') ||
-    url.pathname.includes('ui-components') ||
-    url.pathname.includes('pages') ||
-    url.pathname.includes('utils') ||
-    url.pathname.includes('services') ||
-    url.pathname.includes('contexts') ||
-    url.pathname.includes('config')
-  ) {
+  // 3. Network-First für HTML-Seiten
+  if (url.pathname.match(/\.html$/) || url.pathname === '/') {
+    console.log('[Service Worker] Network-First:', url.pathname);
     event.respondWith(networkFirst(request));
     return;
   }
 
-  // 6. Network-Only für Nostr-Queries und WebSocket
-  if (
-    url.protocol === 'ws:' ||
-    url.protocol === 'wss:' ||
-    url.hostname.includes('relay.') ||
-    url.hostname.includes('nos.lol') ||
-    url.hostname.includes('damus.io') ||
-    url.hostname.includes('primal.net') ||
-    url.hostname.includes('nostr.band') ||
-    url.hostname.includes('strfry.net')
-  ) {
-    // Nicht cachen - immer frische Daten
-    return;
-  }
-
-  // 7. Network-First für API-Requests
+  // 4. Stale-While-Revalidate für API-Endpunkte
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request));
-    return;
-  }
-
-  // 8. Stale-While-Revalidate für HTML-Seiten
-  if (url.pathname.endsWith('.html') || url.pathname === '/') {
+    console.log('[Service Worker] Stale-While-Revalidate:', url.pathname);
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
-  // ============================================================================
-  // DEFAULT STRATEGIE
-  // ============================================================================
+  // 5. Network-Only für Nostr-Relays und WebSockets
+  if (url.protocol === 'wss:' || url.hostname.includes('nos.lol') || url.hostname.includes('relay.')) {
+    console.log('[Service Worker] Network-Only:', url.hostname);
+    event.respondWith(networkOnly(request));
+    return;
+  }
 
-  // Für alles andere: Network-First mit Fallback auf Cache
+  // Default: Network-First für alles andere
+  console.log('[Service Worker] Network-First (default):', url.pathname);
   event.respondWith(networkFirst(request));
 });
 
 // ============================================================================
-// MESSAGE HANDLING
+// MESSAGE EVENT (Client-Kommunikation)
 // ============================================================================
 
 self.addEventListener('message', (event) => {
-  console.log('[Service Worker] Nachricht erhalten:', event.data);
+  const { data } = event;
+  console.log('[Service Worker] Message received:', data);
 
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    // Service Worker sofort aktualisieren
-    self.skipWaiting();
-  }
-
-  if (event.data && event.data.type === 'CACHE_CLEAR') {
-    // Alle Caches leeren
+  // Cache leeren
+  if (data.type === 'CLEAR_CACHE') {
+    console.log('[Service Worker] Clearing cache...');
     event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => caches.delete(cacheName))
-        );
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.keys().then((keys) => {
+          return Promise.all(
+            keys.map((key) => cache.delete(key))
+          );
+        }).then(() => {
+          // Cache Version zurücksetzen
+          const cacheVersionRequest = new Request('/api/cache-version');
+          const cacheVersionResponse = new Response(
+            JSON.stringify({ version: CACHE_VERSION, name: CACHE_NAME, cleared: true }),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Cache-Version': CACHE_VERSION.toString(),
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+              }
+            }
+          );
+          return cache.put(cacheVersionRequest, cacheVersionResponse);
+        });
+      }).then(() => {
+        // Erfolgsmeldung an Client
+        event.ports[0].postMessage({
+          type: 'CLEAR_CACHE_SUCCESS',
+          version: CACHE_VERSION
+        });
+      }).catch((error) => {
+        console.error('[Service Worker] Clear cache failed:', error);
+        event.ports[0].postMessage({
+          type: 'CLEAR_CACHE_ERROR',
+          error: error.message
+        });
       })
     );
   }
 
-  if (event.data && event.data.type === 'CACHE_VERSION') {
-    // Cache-Version zurückgeben
-    event.ports[0].postMessage({ version: CACHE_VERSION });
-  }
-});
-
-// ============================================================================
-// SYNC HANDLING (Background Sync)
-// ============================================================================
-
-self.addEventListener('sync', (event) => {
-  console.log('[Service Worker] Background Sync:', event.tag);
-
-  if (event.tag === 'sync-posts') {
+  // Cache-Version abrufen
+  if (data.type === 'GET_CACHE_VERSION') {
+    console.log('[Service Worker] Getting cache version...');
     event.waitUntil(
-      // Hier könnte man synchronisieren, wenn das Gerät wieder online ist
-      Promise.resolve()
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.match('/api/cache-version');
+      }).then((response) => {
+        if (response) {
+          return response.json().then((data) => {
+            event.ports[0].postMessage({
+              type: 'CACHE_VERSION',
+              version: data.version,
+              name: data.name,
+              cleared: data.cleared || false
+            });
+          });
+        } else {
+          event.ports[0].postMessage({
+            type: 'CACHE_VERSION',
+            version: CACHE_VERSION,
+            name: CACHE_NAME,
+            cleared: false
+          });
+        }
+      }).catch((error) => {
+        console.error('[Service Worker] Get cache version failed:', error);
+        event.ports[0].postMessage({
+          type: 'CACHE_VERSION',
+          version: CACHE_VERSION,
+          name: CACHE_NAME,
+          cleared: false
+        });
+      })
     );
   }
-});
 
-// ============================================================================
-// PUSH HANDLING (für Benachrichtigungen)
-// ============================================================================
-
-self.addEventListener('push', (event) => {
-  console.log('[Service Worker] Push Notification erhalten');
-
-  if (event.data) {
-    const data = event.data.json();
-
+  // Cache invalidieren
+  if (data.type === 'INVALIDATE_CACHE') {
+    console.log('[Service Worker] Invalidating cache...');
     event.waitUntil(
-      self.registration.showNotification(data.title || 'MojoBus', {
-        body: data.body || 'Neue Inhalte verfügbar!',
-        icon: '/mojobuslogo.png',
-        badge: '/mojobuslogo.png',
-        data: data.url || '/',
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.keys().then((keys) => {
+          return Promise.all(
+            keys.map((key) => cache.delete(key))
+          );
+        });
+      }).then(() => {
+        event.ports[0].postMessage({
+          type: 'INVALIDATE_CACHE_SUCCESS',
+          version: CACHE_VERSION
+        });
+      }).catch((error) => {
+        console.error('[Service Worker] Invalidate cache failed:', error);
+        event.ports[0].postMessage({
+          type: 'INVALIDATE_CACHE_ERROR',
+          error: error.message
+        });
       })
     );
   }
 });
 
 // ============================================================================
-// NOTIFICATION CLICK HANDLING
+// SKIP WAITING (beschleunigt Service Worker Updates)
 // ============================================================================
 
-self.addEventListener('notificationclick', (event) => {
-  console.log('[Service Worker] Notification Click:', event);
-
-  event.notification.close();
-
-  event.waitUntil(
-    clients.openWindow(event.notification.data || '/')
-  );
-});
+self.skipWaiting();
+console.log('[Service Worker] Skip waiting - Service Worker wird sofort aktiv');

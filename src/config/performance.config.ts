@@ -130,7 +130,7 @@ export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
 
   // Service Worker
   serviceWorkerCacheStrategy: 'stale-while-revalidate',
-  serviceWorkerCacheVersion: 6, // Erhöht von 5 auf 6 für Cache-Invalidierung
+  serviceWorkerCacheVersion: 7, // Erhöht von 5 auf 6 für Cache-Invalidierung
 } as const;
 
 // ============================================================================
