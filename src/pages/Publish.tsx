@@ -355,9 +355,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             <Upload className="h-5 w-5" />
             Medien hochladen
           </CardTitle>
-          <CardDescription>
-            Lade Bilder, Videos, Audio oder Dokumente hoch fuer deine Vanlife-Reise
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div
@@ -369,7 +366,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             onDragLeave={() => setIsDragging(false)}
           >
             <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Dateien hochladen</h3>
 
             <input
               type="file"
