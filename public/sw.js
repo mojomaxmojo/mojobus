@@ -3,8 +3,13 @@
  * Offline-Fähigkeit und verbessertes Caching mit Workbox
  */
 
-const CACHE_NAME = 'mojobus-v5'; // Version erhöht für Cache-Invalidierung
-const CACHE_VERSION = 5; // Version erhöht
+import { DEFAULT_PERFORMANCE_CONFIG } from '../src/config/performance.config';
+
+const CACHE_NAME = `mojobus-v${DEFAULT_PERFORMANCE_CONFIG.serviceWorkerCacheVersion}`; // Version aus Konfiguration
+const CACHE_VERSION = DEFAULT_PERFORMANCE_CONFIG.serviceWorkerCacheVersion; // Version aus Konfiguration
+
+console.log('[Service Worker] Cache Version:', CACHE_VERSION);
+console.log('[Service Worker] Cache Strategy:', DEFAULT_PERFORMANCE_CONFIG.serviceWorkerCacheStrategy);
 
 // ============================================================================
 // CACHE-STRATEGIEN

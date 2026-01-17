@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm i --silent && vite",
     "build": "node build-intelligent.js",
-    "build:analyze": "npm i --silent && vite build -l error && node vite.analyze.js --analyze",
+    "build:optimize": "node scripts/optimize-build.js",
     "build:force": "FORCE_REBUILD=true node build-intelligent.js",
     "analyze": "node scripts/analyze-bundle.mjs",
     "test": "npm run build && vitest run",

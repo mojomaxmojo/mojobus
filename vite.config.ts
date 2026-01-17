@@ -3,6 +3,7 @@ import path from "node:path";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vitest/config";
 import { visualizer } from "rollup-plugin-visualizer";
+import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
@@ -38,8 +39,7 @@ export default defineConfig(() => ({
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
-    },
-    // 🔥 PERFORMANCE: Detaillierte Vendor-Chunk Optimierung
+      // 🔥 PERFORMANCE: Detaillierte Vendor-Chunk Optimierung
       // Strategie: Gruppieren nach Änderungshäufigkeit für maximales Caching
       manualChunks: (id) => {
         // ============================================================================
@@ -196,26 +196,28 @@ export default defineConfig(() => ({
         return undefined;
       },
       // Optimize chunk sizes for caching
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: DEFAULT_PERFORMANCE_CONFIG.chunkSizeWarningLimit,
     },
     // Asset optimization for better caching
-    assetsInlineLimit: 4096, // Inline small assets < 4KB
-    cssCodeSplit: true, // Split CSS into separate files
+    assetsInlineLimit: DEFAULT_PERFORMANCE_CONFIG.assetsInlineLimit, // Inline small assets < 4KB
+    cssCodeSplit: DEFAULT_PERFORMANCE_CONFIG.enableCSSCodeSplit, // Split CSS into separate files
 
     // Enable source maps for debugging but don't bundle them
-    sourcemap: false,
+    sourcemap: DEFAULT_PERFORMANCE_CONFIG.sourceMaps,
 
     // Minify and optimize
-    minify: 'terser',
+    minify: DEFAULT_PERFORMANCE_CONFIG.minify ? 'terser' : false,
     terserOptions: {
       compress: {
-        drop_console: true,
-        drop_debugger: true,
+        drop_console: DEFAULT_PERFORMANCE_CONFIG.dropConsole,
+        drop_debugger: DEFAULT_PERFORMANCE_CONFIG.dropDebugger,
       },
       mangle: {
         safari10: true,
       },
     },
+    // Manifest for PWA and preloading
+    manifest: '/manifest.webmanifest',
   },
   test: {
     globals: true,
