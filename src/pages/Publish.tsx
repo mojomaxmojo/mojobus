@@ -284,7 +284,10 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       const tagsWithMojobus = [...allTags, mojobusTag];
 
       // Additional special tags
-      const additionalTags = [['type', 'media']];
+      const additionalTags = [
+        ['type', 'media'],
+        ['t', 'media']  // Add media tag for /bilder page compatibility
+      ];
 
       if (mainCategory) additionalTags.push(['t', mainCategory]);
 

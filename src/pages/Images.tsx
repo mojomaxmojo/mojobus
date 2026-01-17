@@ -70,11 +70,14 @@ function Images() {
         }
       ], { signal: abortSignal });
 
-      // Filter events that contain image URLs
+      // Filter events that contain image URLs or have type: media
       const imageEvents = allEvents.filter((event: ImageEvent) => {
+        // Check if event has type: media tag
+        const hasMediaType = event.tags.some(tag => tag[0] === 'type' && tag[1] === 'media');
+
         // Check content for image URLs
         const content = event.content.toLowerCase();
-        return content.includes('.jpg') ||
+        const hasImageUrls = content.includes('.jpg') ||
                content.includes('.jpeg') ||
                content.includes('.png') ||
                content.includes('.gif') ||
@@ -83,6 +86,8 @@ function Images() {
                content.includes('i.imgur.com') ||
                content.includes('cdn.blossom') ||
                content.includes('nostr.build');
+
+        return hasMediaType || hasImageUrls;
       });
 
       // Filter by country if specified with intelligent detection
