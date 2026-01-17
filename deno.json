@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  },
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "@nostrify/nostrify": "https://esm.sh/@nostrify/nostrify@0.46.4",
+    "@nostrify/react": "https://esm.sh/@nostrify/react@0.2.8",
+    "@tanstack/react-query": "https://esm.sh/@tanstack/react-query@5.56.2",
+    "lucide-react": "https://esm.sh/lucide-react@0.462.0"
+  },
+  "include": ["dist/**/*", "public/**/*"],
+  "routes": {
+    "/**": {
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    }
+  },
+  "headers": {
+    "Cache-Control": "public, max-age=3600",
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+  }
+}
