@@ -1,0 +1,25 @@
+# robots.txt for mojobus.cc
+# MojoBus - Perpetual Traveler Blog
+
+# User-agent: *
+User-agent: *
+
+# Disallow specific paths
+Disallow: /veroeffentlichen
+Disallow: /settings
+Disallow: /profile
+Disallow: /login
+Disallow: /admin
+Disallow: /api/
+
+# Allow all other paths
+Allow: /
+
+# Sitemap location
+Sitemap: https://mojobus.cc/sitemap.xml
+
+# Crawl-delay (optional, 1 second)
+Crawl-delay: 1
+
+# Request rate (optional, 1 request per second)
+Request-rate: 1/s

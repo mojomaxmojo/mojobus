@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "generated": "2025-01-23T10:00:00Z",
+  "cacheStrategy": "intelligent-image-caching",
+  "description": "Optimized caching for user-uploaded and system images",
+  "rules": {
+    "uploadedImages": {
+      "pattern": "/uploads/*",
+      "cacheControl": "public, max-age=31536000, immutable", // 1 year
+      "reason": "User-uploaded content rarely changes"
+    },
+    "systemImages": {
+      "pattern": "/mojobuslogo.png",
+      "cacheControl": "public, max-age=2592000, immutable", // 30 days
+      "reason": "System branding images"
+    },
+    "userAvatars": {
+      "pattern": "/avatars/*",
+      "cacheControl": "public, max-age=86400, immutable", // 1 day
+      "reason": "User profile images may change"
+    },
+    "generatedThumbnails": {
+      "pattern": "/thumbnails/*",
+      "cacheControl": "public, max-age=604800, immutable", // 7 days
+      "reason": "Generated thumbnails"
+    },
+    "fallbackImages": {
+      "pattern": "/assets/images/fallback/*",
+      "cacheControl": "public, max-age=2592000, immutable", // 30 days
+      "reason": "Default/fallback images"
+    },
+    "tempUploads": {
+      "pattern": "/temp/*",
+      "cacheControl": "no-cache, no-store, must-revalidate",
+      "reason": "Temporary upload cache"
+    }
+  },
+  "optimizations": {
+    "webpSupport": true,
+    "responsiveImages": true,
+    "lazyLoading": true,
+    "compression": "aggressive",
+    "cdnFallback": true
+  }
+}
