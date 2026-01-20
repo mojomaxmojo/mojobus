@@ -96,24 +96,13 @@ git_pull() {
 install_dependencies() {
     info_msg "Installiere Dependencies..."
 
-    # Prüfe ob devlop in node_modules ist
-    if [ ! -d "$PROJECT_DIR/node_modules/devlop" ]; then
-        warn_msg "devlop nicht in node_modules gefunden - installiere manuell..."
-        npm install --prefix "$PROJECT_DIR" devlop@1.1.0 --loglevel=error 2>&1 | tee -a "$LOG_FILE"
-    fi
-
     if [ -f "$PROJECT_DIR/package-lock.json" ]; then
         npm ci --prefix "$PROJECT_DIR" --loglevel=error 2>&1 | tee -a "$LOG_FILE" || error_exit "npm ci fehlgeschlagen"
     else
         npm install --prefix "$PROJECT_DIR" --loglevel=error 2>&1 | tee -a "$LOG_FILE" || error_exit "npm install fehlgeschlagen"
     fi
 
-    # Verifiziere devlop
-    if [ ! -d "$PROJECT_DIR/node_modules/devlop" ]; then
-        error_exit "devlop konnte nicht installiert werden!"
-    fi
-
-    success_msg "Dependencies installiert (inkl. devlop)"
+    success_msg "Dependencies installiert"
 }
 
 # Projekt bauen

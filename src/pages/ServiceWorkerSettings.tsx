@@ -92,8 +92,14 @@ export function ServiceWorkerSettings() {
   const loadCacheInfo = async () => {
     setLoadingCacheInfo(true);
     try {
+      // Hole aktuelle Cache-Version
+      const version = await getCacheVersion();
+      const cacheName = `mojobus-v${version}`;
+
+      console.log('[ServiceWorkerSettings] Lade Cache Info für:', cacheName);
+
       // Einfache Schätzung der Cache-Größe
-      const cache = await caches.open('mojobus-v1');
+      const cache = await caches.open(cacheName);
       const keys = await cache.keys();
       const entries = keys.length;
 
@@ -107,6 +113,10 @@ export function ServiceWorkerSettings() {
       });
     } catch (error) {
       console.error('Cache Info abrufen fehlgeschlagen:', error);
+      setCacheInfo({
+        totalSize: '0 B',
+        totalEntries: 0,
+      });
     } finally {
       setLoadingCacheInfo(false);
     }

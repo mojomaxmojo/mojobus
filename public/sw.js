@@ -193,49 +193,41 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  console.log('[Service Worker] Fetch:', url.pathname);
-
   // ============================================================================
   // CACHE-STRATEGIE AUSWAHL
   // ============================================================================
 
   // 1. Cache-First für Assets (CSS, JS, Icons, Fonts)
   if (url.pathname.match(/\.(css|js|woff|woff2|ttf|eot|otf)$/i)) {
-    console.log('[Service Worker] Cache-First:', url.pathname);
     event.respondWith(cacheFirst(request));
     return;
   }
 
   // 2. Cache-First für Assets-Verzeichnis
   if (url.pathname.startsWith('/assets/')) {
-    console.log('[Service Worker] Cache-First:', url.pathname);
     event.respondWith(cacheFirst(request));
     return;
   }
 
   // 3. Network-First für HTML-Seiten
   if (url.pathname.match(/\.html$/) || url.pathname === '/') {
-    console.log('[Service Worker] Network-First:', url.pathname);
     event.respondWith(networkFirst(request));
     return;
   }
 
   // 4. Stale-While-Revalidate für API-Endpunkte
   if (url.pathname.startsWith('/api/')) {
-    console.log('[Service Worker] Stale-While-Revalidate:', url.pathname);
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
   // 5. Network-Only für Nostr-Relays und WebSockets
   if (url.protocol === 'wss:' || url.hostname.includes('nos.lol') || url.hostname.includes('relay.')) {
-    console.log('[Service Worker] Network-Only:', url.hostname);
     event.respondWith(networkOnly(request));
     return;
   }
 
   // Default: Network-First für alles andere
-  console.log('[Service Worker] Network-First (default):', url.pathname);
   event.respondWith(networkFirst(request));
 });
 

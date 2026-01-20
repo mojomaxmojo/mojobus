@@ -111,7 +111,7 @@ export function sendMessageToSW(message: any): Promise<any> {
  */
 export async function clearCaches(): Promise<void> {
   try {
-    await sendMessageToSW({ type: 'CACHE_CLEAR' });
+    await sendMessageToSW({ type: 'CLEAR_CACHE' });
     console.log('✅ Alle Caches geleert');
   } catch (error) {
     console.error('❌ Caches leeren fehlgeschlagen:', error);
@@ -123,7 +123,7 @@ export async function clearCaches(): Promise<void> {
  */
 export async function getCacheVersion(): Promise<number> {
   try {
-    const response = await sendMessageToSW({ type: 'CACHE_VERSION' });
+    const response = await sendMessageToSW({ type: 'GET_CACHE_VERSION' });
     return response?.version || 1;
   } catch (error) {
     console.error('❌ Cache-Version abrufen fehlgeschlagen:', error);
@@ -185,12 +185,30 @@ export function addOnlineStatusListener(
   };
 }
 
+let currentCacheName = 'mojobus-v1';
+
+/**
+ * Aktualisiert den aktuellen Cache-Namen
+ */
+export async function updateCacheName(): Promise<void> {
+  try {
+    const response = await sendMessageToSW({ type: 'GET_CACHE_VERSION' });
+    if (response?.name) {
+      currentCacheName = response.name;
+      console.log('✅ Cache-Name aktualisiert:', currentCacheName);
+    }
+  } catch (error) {
+    console.warn('⚠️ Cache-Name konnte nicht aktualisiert werden:', error);
+  }
+}
+
 /**
  * Prüft ob ein Request im Cache ist
  */
 export async function isCached(url: string): Promise<boolean> {
   try {
-    const cache = await caches.open('mojobus-v1');
+    await updateCacheName();
+    const cache = await caches.open(currentCacheName);
     const cachedResponse = await cache.match(url);
     return cachedResponse !== undefined;
   } catch (error) {
@@ -204,7 +222,8 @@ export async function isCached(url: string): Promise<boolean> {
  */
 export async function getFromCache(url: string): Promise<Response | null> {
   try {
-    const cache = await caches.open('mojobus-v1');
+    await updateCacheName();
+    const cache = await caches.open(currentCacheName);
     const cachedResponse = await cache.match(url);
     return cachedResponse || null;
   } catch (error) {
@@ -218,9 +237,10 @@ export async function getFromCache(url: string): Promise<Response | null> {
  */
 export async function addToCache(url: string): Promise<void> {
   try {
+    await updateCacheName();
     const response = await fetch(url);
     if (response.ok) {
-      const cache = await caches.open('mojobus-v1');
+      const cache = await caches.open(currentCacheName);
       await cache.put(url, response);
       console.log('✅ URL zum Cache hinzugefügt:', url);
     }
