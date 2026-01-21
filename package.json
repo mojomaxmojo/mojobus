@@ -130,6 +130,7 @@
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
     "space-separated-tokens": "^2.0.2",
+    "style-to-js": "^1.1.21",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "unified": "^11.0.5",
