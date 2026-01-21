@@ -2,7 +2,7 @@ import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vitest/config";
-import { visualizer } from "rollup-plugin-visualizer";
+import visualizer from "rollup-plugin-visualizer";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
 
 // https://vitejs.dev/config/
@@ -14,8 +14,9 @@ export default defineConfig(() => ({
   plugins: [
     react(),
     // Generate bundle visualization for performance analysis
+    // Run with: npm run analyze
     visualizer({
-      filename: 'stats.html',
+      filename: 'dist/stats.html',
       open: false,
       gzipSize: true,
       brotliSize: true,
