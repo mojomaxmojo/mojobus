@@ -18,6 +18,8 @@ export interface BlossomServerConfig {
   preferred: string;
   /** Max. Dateigröße in MB */
   maxFileSize?: number;
+  /** Backup Blossom Server (immer zusätzlich hochladen) */
+  backupServer?: string;
 }
 
 export interface AuthorBlossomConfig {
@@ -34,12 +36,14 @@ export const BLOSSOM_SERVERS: AuthorBlossomConfig = {
     authorId: 'mojo',
     servers: ['https://relay.mojobus.co'],
     preferred: 'https://relay.mojobus.co',
+    backupServer: 'https://blossom.primal.net',
     maxFileSize: 50, // 50 MB
   },
   susanne: {
     authorId: 'susanne',
     servers: ['https://relays.mojobus.co'],
     preferred: 'https://relays.mojobus.co',
+    backupServer: 'https://blossom.primal.net',
     maxFileSize: 50, // 50 MB
   },
 } as const;
@@ -103,6 +107,11 @@ export const getBlossomConfigByPubkey = (pubkey: string): BlossomServerConfig | 
  * Default Blossom-Server-Konfiguration (wenn kein Autor erkannt wird)
  */
 export const DEFAULT_BLOSSOM_SERVERS = ['https://relay.mojobus.co'];
+
+/**
+ * Globaler Backup-Blossom-Server (immer zusätzlich hochladen)
+ */
+export const BACKUP_BLOSSOM_SERVER = 'https://blossom.primal.net';
 
 // ============================================================================
 // EXPORTS
