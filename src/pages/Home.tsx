@@ -52,18 +52,36 @@ export function Home() {
     queryFn: async ({ signal }) => {
       const events = await nostr.query([
         {
-          kinds: [1],
+          kinds: [1, 30023], // Text notes und longform articles
           authors: NOSTR_CONFIG.authorPubkeys,
           '#t': ['medien', 'media', 'bilder', 'images'],
-          limit: 50,
+          limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch, // Aus Performance-Konfiguration
         }
-      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(2000)]) });
+      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) }); // Aus Performance-Konfiguration
+
+      console.log('[Home Page] Image Events Query:', {
+        total: events.length,
+        limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
+        timeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
+      });
 
       return events.filter((event) => {
         const content = event.content.toLowerCase();
-        return content.includes('.jpg') || content.includes('.png');
+        return content.includes('.jpg') ||
+               content.includes('.jpeg') ||
+               content.includes('.png') ||
+               content.includes('.gif') ||
+               content.includes('.webp') ||
+               content.includes('imgur.com') ||
+               content.includes('i.imgur.com') ||
+               content.includes('cdn.blossom') ||
+               content.includes('nostr.build') ||
+               content.includes('relay.mojobus.co') ||
+               content.includes('relays.mojobus.co') ||
+               content.includes('blossom.primal.net');
       });
     },
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime, // Aus Performance-Konfiguration
   });
 
   const contentItems: ContentItem[] = [];

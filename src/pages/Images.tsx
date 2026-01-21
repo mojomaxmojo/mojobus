@@ -58,7 +58,7 @@ function Images() {
   const { data: events, isLoading, error } = useQuery({
     queryKey: ['images', country],
     queryFn: async ({ signal }) => {
-      const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(3000)]); // Timeout erhöht auf 3s
+      const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]); // Aus Performance-Konfiguration
 
       // Query events with media filter from configured authors only
       const allEvents = await nostr.query([
@@ -66,7 +66,7 @@ function Images() {
           kinds: [1, 30023], // text notes and longform articles
           authors: NOSTR_CONFIG.authorPubkeys, // Filter by configured authors only
           '#t': ['medien', 'media', 'bilder', 'images'], // Media tags from config
-          limit: 500, // Limit erhöht auf 500 für mehr Bilder
+          limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch, // Aus Performance-Konfiguration
         }
       ], { signal: abortSignal });
 
@@ -116,26 +116,21 @@ function Images() {
 
           return hasNatureTag;
         });
-      }
 
-      return imageEvents;
+      // WICHTIG: Sortiere nach created_at (neueste zuerst)
+      const sortedEvents = [...imageEvents].sort((a, b) => b.created_at - a.created_at);
+      console.log('[Images Page] Sortierte Events (neueste zuerst):', sortedEvents.length);
+
+      return sortedEvents;
     },
-
-    // WICHTIG: Sortiere nach created_at (neueste zuerst)
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime, // Aus Performance-Konfiguration
+    gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime, // Aus Performance-Konfiguration
     onSuccess: (data) => {
       console.log('[Images Page] Events geladen:', {
         total: data.length,
         country,
       });
     },
-  });
-
-  // WICHTIG: Sortiere Events nach created_at (neueste zuerst)
-  const sortedEvents = events ? [...events].sort((a, b) => b.created_at - a.created_at) : [];
-
-  console.log('[Images Page] Sortierte Events:', {
-    total: sortedEvents.length,
-    country,
   });
 
   const extractImages = (content: string): string[] => {
@@ -198,7 +193,7 @@ function Images() {
     );
   }
 
-  if (error || !sortedEvents) {
+  if (error || !events) {
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">
@@ -287,7 +282,7 @@ function Images() {
     );
   }
 
-  const filteredEvents = sortedEvents;
+  const filteredEvents = events;
 
   return (
     <div className="min-h-screen py-12">
