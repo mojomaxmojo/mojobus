@@ -15,6 +15,7 @@ import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
+import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';

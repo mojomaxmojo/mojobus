@@ -32,6 +32,7 @@ import {
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
+import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 
 interface ImageEvent {
   id: string;
