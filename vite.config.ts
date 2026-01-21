@@ -23,12 +23,10 @@ export default defineConfig(() => ({
   ],
   // Node.js polyfills for nostr-tools
   define: {
-    global: 'globalThis',
-    'global.Buffer': 'Buffer',
-    'global.process.env': '{}',
+    'process.env': '{}',
   },
   optimizeDeps: {
-    include: ['nostr-tools', 'buffer'],
+    include: ['nostr-tools', 'buffer', 'qrcode'],
     force: true,
   },
   build: {
@@ -73,7 +71,11 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Node.js polyfills
       buffer: 'buffer',
+      events: 'events',
+      stream: 'stream-browserify',
+      util: 'util',
     },
   },
 }));
