@@ -58,25 +58,27 @@ function Images() {
 
   const { data: events, isLoading, error } = useQuery({
     queryKey: ['images', country],
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
+    gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime,
     queryFn: async ({ signal }) => {
-      const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]); // Aus Performance-Konfiguration
+      const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]);
 
-      // Query events with media filter from configured authors only
       const allEvents = await nostr.query([
         {
-          kinds: [1, 30023], // text notes and longform articles
-          authors: NOSTR_CONFIG.authorPubkeys, // Filter by configured authors only
-          '#t': ['medien', 'media', 'bilder', 'images'], // Media tags from config
-          limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch, // Aus Performance-Konfiguration
+          kinds: [1, 30023],
+          authors: NOSTR_CONFIG.authorPubkeys,
+          '#t': ['medien', 'media', 'bilder', 'images'],
+          limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
         }
       ], { signal: abortSignal });
 
-      // Filter events that contain image URLs or have type: media
-      const imageEvents = allEvents.filter((event: ImageEvent) => {
-        // Check if event has type: media tag
-        const hasMediaType = event.tags.some(tag => tag[0] === 'type' && tag[1] === 'media');
+      console.log('[Images Page] Image Events Query:', {
+        total: allEvents.length,
+        country,
+      });
 
-        // Check content for image URLs
+      const imageEvents = allEvents.filter((event: ImageEvent) => {
+        const hasMediaType = event.tags.some(tag => tag[0] === 'type' && tag[1] === 'media');
         const content = event.content.toLowerCase();
         const hasImageUrls = content.includes('.jpg') ||
                content.includes('.jpeg') ||
@@ -90,22 +92,16 @@ function Images() {
                content.includes('relay.mojobus.co') ||
                content.includes('relays.mojobus.co') ||
                content.includes('blossom.primal.net');
-
         return hasMediaType || hasImageUrls;
       });
 
-      // Filter by country if specified with intelligent detection
       if (currentCountry) {
         return filterEventsByCountry(imageEvents, country);
       }
 
-      // Filter by nature category if specified
       if (isNatureRoute && natureCategory) {
-        return imageEvents.filter((event: ImageEvent) => {
-          // Check if event has the nature category tag
+        const natureFiltered = imageEvents.filter((event: ImageEvent) => {
           const hasNatureTag = event.tags.some(tag => tag[0] === 't' && tag[1] === natureCategory);
-
-          // Also check for related tags from menu configuration
           const categoryConfig = MAIN_MENU.nature[natureCategory as keyof typeof MAIN_MENU.nature];
           if (categoryConfig && categoryConfig.tags) {
             const hasRelatedTag = event.tags.some(tag =>
@@ -114,18 +110,17 @@ function Images() {
             );
             return hasNatureTag || hasRelatedTag;
           }
-
           return hasNatureTag;
         });
+        console.log('[Images Page] Gefiltert nach Natur-Kategorie:', { natureCategory, result: natureFiltered.length });
+        return natureFiltered;
+      }
 
-      // WICHTIG: Sortiere nach created_at (neueste zuerst)
       const sortedEvents = [...imageEvents].sort((a, b) => b.created_at - a.created_at);
-      console.log('[Images Page] Sortierte Events (neueste zuerst):', sortedEvents.length);
+      console.log('[Images Page] Sortierte Events:', sortedEvents.length);
 
       return sortedEvents;
     },
-    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime, // Aus Performance-Konfiguration
-    gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime, // Aus Performance-Konfiguration
     onSuccess: (data) => {
       console.log('[Images Page] Events geladen:', {
         total: data.length,
@@ -228,7 +223,7 @@ function Images() {
               </p>
               <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <span className="font-semibold">{filteredEvents.length}</span>
+                  <span className="font-semibold">{events?.length || 0}</span>
                   <span>Bilder{
                     currentCountry ? ` aus ${currentCountry.name}` :
                     natureCategory ? ` ${MAIN_MENU.nature[natureCategory as keyof typeof MAIN_MENU.nature]?.name}` :
@@ -392,7 +387,7 @@ function ImageCardComponent({
   const [isDeleting, setIsDeleting] = useState(false);
   const metadata = author?.metadata;
 
-  // Check if current user is the author
+  // Check if current user is author
   const isAuthor = user?.pubkey === event.pubkey;
 
   const handleImageClick = () => {
