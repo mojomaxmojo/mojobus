@@ -131,6 +131,7 @@
     "micromark-util-symbol": "^2.0.1",
     "micromark-util-types": "^2.0.2",
     "nostr-tools": "^2.13.0",
+    "orderedmap": "^2.1.1",
     "parse5": "^8.0.0",
     "property-information": "^7.1.0",
     "prosemirror-commands": "^1.7.1",
