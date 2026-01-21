@@ -16,10 +16,12 @@ export default defineConfig(() => ({
   // Node.js polyfills for nostr-tools
   define: {
     'process.env': '{}',
+    'global': 'globalThis',
   },
   optimizeDeps: {
-    include: ['nostr-tools', 'buffer', 'qrcode'],
+    include: ['nostr-tools', 'buffer'],
     force: true,
+    exclude: [],
   },
   build: {
     rollupOptions: {
@@ -77,6 +79,7 @@ export default defineConfig(() => ({
       events: 'events',
       stream: 'stream-browserify',
       util: 'util',
+      process: 'process',
     },
   },
 }));
