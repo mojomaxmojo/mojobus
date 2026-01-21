@@ -90,6 +90,7 @@
     "embla-carousel-react": "^8.3.0",
     "ieee754": "^1.2.1",
     "input-otp": "^1.2.4",
+    "linkifyjs": "^4.3.2",
     "lucide-react": "^0.462.0",
     "nostr-tools": "^2.13.0",
     "qrcode": "^1.5.4",
