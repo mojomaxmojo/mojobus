@@ -3,11 +3,10 @@
  * Legacy-Konfiguration - Neue Konfigurationen unter ./relays.ts und ./app.ts
  */
 
-import { Author } from '@/config/types';
 import { AUTHORS, RELAYS as RELAYS_NEW } from './relays';
 
 // Re-export AUTHORS aus relays.ts für Kompatibilität
-export { AUTHORS, Author };
+export { AUTHORS };
 
 export const NOSTR_CONFIG = {
   // Autoren NPUBs (Legacy-Support)
