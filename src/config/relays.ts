@@ -351,6 +351,68 @@ export const DEFAULT_APP_CONFIG = {
 } as const;
 
 // ============================================================================
+// AUTOR-SPEZIFISCHE RELAY-KONFIGURATION
+// ============================================================================
+
+export interface AuthorRelayConfig {
+  authorId: string;
+  npub: string;
+  pubkey: string;
+  read: string[];
+  write: string[];
+  activeRelay: string;
+}
+
+export const AUTHOR_RELAY_CONFIG: Record<string, AuthorRelayConfig> = {
+  mojo: {
+    authorId: 'mojo',
+    npub: 'npub1f4vym2mu3q9fsz08muz8d469hl568l5358qx90qlaspyuz67ru0sfxvupf',
+    pubkey: '4d584dab7c880a9809e7df0476d745bfe9a3fe91a1c062bc1fec024e0b5e1f1f',
+    read: ['wss://relay.mojobus.co'],
+    write: ['wss://relay.mojobus.co'],
+    activeRelay: 'wss://relay.mojobus.co',
+  },
+  susanne: {
+    authorId: 'susanne',
+    npub: 'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc9c5407f828002qdls5wz',
+    pubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
+    read: ['wss://relays.mojobus.co'],
+    write: ['wss://relays.mojobus.co'],
+    activeRelay: 'wss://relays.mojobus.co',
+  },
+} as const;
+
+// ============================================================================
+// AUTOR-RELAY LOOKUP FUNKTIONEN
+// ============================================================================
+
+/**
+ * Holt die Relay-Konfiguration für einen Autor basierend auf pubkey
+ */
+export const getAuthorRelayConfigByPubkey = (pubkey?: string): AuthorRelayConfig | null => {
+  if (!pubkey) return null;
+
+  const config = Object.values(AUTHOR_RELAY_CONFIG).find(
+    (config) => config.pubkey === pubkey
+  );
+
+  return config || null;
+};
+
+/**
+ * Holt die Relay-Konfiguration für einen Autor basierend auf npub
+ */
+export const getAuthorRelayConfigByNpub = (npub: string): AuthorRelayConfig | null => {
+  if (!npub) return null;
+
+  const config = Object.values(AUTHOR_RELAY_CONFIG).find(
+    (config) => config.npub === npub
+  );
+
+  return config || null;
+};
+
+// ============================================================================
 // EXPORT KONSTANTEN FÜR KOMPATIBILITÄT
 // ============================================================================
 

@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { BlossomUploader } from '@nostrify/nostrify/uploaders';
 
 import { useCurrentUser } from "./useCurrentUser";
+import { getBlossomConfigByPubkey } from '@/config/blossom';
 
 export function useUploadFile() {
   const { user } = useCurrentUser();
@@ -12,6 +13,14 @@ export function useUploadFile() {
         throw new Error('Must be logged in to upload files');
       }
 
+      // Hole autor-spezifische Blossom-Server-Konfiguration
+      const blossomConfig = getBlossomConfigByPubkey(user.pubkey);
+
+      // Verwende autor-spezifische Server oder Default
+      const blossomServers = blossomConfig?.servers || [
+        'https://blossom.primal.net/',
+      ];
+
       console.log('Starting upload with BlossomUploader...');
       console.log('File details:', {
         name: file.name,
@@ -19,11 +28,11 @@ export function useUploadFile() {
         type: file.type,
         lastModified: file.lastModified
       });
+      console.log('Author blossom servers:', blossomServers);
+      console.log('Using blossom servers:', blossomConfig ? `Author-specific (${blossomConfig.authorId})` : 'Default');
 
       const uploader = new BlossomUploader({
-        servers: [
-          'https://blossom.primal.net/',
-        ],
+        servers: blossomServers,
         signer: user.signer,
       });
 
