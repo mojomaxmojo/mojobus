@@ -2,7 +2,6 @@ import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vitest/config";
-import { visualizer } from "rollup-plugin-visualizer";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
 
 // https://vitejs.dev/config/
@@ -30,6 +29,15 @@ export default defineConfig(() => ({
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
+      onwarn(warning, warn) {
+        // Suppress external import warnings from node_modules
+        // These are usually peer dependencies that will be resolved at runtime
+        if (warning.code === 'UNRESOLVED_IMPORT' &&
+            warning.message.includes('node_modules')) {
+          return;
+        }
+        warn(warning);
+      }
     },
     // Asset optimization for better caching
     assetsInlineLimit: DEFAULT_PERFORMANCE_CONFIG.assetsInlineLimit, // Inline small assets < 4KB
