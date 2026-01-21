@@ -199,21 +199,24 @@ export default defineConfig(() => ({
       chunkSizeWarningLimit: DEFAULT_PERFORMANCE_CONFIG.chunkSizeWarningLimit,
     },
     // Asset optimization for better caching
-    assetsInlineLimit: DEFAULT_PERFORMANCE_CONFIG.assetsInlineLimit, // Inline small assets < 4KB
-    cssCodeSplit: DEFAULT_PERFORMANCE_CONFIG.enableCSSCodeSplit, // Split CSS into separate files
+    assetsInlineLimit: 4096, // Inline small assets < 4KB
+    cssCodeSplit: true, // 🔥 WICHTIG: CSS in separate Dateien aufteilen
 
     // Enable source maps for debugging but don't bundle them
-    sourcemap: DEFAULT_PERFORMANCE_CONFIG.sourceMaps,
+    sourcemap: false, // Production: keine Source Maps
 
     // Minify and optimize
-    minify: DEFAULT_PERFORMANCE_CONFIG.minify ? 'terser' : false,
+    minify: 'terser', // 🔥 WICHTIG: Minifizierung aktivieren
     terserOptions: {
       compress: {
-        drop_console: DEFAULT_PERFORMANCE_CONFIG.dropConsole,
-        drop_debugger: DEFAULT_PERFORMANCE_CONFIG.dropDebugger,
+        drop_console: true, // console.log() in Production entfernen
+        drop_debugger: true, // debugger statements entfernen
       },
       mangle: {
         safari10: true,
+      },
+      format: {
+        comments: false, // Kommentare entfernen
       },
     },
     // Manifest for PWA and preloading
