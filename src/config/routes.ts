@@ -14,6 +14,7 @@ export const ROUTES: Route[] = [
   { path: '/plaetze/:country', component: 'Places', title: 'Plätze in Land', category: 'places' },
   { path: '/bilder', component: 'Images', title: 'Bilder', category: 'media' },
   { path: '/bilder/:country', component: 'Images', title: 'Bilder aus Land', category: 'media' },
+  { path: '/bilder/natur/:category', component: 'Images', title: 'Natur Bilder', category: 'media' },
   { path: '/notes', component: 'Notes', title: 'Notes', category: 'notes' },
   { path: '/notes/:country', component: 'Notes', title: 'Notes aus Land', category: 'notes' },
   { path: '/about', component: 'About', title: 'About' },
