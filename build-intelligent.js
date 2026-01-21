@@ -3,10 +3,26 @@
 import { execSync, spawn } from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 
-const CURRENT_SOURCE_HASH = execSync('node vite.analyze.js --analyze', { encoding: 'utf8' })
-  .match(/Source Hash: ([a-f0-9]+)/)?.[1];
+// Skip analyze step if requested (faster builds)
+const SKIP_ANALYZE = process.env.SKIP_ANALYZE === 'true';
 
-console.log('🔍 Intelligent Build System');
+let CURRENT_SOURCE_HASH = 'unknown';
+
+// Get source hash with timeout (falls back if too slow)
+try {
+  console.log('🔍 Calculating source hash...');
+  CURRENT_SOURCE_HASH = execSync('node vite.analyze.js --analyze', {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+    timeout: 10000, // 10 second timeout
+  })
+    .match(/Source Hash: ([a-f0-9]+)/)?.[1] || 'unknown';
+  console.log(`✅ Current Source Hash: ${CURRENT_SOURCE_HASH}`);
+} catch (error) {
+  console.log('⚠️ Source hash calculation timed out or failed, forcing rebuild');
+  CURRENT_SOURCE_HASH = 'unknown';
+}
+
 console.log(`Current Source Hash: ${CURRENT_SOURCE_HASH}`);
 
 // Check if we have a previous successful build
@@ -20,8 +36,8 @@ if (FORCE_REBUILD) {
 }
 
 // Check if source has changed
-if (CURRENT_SOURCE_HASH !== LAST_BUILD_HASH) {
-  console.log('📝 Source changes detected - building...');
+if (CURRENT_SOURCE_HASH !== LAST_BUILD_HASH || CURRENT_SOURCE_HASH === 'unknown') {
+  console.log('📝 Source changes detected or hash unknown - building...');
   execSync('vite build', { stdio: 'inherit' });
 
   // Set environment variable for next build
