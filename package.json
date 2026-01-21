@@ -77,6 +77,7 @@
     "@tiptap/extension-text-align": "^3.15.3",
     "@tiptap/extension-underline": "^3.15.3",
     "@tiptap/extensions": "^3.16.0",
+    "@tiptap/pm": "^3.16.0",
     "@tiptap/react": "^3.15.3",
     "@tiptap/starter-kit": "^3.15.3",
     "@unhead/addons": "^2.0.10",
