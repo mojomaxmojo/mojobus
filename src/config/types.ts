@@ -172,7 +172,7 @@ export const isDIYCategory = (category: any): category is DIYCategory => {
 };
 
 export const isArticleCategory = (category: any): category is ArticleCategory => {
-  return category && typeof item === 'object' &&
+  return category && typeof category === 'object' &&
          'id' in category && 'name' in category && 'description' in category &&
          'tags' in category && 'priority' in category;
 };
