@@ -29,7 +29,7 @@ export default defineConfig(() => ({
   },
   optimizeDeps: {
     include: ['nostr-tools', 'buffer'],
-    force: false, // 🔥 WICHTIG: force = false für korrektes Code Splitting!
+    force: true,
   },
   build: {
     rollupOptions: {
