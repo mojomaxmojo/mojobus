@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { useCurrentUser } from './useCurrentUser';
+import { useNostrLogin } from '@nostrify/react/login';
 import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { DEFAULT_APP_CONFIG } from '@/config/relays';
 
@@ -47,11 +47,14 @@ export interface AuthorRelaysResult {
  * ```
  */
 export function useAuthorRelays(): AuthorRelaysResult {
-  const { user } = useCurrentUser();
+  const { logins } = useNostrLogin();
+
+  // Hole pubkey vom ersten eingeloggten Benutzer
+  const pubkey = logins[0]?.pubkey;
 
   const result = useMemo(() => {
     // Prüfe ob ein Autor eingeloggt ist
-    const authorConfig = getAuthorRelayConfigByPubkey(user?.pubkey);
+    const authorConfig = getAuthorRelayConfigByPubkey(pubkey);
 
     if (authorConfig) {
       // Autor-spezifische Konfiguration
@@ -78,7 +81,7 @@ export function useAuthorRelays(): AuthorRelaysResult {
       isAuthorConfig: false,
       authorId: null,
     };
-  }, [user?.pubkey]);
+  }, [pubkey]);
 
   return result;
 }

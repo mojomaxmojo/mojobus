@@ -5,11 +5,11 @@ import { useCurrentUser } from "./useCurrentUser";
 import { getBlossomConfigByPubkey } from '@/config/blossom';
 
 export function useUploadFile() {
-  const { user } = useCurrentUser();
+  const { user, users } = useCurrentUser();
 
   return useMutation({
     mutationFn: async (file: File) => {
-      if (!user) {
+      if (!user || users.length === 0) {
         throw new Error('Must be logged in to upload files');
       }
 
