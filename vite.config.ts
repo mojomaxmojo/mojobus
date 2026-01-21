@@ -58,8 +58,6 @@ export default defineConfig(() => ({
         safari10: true,
       },
     },
-    // Manifest for PWA and preloading
-    manifest: '/manifest.webmanifest',
   },
   test: {
     globals: true,
