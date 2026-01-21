@@ -327,21 +327,21 @@ export const getSearchRelays = (): RelayConfig[] => {
  */
 export const DEFAULT_APP_CONFIG = {
   // ============================================================================
-  // READ KONFIGURATION (Abrufen/Queries) - FAST Preset
+  // READ KONFIGURATION (Abrufen/Queries) - MOJOBUS Preset
   // ============================================================================
   read: {
-    relayUrls: RELAY_PRESETS.ultrafast.relayUrls, // Nur nos.lol (Ditto) für maximale Performance
-    maxRelays: RELAY_PRESETS.ultrafast.maxRelays, // Nur einen Relay verwenden
-    queryTimeout: RELAY_PRESETS.ultrafast.queryTimeout, // 1500ms - schneller Timeout
+    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co + Backups
+    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // Alle 3 Relays verwenden
+    queryTimeout: RELAY_PRESETS.mojobus.queryTimeout, // 3000ms - Standard Timeout
   },
 
   // ============================================================================
-  // WRITE KONFIGURATION (Veröffentlichen) - ULTRA RELIABLE Preset
+  // WRITE KONFIGURATION (Veröffentlichen) - MOJOBUS Preset
   // ============================================================================
   write: {
-    relayUrls: RELAY_PRESETS.ultrareliable.relayUrls, // 5 Relays für maximale Redundanz (inkl. privates Relay)
-    maxRelays: RELAY_PRESETS.ultrareliable.maxRelays, // Alle 5 Relays verwenden
-    activeRelay: RELAY_PRESETS.ultrareliable.relayUrls[0], // nos.lol als aktiver Relay
+    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co + Backups
+    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // Alle 3 Relays verwenden
+    activeRelay: RELAY_PRESETS.mojobus.relayUrls[0], // relay.mojobus.co als aktiver Relay
   },
 
   // ============================================================================
