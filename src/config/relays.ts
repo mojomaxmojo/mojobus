@@ -137,6 +137,18 @@ export const RELAYS: RelayConfig[] = [
     search: false,
     nips: [1, 2, 9, 11, 12, 15, 16, 20, 22, 26, 40, 42, 50, 57, 70, 90],
   },
+
+  // Private Relays (Authentifizierung erforderlich)
+  {
+    name: 'MojoBus Private',
+    url: 'wss://relay.mojobus.co',
+    category: 'stable',
+    description: 'Privates Relay - nur mit Mojo npub schreibbar',
+    read: true,
+    write: true,
+    search: false,
+    nips: [1, 2, 9, 11, 12, 15, 16, 20, 22, 26, 40, 42, 50, 57, 70],
+  },
 ] as const;
 
 // ============================================================================
@@ -203,17 +215,18 @@ export const RELAY_PRESETS = {
     queryTimeout: 1500,
   },
 
-  // Ultra-Reliable (maximale Redundanz - 4 Relays)
+  // Ultra-Reliable (maximale Redundanz - 5 Relays)
   ultrareliable: {
     name: 'Ultra Reliable',
-    description: 'Maximale Redundanz mit 4 zuverlässigen Relays',
+    description: 'Maximale Redundanz mit 5 zuverlässigen Relays',
     relayUrls: [
       'wss://nos.lol',           // Ditto - schnell, zuverlässig
       'wss://relay.damus.io',    // Damus - etabliert, zuverlässig
       'wss://relay.primal.net',  // Primal - Enterprise-Grade
       'wss://nostr.strfry.net', // Strfry - High-Performance
+      'wss://relay.mojobus.co',  // MojoBus Private - privates Relay
     ],
-    maxRelays: 4,
+    maxRelays: 5,
     queryTimeout: 3000,
   },
 
@@ -228,6 +241,19 @@ export const RELAY_PRESETS = {
     ],
     maxRelays: 3,
     queryTimeout: 4000,
+  },
+
+  // MojoBus Private (für Mojo - bevorzugt eigenes Relay)
+  mojobus: {
+    name: 'MojoBus Private',
+    description: 'Private Relay-Konfiguration für Mojo mit privatem Relay',
+    relayUrls: [
+      'wss://relay.mojobus.co',  // MojoBus Private - privates Relay (Haupt-Relay)
+      'wss://nos.lol',           // Ditto - Backup für Zuverlässigkeit
+      'wss://relay.primal.net',  // Primal - weiterer Backup
+    ],
+    maxRelays: 3,
+    queryTimeout: 3000,
   },
 } as const;
 
@@ -313,8 +339,8 @@ export const DEFAULT_APP_CONFIG = {
   // WRITE KONFIGURATION (Veröffentlichen) - ULTRA RELIABLE Preset
   // ============================================================================
   write: {
-    relayUrls: RELAY_PRESETS.ultrareliable.relayUrls, // 4 Relays für maximale Redundanz
-    maxRelays: RELAY_PRESETS.ultrareliable.maxRelays, // Alle 4 Relays verwenden
+    relayUrls: RELAY_PRESETS.ultrareliable.relayUrls, // 5 Relays für maximale Redundanz (inkl. privates Relay)
+    maxRelays: RELAY_PRESETS.ultrareliable.maxRelays, // Alle 5 Relays verwenden
     activeRelay: RELAY_PRESETS.ultrareliable.relayUrls[0], // nos.lol als aktiver Relay
   },
 
