@@ -1,21 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { RelaySelector } from '@/components/RelaySelector';
-import { Badge } from '@/components/ui/badge';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
-import { nip19 } from 'nostr-tools';
-import { NOSTR_CONFIG } from '@/config/nostr';
+import { nip19 } from '@nostrify/nostrify';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { RelaySelector } from '@/components/RelaySelector';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { useAuthor } from '@/hooks/useAuthor';
-import { genUserName } from '@/lib/genUserName';
 import { PostActions } from '@/components/PostActions';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { NoteContent } from '@/components/NoteContent';
-import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User, Loader2 } from 'lucide-react';
-import { useHead } from '@unhead/react';
+import { NOSTR_CONFIG } from '@/config/nostr';
+import { nip19 } from 'nostr-tools';
 
 interface ImageEvent {
   id: string;
@@ -51,6 +50,8 @@ export function ImageDetail() {
 
       const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(3000)]);
 
+      console.log('Querying for event with ID:', eventId);
+
       const allEvents = await nostr.query([
         {
           ids: [eventId],
@@ -58,9 +59,13 @@ export function ImageDetail() {
         }
       ], { signal: abortSignal });
 
+      console.log('Found events:', allEvents.length);
+      console.log('Events data:', allEvents);
+
       const event = allEvents[0];
 
       if (!event) {
+        console.log('No event found with ID:', eventId);
         return null;
       }
 
@@ -114,6 +119,14 @@ export function ImageDetail() {
     )
   );
 
+  console.log('Image validation:', {
+    isLoading,
+    eventExists: !!events,
+    imagesCount: images.length,
+    tagsFound: tags,
+    isValid: isValidImageEvent
+  });
+
   // Handle keyboard navigation for fullscreen
   useEffect(() => {
     if (!isImageFullscreen) return;
@@ -159,6 +172,13 @@ export function ImageDetail() {
 
   // Only show invalid image error if NOT loading and NOT an image event
   if (!isLoading && !isValidImageEvent) {
+    console.log('Event does not contain images or media tags, showing error');
+    console.log('Debug info:', {
+      event: events,
+      imagesCount: images.length,
+      tags: tags,
+      isValid: isValidImageEvent
+    });
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">
@@ -174,9 +194,9 @@ export function ImageDetail() {
           <Card className="border-dashed">
             <CardContent className="py-12 px-8 text-center">
               <div className="max-w-sm mx-auto space-y-6">
-                <h2 className="text-lg font-semibold text-red-600">
+                <h3 className="text-lg font-semibold text-red-600">
                   Kein gültiges Bild
-                </h2>
+                </h3>
                 <p className="text-muted-foreground mb-4">
                   Dieses Event wurde nicht als Bild-Ereignis klassifiziert.
                 </p>
@@ -185,7 +205,7 @@ export function ImageDetail() {
                 </p>
                 <div className="space-y-2">
                   <Button onClick={() => navigate('/bilder')}>
-                    Zurück zur Bildergalerie
+                    Zur Bildergalerie
                   </Button>
                   <RelaySelector className="w-full" />
                 </div>
@@ -201,26 +221,36 @@ export function ImageDetail() {
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <Skeleton className="h-8 w-3/4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-48 w-full rounded-md mb-4" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          </div>
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/bilder')}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Zurück zu Bilder
+          </Button>
+
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   if (error || !events) {
+    console.log('Error or no events found');
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">
@@ -589,5 +619,3 @@ export function ImageDetail() {
     </div>
   );
 }
-
-export default ImageDetail;

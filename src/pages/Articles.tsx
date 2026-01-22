@@ -11,14 +11,13 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { filterEventsByCountry } from '@/lib/countryDetection';
 import { COUNTRIES } from '@/config';
 import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
-import { useState, useMemo, memo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
 import { useInView } from 'react-intersection-observer';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { MAIN_MENU } from '@/config/menu';
-import { useVirtualizer } from '@tanstack/react-virtual';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
@@ -30,38 +29,55 @@ function Articles() {
   const [selectedTag, setSelectedTag] = useState(null);
   const [selectedAuthor, setSelectedAuthor] = useState(null);
 
-  // Virtual Scrolling Parent Ref
-  const parentRef = useRef<HTMLDivElement>(null);
-
   // Infinite Scroll trigger
-  const { ref: loaderRef, inView } = useInView({
+  const { ref, inView } = useInView({
     threshold: 0.1,
     rootMargin: '100px',
   });
 
   // Fetch more articles when scroll trigger is visible
-  const handleLoadMore = useCallback(() => {
+  useEffect(() => {
+    console.log('👀 Infinite Scroll Trigger:', {
+      inView,
+      hasNextPage,
+      isFetchingNextPage,
+      shouldFetch: inView && hasNextPage && !isFetchingNextPage
+    });
+
     if (inView && hasNextPage && !isFetchingNextPage) {
+      console.log('📥 Fetching next page...');
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // Call load more when inView changes
-  useEffect(() => {
-    handleLoadMore();
-  }, [handleLoadMore]);
 
   const currentCountry = country ? COUNTRIES[country] : null;
 
   // Flatten all pages
   const allArticles = useMemo(() => {
     const flattened = data?.pages.flat() || [];
+    console.log('📚 Articles Page State:', {
+      totalPages: data?.pages.length || 0,
+      totalArticles: flattened.length,
+      articlesPerPage: data?.pages.map(p => p.length) || [],
+      hasNextPage,
+      isFetchingNextPage
+    });
     return flattened;
-  }, [data]);
+  }, [data, hasNextPage, isFetchingNextPage]);
 
   // Filter articles mit intelligenter Ländererkennung
   const filteredArticles = useMemo(() => {
     let filtered = [...allArticles];
+
+    // Debug: Alle Autoren und Artikel anzeigen
+    console.log('🔍 Debug Articles:', {
+      totalArticles: allArticles.length,
+      selectedAuthor,
+      allAuthors: allArticles.map(a => ({
+        pubkey: a.pubkey,
+        authorName: AUTHORS.find(auth => auth.pubkey === a.pubkey)?.name || 'Unknown'
+      }))
+    });
 
     // Country filter mit intelligenter Erkennung
     if (currentCountry) {
@@ -70,7 +86,20 @@ function Articles() {
 
     // Author filter (auch wenn keine Suche!)
     if (selectedAuthor) {
+      console.log('👤 Author Filter Applied:', {
+        selectedAuthor,
+        beforeFilter: filtered.length,
+        susannePubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
+        matchingArticles: allArticles.filter(a => a.pubkey === selectedAuthor).length
+      });
       filtered = filtered.filter(article => article.pubkey === selectedAuthor);
+      console.log('👤 After Author Filter:', {
+        afterFilter: filtered.length,
+        susanneArticles: filtered.map(a => ({
+          title: a.tags.find(([name]) => name === 'title')?.[1] || 'No title',
+          pubkey: a.pubkey
+        }))
+      });
     }
 
     // Search filter
@@ -94,20 +123,19 @@ function Articles() {
       });
     }
 
+    console.log('🎯 Final Filtered Articles:', {
+      count: filtered.length,
+      articles: filtered.map(a => ({
+        title: a.tags.find(([name]) => name === 'title')?.[1],
+        pubkey: a.pubkey,
+        author: AUTHORS.find(auth => auth.pubkey === a.pubkey)?.name
+      }))
+    });
+
     return filtered.sort((a, b) => b.created_at - a.created_at);
   }, [allArticles, searchQuery, selectedTag, selectedAuthor, currentCountry, country]);
 
   const articleCount = allArticles.length;
-
-  // Virtual Scrolling - Nur sichtbare Artikel rendern
-  const virtualizer = useVirtualizer({
-    count: filteredArticles.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 450,
-    overscan: 5,
-  });
-
-  const virtualRows = virtualizer.getVirtualItems();
 
   // Simple SEO Meta Tags
   const pageTitle = currentCountry
@@ -162,7 +190,6 @@ function Articles() {
     <div className="min-h-screen py-12">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-8">
-          {/* Header */}
           <div className="text-center space-y-4">
             <h1 className="text-4xl md:text-5xl font-bold">
               {currentCountry ? (
@@ -303,47 +330,18 @@ function Articles() {
             </div>
           </div>
 
-          {/* Articles Grid - Mit Virtual Scrolling für Performance */}
+          {/* Articles Grid */}
           {hasContent ? (
-            <div ref={parentRef} className="relative" style={{ height: `${virtualizer.getTotalSize()}px` }}>
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  transform: `translateY(${virtualRows[0]?.start ?? 0}px)`,
-                }}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {virtualRows.map((virtualRow) => {
-                    const article = filteredArticles[virtualRow.index];
-                    return (
-                      <div
-                        key={article.id}
-                        data-index={virtualRow.index}
-                        ref={virtualizer.measureElement}
-                        style={{ minHeight: `${virtualRow.size}px` }}
-                      >
-                        <ArticleCard article={article} />
-                      </div>
-                    );
-                  })}
-                </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredArticles.map((article) => (
+                  <ArticleCard key={article.id} article={article} />
+                ))}
               </div>
 
-              {/* Infinite Scroll Loader - am Ende des Virtual Containers */}
+              {/* Infinite Scroll Loader */}
               {hasNextPage && (
-                <div
-                  ref={loaderRef}
-                  className="py-8 flex justify-center"
-                  style={{
-                    position: 'absolute',
-                    top: `${virtualizer.getTotalSize()}px`,
-                    left: 0,
-                    width: '100%',
-                  }}
-                >
+                <div ref={ref} className="py-8 flex justify-center">
                   {isFetchingNextPage && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -352,7 +350,7 @@ function Articles() {
                   )}
                 </div>
               )}
-            </div>
+            </>
           ) : (
             <div className="text-center py-20">
               <div className="max-w-md mx-auto">

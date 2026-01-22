@@ -70,7 +70,12 @@ function Images() {
           '#t': ['medien', 'media', 'bilder', 'images'],
           limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
         }
-       ], { signal: abortSignal });
+      ], { signal: abortSignal });
+
+      console.log('[Images Page] Image Events Query:', {
+        total: allEvents.length,
+        country,
+      });
 
       const imageEvents = allEvents.filter((event: ImageEvent) => {
         const hasMediaType = event.tags.some(tag => tag[0] === 'type' && tag[1] === 'media');
@@ -103,18 +108,26 @@ function Images() {
               tag[0] === 't' &&
               (categoryConfig.tags.primary.includes(tag[1]) || categoryConfig.tags.secondary.includes(tag[1]))
             );
-           return hasNatureTag || hasRelatedTag;
-           }
-           return hasNatureTag;
-         });
-         return natureFiltered;
-       }
+            return hasNatureTag || hasRelatedTag;
+          }
+          return hasNatureTag;
+        });
+        console.log('[Images Page] Gefiltert nach Natur-Kategorie:', { natureCategory, result: natureFiltered.length });
+        return natureFiltered;
+      }
 
-       const sortedEvents = [...imageEvents].sort((a, b) => b.created_at - a.created_at);
+      const sortedEvents = [...imageEvents].sort((a, b) => b.created_at - a.created_at);
+      console.log('[Images Page] Sortierte Events:', sortedEvents.length);
 
-       return sortedEvents;
-     },
-   });
+      return sortedEvents;
+    },
+    onSuccess: (data) => {
+      console.log('[Images Page] Events geladen:', {
+        total: data.length,
+        country,
+      });
+    },
+  });
 
   const extractImages = (content: string): string[] => {
     const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
