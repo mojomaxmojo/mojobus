@@ -1,60 +1,9 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
-import { defineConfig, Plugin } from "vitest/config";
+import { defineConfig } from "vitest/config";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
-
-// Custom plugin to inject polyfills at the top of every chunk
-function polyfillPlugin(): Plugin {
-  return {
-    name: 'inject-polyfills',
-    renderChunk(code) {
-      const polyfills = `
-// Node.js Polyfills for CommonJS compatibility
-if (typeof globalThis === 'undefined') self.globalThis = self;
-if (typeof process === 'undefined') {
-  self.process = {
-    env: {},
-    version: '',
-    nextTick: (fn) => setTimeout(fn, 0),
-    cwd: () => '/',
-    platform: 'browser',
-    browser: true,
-  };
-}
-if (typeof Buffer === 'undefined') {
-  self.Buffer = {
-    isBuffer: () => false,
-    from: () => [],
-    alloc: () => [],
-  };
-}
-if (typeof require === 'undefined') {
-  const cache = {};
-  self.require = function(id) {
-    console.warn('[Polyfill] require() called in browser for:', id);
-    return cache[id];
-  };
-  self.require.cache = cache;
-  self.require.resolve = function(id) {
-    return id;
-  };
-  self.require.extensions = {};
-}
-if (typeof module === 'undefined') {
-  self.module = { exports: {}, children: [], parent: null };
-}
-if (typeof exports === 'undefined') {
-  self.exports = {};
-}
-`;
-      return {
-        code: polyfills + code,
-        map: null,
-      };
-    },
-  };
-}
+import requireTransform from 'vite-plugin-require-transform';
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
@@ -64,7 +13,18 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
-    polyfillPlugin(),
+    // Transform require() calls to ES module imports
+    requireTransform({
+      fileRegex: /.*/,
+      transforms: [
+        {
+          fileRegex: /.*/,
+          transforms: {
+            'require': 'import',
+          },
+        },
+      ],
+    }),
   ],
   // Node.js polyfills for nostr-tools
   define: {
@@ -124,6 +84,8 @@ export default defineConfig(() => ({
     commonjsOptions: {
       transformMixedEsModules: true,
       include: [/node_modules/],
+      // Don't transform require() in bundled code
+      requireReturnsDefault: 'auto',
     },
   },
   test: {
