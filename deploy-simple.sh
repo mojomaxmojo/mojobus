@@ -156,6 +156,19 @@ deploy_files() {
     # Inhalt von dist/ nach DEPLOY_DIR kopieren
     cp -r "$PROJECT_DIR/dist/"* "$DEPLOY_DIR/" || error_exit "Kopieren fehlgeschlagen"
 
+    # Prüfe ob assets Ordner existiert
+    if [ ! -d "$DEPLOY_DIR/assets" ]; then
+        error_exit "assets Ordner nicht im Deployment gefunden! Build hat nicht funktioniert."
+    fi
+
+    # Prüfe ob chunks erstellt wurden
+    JS_FILES=$(find "$DEPLOY_DIR/assets" -name "*.js" -type f 2>/dev/null | wc -l)
+    if [ "$JS_FILES" -lt 5 ]; then
+        warn_msg "⚠ Nur $JS_FILES JS-Chunks gefunden - Code-Splitting funktioniert vielleicht nicht"
+    else
+        info_msg "✓ $JS_FILES JS-Chunks deployed"
+    fi
+
     # Emergency SW deployen wenn --emergency flag
     if [ "$1" == "--emergency" ] || [ "$2" == "--emergency" ]; then
         warn_msg "Deploye Emergency Service Worker zum Cache-Leeren..."
