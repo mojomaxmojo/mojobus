@@ -19,12 +19,8 @@ export default defineConfig(() => ({
     'global': 'globalThis',
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'nostr-tools', 'buffer'],
+    include: ['react', 'react-dom', 'nostr-tools', 'buffer', '@nostrify/react', '@nostrify/nostrify'],
     force: true,
-    // Force react to be bundled first to avoid loading order issues
-    esbuildOptions: {
-      target: 'es2020',
-    },
   },
   build: {
     rollupOptions: {
@@ -39,41 +35,9 @@ export default defineConfig(() => ({
         inlineDynamicImports: false,
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
-        // Ensure manual chunks work - fixed to avoid circular dependencies
-        // WICHTIG: Keine Abhängigkeiten zwischen den vendor chunks!
-        manualChunks(id) {
-          // Nur node_modules verarbeiten
-          if (!id.includes('node_modules')) return undefined;
-
-          const path = id.toLowerCase();
-
-          // React und verwandte Bibliotheken - Grundlage für alles
-          if (path.includes('react') || path.includes('@react') || path.includes('react-dom') ||
-              path.includes('react/') || path.includes('scheduler/') || path.includes('prop-types')) {
-            return 'vendor-react';
-          }
-
-          // Radix UI und UI-Komponenten - hängen von React ab
-          if (path.includes('@radix-ui') || path.includes('@tiptap') || path.includes('prosemirror') ||
-              path.includes('lucide-react') || path.includes('cmdk')) {
-            return 'vendor-ui';
-          }
-
-          // Nostr und Netzwerk-Bibliotheken
-          if (path.includes('nostr-tools') || path.includes('nostrify') ||
-              path.includes('@jsr/nostrify') || path.includes('@getalby')) {
-            return 'vendor-nostr';
-          }
-
-          // Utility-Bibliotheken und Tools
-          if (path.includes('date-fns') || path.includes('zod') || path.includes('clsx') ||
-              path.includes('tailwind-merge') || path.includes('class-variance-authority')) {
-            return 'vendor-utils';
-          }
-
-          // Alle anderen node_modules in einem Chunk
-          return 'vendor';
-        },
+        // Deaktiviere manuelle Chunks um zirkuläre Abhängigkeiten zu vermeiden
+        // Vite/Rollup kümmert sich automatisch um das Chapping
+        manualChunks: undefined,
       },
       onwarn(warning, warn) {
         // Suppress external import warnings from node_modules
