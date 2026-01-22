@@ -15,11 +15,11 @@ export const INFINITE_SCROLL_CONFIG = {
   enabled: true,
 
   // Anzahl der Artikel pro Seite (Batch-Size)
-  // Empfehlung: 15-20 für gute Balance zwischen Performance und UX
+  // Empfehlung: 10-15 für maximale Performance
   // Höhere Werte = mehr JS im Speicher, aber weniger Requests
   // WICHTIG: Viele Relays haben ein internes Limit (oft 100-200 Events pro Query).
-  // Ein kleinerer Limit (15-25) stellt sicher, dass alle Artikel geladen werden.
-  itemsPerPage: 15, // Reduziert für bessere Performance
+  // Ein kleinerer Limit (10-20) stellt sicher, dass alle Artikel geladen werden.
+  itemsPerPage: 10, // Maximale Performance
 
   // Max. Anzahl an Artikeln, die im DOM gerendert werden (für Virtualisierung)
   // Nur relevant wenn virtualization: true
