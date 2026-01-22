@@ -126,8 +126,14 @@
   <body>
     <div id="root"></div>
 
-    <!-- 🔥 CRITICAL: Node.js polyfills MUST load BEFORE any other JS -->
-    <script src="/polyfills.js"></script>
+    <!-- 🔥 CRITICAL: Node.js polyfills MUST load synchronously before ALL other scripts -->
+    <script>
+    if(typeof globalThis==="undefined"){self.globalThis=self;}
+    if(typeof process==="undefined"){self.process={env:"",version:"",nextTick:function(fn){return setTimeout(fn,0);},cwd:function(){return"/";},platform:"browser",browser:true};}
+    if(typeof require==="undefined"){var cache={};self.require=function(id){console.warn("[Polyfill] require():",id);return cache[id];};self.require.cache=cache;self.require.resolve=function(id){return id;};self.require.extensions={};}
+    if(typeof module==="undefined"){self.module={exports:{},children:[],parent:null};}
+    if(typeof exports==="undefined"){self.exports={};}
+    </script>
 
     <script type="module" src="/src/main.tsx"></script>
   </body>
