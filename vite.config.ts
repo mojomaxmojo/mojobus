@@ -1,28 +1,8 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
-import { defineConfig, Plugin } from "vitest/config";
+import { defineConfig } from "vitest/config";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
-
-// Custom plugin to inject polyfills at the top of EVERY chunk
-function globalPolyfillsPlugin(): Plugin {
-  return {
-    name: 'global-polyfills',
-    renderChunk(code) {
-      const polyfills = `// Global Node.js polyfills
-if(typeof globalThis==="undefined")self.globalThis=self;
-if(typeof process==="undefined"){self.process={env:"",version:"",nextTick:fn=>setTimeout(fn,0),cwd:()=>"/",platform:"browser",browser:true};}
-if(typeof require==="undefined"){const cache={};self.require=function(id){console.warn("[Polyfill] require() called:",id);return cache[id]};self.require.cache=cache;self.require.resolve=id=>id;self.require.extensions={};}
-if(typeof module==="undefined"){self.module={exports:{},children:[],parent:null};}
-if(typeof exports==="undefined"){self.exports={};}
-`;
-      return {
-        code: polyfills + code,
-        map: null,
-      };
-    },
-  };
-}
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
@@ -32,7 +12,42 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
-    globalPolyfillsPlugin(),
+  ],
+  // Node.js polyfills for nostr-tools
+  define: {
+    'process.env': '{}',
+    'global': 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['nostr-tools', 'buffer'],
+    force: true,
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // Add hash to filenames for cache busting
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        // Manual chunks to bundle nostr-tools with main bundle
+        manualChunks(id) {
+          if (id.includes('nostr-tools')) {
+            return 'nostr-tools';
+          }
+        },
+      },
+      onwarn(warning, warn) {
+        // Suppress external import warnings from node_modules
+        // These are usually peer dependencies that will be resolved at runtime
+        if (warning.code === 'UNRESOLVED_IMPORT' &&
+            warning.message.includes('node_modules')) {
+          return;
+        }
+        warn(warning);
+      }
+    },
+  plugins: [
+    react(),
   ],
   // Node.js polyfills for nostr-tools
   define: {
@@ -59,20 +74,12 @@ export default defineConfig(() => ({
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
-        // Inline dynamic imports for CommonJS compatibility
-        inlineDynamicImports: false,
-        // Define globals for Node.js polyfills
-        globals: {},
       },
       onwarn(warning, warn) {
         // Suppress external import warnings from node_modules
         // These are usually peer dependencies that will be resolved at runtime
         if (warning.code === 'UNRESOLVED_IMPORT' &&
             warning.message.includes('node_modules')) {
-          return;
-        }
-        // Suppress warnings about dynamic imports in CommonJS
-        if (warning.code === 'THIS_IS_UNDEFINED') {
           return;
         }
         warn(warning);
