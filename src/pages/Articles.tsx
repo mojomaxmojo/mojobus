@@ -11,13 +11,14 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { filterEventsByCountry } from '@/lib/countryDetection';
 import { COUNTRIES } from '@/config';
 import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
-import { useState, useMemo, memo, useEffect, useRef } from 'react';
+import { useState, useMemo, memo, useRef, useCallback } from 'react';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
 import { useInView } from 'react-intersection-observer';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { MAIN_MENU } from '@/config/menu';
+import { useVirtualizer } from '@tanstack/react-virtual';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
@@ -29,41 +30,34 @@ function Articles() {
   const [selectedTag, setSelectedTag] = useState(null);
   const [selectedAuthor, setSelectedAuthor] = useState(null);
 
+  // Virtual Scrolling Parent Ref
+  const parentRef = useRef<HTMLDivElement>(null);
+
   // Infinite Scroll trigger
-  const { ref, inView } = useInView({
+  const { ref: loaderRef, inView } = useInView({
     threshold: 0.1,
     rootMargin: '100px',
   });
 
   // Fetch more articles when scroll trigger is visible
-  useEffect(() => {
-    console.log('👀 Infinite Scroll Trigger:', {
-      inView,
-      hasNextPage,
-      isFetchingNextPage,
-      shouldFetch: inView && hasNextPage && !isFetchingNextPage
-    });
-
+  const handleLoadMore = useCallback(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
-      console.log('📥 Fetching next page...');
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Call load more when inView changes
+  useEffect(() => {
+    handleLoadMore();
+  }, [handleLoadMore]);
 
   const currentCountry = country ? COUNTRIES[country] : null;
 
   // Flatten all pages
   const allArticles = useMemo(() => {
     const flattened = data?.pages.flat() || [];
-    console.log('📚 Articles Page State:', {
-      totalPages: data?.pages.length || 0,
-      totalArticles: flattened.length,
-      articlesPerPage: data?.pages.map(p => p.length) || [],
-      hasNextPage,
-      isFetchingNextPage
-    });
     return flattened;
-  }, [data, hasNextPage, isFetchingNextPage]);
+  }, [data]);
 
   // Filter articles mit intelligenter Ländererkennung
   const filteredArticles = useMemo(() => {
@@ -136,6 +130,17 @@ function Articles() {
   }, [allArticles, searchQuery, selectedTag, selectedAuthor, currentCountry, country]);
 
   const articleCount = allArticles.length;
+
+  // Virtual Scrolling - Nur sichtbare Artikel rendern
+  const virtualizer = useVirtualizer({
+    count: filteredArticles.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 450, // Durchschnittliche Höhe einer ArticleCard
+    overscan: 5, // 5 Elemente vor/hinter dem Viewport rendern
+  });
+
+  // Virtuallisierten Artikel abrufen
+  const virtualRows = virtualizer.getVirtualItems();
 
   // Simple SEO Meta Tags
   const pageTitle = currentCountry
@@ -330,18 +335,47 @@ function Articles() {
             </div>
           </div>
 
-          {/* Articles Grid */}
+          {/* Articles Grid - Mit Virtual Scrolling für Performance */}
           {hasContent ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredArticles.map((article) => (
-                  <ArticleCard key={article.id} article={article} />
-                ))}
+            <div ref={parentRef} className="relative" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRows[0]?.start ?? 0}px)`,
+                }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {virtualRows.map((virtualRow) => {
+                    const article = filteredArticles[virtualRow.index];
+                    return (
+                      <div
+                        key={article.id}
+                        data-index={virtualRow.index}
+                        ref={virtualizer.measureElement}
+                        style={{ minHeight: `${virtualRow.size}px` }}
+                      >
+                        <ArticleCard article={article} />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Infinite Scroll Loader */}
+              {/* Infinite Scroll Loader - am Ende des Virtual Containers */}
               {hasNextPage && (
-                <div ref={ref} className="py-8 flex justify-center">
+                <div
+                  ref={loaderRef}
+                  className="py-8 flex justify-center"
+                  style={{
+                    position: 'absolute',
+                    top: `${virtualizer.getTotalSize()}px`,
+                    left: 0,
+                    width: '100%',
+                  }}
+                >
                   {isFetchingNextPage && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-5 w-5 animate-spin" />

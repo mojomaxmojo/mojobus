@@ -31,7 +31,7 @@ export const INFINITE_SCROLL_CONFIG = {
 
   // Aktiviere Virtualisierung für extrem lange Listen (1000+ Artikel)
   // Reduziert DOM-Elemente drastisch für bessere Performance
-  virtualization: false,
+  virtualization: true,
 
   // Trigger-Threshold für Infinite Scroll (0.0 - 1.0)
   // 0.1 = Lade nächste Seite wenn 10% des Loaders sichtbar sind
