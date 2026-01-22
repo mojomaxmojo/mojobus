@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +14,13 @@ import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { memo } from 'react';
 import { useInView } from 'react-intersection-observer';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 export function Leon() {
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Virtual Scrolling Parent Ref
+  const parentRef = useRef<HTMLDivElement>(null);
 
   // Alle Leon-Artikel abrufen mit Infinite Scroll
   const { data: articles, isLoading, error, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteLongformArticles({
@@ -25,25 +29,22 @@ export function Leon() {
   });
 
   // Infinite Scroll trigger
-  const { ref, inView } = useInView({
+  const { ref: loaderRef, inView } = useInView({
     threshold: 0.1,
     rootMargin: '100px',
   });
 
   // Fetch more articles when scroll trigger is visible
-  useEffect(() => {
-    console.log('👀 Leon Infinite Scroll Trigger:', {
-      inView,
-      hasNextPage,
-      isFetchingNextPage,
-      shouldFetch: inView && hasNextPage && !isFetchingNextPage
-    });
-
+  const handleLoadMore = useCallback(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
-      console.log('📥 Leon: Fetching next page...');
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Call load more when inView changes
+  useEffect(() => {
+    handleLoadMore();
+  }, [handleLoadMore]);
 
   // Kombiniere alle Seiten und entferne Duplikate
   const allLeonArticles = () => {
@@ -73,6 +74,17 @@ export function Leon() {
       metadata.tags.some(tag => tag.toLowerCase().includes(searchLower))
     );
   }) || [];
+
+  // Virtual Scrolling - Nur sichtbare Artikel rendern
+  const virtualizer = useVirtualizer({
+    count: filteredArticles.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 450, // Durchschnittliche Höhe einer LeonArticleCard
+    overscan: 5, // 5 Elemente vor/hinter dem Viewport rendern
+  });
+
+  // Virtuallisierten Artikel abrufen
+  const virtualRows = virtualizer.getVirtualItems();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -175,18 +187,48 @@ export function Leon() {
           </Card>
         )}
 
-        {/* Articles Grid */}
+        {/* Articles Grid - Mit Virtual Scrolling für Performance */}
         {filteredArticles.length > 0 && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredArticles.map((article) => (
-                <LeonArticleCard key={article.id} article={article} />
-              ))}
-            </div>
+            <div ref={parentRef} className="relative" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRows[0]?.start ?? 0}px)`,
+                }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {virtualRows.map((virtualRow) => {
+                    const article = filteredArticles[virtualRow.index];
+                    return (
+                      <div
+                        key={article.id}
+                        data-index={virtualRow.index}
+                        ref={virtualizer.measureElement}
+                        style={{ minHeight: `${virtualRow.size}px` }}
+                      >
+                        <LeonArticleCard article={article} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-            {/* Infinite Scroll Loader */}
+            {/* Infinite Scroll Loader - am Ende des Virtual Containers */}
             {hasNextPage && !searchTerm && (
-              <div ref={ref} className="py-8 flex justify-center">
+              <div
+                ref={loaderRef}
+                className="py-8 flex justify-center"
+                style={{
+                  position: 'absolute',
+                  top: `${virtualizer.getTotalSize()}px`,
+                  left: 0,
+                  width: '100%',
+                }}
+              >
                 {isFetchingNextPage && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin" />
