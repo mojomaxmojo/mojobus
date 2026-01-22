@@ -11,7 +11,7 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { filterEventsByCountry } from '@/lib/countryDetection';
 import { COUNTRIES } from '@/config';
 import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
-import { useState, useMemo, memo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, memo, useRef, useCallback } from 'react';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
@@ -94,6 +94,15 @@ function Articles() {
       });
     }
 
+    console.log('🎯 Final Filtered Articles:', {
+      count: filtered.length,
+      articles: filtered.map(a => ({
+        title: a.tags.find(([name]) => name === 'title')?.[1],
+        pubkey: a.pubkey,
+        author: AUTHORS.find(auth => auth.pubkey === a.pubkey)?.name
+      }))
+    });
+
     return filtered.sort((a, b) => b.created_at - a.created_at);
   }, [allArticles, searchQuery, selectedTag, selectedAuthor, currentCountry, country]);
 
@@ -103,10 +112,11 @@ function Articles() {
   const virtualizer = useVirtualizer({
     count: filteredArticles.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 450,
-    overscan: 5,
+    estimateSize: () => 450, // Durchschnittliche Höhe einer ArticleCard
+    overscan: 5, // 5 Elemente vor/hinter dem Viewport rendern
   });
 
+  // Virtuallisierten Artikel abrufen
   const virtualRows = virtualizer.getVirtualItems();
 
   // Simple SEO Meta Tags
@@ -162,7 +172,6 @@ function Articles() {
     <div className="min-h-screen py-12">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-8">
-          {/* Header */}
           <div className="text-center space-y-4">
             <h1 className="text-4xl md:text-5xl font-bold">
               {currentCountry ? (
@@ -352,7 +361,7 @@ function Articles() {
                   )}
                 </div>
               )}
-            </div>
+            </>
           ) : (
             <div className="text-center py-20">
               <div className="max-w-md mx-auto">
