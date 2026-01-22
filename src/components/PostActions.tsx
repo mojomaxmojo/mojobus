@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Edit, Trash2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
 import {
@@ -128,7 +129,6 @@ export function PostActions({
   };
 
   // Check if current user is the author
-  const { useCurrentUser } = require('@/hooks/useCurrentUser');
   const { user } = useCurrentUser();
   const isAuthor = user?.pubkey === event.pubkey;
 
