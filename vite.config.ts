@@ -1,7 +1,6 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
-import commonjs from "@rollup/plugin-commonjs";
 import { defineConfig } from "vitest/config";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
 
@@ -13,12 +12,6 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
-    commonjs({
-      include: [/node_modules/],
-      transformMixedEsModules: true,
-      // Ignore require() calls in browser environment
-      dynamicRequireTargets: [],
-    }),
   ],
   // Node.js polyfills for nostr-tools
   define: {
