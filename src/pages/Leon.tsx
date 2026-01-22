@@ -187,62 +187,63 @@ export function Leon() {
           </Card>
         )}
 
-        {/* Articles Grid - Mit Virtual Scrolling für Performance */}
-        {filteredArticles.length > 0 && (
-          <>
-            <div ref={parentRef} className="relative" style={{ height: `${virtualizer.getTotalSize()}px` }}>
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  transform: `translateY(${virtualRows[0]?.start ?? 0}px)`,
-                }}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {virtualRows.map((virtualRow) => {
-                    const article = filteredArticles[virtualRow.index];
-                    return (
-                      <div
-                        key={article.id}
-                        data-index={virtualRow.index}
-                        ref={virtualizer.measureElement}
-                        style={{ minHeight: `${virtualRow.size}px` }}
-                      >
-                        <LeonArticleCard article={article} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+         {/* Articles Grid - Mit Virtual Scrolling für Performance */}
+         {filteredArticles.length > 0 && (
+           <>
+             <div ref={parentRef} className="relative" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+               <div
+                 style={{
+                   position: 'absolute',
+                   top: 0,
+                   left: 0,
+                   width: '100%',
+                   transform: `translateY(${virtualRows[0]?.start ?? 0}px)`,
+                 }}
+               >
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                   {virtualRows.map((virtualRow) => {
+                     const article = filteredArticles[virtualRow.index];
+                     return (
+                       <div
+                         key={article.id}
+                         data-index={virtualRow.index}
+                         ref={virtualizer.measureElement}
+                         style={{ minHeight: `${virtualRow.size}px` }}
+                       >
+                         <LeonArticleCard article={article} />
+                       </div>
+                     );
+                   })}
+                 </div>
+               </div>
 
-            {/* Infinite Scroll Loader - am Ende des Virtual Containers */}
-            {hasNextPage && !searchTerm && (
-              <div
-                ref={loaderRef}
-                className="py-8 flex justify-center"
-                style={{
-                  position: 'absolute',
-                  top: `${virtualizer.getTotalSize()}px`,
-                  left: 0,
-                  width: '100%',
-                }}
-              >
-                {isFetchingNextPage && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Lade mehr Leon-Geschichten...</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+               {/* Infinite Scroll Loader - am Ende des Virtual Containers */}
+               {hasNextPage && !searchTerm && (
+                 <div
+                   ref={loaderRef}
+                   className="py-8 flex justify-center"
+                   style={{
+                     position: 'absolute',
+                     top: `${virtualizer.getTotalSize()}px`,
+                     left: 0,
+                     width: '100%',
+                   }}
+                 >
+                   {isFetchingNextPage && (
+                     <div className="flex items-center gap-2 text-muted-foreground">
+                       <Loader2 className="h-5 w-5 animate-spin" />
+                       <span>Lade mehr Leon-Geschichten...</span>
+                     </div>
+                   )}
+                 </div>
+               )}
+             </div>
+           </>
+         )}
+       </div>
+     </div>
+   );
+ }
 
 const LeonArticleCard = memo(function LeonArticleCard({ article }: { article: NostrEvent }) {
   const metadata = extractArticleMetadata(article);
