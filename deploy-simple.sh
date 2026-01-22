@@ -83,7 +83,16 @@ git_pull() {
     else
         info_msg "Bereits aktuell! Keine neuen Änderungen."
 
-        if [ "$1" != "--force" ]; then
+        # Prüfe ob --force oder -force in den Argumenten
+        FORCE_DEPLOY=0
+        for arg in "$@"; do
+            if [ "$arg" = "--force" ] || [ "$arg" = "-force" ]; then
+                FORCE_DEPLOY=1
+                break
+            fi
+        done
+
+        if [ $FORCE_DEPLOY -eq 0 ]; then
             info_msg "Deployment übersprungen. Nutze --force um trotzdem zu deployen."
             exit 0
         fi
@@ -98,15 +107,15 @@ install_dependencies() {
 
     # Versuche npm ci, falle auf npm install zurück bei Fehlern
     if [ -f "$PROJECT_DIR/package-lock.json" ]; then
-        if npm ci --prefix "$PROJECT_DIR" --loglevel=error 2>&1 | tee -a "$LOG_FILE"; then
+        if npm ci --prefix "$PROJECT_DIR" --loglevel=error >> "$LOG_FILE" 2>&1; then
             success_msg "Dependencies installiert (npm ci)"
             return
         else
-            warn_msg "npm ci fehlgeschlagen, versuche npm install..."
+            warn_msg "npm ci fehlgeschlagen (Exit Code: $?), versuche npm install..."
         fi
     fi
 
-    npm install --prefix "$PROJECT_DIR" --loglevel=error 2>&1 | tee -a "$LOG_FILE" || error_exit "npm install fehlgeschlagen"
+    npm install --prefix "$PROJECT_DIR" --loglevel=error >> "$LOG_FILE" 2>&1 || error_exit "npm install fehlgeschlagen (Exit Code: $?)"
     success_msg "Dependencies installiert (npm install)"
 }
 
