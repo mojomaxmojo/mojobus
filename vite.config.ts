@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
+import commonjs from "@rollup/plugin-commonjs";
 import { defineConfig } from "vitest/config";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
 
@@ -12,6 +13,12 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
+    commonjs({
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+      // Ignore require() calls in browser environment
+      dynamicRequireTargets: [],
+    }),
   ],
   // Node.js polyfills for nostr-tools
   define: {
@@ -22,6 +29,14 @@ export default defineConfig(() => ({
     include: ['nostr-tools', 'buffer'],
     force: true,
     exclude: [],
+    // Pre-bundle dependencies with CommonJS issues
+    esbuildOptions: {
+      banner: {
+        js: '// CommonJS polyfills loaded',
+      },
+      // Inject polyfills into bundled dependencies
+      inject: [],
+    },
   },
   build: {
     rollupOptions: {
@@ -59,6 +74,11 @@ export default defineConfig(() => ({
         safari10: true,
       },
     },
+    // CommonJS to ESM transform
+    commonjsOptions: {
+      transformMixedEsModules: true,
+      include: [/node_modules/],
+    },
   },
   test: {
     globals: true,
@@ -81,5 +101,9 @@ export default defineConfig(() => ({
       util: 'util',
       process: 'process',
     },
+  },
+  // Additional configuration to handle CommonJS
+  css: {
+    devSourcemap: true,
   },
 }));
