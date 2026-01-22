@@ -46,45 +46,6 @@ export default defineConfig(() => ({
         warn(warning);
       }
     },
-  plugins: [
-    react(),
-  ],
-  // Node.js polyfills for nostr-tools
-  define: {
-    'process.env': '{}',
-    'global': 'globalThis',
-  },
-  optimizeDeps: {
-    include: ['nostr-tools', 'buffer'],
-    force: true,
-    exclude: [],
-    // Pre-bundle dependencies with CommonJS issues
-    esbuildOptions: {
-      banner: {
-        js: '// CommonJS polyfills loaded',
-      },
-      // Inject polyfills into bundled dependencies
-      inject: [],
-    },
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        // Add hash to filenames for cache busting
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
-      },
-      onwarn(warning, warn) {
-        // Suppress external import warnings from node_modules
-        // These are usually peer dependencies that will be resolved at runtime
-        if (warning.code === 'UNRESOLVED_IMPORT' &&
-            warning.message.includes('node_modules')) {
-          return;
-        }
-        warn(warning);
-      }
-    },
     // Asset optimization for better caching
     assetsInlineLimit: DEFAULT_PERFORMANCE_CONFIG.assetsInlineLimit, // Inline small assets < 4KB
     cssCodeSplit: DEFAULT_PERFORMANCE_CONFIG.enableCSSCodeSplit, // Split CSS into separate files
@@ -107,8 +68,6 @@ export default defineConfig(() => ({
     commonjsOptions: {
       transformMixedEsModules: true,
       include: [/node_modules/],
-      // Don't transform require() in bundled code
-      requireReturnsDefault: 'auto',
     },
   },
   test: {
