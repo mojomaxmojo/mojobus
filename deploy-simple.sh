@@ -71,33 +71,31 @@ check_deploy_dir() {
 git_pull() {
     info_msg "Hole Updates von Git..."
 
+    # Stash lokale Änderungen
+    git -C "$PROJECT_DIR" stash push -m "Stash before deploy" 2>/dev/null || true
+
+    # Fetch origin
     git -C "$PROJECT_DIR" fetch origin
 
-    LOCAL=$(git -C "$PROJECT_DIR" rev-parse HEAD)
-    REMOTE=$(git -C "$PROJECT_DIR" rev-parse origin/main)
+    # Reset zu origin/main
+    git -C "$PROJECT_DIR" reset --hard origin/main
 
-    if [ "$LOCAL" != "$REMOTE" ]; then
-        info_msg "Neue Version verfügbar! ($LOCAL → $REMOTE)"
-        git -C "$PROJECT_DIR" pull origin main || error_exit "Git pull fehlgeschlagen"
-        success_msg "Git pull erfolgreich"
+    success_msg "Git reset zu origin/main erfolgreich"
+
+    # Prüfe ob --force oder -force in den Argumenten
+    FORCE_DEPLOY=0
+    for arg in "$@"; do
+      if [ "$arg" = "--force" ] || [ "$arg" = "-force" ]; then
+        FORCE_DEPLOY=1
+        break
+      fi
+    done
+
+    if [ $FORCE_DEPLOY -eq 1 ]; then
+      info_msg "Force deployment erkannt..."
     else
-        info_msg "Bereits aktuell! Keine neuen Änderungen."
-
-        # Prüfe ob --force oder -force in den Argumenten
-        FORCE_DEPLOY=0
-        for arg in "$@"; do
-            if [ "$arg" = "--force" ] || [ "$arg" = "-force" ]; then
-                FORCE_DEPLOY=1
-                break
-            fi
-        done
-
-        if [ $FORCE_DEPLOY -eq 0 ]; then
-            info_msg "Deployment übersprungen. Nutze --force um trotzdem zu deployen."
-            exit 0
-        fi
-
-        info_msg "Force deployment..."
+      info_msg "Deployment ohne force - übersprungen."
+      exit 0
     fi
 }
 
