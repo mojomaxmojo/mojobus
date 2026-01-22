@@ -19,7 +19,7 @@ export default defineConfig(() => ({
     'global': 'globalThis',
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'nostr-tools', 'buffer', '@nostrify/react', '@nostrify/nostrify'],
+    include: ['react', 'react-dom', 'nostr-tools', 'buffer', '@nostrify/react', '@nostrify/nostrify', '@tanstack/react-virtual', '@tanstack/virtual-core'],
     force: true,
   },
   build: {
