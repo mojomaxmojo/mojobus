@@ -227,7 +227,7 @@ main() {
         info_msg "node_modules gelöscht"
     fi
 
-    git_pull "$1"
+    git_pull "$@"
     install_dependencies
     build_project
     deploy_files "$1" "$2"
