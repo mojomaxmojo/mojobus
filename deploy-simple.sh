@@ -96,13 +96,18 @@ git_pull() {
 install_dependencies() {
     info_msg "Installiere Dependencies..."
 
+    # Versuche npm ci, falle auf npm install zurück bei Fehlern
     if [ -f "$PROJECT_DIR/package-lock.json" ]; then
-        npm ci --prefix "$PROJECT_DIR" --loglevel=error 2>&1 | tee -a "$LOG_FILE" || error_exit "npm ci fehlgeschlagen"
-    else
-        npm install --prefix "$PROJECT_DIR" --loglevel=error 2>&1 | tee -a "$LOG_FILE" || error_exit "npm install fehlgeschlagen"
+        if npm ci --prefix "$PROJECT_DIR" --loglevel=error 2>&1 | tee -a "$LOG_FILE"; then
+            success_msg "Dependencies installiert (npm ci)"
+            return
+        else
+            warn_msg "npm ci fehlgeschlagen, versuche npm install..."
+        fi
     fi
 
-    success_msg "Dependencies installiert"
+    npm install --prefix "$PROJECT_DIR" --loglevel=error 2>&1 | tee -a "$LOG_FILE" || error_exit "npm install fehlgeschlagen"
+    success_msg "Dependencies installiert (npm install)"
 }
 
 # Projekt bauen
