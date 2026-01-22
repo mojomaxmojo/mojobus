@@ -50,8 +50,6 @@ export function ImageDetail() {
 
       const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(3000)]);
 
-      console.log('Querying for event with ID:', eventId);
-
       const allEvents = await nostr.query([
         {
           ids: [eventId],
@@ -59,13 +57,9 @@ export function ImageDetail() {
         }
       ], { signal: abortSignal });
 
-      console.log('Found events:', allEvents.length);
-      console.log('Events data:', allEvents);
-
       const event = allEvents[0];
 
       if (!event) {
-        console.log('No event found with ID:', eventId);
         return null;
       }
 
@@ -117,18 +111,11 @@ export function ImageDetail() {
     tags.some(tag =>
       ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
     )
-  );
+     );
+   }
 
-  console.log('Image validation:', {
-    isLoading,
-    eventExists: !!events,
-    imagesCount: images.length,
-    tagsFound: tags,
-    isValid: isValidImageEvent
-  });
-
-  // Handle keyboard navigation for fullscreen
-  useEffect(() => {
+   // Handle keyboard navigation for fullscreen
+   useEffect(() => {
     if (!isImageFullscreen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -172,13 +159,6 @@ export function ImageDetail() {
 
   // Only show invalid image error if NOT loading and NOT an image event
   if (!isLoading && !isValidImageEvent) {
-    console.log('Event does not contain images or media tags, showing error');
-    console.log('Debug info:', {
-      event: events,
-      imagesCount: images.length,
-      tags: tags,
-      isValid: isValidImageEvent
-    });
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">
@@ -250,7 +230,6 @@ export function ImageDetail() {
   }
 
   if (error || !events) {
-    console.log('Error or no events found');
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">
