@@ -153,6 +153,10 @@ deploy_files() {
     # Zielverzeichnis leeren
     rm -rf "$DEPLOY_DIR"/*
 
+    # Lösche polyfills.js wenn sie existiert (wir nutzen jetzt inline polyfills)
+    rm -f "$PROJECT_DIR/public/polyfills.js" 2>/dev/null
+    rm -f "$PROJECT_DIR/dist/polyfills.js" 2>/dev/null
+
     # Inhalt von dist/ nach DEPLOY_DIR kopieren
     cp -r "$PROJECT_DIR/dist/"* "$DEPLOY_DIR/" || error_exit "Kopieren fehlgeschlagen"
 
@@ -161,10 +165,16 @@ deploy_files() {
         error_exit "assets Ordner nicht im Deployment gefunden! Build hat nicht funktioniert."
     fi
 
+    # Prüfe ob polyfills.js existiert (sollte nicht!)
+    if [ -f "$DEPLOY_DIR/polyfills.js" ]; then
+        warn_msg "⚠ polyfills.js existiert noch - sollte gelöscht sein, lösche jetzt"
+        rm -f "$DEPLOY_DIR/polyfills.js"
+    fi
+
     # Prüfe ob chunks erstellt wurden
     JS_FILES=$(find "$DEPLOY_DIR/assets" -name "*.js" -type f 2>/dev/null | wc -l)
     if [ "$JS_FILES" -lt 5 ]; then
-        warn_msg "⚠ Nur $JS_FILES JS-Chunks gefunden - Code-Splitting funktioniert vielleicht nicht"
+        error_exit "Nur $JS_FILES JS-Chunks gefunden - Code-Splitting funktioniert nicht!"
     else
         info_msg "✓ $JS_FILES JS-Chunks deployed"
     fi
