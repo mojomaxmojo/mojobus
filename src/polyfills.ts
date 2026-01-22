@@ -19,6 +19,8 @@ const processPolyfill = {
   version: '',
   nextTick: (fn: Function) => setTimeout(fn, 0),
   cwd: () => '/',
+  platform: 'browser' as const,
+  browser: true,
 };
 
 if (typeof globalThis !== 'undefined') {
@@ -31,16 +33,27 @@ if (typeof window !== 'undefined') {
 
 // Polyfill require to prevent errors from CommonJS packages
 // This is a minimal implementation that returns undefined for all requires
-if (typeof globalThis !== 'undefined') {
-  (globalThis as any).require = () => {
-    console.warn('require() was called in browser context - this may indicate a package using CommonJS');
-    return undefined;
+const createRequireStub = () => {
+  const cache: Record<string, any> = {};
+
+  const requireStub = (id: string): any => {
+    console.warn(`require() called in browser context for: ${id}`);
+    return cache[id];
   };
+
+  requireStub.cache = cache;
+  requireStub.resolve = (id: string) => {
+    console.warn(`require.resolve() called in browser context for: ${id}`);
+    return id;
+  };
+
+  return requireStub;
+};
+
+if (typeof globalThis !== 'undefined') {
+  (globalThis as any).require = createRequireStub();
 }
 
 if (typeof window !== 'undefined') {
-  (window as any).require = () => {
-    console.warn('require() was called in browser context - this may indicate a package using CommonJS');
-    return undefined;
-  };
+  (window as any).require = createRequireStub();
 }
