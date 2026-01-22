@@ -42,7 +42,7 @@ if(typeof exports==="undefined"){self.exports={};}
   build: {
     rollupOptions: {
       output: {
-        // Add hash to filenames for cache busting
+        // Add hash to filenames for code busting
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
@@ -50,16 +50,19 @@ if(typeof exports==="undefined"){self.exports={};}
         compact: false,
         // Inline dynamic imports to force code splitting
         inlineDynamicImports: false,
-        // Ensure manual chunks work
+        // Ensure manual chunks work - fixed to avoid circular dependencies
         manualChunks(id) {
-          // Vendor chunks
+          // Vendor chunks - avoid circular deps
           if (id.includes('node_modules')) {
+            // Put nostr-tools in its own vendor chunk
             if (id.includes('nostr-tools')) {
               return 'vendor-nostr-tools';
             }
-            if (id.includes('react')) {
+            // React and its dependencies
+            if (id.includes('react') || id.includes('react-dom')) {
               return 'vendor-react';
             }
+            // Everything else
             return 'vendor';
           }
         },
