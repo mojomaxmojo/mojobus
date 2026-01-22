@@ -19,8 +19,12 @@ export default defineConfig(() => ({
     'global': 'globalThis',
   },
   optimizeDeps: {
-    include: ['nostr-tools', 'buffer'],
+    include: ['react', 'react-dom', 'nostr-tools', 'buffer'],
     force: true,
+    // Force react to be bundled first to avoid loading order issues
+    esbuildOptions: {
+      target: 'es2020',
+    },
   },
   build: {
     rollupOptions: {
@@ -33,19 +37,21 @@ export default defineConfig(() => ({
         compact: false,
         // Inline dynamic imports to force code splitting
         inlineDynamicImports: false,
+        // Ensure proper interop between CJS and ESM modules
+        interop: 'auto',
         // Ensure manual chunks work - fixed to avoid circular dependencies
         manualChunks(id) {
-          // Vendor chunks - avoid circular deps
+          // Only process node_modules
           if (id.includes('node_modules')) {
-            // Put nostr-tools in its own vendor chunk
+            // React and React DOM - always in the same chunk
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react/') || id.includes('@react')) {
+              return 'vendor-react';
+            }
+            // Nostr tools - separate chunk
             if (id.includes('nostr-tools')) {
               return 'vendor-nostr-tools';
             }
-            // React and its dependencies
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor-react';
-            }
-            // Everything else
+            // All other node_modules
             return 'vendor';
           }
         },
