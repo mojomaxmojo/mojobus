@@ -5,6 +5,11 @@
 # Deploy auf Testseite: test.mojobus.co
 # Nur deployen: Git pull → Build → Deploy
 # Voraussetzung: Nginx, SSL, Directory sind bereit
+# 
+# OPTIONAL: COMMIT-RESET
+# Wenn du ein bestimmtes Deploy (Commit, Rollback) willst:
+# Setze environment variable DEPLOY_COMMIT_HASH vor dem Aufruf
+# Beispiel: DEPLOY_COMMIT_HASH=6647829 ./deploy-test.sh --force
 # ============================================
 
 # Farben für Ausgabe
@@ -75,13 +80,13 @@ git_pull() {
     # Stash lokale Änderungen
     git -C "$PROJECT_DIR" stash push -m "Stash before deploy" 2>/dev/null || true
 
-    # Fetch origin
-    git -C "$PROJECT_DIR" fetch origin
+  # Fetch origin
+  git -C "$PROJECT_DIR" fetch origin
 
-    # Reset zu origin/main
-    git -C "$PROJECT_DIR" reset --hard origin/main
+  # Reset zu origin/test (WICHTIG: Test-Branch für Testseite!)
+  git -C "$PROJECT_DIR" reset --hard origin/test
 
-    success_msg "Git reset zu origin/main erfolgreich"
+  success_msg "Git reset zu origin/test erfolgreich"
 
     # Prüfe ob --force oder -force in den Argumenten
     FORCE_DEPLOY=0
