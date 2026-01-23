@@ -11,6 +11,7 @@ export * from './rvlife';
 export * from './app';
 export * from './relays';
 export * from './blossom';
+export * from './imageService';
 
 // Legacy exports for backward compatibility
 export { NOSTR_CONFIG, AUTHORS, DEFAULT_RELAYS } from './nostr';

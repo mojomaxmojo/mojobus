@@ -1,109 +1,45 @@
 /**
  * Image Utility Functions for Performance Optimization
  *
- * Uses imgproxy for ALL images (since Blossom servers don't support resize)
+ * Uses configurable external image service (default: images.weserv.nl)
  *
- * imgproxy URL format:
- * https://imgproxy.mojobus.co/insecure/{BASE64_URL}/{OPTIONS}
+ * Konfiguration: src/config/imageService.ts
  */
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-/**
- * imgproxy Server URL
- * Change this to your imgproxy instance URL
- */
-const IMGPROXY_SERVER = process.env.NEXT_PUBLIC_IMGPROXY_URL || 'https://imgproxy.mojobus.co';
-
-/**
- * Enable/Disable imgproxy
- * Set to false to disable imgproxy (fallback to original URLs)
- */
-const ENABLE_IMGPROXY = true;
-
-// ============================================================================
-// IMGPROXY UTILITIES
-// ============================================================================
-
-/**
- * Base64 Encode eine URL für imgproxy
- * imgproxy nutzt URL-safe Base64
- */
-function encodeUrlForImgproxy(url: string): string {
-  try {
-    // UTF-8 encode
-    const utf8Bytes = new TextEncoder().encode(url);
-
-    // Base64 encode
-    const base64 = btoa(String.fromCharCode(...utf8Bytes));
-
-    // URL-safe: + → -, / → _, = am Ende entfernen
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  } catch (error) {
-    console.error('Failed to encode URL for imgproxy:', error);
-    return '';
-  }
-}
-
-/**
- * Generiert eine imgproxy-optimierte Bild-URL
- *
- * Format: https://imgproxy.mojobus.co/insecure/{BASE64_URL}/{OPTIONS}
- *
- * @param imageUrl - Originalbild URL
- * @param width - Zielbreite
- * @param height - Zielhöhe (optional)
- * @param quality - Qualität (1-100)
- * @returns imgproxy URL
- */
-export function getImgproxyUrl(
-  imageUrl: string,
-  width: number,
-  height?: number,
-  quality = 80
-): string {
-  if (!imageUrl) return '';
-  if (!ENABLE_IMGPROXY) return imageUrl;
-
-  try {
-    const encodedUrl = encodeUrlForImgproxy(imageUrl);
-    if (!encodedUrl) return imageUrl;
-
-    const h = height || width; // Quadratisch wenn height nicht angegeben
-    const options = `rs:fill:${width}:${h}:0/q:${quality}`;
-
-    return `${IMGPROXY_SERVER}/insecure/${encodedUrl}/${options}`;
-  } catch (error) {
-    console.error('Failed to generate imgproxy URL:', error);
-    return imageUrl; // Fallback zur Original-URL
-  }
-}
+import {
+  IMAGE_SERVICE_URL,
+  IMAGE_SERVICE_TYPE,
+  ENABLE_IMAGE_SERVICE,
+  DEFAULT_IMAGE_QUALITY,
+  DEFAULT_IMAGE_FORMAT,
+  generateImageUrl as generateServiceImageUrl,
+} from '@/config/imageService';
 
 // ============================================================================
 // THUMBNAIL GENERATION
 // ============================================================================
 
 /**
- * Generates a thumbnail URL via imgproxy
+ * Generates a thumbnail URL via external image service
  *
- * imgproxy wird für ALLE Bilder verwendet, da Blossom-Server
- * KEIN Image-Resize mit Query-Parametern unterstützen.
+ * Uses the configured service from imageService.ts
+ * Default: images.weserv.nl (kostenlos, CDN-basiert)
  *
- * @param imageUrl - Original image URL
- * @param width - Target width in pixels
- * @param quality - Image quality (1-100)
- * @returns Thumbnail URL via imgproxy
+ * @param imageUrl - Originalbild URL
+ * @param width - Zielbreite
+ * @param quality - Qualität (1-100)
+ * @returns Thumbnail URL via image service
  */
 export function getThumbnailUrl(
   imageUrl: string,
   width = 300,
-  quality = 80
+  quality = DEFAULT_IMAGE_QUALITY
 ): string {
-  if (!imageUrl) return '';
+  if (!imageUrl || !ENABLE_IMAGE_SERVICE) {
+    return imageUrl;
+  }
 
-  return getImgproxyUrl(imageUrl, width, width, quality);
+  return generateServiceImageUrl(imageUrl, width, width, quality);
 }
 
 /**
@@ -146,7 +82,7 @@ export function getListThumbnailUrl(imageUrl: string): string {
  * @returns Thumbnail URL (1200x630, quality 90)
  */
 export function getArticleHeaderUrl(imageUrl: string): string {
-  return getImgproxyUrl(imageUrl, 1200, 630, 90);
+  return generateServiceImageUrl(imageUrl, 1200, 630, 90);
 }
 
 // ============================================================================
@@ -156,7 +92,7 @@ export function getArticleHeaderUrl(imageUrl: string): string {
 /**
  * Generates a set of srcset URLs for responsive images
  *
- * Uses imgproxy for ALL images
+ * Uses the configured image service for ALL images
  *
  * @param imageUrl - Original image URL
  * @returns srcset string for img element
@@ -201,31 +137,33 @@ export function generateSizes(type: 'card' | 'header' | 'hero' = 'card'): string
 // ============================================================================
 
 /**
- * Extracts image dimensions from an imgproxy URL
+ * Extracts image dimensions from an image service URL
  *
- * @param imageUrl - Image URL (imgproxy or original)
+ * @param imageUrl - Image URL (image service or original)
  * @returns Image dimensions { width, height } or null
  */
 export function getImageDimensions(imageUrl: string): { width: number; height: number } | null {
   try {
-    // Prüfe ob es ein imgproxy URL ist
-    const imgproxyMatch = imageUrl.match(/\/insecure\/([a-zA-Z0-9_-]+)\/rs:fill:(\d+):(\d+):/);
-    if (imgproxyMatch) {
+    // Prüfe ob es ein image service URL ist
+    const url = new URL(imageUrl);
+
+    // images.weserv.nl Format: ?w=200&h=200
+    const w = url.searchParams.get('w');
+    const h = url.searchParams.get('h');
+
+    if (w && h) {
       return {
-        width: parseInt(imgproxyMatch[2], 10),
-        height: parseInt(imgproxyMatch[3], 10),
+        width: parseInt(w, 10),
+        height: parseInt(h, 10),
       };
     }
 
-    // Fallback für query-Parameter URLs (Blossom, obwohl sie nicht funktionieren)
-    const url = new URL(imageUrl);
-    const width = url.searchParams.get('w');
-    const height = url.searchParams.get('h');
-
-    if (width && height) {
+    // imgproxy Format: /rs:fill:200:200:0
+    const imgproxyMatch = url.pathname.match(/rs:fill:(\d+):(\d+):/);
+    if (imgproxyMatch) {
       return {
-        width: parseInt(width, 10),
-        height: parseInt(height, 10),
+        width: parseInt(imgproxyMatch[1], 10),
+        height: parseInt(imgproxyMatch[2], 10),
       };
     }
   } catch (error) {
@@ -255,7 +193,7 @@ export function getImagePlaceholder(imageUrl: string): string {
 
   const r = (hash & 0xff0000) >> 16;
   const g = (hash & 0x00ff00) >> 8;
-  const b = hash & 0x0000ff;
+  const b = (hash & 0x0000ff);
 
   return `rgb(${r}, ${g}, ${b})`;
 }
@@ -266,11 +204,10 @@ export function getImagePlaceholder(imageUrl: string): string {
 
 /**
  * Checks if a URL is from a Blossom server
- * (DEPRECATED - Blossom servers don't support resize, so this is no longer used)
  *
  * @param imageUrl - Image URL
  * @returns True if image is from a Blossom server
- * @deprecated Blossom servers don't support resize, use imgproxy instead
+ * @deprecated Not needed anymore - all images go through image service
  */
 export function isBlossomImage(imageUrl: string): boolean {
   try {
@@ -294,11 +231,11 @@ export function isBlossomImage(imageUrl: string): boolean {
 /**
  * Optimizes an image URL for better performance
  *
- * Uses imgproxy for ALL images now.
+ * Uses the configured image service for ALL images now.
  *
  * @param imageUrl - Original image URL
  * @param context - Context: 'list' or 'article'
- * @returns Optimized image URL via imgproxy
+ * @returns Optimized image URL via image service
  */
 export function optimizeImageUrl(
   imageUrl: string,
@@ -318,19 +255,28 @@ export function optimizeImageUrl(
 }
 
 /**
- * Get imgproxy server URL
+ * Get image service URL
  *
- * @returns imgproxy server URL
+ * @returns Current image service URL
  */
-export function getImgproxyServer(): string {
-  return IMGPROXY_SERVER;
+export function getImageServiceUrl(): string {
+  return IMAGE_SERVICE_URL;
 }
 
 /**
- * Check if imgproxy is enabled
+ * Get image service type
  *
- * @returns true if imgproxy is enabled
+ * @returns Current image service type
  */
-export function isImgproxyEnabled(): boolean {
-  return ENABLE_IMGPROXY;
+export function getImageServiceType(): string {
+  return IMAGE_SERVICE_TYPE;
+}
+
+/**
+ * Check if image service is enabled
+ *
+ * @returns true if image service is enabled
+ */
+export function isImageServiceEnabled(): boolean {
+  return ENABLE_IMAGE_SERVICE;
 }
