@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/useToast';
 import { useUploadWithProgress, type UploadProgress } from '@/hooks/useUploadWithProgress';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { ImageOptimizationToggle } from '@/components/ImageOptimizationToggle';
-import { UploadProgressIndicator } from '@/components/UploadProgressIndicator';
+// import { UploadProgressIndicator } from '@/components/UploadProgressIndicator';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -216,153 +216,154 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     setIsUploading(true);
     setUploadProgress([]);
 
-    try {
-      // Upload all files with progress tracking
-      const uploadedUrls: string[] = [];
-      for (const [fileIndex, fileObj] of files.entries()) {
-        try {
-          const uploadResult = await uploadFileWithProgress({
-            file: fileObj.file,
-            fileIndex,
-            totalFiles: files.length,
-          });
-
-          if (!uploadResult) {
-            throw new Error('Upload returned null');
-          }
-
-          // Check if uploadResult is an array (expected format from BlossomUploader)
-          if (!Array.isArray(uploadResult)) {
-            console.error('Upload result is not an array:', typeof uploadResult, uploadResult);
-            throw new Error('Upload returned invalid format - expected array');
-          }
-
-          if (uploadResult.length === 0) {
-            throw new Error('Upload returned empty array');
-          }
-
-          // Find the URL tag (format: ['url', 'https://...'])
-          const urlTag = uploadResult.find(tag => Array.isArray(tag) && tag.length >= 2 && tag[0] === 'url');
-
-          if (!urlTag) {
-            // Fallback: try to get the first tag that looks like a URL
-            const potentialUrlTag = uploadResult.find(tag =>
-              Array.isArray(tag) &&
-              tag.length >= 2 &&
-              typeof tag[1] === 'string' &&
-              tag[1].startsWith('http')
-            );
-
-            if (potentialUrlTag) {
-              uploadedUrls.push(potentialUrlTag[1]);
-            } else {
-              console.error('No URL tag found in upload result:', uploadResult);
-              throw new Error('No URL found in upload result');
-            }
-          } else {
-            uploadedUrls.push(urlTag[1]);
-          }
-        } catch (uploadError) {
-          console.error('Upload failed for file:', fileObj.file.name, uploadError);
-          console.error('Upload error details:', {
-            name: uploadError.name,
-            message: uploadError.message,
-            stack: uploadError.stack
-          });
-          throw new Error(`Upload failed for ${fileObj.file.name}: ${uploadError.message}`);
-        }
-      }
-
-      // Create content with file URLs
-      const content = `${title ? `# ${title}\n\n` : ''}${description ? `${description}\n\n` : ''}${uploadedUrls.join('\n\n')}`;
-
-      // Entferne Country-Tags aus customTags, um Duplikate zu vermeiden
-      const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
-      const customTagsArray = (customTags || '').split(' ').filter(Boolean);
-      const customTagsWithoutCountry = customTagsArray.filter(tag =>
-        !countryList.includes(tag.toLowerCase()) &&
-        !countryList.includes(tag.replace('#', '').toLowerCase())
-      );
-
-      // Collect all tags from different sources
-      const allTags = [
-        ...selectedSubTags,
-        ...detailedTags,
-        ...customTagsWithoutCountry,
-        ...(selectedCountry ? getCountryTag(selectedCountry) : []) // Country-Tags nur hinzufügen, wenn gewählt
-      ];
-
-      // Always add #mojobus as mandatory tag for /veroeffentlichen
-      const mojobusTag = 'mojobus';
-      const tagsWithMojobus = [...allTags, mojobusTag];
-
-      // Additional special tags
-      const additionalTags = [
-        ['type', 'media'],
-        ['t', 'media']  // Add media tag for /bilder page compatibility
-      ];
-
-      if (mainCategory) additionalTags.push(['t', mainCategory]);
-
-      // Add location and date tags
-      if (location) additionalTags.push(['location', location]);
-      if (date) additionalTags.push(['published_at', date]);
-
-      // Final tag array - includes #mojobus
-      const tags = [
-        ...tagsWithMojobus.map(tag => ['t', tag]),
-        ...additionalTags
-      ];
-
-      // Publish to Nostr
       try {
-        publishEvent({
-          kind: 1, // Text note with media attachments
-          content,
-          tags,
-        });
+        // Upload all files with progress tracking
+        const uploadedUrls: string[] = [];
+        for (const [fileIndex, fileObj] of files.entries()) {
+          try {
+            const uploadResult = await uploadFileWithProgress({
+              file: fileObj.file,
+              fileIndex,
+              totalFiles: files.length,
+            });
 
-        toast({
-          title: 'Erfolg!',
-          description: 'Bilder erfolgreich veroeffentlicht.'
-        });
+            if (!uploadResult) {
+              throw new Error('Upload returned null');
+            }
 
-        // Reset form and redirect
-        setFiles([]);
-        setTitle('');
-        setDescription('');
-        setMainCategory('');
-        setSelectedSubTags([]);
-        setDate('');
-        setCustomTags('');
-        setLocation('');
-        setSelectedCountry('');
-        setDetailedTags([]);
-        setUploadProgress([]);
-        setImageUrls([]);
+            // Check if uploadResult is an array (expected format from BlossomUploader)
+            if (!Array.isArray(uploadResult)) {
+              console.error('Upload result is not an array:', typeof uploadResult, uploadResult);
+              throw new Error('Upload returned invalid format - expected array');
+            }
 
-        // Redirect to home page after successful publish
-        setTimeout(() => {
-          navigate('/');
-        }, 1000);
-      } catch (publishError) {
-        console.error('Publish error:', publishError);
+            if (uploadResult.length === 0) {
+              throw new Error('Upload returned empty array');
+            }
+
+            // Find URL tag (format: ['url', 'https://...'])
+            const urlTag = uploadResult.find(tag => Array.isArray(tag) && tag.length >= 2 && tag[0] === 'url');
+
+            if (!urlTag) {
+              // Fallback: try to get the first tag that looks like a URL
+              const potentialUrlTag = uploadResult.find(tag =>
+                Array.isArray(tag) &&
+                tag.length >= 2 &&
+                typeof tag[1] === 'string' &&
+                tag[1].startsWith('http')
+              );
+
+              if (potentialUrlTag) {
+                uploadedUrls.push(potentialUrlTag[1]);
+              } else {
+                console.error('No URL tag found in upload result:', uploadResult);
+                throw new Error('No URL found in upload result');
+              }
+            } else {
+              uploadedUrls.push(urlTag[1]);
+            }
+          } catch (uploadError) {
+            console.error('Upload failed for file:', fileObj.file.name, uploadError);
+            console.error('Upload error details:', {
+              name: uploadError.name,
+              message: uploadError.message,
+              stack: uploadError.stack
+            });
+            throw new Error(`Upload failed for ${fileObj.file.name}: ${uploadError.message}`);
+          }
+        }
+
+        // Create content with file URLs
+        const content = `${title ? `# ${title}\n\n` : ''}${description ? `${description}\n\n` : ''}${uploadedUrls.join('\n\n')}`;
+
+        // Entferne Country-Tags aus customTags, um Duplikate zu vermeiden
+        const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
+        const customTagsArray = (customTags || '').split(' ').filter(Boolean);
+        const customTagsWithoutCountry = customTagsArray.filter(tag =>
+          !countryList.includes(tag.toLowerCase()) &&
+          !countryList.includes(tag.replace('#', '').toLowerCase())
+        );
+
+        // Collect all tags from different sources
+        const allTags = [
+          ...selectedSubTags,
+          ...detailedTags,
+          ...customTagsWithoutCountry,
+          ...(selectedCountry ? getCountryTag(selectedCountry) : []) // Country-Tags nur hinzufügen, wenn gewählt
+        ];
+
+        // Always add #mojobus as mandatory tag for /veroeffentlichen
+        const mojobusTag = 'mojobus';
+        const tagsWithMojobus = [...allTags, mojobusTag];
+
+        // Additional special tags
+        const additionalTags = [
+          ['type', 'media'],
+          ['t', 'media']  // Add media tag for /bilder page compatibility
+        ];
+
+        if (mainCategory) additionalTags.push(['t', mainCategory]);
+
+        // Add location and date tags
+        if (location) additionalTags.push(['location', location]);
+        if (date) additionalTags.push(['published_at', date]);
+
+        // Final tag array - includes #mojobus
+        const tags = [
+          ...tagsWithMojobus.map(tag => ['t', tag]),
+          ...additionalTags
+        ];
+
+        // Publish to Nostr
+        try {
+          publishEvent({
+            kind: 1, // Text note with media attachments
+            content,
+            tags,
+          });
+
+          toast({
+            title: 'Erfolg!',
+            description: 'Bilder erfolgreich veroeffentlicht.'
+          });
+
+          // Reset form and redirect
+          setFiles([]);
+          setTitle('');
+          setDescription('');
+          setMainCategory('');
+          setSelectedSubTags([]);
+          setDate('');
+          setCustomTags('');
+          setLocation('');
+          setSelectedCountry('');
+          setDetailedTags([]);
+          setUploadProgress([]);
+          setImageUrls([]);
+
+          // Redirect to home page after successful publish
+          setTimeout(() => {
+            navigate('/');
+          }, 1000);
+        } catch (publishError) {
+          console.error('Publish error:', publishError);
+          toast({
+            title: 'Fehler',
+            description: 'Post konnte nicht veroeffentlicht werden.',
+            variant: 'destructive'
+          });
+          throw publishError;
+        }
+      } catch (error) {
+        console.error('Form submission error:', error);
         toast({
           title: 'Fehler',
-          description: 'Post konnte nicht veroeffentlicht werden.',
+          description: error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten.',
           variant: 'destructive'
         });
-        throw publishError;
+      } finally {
+        setIsUploading(false);
       }
-    } catch (error) {
-      console.error('Form submission error:', error);
-      toast({
-        title: 'Fehler',
-        description: error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -439,784 +440,12 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                   </Button>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Media Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Bilderdetails</CardTitle>
-          <ImageOptimizationToggle className="mt-4" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="title">Titel</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Gib deinen Bildern einen Titel..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date">Datum</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Beschreibung</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Beschreibe deine Bilder-Erlebnisse..."
-              rows={4}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Standort</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="📍 Wo wurden die Bilder aufgenommen?"
-            />
-          </div>
-
-          {/* Country Selection */}
-          <CountrySelector
-            selectedCountry={selectedCountry}
-            onCountryChange={setSelectedCountry}
-            placeholder="Land auswaehlen"
-          />
-
-          {/* Categories */}
-          <div className="space-y-4">
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Hauptkategorie</Label>
-                <Select value={mainCategory} onValueChange={handleMainCategoryChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Hauptkategorie waehlen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mainCategories.map(cat => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        <span className="flex items-center gap-2">
-                          <span>{cat.icon}</span>
-                          {cat.label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Themen</Label>
-                  {selectedSubTags.length > 0 && (
-                    <span className="text-sm text-muted-foreground">
-                      {selectedSubTags.length} ausgewählt
-                    </span>
-                  )}
-                </div>
-
-                {mainCategory ? (
-                  <>
-                    <div className="flex flex-wrap gap-2">
-                      {subCategories[mainCategory as keyof typeof subCategories]?.map(tag => (
-                        <Badge
-                          key={tag}
-                          variant={selectedSubTags.includes(tag) ? "default" : "outline"}
-                          className={`cursor-pointer transition-all hover:scale-105 ${
-                            selectedSubTags.includes(tag)
-                              ? "bg-ocean-600 hover:bg-ocean-700 text-white"
-                              : "hover:bg-ocean-100 hover:text-ocean-700 hover:border-ocean-300"
-                          }`}
-                          onClick={() => handleSubTagToggle(tag)}
-                        >
-                          {selectedSubTags.includes(tag) && (
-                            <span className="mr-1">✓</span>
-                          )}
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    {selectedSubTags.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Ausgewählte Themen:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedSubTags.map(tag => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="text-xs bg-ocean-100 text-ocean-700 hover:bg-ocean-200"
-                            >
-                              {tag}
-                              <button
-                                onClick={() => handleSubTagToggle(tag)}
-                                className="ml-1 hover:text-ocean-900"
-                              >
-                                ×
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Special handling for Nature category - show detailed tags */}
-                    {mainCategory === 'natur' && selectedSubTags.length > 0 && (
-                      <div className="mt-4 space-y-3">
-                        <div className="text-sm font-medium text-muted-foreground">
-                          Detaillierte Tags für {selectedSubTags.join(', ')}:
-                        </div>
-                        {selectedSubTags.map(subCategory => {
-                          const categoryConfig = MAIN_MENU.nature[subCategory as keyof typeof MAIN_MENU.nature];
-                          if (!categoryConfig?.tags) return null;
-
-                          return (
-                            <div key={subCategory} className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">{categoryConfig.emoji}</span>
-                                <span className="font-medium">{categoryConfig.name}</span>
-                              </div>
-
-                              <div className="space-y-2">
-                                <div>
-                                  <p className="text-xs font-medium text-muted-foreground mb-1">Primär-Tags:</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {categoryConfig.tags.primary.map(tag => (
-                                      <Badge
-                                        key={`primary-${tag}`}
-                                        variant={detailedTags.includes(tag) ? "default" : "outline"}
-                                        className={`text-xs cursor-pointer transition-all hover:scale-105 ${
-                                          detailedTags.includes(tag)
-                                            ? "bg-green-600 hover:bg-green-700 text-white"
-                                            : "hover:bg-green-100 hover:text-green-700 hover:border-green-300"
-                                        }`}
-                                        onClick={() => handleDetailedTagToggle(tag)}
-                                      >
-                                        {detailedTags.includes(tag) && <span className="mr-1">✓</span>}
-                                        #{tag}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <p className="text-xs font-medium text-muted-foreground mb-1">Sekundär-Tags:</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {categoryConfig.tags.secondary.map(tag => (
-                                      <Badge
-                                        key={`secondary-${tag}`}
-                                        variant={detailedTags.includes(tag) ? "default" : "outline"}
-                                        className={`text-xs cursor-pointer transition-all hover:scale-105 ${
-                                          detailedTags.includes(tag)
-                                            ? "bg-blue-600 hover:bg-blue-700 text-white"
-                                            : "hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300"
-                                        }`}
-                                        onClick={() => handleDetailedTagToggle(tag)}
-                                      >
-                                        {detailedTags.includes(tag) && <span className="mr-1">✓</span>}
-                                        #{tag}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Show selected detailed tags */}
-                    {detailedTags.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Ausgewählte Detail-Tags:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {detailedTags.map(tag => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                              #{tag}
-                              <button
-                                onClick={() => handleDetailedTagToggle(tag)}
-                                className="ml-1 hover:text-gray-900"
-                              >
-                                ×
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-sm text-muted-foreground p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed">
-                    Bitte wähle zuerst eine Hauptkategorie
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Eigene Tags</Label>
-              <Input
-                placeholder="sunset-watching vanlife portugal (mit Leerzeichen trennen)"
-                value={customTags}
-                onChange={(e) => setCustomTags(e.target.value)}
-              />
-              {customTags && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Vorschau:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {customTags.split(' ').filter(Boolean).map((tag, index) => (
-                      <Badge
-                        key={index}
-                        variant="outline"
-                        className="text-xs bg-purple-100 text-purple-700 border-purple-300"
-                      >
-                        #{tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Tag Summary */}
-          {(mainCategory || selectedSubTags.length > 0 || detailedTags.length > 0 || customTags) && (
-            <div className="mt-6 p-4 bg-ocean-50 dark:bg-ocean-950 rounded-lg border border-ocean-200 dark:border-ocean-800">
-              <h4 className="font-medium text-ocean-900 dark:text-ocean-100 mb-3">
-                📋 Zusammenfassung aller Tags
-              </h4>
-              <div className="space-y-2">
-                {mainCategory && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground">Hauptkategorie:</span>
-                    <Badge className="ml-2 bg-ocean-600 text-white">
-                      {mainCategories.find(cat => cat.value === mainCategory)?.icon} {mainCategory}
-                    </Badge>
-                  </div>
-                )}
-                {selectedSubTags.length > 0 && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground">Themen:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {selectedSubTags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="bg-ocean-100 text-ocean-700">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {detailedTags.length > 0 && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground">Detail-Tags:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {detailedTags.map(tag => (
-                        <Badge key={tag} variant="outline" className="text-xs border-green-300 text-green-700">
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {customTags && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground">Eigene Tags:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {customTags.split(' ').filter(Boolean).map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs border-purple-300 text-purple-700">
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <Button
-            onClick={handleSubmit}
-            className="w-full"
-            disabled={files.length === 0 || isUploading}
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Verarbeite...
-              </>
-            ) : (
-              <>
-                <Upload className="h-4 w-4 mr-2" />
-                Bilder veroeffentlichen
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Upload Progress */}
-      {uploadProgress.length > 0 && (
-        <Card>
-          <CardContent className="pt-6">
-            <UploadProgressIndicator progress={uploadProgress} />
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-// Note Form Component
-function NoteForm({ editEvent }: { editEvent?: any }) {
-  const [content, setContent] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [isPublic, setIsPublic] = useState(true);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const { toast } = useToast();
-  const { mutate: publishEvent } = useNostrPublish();
-  const { mutateAsync: uploadFileWithProgress } = useUploadWithProgress((progress) => {
-    setUploadProgress(prev => {
-      const existingIndex = prev.findIndex(p => p.fileIndex === progress.fileIndex);
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex] = progress;
-        return updated;
-      }
-      return [...prev, progress];
-    });
-  });
-  const navigate = useNavigate();
-
-  // Load edit data
-  useEffect(() => {
-    if (editEvent) {
-      setContent(editEvent.content || '');
-      const eventTags = editEvent.tags?.filter((tag: any) => tag[0] === 't')?.map((tag: any) => tag[1]) || [];
-      setTags(eventTags);
-
-      // Extract country from tags
-      const countryTags = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
-      const foundCountry = eventTags.find(tag => countryTags.includes(tag));
-      if (foundCountry) {
-        setSelectedCountry(foundCountry);
-      }
-
-      // Extract images from edit content
-      const imageTags = editEvent.tags?.filter((tag: any) => tag[0] === 'image')?.map((tag: any) => tag[1]) || [];
-      if (imageTags.length > 0) {
-        setImageUrls(imageTags);
-      }
-    }
-  }, [editEvent]);
-
-  const handleTagToggle = (tag: string) => {
-    setTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
-
-
-
-  const handleImageSelect = (files: FileList | null) => {
-    if (!files) return;
-
-    // Filter for image files only
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    setImageFiles(prev => [...prev, ...imageFiles]);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleImageSelect(e.dataTransfer.files);
-  };
-
-  const removeImageFile = (index: number) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const uploadImages = async () => {
-    if (imageFiles.length === 0) return;
-
-    setIsUploading(true);
-    setUploadProgress([]);
-
-    try {
-      const uploadedUrls: string[] = [];
-      for (const [fileIndex, file] of imageFiles.entries()) {
-        const uploadResult = await uploadFileWithProgress({
-          file,
-          fileIndex,
-          totalFiles: imageFiles.length,
-        });
-
-        const urlTag = uploadResult?.find(tag => tag[0] === 'url');
-        if (urlTag) {
-          uploadedUrls.push(urlTag[1]);
-        }
-      }
-
-      setImageUrls(prev => [...prev, ...uploadedUrls]);
-      setImageFiles([]);
-      toast({
-        title: 'Erfolg!',
-        description: `${uploadedUrls.length} Bild(er) erfolgreich hochgeladen.`,
-      });
-    } catch (error) {
-      toast({
-        title: 'Fehler',
-        description: 'Bild-Upload fehlgeschlagen. Bitte versuche es erneut.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const removeImageUrl = (index: number) => {
-    setImageUrls(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = () => {
-    if (!content.trim()) {
-      toast({
-        title: 'Fehler',
-        description: 'Bitte gib einen Text ein.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    // Entferne Country-Tags aus tags, um Duplikate zu vermeiden
-    const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
-    const tagsWithoutCountry = tags.filter(tag =>
-      !countryList.includes(tag.toLowerCase()) && !tag.startsWith('#') && !countryList.includes(tag.replace('#', '').toLowerCase())
-    );
-
-    // Create event tags with country tags and #mojobus
-    const baseTags = createRequiredTags('notes', tagsWithoutCountry);
-    const additionalTags = [
-      ['type', 'note'],      // Explicit type marker
-      ['t', 'mojobus'],     // #mojobus tag
-      ['t', 'note'],        // Standard tag #note
-      ['t', 'notiz']        // Standard tag #notiz
-    ];
-
-    // Add country tags (nur wenn selectedCountry gewählt wurde)
-    if (selectedCountry) {
-      const countryTags = getCountryTag(selectedCountry);
-      countryTags.forEach(tag => additionalTags.push(['t', tag]));
-    }
-
-    // Add image tags if images exist
-    imageUrls.forEach(url => {
-      additionalTags.push(['image', url]);
-    });
-
-    const eventTags = [
-      ...baseTags,
-      ...additionalTags
-    ];
-
-    // Create content with images
-    let articleContent = content.trim();
-    if (imageFiles.length > 0) {
-      articleContent += '\n\n'; // Add spacing before images
-      imageFiles.forEach((file, index) => {
-        articleContent += `\n![Titelbild ${index + 1}](${URL.createObjectURL(file)})`;
-      });
-    }
-
-    publishEvent({
-      kind: 1, // Note
-      content: articleContent,
-      tags: eventTags
-    });
-
-    toast({
-      title: 'Erfolg!',
-      description: 'Note erfolgreich veroeffentlicht.'
-    });
-
-    // Reset form and redirect
-    setContent('');
-    setTags([]);
-    setSelectedCountry('');
-    setImageFiles([]);
-    setImageUrls([]);
-
-    // Redirect to notes page after successful publish
-    setTimeout(() => {
-      navigate('/notes');
-    }, 1000);
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Note veroeffentlichen
-        </CardTitle>
-        <CardDescription>
-          Kurze Updates, Gedanken und Momente fuer deine Vanlife-Gemeinschaft
-        </CardDescription>
-        <ImageOptimizationToggle className="mt-4" />
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="note-content">Dein Note</Label>
-          <Textarea
-            id="note-content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Was machst du gerade? Was bewegt dich? Share your vanlife moments..."
-            rows={4}
-            className="resize-none"
-          />
-          <p className="text-sm text-muted-foreground">
-            {content.length}/500 Zeichen
-          </p>
-        </div>
-
-        {/* Image Upload Area */}
-        <div className="space-y-4">
-          <Label>Bilder hinzufuegen</Label>
-
-          {/* Drop Zone */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-              isDragging ? 'border-ocean-500 bg-ocean-50' : 'border-gray-300 dark:border-gray-600'
-            }`}
-            onDrop={handleDrop}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-          >
-            <Upload className="mx-auto h-8 w-8 text-gray-400 mb-3" />
-            <h4 className="text-sm font-medium mb-2">Bilder hinzufuegen</h4>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => handleImageSelect(e.target.files)}
-              className="hidden"
-              id="note-image-upload"
-            />
-            <Button asChild>
-              <label htmlFor="note-image-upload" className="cursor-pointer">
-                <Camera className="h-4 w-4 mr-2" />
-                Dateien auswaehlen
-              </label>
-            </Button>
-          </div>
-
-          {/* Selected Files Preview */}
-          {imageFiles.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Ausgewaehlte Dateien ({imageFiles.length})</Label>
-                <Button
-                  onClick={uploadImages}
-                  size="sm"
-                  disabled={imageFiles.length === 0 || isUploading}
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Verarbeite...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Hochladen
-                    </>
-                  )}
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {imageFiles.map((file, index) => (
-                  <div key={index} className="relative group border rounded-lg overflow-hidden">
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={`Upload ${index + 1}`}
-                      className="w-full h-20 object-cover"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeImageFile(index)}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Uploaded Images */}
-          {imageUrls.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Hochgeladene Bilder ({imageUrls.length})</Label>
-                <Button
-                  onClick={() => setImageUrls([])}
-                  variant="outline"
-                  size="sm"
-                >
-                  Alle entfernen
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {imageUrls.map((url, index) => (
-                  <div key={index} className="relative group border rounded-lg overflow-hidden">
-                    <img
-                      src={url}
-                      alt={`Uploaded ${index + 1}`}
-                      className="w-full h-20 object-cover"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeImageUrl(index)}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <Label>Tags</Label>
-          <div className="flex flex-wrap gap-2">
-            {getOptionalTags('notes').map(tag => (
-              <Badge
-                key={tag}
-                variant={tags.includes(tag) ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => handleTagToggle(tag)}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Eigene Tags (mit Leerzeichen trennen)..."
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const value = e.currentTarget.value;
-                  const newTags = value.split(' ').filter(Boolean);
-                  setTags(prev => [...prev, ...newTags]);
-                  e.currentTarget.value = '';
-                }
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={(e) => {
-                const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                const value = input.value;
-                const newTags = value.split(' ').filter(Boolean);
-                setTags(prev => [...prev, ...newTags]);
-                input.value = '';
-              }}
-            >
-              Hinzufügen
-            </Button>
-          </div>
-        </div>
-
-        {tags.length > 0 && (
-          <div className="space-y-2">
-            <Label>Ausgewaehlte Tags</Label>
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="gap-1"
-                >
-                  {tag}
-                  <button
-                    className="ml-1 text-xs hover:text-red-500"
-                    onClick={() => setTags(prev => prev.filter((_, i) => i !== index))}
-                  >
-                    ×
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Country Selection */}
-        <CountrySelector
-          selectedCountry={selectedCountry}
-          onCountryChange={setSelectedCountry}
-          placeholder="Land auswaehlen"
-        />
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="note-public"
-              checked={isPublic}
-              onCheckedChange={setIsPublic}
-            />
-            <Label htmlFor="note-public">Öffentlich sichtbar</Label>
-          </div>
-
-          <Button onClick={handleSubmit} disabled={!content}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Note veroeffentlichen
-          </Button>
         </div>
       </CardContent>
     </Card>
   );
-}
 
-// Place Form Component
-function PlaceForm({ editEvent }: { editEvent?: any }) {
+  function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -2603,6 +1832,15 @@ Schreibe deinen Artikel hier...
         </Button>
       </CardContent>
     </Card>
+
+    {/* Upload Progress */}
+    {/*uploadProgress.length > 0 && (
+      <Card>
+        <CardContent className="pt-6">
+          <UploadProgressIndicator progress={uploadProgress} />
+        </CardContent>
+      </Card>
+    )*/}
   );
 }
 
