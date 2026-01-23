@@ -6,7 +6,7 @@
 // ============================================================================
 // CACHE-KONFIGURATION
 // ============================================================================
-const CACHE_VERSION = 6; // Cache Version erhöhen (war 5, jetzt 6)
+const CACHE_VERSION = 7; // Cache Version erhöhen (war 6, jetzt 7) - für Image Service Änderung
 const CACHE_NAME = `mojobus-v${CACHE_VERSION}`; // Version aus Konfiguration
 
 console.log('[Service Worker] Cache Version:', CACHE_VERSION);
