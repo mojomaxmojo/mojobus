@@ -16,6 +16,37 @@ import {
 } from '@/config/imageService';
 
 // ============================================================================
+// HELPER: Doppelte URL-Optimierung verhindern
+// ============================================================================
+
+/**
+ * Prüft, ob eine URL bereits optimiert ist
+ * Verhindert doppelte Proxy-Loops (weserv → weserv → weserv...)
+ *
+ * @param imageUrl - Zu prüfende URL
+ * @returns true, wenn URL bereits optimiert ist
+ */
+function isAlreadyOptimized(imageUrl: string): boolean {
+  if (!imageUrl) return false;
+
+  try {
+    const url = new URL(imageUrl);
+
+    // Prüfe ob es eine Image-Service URL ist
+    if (url.hostname.includes('images.weserv.nl') ||
+        url.hostname.includes('imgproxy.mojobus.co') ||
+        url.hostname.includes('cloudflareimages.cloudflare.com')) {
+      console.log('[imageUtils] URL already optimized:', imageUrl.substring(0, 80) + '...');
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+// ============================================================================
 // THUMBNAIL GENERATION
 // ============================================================================
 

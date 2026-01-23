@@ -65,6 +65,8 @@ export const DEFAULT_IMAGE_FORMAT = 'webp';
 /**
  * Generiert eine optimierte Bild-URL basierend auf dem Service-Typ
  *
+ * Verhindert doppelte URL-Optimierung (Loop-Vermeidung)
+ *
  * @param imageUrl - Originalbild URL
  * @param width - Zielbreite
  * @param height - Zielhöhe (optional)
@@ -79,6 +81,21 @@ export function generateImageUrl(
 ): string {
   if (!imageUrl || !ENABLE_IMAGE_SERVICE) {
     return imageUrl;
+  }
+
+  // Prüfen, ob URL bereits optimiert ist (verhindert doppelte Proxy-Loops)
+  try {
+    const url = new URL(imageUrl);
+
+    // Wenn die URL bereits eine Image-Service URL ist, direkt zurückgeben
+    if (url.hostname.includes('images.weserv.nl') ||
+        url.hostname.includes('imgproxy.mojobus.co') ||
+        url.hostname.includes('cloudflareimages.cloudflare.com')) {
+      console.log('[imageService] URL already optimized:', imageUrl.substring(0, 80) + '...');
+      return imageUrl;
+    }
+  } catch (error) {
+    // Bei Parse-Fehlern einfach weitermachen
   }
 
   switch (IMAGE_SERVICE_TYPE) {
