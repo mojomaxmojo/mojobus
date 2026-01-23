@@ -65,6 +65,13 @@ interface MediaFile {
   tags?: string[];
 }
 
+interface UploadProgress {
+  current: number;
+  total: number;
+  stage: 'upload' | 'publish' | 'success' | 'error' | '';
+  status: string;
+}
+
 function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [title, setTitle] = useState('');
@@ -79,7 +86,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
@@ -204,14 +211,19 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     }
 
     setIsUploading(true);
-    setUploadProgress({ current: 0, total: files.length, status: 'Upload wird gestartet...' });
+    setUploadProgress({ current: 0, total: files.length, stage: 'upload', status: '📤 Upload zu Blossom wird gestartet...' });
 
     try {
-      // Upload all files
+      // STAGE 1: Upload all files to Blossom
       const uploadedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const fileObj = files[i];
-        setUploadProgress({ current: i, total: files.length, status: `Lade "${fileObj.name}" hochladen...` });
+        setUploadProgress({
+          current: i + 1,
+          total: files.length,
+          stage: 'upload',
+          status: `📤 Lade "${fileObj.name}" zu Blossom hochladen... (${((i + 1) / files.length * 100).toFixed(0)}%)`
+        });
 
         try {
           const uploadResult = await uploadFile(fileObj.file);
@@ -251,6 +263,10 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
           } else {
             uploadedUrls.push(urlTag[1]);
           }
+
+          // Brief delay to show progress
+          await new Promise(resolve => setTimeout(resolve, 100));
+
         } catch (uploadError) {
           console.error('Upload failed for file:', fileObj.file.name, uploadError);
           console.error('Upload error details:', {
@@ -262,7 +278,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         }
       }
 
-      setUploadProgress({ current: files.length, total: files.length, status: 'Event wird veroeffentlicht...' });
+      // STAGE 2: Publish to Nostr
+      setUploadProgress({
+        current: files.length,
+        total: files.length,
+        stage: 'publish',
+        status: '📝 Nostr Event wird erstellt...'
+      });
 
       // Create content with file URLs
       const content = `${title ? `# ${title}\n\n` : ''}${description ? `${description}\n\n` : ''}${uploadedUrls.join('\n\n')}`;
@@ -305,6 +327,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         ...additionalTags
       ];
 
+      setUploadProgress({
+        current: files.length,
+        total: files.length,
+        stage: 'publish',
+        status: '📡 Sende Event zu Nostr Relays...'
+      });
+
       // Publish to Nostr
       try {
         publishEvent({
@@ -317,7 +346,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         throw new Error(`Publishing failed: ${publishError.message}`);
       }
 
-      setUploadProgress({ current: files.length, total: files.length, status: '✅ Erfolgreich!' });
+      // SUCCESS!
+      setUploadProgress({
+        current: files.length,
+        total: files.length,
+        stage: 'success',
+        status: '✅ Erfolgreich! Bilder hochgeladen und veroeffentlicht.'
+      });
 
       toast({
         title: 'Erfolg!',
@@ -339,10 +374,17 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       // Redirect to bilder page after successful publish
       setTimeout(() => {
         navigate('/bilder');
-      }, 1000);
+      }, 1500);
 
     } catch (error) {
       console.error('Complete upload error:', error);
+      setUploadProgress({
+        current: 0,
+        total: 0,
+        stage: 'error',
+        status: `❌ Fehler: ${error.message || 'Unbekannter Fehler'}`
+      });
+
       toast({
         title: 'Fehler',
         description: `Upload fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`,
@@ -351,8 +393,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     } finally {
       setIsUploading(false);
       setTimeout(() => {
-        setUploadProgress({ current: 0, total: 0, status: '' });
-      }, 3000);
+        setUploadProgress({ current: 0, total: 0, stage: '', status: '' });
+      }, 5000);
     }
   };
 
@@ -750,33 +792,102 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
           {/* Upload Progress */}
           {isUploading && (
-            <Card className="border-ocean-200 dark:border-ocean-800 bg-ocean-50 dark:bg-ocean-950">
+            <Card className={`border-2 ${
+              uploadProgress.stage === 'error'
+                ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950'
+                : uploadProgress.stage === 'success'
+                  ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950'
+                  : 'border-ocean-200 dark:border-ocean-800 bg-ocean-50 dark:bg-ocean-950'
+            }`}>
               <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {uploadProgress.current < uploadProgress.total ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-ocean-600" />
-                      ) : (
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      )}
-                      <div className="space-y-1">
-                        <p className="font-medium text-ocean-900 dark:text-ocean-100">
-                          {uploadProgress.status}
-                        </p>
-                        <p className="text-sm text-ocean-600 dark:text-ocean-400">
-                          {uploadProgress.current} von {uploadProgress.total} Dateien hochgeladen
-                        </p>
+                <div className="space-y-6">
+                  {/* Stage Indicator */}
+                  <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-2 ${
+                      uploadProgress.stage === 'upload' ? 'text-ocean-600 dark:text-ocean-400' :
+                      uploadProgress.stage === 'publish' ? 'text-ocean-600 dark:text-ocean-400' :
+                      uploadProgress.stage === 'success' ? 'text-green-600 dark:text-green-400' :
+                      uploadProgress.stage === 'error' ? 'text-red-600 dark:text-red-400' :
+                      'text-gray-400'
+                    }`}>
+                      {uploadProgress.stage === 'upload' && <Loader2 className="h-5 w-5 animate-spin" />}
+                      {uploadProgress.stage === 'publish' && <UploadCloud className="h-5 w-5" />}
+                      {uploadProgress.stage === 'success' && <CheckCircle2 className="h-5 w-5" />}
+                      {uploadProgress.stage === 'error' && <span className="text-2xl">❌</span>}
+                      {!uploadProgress.stage && <span className="text-2xl">⏳</span>}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="font-medium text-sm">
+                        {uploadProgress.status}
+                      </p>
+                      {/* Stage badges */}
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className={`text-xs ${
+                          uploadProgress.stage === 'upload'
+                            ? 'bg-ocean-100 border-ocean-300 text-ocean-700'
+                            : uploadProgress.stage === 'publish' || uploadProgress.stage === 'success'
+                              ? 'bg-green-100 border-green-300 text-green-700'
+                              : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          🌸 Blossom Upload
+                        </Badge>
+                        <Badge variant="outline" className={`text-xs ${
+                          uploadProgress.stage === 'publish'
+                            ? 'bg-ocean-100 border-ocean-300 text-ocean-700'
+                            : uploadProgress.stage === 'success'
+                              ? 'bg-green-100 border-green-300 text-green-700'
+                              : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          📡 Nostr Post
+                        </Badge>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-sm">
-                      {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
-                    </Badge>
                   </div>
-                  <Progress
-                    value={(uploadProgress.current / uploadProgress.total) * 100}
-                    className="h-2"
-                  />
+
+                  {/* File Upload Progress */}
+                  {uploadProgress.stage === 'upload' && (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-ocean-600 dark:text-ocean-400">
+                          {uploadProgress.current} von {uploadProgress.total} Dateien
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                        </Badge>
+                      </div>
+                      <Progress
+                        value={(uploadProgress.current / uploadProgress.total) * 100}
+                        className="h-2"
+                      />
+                    </>
+                  )}
+
+                  {/* Publishing Progress */}
+                  {uploadProgress.stage === 'publish' && (
+                    <div className="flex items-center gap-3 text-sm text-ocean-600 dark:text-ocean-400">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <p>Event wird zu {uploadProgress.total} Nostr Relays gesendet...</p>
+                    </div>
+                  )}
+
+                  {/* Success State */}
+                  {uploadProgress.stage === 'success' && (
+                    <div className="flex items-center gap-3 text-sm text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <p>Bilder erfolgreich zu Blossom hochgeladen und zu Nostr veroeffentlicht!</p>
+                    </div>
+                  )}
+
+                  {/* Error State */}
+                  {uploadProgress.stage === 'error' && (
+                    <div className="flex items-start gap-3 text-sm text-red-600 dark:text-red-400">
+                      <span className="text-xl">⚠️</span>
+                      <div className="space-y-1">
+                        <p>{uploadProgress.status}</p>
+                        <p className="text-xs">Bitte versuche es erneut.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -789,8 +900,16 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
           >
             {isUploading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {uploadProgress.status || 'Wird hochgeladen...'}
+                {uploadProgress.stage === 'upload' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {uploadProgress.stage === 'publish' && <UploadCloud className="h-4 w-4 mr-2" />}
+                {uploadProgress.stage === 'success' && <CheckCircle2 className="h-4 w-4 mr-2" />}
+                {uploadProgress.stage === 'error' && <span className="mr-2">⚠️</span>}
+                {!uploadProgress.stage && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {uploadProgress.stage === 'upload' && 'Upload zu Blossom...'}
+                {uploadProgress.stage === 'publish' && 'Post zu Nostr...'}
+                {uploadProgress.stage === 'success' && '✅ Erfolgreich!'}
+                {uploadProgress.stage === 'error' && 'Fehler aufgetreten'}
+                {!uploadProgress.stage && 'Wird verarbeitet...'}
               </>
             ) : (
               <>
