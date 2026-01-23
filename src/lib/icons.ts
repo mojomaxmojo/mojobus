@@ -28,7 +28,7 @@ export { User, UserPlus, UserIcon, Settings, Settings as SettingsIcon, LogOut, L
 // AUTH ICONS
 // ============================================================================
 
-export { Shield, Upload, AlertTriangle, KeyRound, Key, CheckCircle, Globe, Sparkles, Cloud } from 'lucide-react';
+export { Shield, Upload, UploadCloud, AlertTriangle, KeyRound, Key, CheckCircle, Globe, Sparkles, Cloud } from 'lucide-react';
 
 // ============================================================================
 // LOCATION ICONS

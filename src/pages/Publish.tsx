@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle2, UploadCloud } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -812,7 +812,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                     }`}>
                       {uploadProgress.stage === 'upload' && <Loader2 className="h-5 w-5 animate-spin" />}
                       {uploadProgress.stage === 'publish' && <UploadCloud className="h-5 w-5" />}
-                      {uploadProgress.stage === 'success' && <CheckCircle2 className="h-5 w-5" />}
+                      {uploadProgress.stage === 'success' && <CheckCircle className="h-5 w-5" />}
                       {uploadProgress.stage === 'error' && <span className="text-2xl">❌</span>}
                       {!uploadProgress.stage && <span className="text-2xl">⏳</span>}
                     </div>
@@ -873,7 +873,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                   {/* Success State */}
                   {uploadProgress.stage === 'success' && (
                     <div className="flex items-center gap-3 text-sm text-green-600 dark:text-green-400">
-                      <CheckCircle2 className="h-4 w-4" />
+                      <CheckCircle className="h-4 w-4" />
                       <p>Bilder erfolgreich zu Blossom hochgeladen und zu Nostr veroeffentlicht!</p>
                     </div>
                   )}
@@ -902,7 +902,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
               <>
                 {uploadProgress.stage === 'upload' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {uploadProgress.stage === 'publish' && <UploadCloud className="h-4 w-4 mr-2" />}
-                {uploadProgress.stage === 'success' && <CheckCircle2 className="h-4 w-4 mr-2" />}
+                {uploadProgress.stage === 'success' && <CheckCircle className="h-4 w-4 mr-2" />}
                 {uploadProgress.stage === 'error' && <span className="mr-2">⚠️</span>}
                 {!uploadProgress.stage && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {uploadProgress.stage === 'upload' && 'Upload zu Blossom...'}
