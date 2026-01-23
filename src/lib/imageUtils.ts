@@ -15,6 +15,15 @@ import {
   generateImageUrl as generateServiceImageUrl,
 } from '@/config/imageService';
 
+// Debug: Konfiguration prüfen
+console.log('[imageUtils] Image Service Configuration loaded:', {
+  IMAGE_SERVICE_URL,
+  IMAGE_SERVICE_TYPE,
+  ENABLE_IMAGE_SERVICE,
+  DEFAULT_IMAGE_QUALITY,
+  DEFAULT_IMAGE_FORMAT,
+});
+
 // ============================================================================
 // THUMBNAIL GENERATION
 // ============================================================================
@@ -22,7 +31,7 @@ import {
 /**
  * Generates a thumbnail URL via external image service
  *
- * Uses the configured service from imageService.ts
+ * Uses a configured service from imageService.ts
  * Default: images.weserv.nl (kostenlos, CDN-basiert)
  *
  * @param imageUrl - Originalbild URL
@@ -35,11 +44,23 @@ export function getThumbnailUrl(
   width = 300,
   quality = DEFAULT_IMAGE_QUALITY
 ): string {
+  console.log('[imageUtils] getThumbnailUrl called:', {
+    imageUrl: imageUrl.substring(0, 60) + '...',
+    width,
+    quality,
+    ENABLE_IMAGE_SERVICE,
+  });
+
   if (!imageUrl || !ENABLE_IMAGE_SERVICE) {
+    console.log('[imageUtils] Returning original URL:', imageUrl);
     return imageUrl;
   }
 
-  return generateServiceImageUrl(imageUrl, width, width, quality);
+  const result = generateServiceImageUrl(imageUrl, width, width, quality);
+
+  console.log('[imageUtils] Generated thumbnail URL:', result.substring(0, 60) + '...');
+
+  return result;
 }
 
 /**
