@@ -9,11 +9,8 @@ import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { RelaySelector } from '@/components/RelaySelector';
-import { filterEventsByCountry, countries } from '@/lib/countryDetection';
-import { Search, Calendar, User, MapPin } from 'lucide-react';
-import { nip19 } from 'nostr-tools';
-import type { NostrEvent } from '@nostrify/nostrify';
-import { AUTHORS } from '@/config/nostr';
+import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
+import { Main_MENU } from '@/config/menu';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
@@ -231,23 +228,39 @@ function Places() {
 }
 
 const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
+  const metadata = extractArticleMetadata(place);
+
+  // Optimized thumbnail URL (200px, quality 80) with srcset
+  const thumbnailUrl = metadata.image ? getListThumbnailUrl(metadata.image) : null;
+  const srcset = metadata.image ? generateSrcset(metadata.image) : undefined;
+  const sizes = generateSizes('card');
+  const placeholderColor = metadata.image ? getImagePlaceholder(metadata.image) : undefined;
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
       <Link to={`/${place.naddr}`} className="flex flex-col h-full">
-        {place.image && (
-          <div className="aspect-video overflow-hidden">
+        {thumbnailUrl && (
+          <div
+            className="aspect-video overflow-hidden bg-muted"
+            style={{
+              backgroundColor: placeholderColor,
+            }}
+          >
             <img
-              src={place.image}
-              alt={place.title}
+              src={thumbnailUrl}
+              srcSet={srcset}
+              sizes={sizes}
+              alt={metadata.title}
               className="w-full h-full object-cover"
               loading="lazy"
+              decoding="async"
             />
           </div>
         )}
         <CardHeader className="flex-1">
           <CardTitle className="line-clamp-2 hover:text-ocean-600 transition-colors flex items-center gap-2">
             <MapPin className="h-4 w-4 text-ocean-600" />
-            {place.title}
+            {metadata.title}
           </CardTitle>
           {place.location && (
             <CardDescription className="flex items-center gap-1">

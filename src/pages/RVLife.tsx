@@ -11,6 +11,7 @@ import { genUserName } from '@/lib/genUserName';
 import { Search, Calendar, User, Home, ChefHat, Compass, Truck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
+import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { memo } from 'react';
@@ -265,16 +266,30 @@ const RVLifeArticleCard = memo(function RVLifeArticleCard({ article }: { article
     relays: ['wss://relay.nostr.band']
   });
 
+  // Optimized thumbnail URL via images.weserv.nl
+  const thumbnailUrl = metadata.image ? getListThumbnailUrl(metadata.image) : null;
+  const srcset = metadata.image ? generateSrcset(metadata.image) : undefined;
+  const sizes = generateSizes('card');
+  const placeholderColor = metadata.image ? getImagePlaceholder(metadata.image) : undefined;
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
       <Link to={`/${naddr}`} className="flex flex-col h-full">
-        {metadata.image && (
-          <div className="aspect-video overflow-hidden">
+        {thumbnailUrl && (
+          <div
+            className="aspect-video overflow-hidden bg-muted"
+            style={{
+              backgroundColor: placeholderColor,
+            }}
+          >
             <img
-              src={metadata.image}
+              src={thumbnailUrl}
+              srcSet={srcset}
+              sizes={sizes}
               alt={metadata.title}
               className="w-full h-full object-cover"
               loading="lazy"
+              decoding="async"
             />
           </div>
         )}
