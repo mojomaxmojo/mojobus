@@ -102,26 +102,6 @@ export function useNote(eventId: string) {
     refetchOnMount: false,
   });
 }
-      );
-
-      const event = events[0] || null;
-
-      // Validiere, dass das Event die #t note oder #t notiz Tags hat
-      if (event && event.kind === NOSTR_CONFIG.kinds.note) {
-        const tags = extractNoteTags(event);
-        if (!tags.includes('note') && !tags.includes('notiz')) {
-          console.warn('⚠️ Note ohne #t note oder #t notiz ignoriert:', eventId);
-          return null;
-        }
-      }
-
-      return event;
-    },
-    staleTime: NOSTR_CONFIG.cache.staleTime,
-    gcTime: NOSTR_CONFIG.cache.maxAge,
-    enabled: !!eventId,
-  });
-}
 
 /**
  * Extrahiert Tags aus einem Note Event
