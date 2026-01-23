@@ -177,15 +177,16 @@ export function useLongformArticles(options?: {
   limit?: number;
 }) {
   const { nostr } = useNostr();
+  const { user } = useCurrentUser();
 
   return useQuery({
-    queryKey: ['longform-articles', NOSTR_CONFIG.authorPubkeys, options?.['#t']],
+    queryKey: ['longform-articles', user?.pubkey || 'all', NOSTR_CONFIG.authorPubkeys, options?.['#t']],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
 
       const filter: any = {
         kinds: options?.kinds || [NOSTR_CONFIG.kinds.longform],
-        authors: options?.authors || NOSTR_CONFIG.authorPubkeys,
+        authors: options?.authors || (user?.pubkey ? [user.pubkey] : NOSTR_CONFIG.authorPubkeys),
         limit: options?.limit || 100,
       };
 
@@ -223,15 +224,16 @@ export function useInfiniteLongformArticles(options?: {
   authors?: string[];
 }) {
   const { nostr } = useNostr();
+  const { user } = useCurrentUser();
 
   return useInfiniteQuery({
-    queryKey: ['infinite-longform-articles', NOSTR_CONFIG.authorPubkeys, options?.['#t']],
+    queryKey: ['infinite-longform-articles', user?.pubkey || 'all', NOSTR_CONFIG.authorPubkeys, options?.['#t']],
     queryFn: async ({ pageParam, signal }) => {
       const abortSignal = AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
 
       const filter: any = {
         kinds: options?.kinds || [NOSTR_CONFIG.kinds.longform],
-        authors: options?.authors || NOSTR_CONFIG.authorPubkeys,
+        authors: options?.authors || (user?.pubkey ? [user.pubkey] : NOSTR_CONFIG.authorPubkeys),
         limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage,
       };
 
@@ -280,9 +282,10 @@ export function useInfiniteLongformArticles(options?: {
  */
 export function usePlaces() {
   const { nostr } = useNostr();
+  const { user } = useCurrentUser();
 
   return useQuery({
-    queryKey: ['places', NOSTR_CONFIG.authorPubkeys],
+    queryKey: ['places', user?.pubkey || 'all', NOSTR_CONFIG.authorPubkeys],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
 
@@ -290,7 +293,7 @@ export function usePlaces() {
         [
           {
             kinds: [NOSTR_CONFIG.kinds.longform],
-            authors: NOSTR_CONFIG.authorPubkeys,
+            authors: user?.pubkey ? [user.pubkey] : NOSTR_CONFIG.authorPubkeys,
             limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage * 4,
           },
         ],
@@ -319,6 +322,7 @@ export function usePlaces() {
  */
 export function useLongformArticle(identifier: string, authorPubkey: string) {
   const { nostr } = useNostr();
+  const { user } = useCurrentUser();
 
   return useQuery({
     queryKey: ['longform-article', identifier, authorPubkey],

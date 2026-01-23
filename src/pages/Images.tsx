@@ -53,9 +53,10 @@ function Images() {
   const natureCategory = isNatureRoute && country ? country : null;
 
   const { nostr } = useNostr();
+  const { user } = useCurrentUser();
 
   const { data: events, isLoading, error } = useQuery({
-    queryKey: ['images', country],
+    queryKey: ['images', user?.pubkey || 'all', country],
     staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
     gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime,
     queryFn: async ({ signal }) => {
@@ -64,7 +65,7 @@ function Images() {
       const allEvents = await nostr.query([
         {
           kinds: [1, 30023],
-          authors: NOSTR_CONFIG.authorPubkeys,
+          authors: user?.pubkey ? [user.pubkey] : NOSTR_CONFIG.authorPubkeys,
           '#t': ['medien', 'media', 'bilder', 'images'],
           limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
         }
@@ -73,6 +74,7 @@ function Images() {
       console.log('[Images Page] Image Events Query:', {
         total: allEvents.length,
         country,
+        currentUser: user?.pubkey ? user.pubkey.slice(0, 8) + '...' : 'not logged in',
       });
 
       const imageEvents = allEvents.filter((event: ImageEvent) => {
@@ -123,6 +125,7 @@ function Images() {
       console.log('[Images Page] Events geladen:', {
         total: data.length,
         country,
+        currentUser: user?.pubkey ? user.pubkey.slice(0, 8) + '...' : 'not logged in',
       });
     },
   });

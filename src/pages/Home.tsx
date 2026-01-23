@@ -16,6 +16,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';
@@ -25,20 +26,83 @@ type ContentItem = {
 };
 
 export function Home() {
+  const { nostr } = useNostr();
+  const { user } = useCurrentUser();
+
+  // SEO Meta Tags
   useHead({
     title: 'MojoBus - Perpetual Traveler Blog',
     meta: [
       { name: 'description', content: 'Perpetual Traveler Blog. Unser Leben am Meer, vanlife, offgrid und Reisen. Geschichten, Tipps und Einblicke vom Strand.' },
-      { name: 'keywords', content: 'perpetual traveler, vanlife, offgrid, beachlife, reisen, camping, meer, strand, mobiles leben, nomaden' },
+      { name: 'keywords', content: 'Vanlife, Reisen, Portugal, Spanien, Frankreich, Offgrid, Solar, RV' },
       { property: 'og:title', content: 'MojoBus - Perpetual Traveler Blog' },
-      { property: 'og:description', content: 'Unser Leben am Meer. Vanlife, offgrid und Geschichten vom Strand. Perpetual Traveler Lifestyle mit Soul Leon (Lionhunter).' },
-      { property: 'og:url', content: 'https://mojobus.cc/' },
-      { property: 'og:type', content: 'website' },
-      { name: 'twitter:title', content: 'MojoBus - Perpetual Traveler Blog' },
-      { name: 'twitter:description', content: 'Unser Leben am Meer. Vanlife, offgrid und Geschichten vom Strand. 🌊🚐✨' },
-      { name: 'twitter:card', content: 'summary_large_image' },
+      { property: 'og:description', content: 'Perpetual Traveler Blog. Unser Leben am Meer, vanlife, offgrid und Reisen.' },
+      { property: 'og:type', content: 'website' }
     ],
-    link: [{ rel: 'canonical', href: 'https://mojobus.cc/' }]
+    link: [
+      { rel: 'canonical', href: 'https://mojobus.org' }
+    ]
+  });
+
+  const { data: articles, isLoading: articlesLoading } = useLongformArticles({
+    kinds: [30023],
+    limit: 50,
+  });
+
+  const { data: places, isLoading: placesLoading } = usePlaces();
+
+  const { data: noteEvents = [] } = useQuery({
+    queryKey: ['home-notes', user?.pubkey || 'all', NOSTR_CONFIG.authorPubkeys],
+    queryFn: async ({ signal }) => {
+      const events = await nostr.query([
+        {
+          kinds: [NOSTR_CONFIG.kinds.note],
+          authors: user?.pubkey ? [user.pubkey] : NOSTR_CONFIG.authorPubkeys,
+          '#t': ['note', 'notiz'],
+          limit: 20,
+        }
+      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) });
+      return events;
+    },
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
+  });
+
+  const { data: imageEvents = [] } = useQuery({
+    queryKey: ['home-media', user?.pubkey || 'all', NOSTR_CONFIG.authorPubkeys],
+    queryFn: async ({ signal }) => {
+      const events = await nostr.query([
+        {
+          kinds: [1, 30023], // Text notes und longform articles
+          authors: user?.pubkey ? [user.pubkey] : NOSTR_CONFIG.authorPubkeys,
+          '#t': ['medien', 'media', 'bilder', 'images'],
+          limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
+        }
+      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) }); // Aus Performance-Konfiguration
+
+      console.log('[Home Page] Image Events Query:', {
+        total: events.length,
+        limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
+        timeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
+        currentUser: user?.pubkey ? user.pubkey.slice(0, 8) + '...' : 'not logged in',
+      });
+
+      return events.filter((event) => {
+        const content = event.content.toLowerCase();
+        return content.includes('.jpg') ||
+               content.includes('.jpeg') ||
+               content.includes('.png') ||
+               content.includes('.gif') ||
+               content.includes('.webp') ||
+               content.includes('imgur.com') ||
+               content.includes('i.imgur.com') ||
+               content.includes('cdn.blossom') ||
+               content.includes('nostr.build') ||
+               content.includes('relay.mojobus.co') ||
+               content.includes('relays.mojobus.co') ||
+               content.includes('blossom.primal.net');
+      });
+    },
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
   });
 
   const { data: articles, isLoading } = useLongformArticles();
