@@ -6,7 +6,7 @@
 // ============================================================================
 // CACHE-KONFIGURATION
 // ============================================================================
-const CACHE_VERSION = 7; // Cache Version erhöhen (war 6, jetzt 7) - für Image Service Änderung
+const CACHE_VERSION = 6; // Cache Version erhöhen (war 5, jetzt 6)
 const CACHE_NAME = `mojobus-v${CACHE_VERSION}`; // Version aus Konfiguration
 
 console.log('[Service Worker] Cache Version:', CACHE_VERSION);
@@ -149,10 +149,6 @@ self.addEventListener('install', (event) => {
         }
       );
       return cache.put(cacheVersionRequest, cacheVersionResponse);
-    }).then(() => {
-      // Keepalive starten (verhindert, dass Browser SW killt)
-      startKeepAlive();
-      console.log('[Service Worker] Keepalive started');
     }).catch((error) => {
       console.error('[Service Worker] Install failed:', error);
     })
@@ -165,11 +161,6 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activate Event - Cache Version:', CACHE_VERSION);
-
-  // Keepalive starten (falls er noch nicht läuft)
-  stopKeepAlive();
-  startKeepAlive();
-  console.log('[Service Worker] Keepalive restarted on activate');
 
   // Alte Caches leeren
   event.waitUntil(
@@ -195,12 +186,49 @@ self.addEventListener('activate', (event) => {
 });
 
 // ============================================================================
-// DEACTIVATE EVENT
+// FETCH EVENT (Cache-Strategien)
 // ============================================================================
 
-self.addEventListener('deactivate', (event) => {
-  console.log('[Service Worker] Deactivate Event - stopping keepalive');
-  stopKeepAlive();
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // ============================================================================
+  // CACHE-STRATEGIE AUSWAHL
+  // ============================================================================
+
+  // 1. Cache-First für Assets (CSS, JS, Icons, Fonts)
+  if (url.pathname.match(/\.(css|js|woff|woff2|ttf|eot|otf)$/i)) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  // 2. Cache-First für Assets-Verzeichnis
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  // 3. Network-First für HTML-Seiten
+  if (url.pathname.match(/\.html$/) || url.pathname === '/') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // 4. Stale-While-Revalidate für API-Endpunkte
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+
+  // 5. Network-Only für Nostr-Relays und WebSockets
+  if (url.protocol === 'wss:' || url.hostname.includes('nos.lol') || url.hostname.includes('relay.')) {
+    event.respondWith(networkOnly(request));
+    return;
+  }
+
+  // Default: Network-First für alles andere
+  event.respondWith(networkFirst(request));
 });
 
 // ============================================================================
@@ -317,59 +345,5 @@ self.addEventListener('message', (event) => {
 // SKIP WAITING (beschleunigt Service Worker Updates)
 // ============================================================================
 
-// skipWaiting() entfernt - kann Service Worker killen
-// Der Service Worker wird automatisch bei Änderungen aktiviert
-console.log('[Service Worker] Skip waiting deaktiviert');
-
-// ============================================================================
-// GLOBAL ERROR HANDLING
-// ============================================================================
-
-// Alle globalen Errors abfangen
-self.addEventListener('error', (error) => {
-  console.error('[Service Worker] Global error:', error);
-  console.error('[Service Worker] Error message:', error.message);
-  console.error('[Service Worker] Error filename:', error.filename);
-  console.error('[Service Worker] Error lineno:', error.lineno);
-  console.error('[Service Worker] Error colno:', error.coleno);
-});
-
-// Alle unhandled rejections abfangen
-self.addEventListener('unhandledrejection', (event) => {
-  console.error('[Service Worker] Unhandled rejection:', event.reason);
-});
-
-// ============================================================================
-// KEEPALIVE (verhindert, dass Browser den SW killt)
-// ============================================================================
-
-let keepAliveTimer = null;
-
-function startKeepAlive() {
-  // Jede 30 Sekunden einen leeren fetch ausführen
-  keepAliveTimer = setInterval(async () => {
-    try {
-      // Leere Anfrage, um den SW am Leben zu erhalten
-      await fetch('https://test.mojobus.co/?keepalive=' + Date.now());
-      console.log('[Service Worker] Keepalive ping sent');
-    } catch (error) {
-      console.error('[Service Worker] Keepalive error:', error);
-    }
-  }, 30000); // 30 Sekunden
-}
-
-function stopKeepAlive() {
-  if (keepAliveTimer) {
-    clearInterval(keepAliveTimer);
-    keepAliveTimer = null;
-    console.log('[Service Worker] Keepalive stopped');
-  }
-}
-
-// ============================================================================
-// FETCH EVENT (Cache-Strategien)
-// ============================================================================
-
-// skipWaiting() entfernt - kann Service Worker killen
-// Der Service Worker wird automatisch bei Änderungen aktiviert
-console.log('[Service Worker] Skip waiting deaktiviert');
+self.skipWaiting();
+console.log('[Service Worker] Skip waiting - Service Worker wird sofort aktiv');

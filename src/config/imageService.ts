@@ -59,23 +59,6 @@ export const DEFAULT_IMAGE_QUALITY = 85;
 export const DEFAULT_IMAGE_FORMAT = 'webp';
 
 // ============================================================================
-// DEBUG LOGS
-// ============================================================================
-
-console.log('[imageService] Configuration:', {
-  IMAGE_SERVICE_URL,
-  IMAGE_SERVICE_TYPE,
-  ENABLE_IMAGE_SERVICE,
-  DEFAULT_IMAGE_QUALITY,
-  DEFAULT_IMAGE_FORMAT,
-  'Env vars': {
-    NEXT_PUBLIC_IMAGE_SERVICE_URL: process.env.NEXT_PUBLIC_IMAGE_SERVICE_URL,
-    NEXT_PUBLIC_IMAGE_SERVICE_TYPE: process.env.NEXT_PUBLIC_IMAGE_SERVICE_TYPE,
-    NEXT_PUBLIC_ENABLE_IMAGE_SERVICE: process.env.NEXT_PUBLIC_ENABLE_IMAGE_SERVICE,
-  }
-});
-
-// ============================================================================
 // URL GENERATION
 // ============================================================================
 
@@ -127,10 +110,7 @@ function generateWeservUrl(
   height?: number,
   quality = DEFAULT_IMAGE_QUALITY
 ): string {
-  if (!IMAGE_SERVICE_URL) {
-    console.log('[imageService] No IMAGE_SERVICE_URL configured, returning original:', imageUrl);
-    return imageUrl;
-  }
+  if (!IMAGE_SERVICE_URL) return imageUrl;
 
   try {
     const h = height || width; // Quadratisch wenn height nicht angegeben
@@ -144,20 +124,9 @@ function generateWeservUrl(
       output: DEFAULT_IMAGE_FORMAT,
     });
 
-    const finalUrl = `${IMAGE_SERVICE_URL}/?${params.toString()}`;
-
-    console.log('[imageService] Weserv URL generated:', {
-      original: imageUrl,
-      final: finalUrl,
-      width,
-      height: h,
-      quality,
-      format: DEFAULT_IMAGE_FORMAT,
-    });
-
-    return finalUrl;
+    return `${IMAGE_SERVICE_URL}/?${params.toString()}`;
   } catch (error) {
-    console.error('[imageService] Failed to generate weserv.nl URL:', error);
+    console.error('Failed to generate weserv.nl URL:', error);
     return imageUrl;
   }
 }
