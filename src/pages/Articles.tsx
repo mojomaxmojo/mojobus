@@ -37,15 +37,7 @@ function Articles() {
 
   // Fetch more articles when scroll trigger is visible
   useEffect(() => {
-    console.log('👀 Infinite Scroll Trigger:', {
-      inView,
-      hasNextPage,
-      isFetchingNextPage,
-      shouldFetch: inView && hasNextPage && !isFetchingNextPage
-    });
-
     if (inView && hasNextPage && !isFetchingNextPage) {
-      console.log('📥 Fetching next page...');
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -54,30 +46,12 @@ function Articles() {
 
   // Flatten all pages
   const allArticles = useMemo(() => {
-    const flattened = data?.pages.flat() || [];
-    console.log('📚 Articles Page State:', {
-      totalPages: data?.pages.length || 0,
-      totalArticles: flattened.length,
-      articlesPerPage: data?.pages.map(p => p.length) || [],
-      hasNextPage,
-      isFetchingNextPage
-    });
-    return flattened;
-  }, [data, hasNextPage, isFetchingNextPage]);
+    return data?.pages.flat() || [];
+  }, [data]);
 
   // Filter articles mit intelligenter Ländererkennung
   const filteredArticles = useMemo(() => {
     let filtered = [...allArticles];
-
-    // Debug: Alle Autoren und Artikel anzeigen
-    console.log('🔍 Debug Articles:', {
-      totalArticles: allArticles.length,
-      selectedAuthor,
-      allAuthors: allArticles.map(a => ({
-        pubkey: a.pubkey,
-        authorName: AUTHORS.find(auth => auth.pubkey === a.pubkey)?.name || 'Unknown'
-      }))
-    });
 
     // Country filter mit intelligenter Erkennung
     if (currentCountry) {
@@ -86,20 +60,7 @@ function Articles() {
 
     // Author filter (auch wenn keine Suche!)
     if (selectedAuthor) {
-      console.log('👤 Author Filter Applied:', {
-        selectedAuthor,
-        beforeFilter: filtered.length,
-        susannePubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
-        matchingArticles: allArticles.filter(a => a.pubkey === selectedAuthor).length
-      });
       filtered = filtered.filter(article => article.pubkey === selectedAuthor);
-      console.log('👤 After Author Filter:', {
-        afterFilter: filtered.length,
-        susanneArticles: filtered.map(a => ({
-          title: a.tags.find(([name]) => name === 'title')?.[1] || 'No title',
-          pubkey: a.pubkey
-        }))
-      });
     }
 
     // Search filter
@@ -122,15 +83,6 @@ function Articles() {
         );
       });
     }
-
-    console.log('🎯 Final Filtered Articles:', {
-      count: filtered.length,
-      articles: filtered.map(a => ({
-        title: a.tags.find(([name]) => name === 'title')?.[1],
-        pubkey: a.pubkey,
-        author: AUTHORS.find(auth => auth.pubkey === a.pubkey)?.name
-      }))
-    });
 
     return filtered.sort((a, b) => b.created_at - a.created_at);
   }, [allArticles, searchQuery, selectedTag, selectedAuthor, currentCountry, country]);

@@ -24,7 +24,6 @@ function validateLongformArticle(event: NostrEvent): boolean {
                 event.tags.find(([name]) => name === 'name')?.[1]; // Auch name-Tag akzeptieren für Plätze
 
   if (!title) {
-    console.log('⚠️ Event ohne title- oder name-Tag ignoriert:', event.id);
     return false;
   }
 
@@ -37,11 +36,6 @@ function validateLongformArticle(event: NostrEvent): boolean {
   const isValidType = typeTag === 'article' || articleTag || typeTag === 'place' || placesTag;
 
   if (!isValidType) {
-    console.log('⚠️ Event ohne gültigen type ignoriert:', event.id, {
-      typeTag,
-      hasArticleTag: articleTag,
-      hasPlacesTag: placesTag
-    });
     return false;
   }
 
@@ -192,36 +186,12 @@ export function useLongformArticles(options?: {
 
       const events = await nostr.query([filter], { signal });
 
-      console.log('🔍 useLongformArticles: Found total events:', events.length);
-
       // Validiere und filtere Artikel (Plätze ausschließen)
       const validArticles = events.filter(event => {
         const isValid = validateLongformArticle(event);
         const isPlace = isPlaceEvent(event);
-
-        const eventInfo = {
-          kind: event.kind,
-          identifier: event.tags.find(([name]) => name === 'd')?.[1],
-          type: event.tags.find(([name]) => name === 'type')?.[1],
-          title: event.tags.find(([name]) => name === 'title')?.[1],
-          name: event.tags.find(([name]) => name === 'name')?.[1],
-          isValid,
-          isPlace,
-          willInclude: isValid && !isPlace
-        };
-
-        if (!isValid) {
-          console.log('❌ Event failed validation:', event.id, eventInfo);
-        } else if (isPlace) {
-          console.log('📍 Event is a place (excluded from articles):', event.id, eventInfo);
-        } else {
-          console.log('✅ Event included in articles:', event.id, eventInfo);
-        }
-
         return isValid && !isPlace;
       });
-
-      console.log('📦 useLongformArticles: Valid articles after filtering:', validArticles.length);
 
       // Sortiere nach Datum (neueste zuerst)
       return validArticles.sort((a, b) => b.created_at - a.created_at);
@@ -258,9 +228,6 @@ export function useInfiniteLongformArticles(options?: {
       // Timestamp-basierte Pagination
       if (pageParam) {
         filter.until = pageParam;
-        console.log('🔄 Infinite Scroll: Fetching next page', { until: pageParam });
-      } else {
-        console.log('📄 Infinite Scroll: Fetching first page');
       }
 
       // Füge Tag-Filter hinzu wenn vorhanden
@@ -270,8 +237,6 @@ export function useInfiniteLongformArticles(options?: {
 
       const events = await nostr.query([filter], { signal: abortSignal });
 
-      console.log('📦 Infinite Scroll: Received', events.length, 'events from relay (limit was', DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage, ')');
-
       // Validiere und filtere Artikel (Plätze ausschließen)
       const validArticles = events.filter(event => {
         const isValid = validateLongformArticle(event);
@@ -279,58 +244,18 @@ export function useInfiniteLongformArticles(options?: {
         return isValid && !isPlace;
       });
 
-      console.log('✅ Infinite Scroll: After filtering', validArticles.length, 'valid articles');
-
       // Sortiere nach Datum (neueste zuerst)
-      const sorted = validArticles.sort((a, b) => b.created_at - a.created_at);
-
-      // Log pagination info
-      if (sorted.length > 0) {
-        const firstCreated = sorted[0].created_at;
-        const lastCreated = sorted[sorted.length - 1].created_at;
-        console.log('📊 Infinite Scroll: Date range', {
-          first: new Date(firstCreated * 1000).toISOString(),
-          last: new Date(lastCreated * 1000).toISOString(),
-          count: sorted.length
-        });
-      }
-
-      return sorted;
+      return validArticles.sort((a, b) => b.created_at - a.created_at);
     },
     getNextPageParam: (lastPage, allPages) => {
       // Wenn keine Artikel mehr zurückgegeben wurden, sind wir fertig
       if (lastPage.length === 0) {
-        console.log('🚫 Infinite Scroll: No more articles (empty page)');
         return undefined;
-      }
-
-      // Wenn wir weniger als 50% der erwarteten Anzahl erhalten, könnte das das Ende sein
-      const expectedCount = DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage;
-      const isPartialPage = lastPage.length < expectedCount * 0.5;
-
-      if (isPartialPage) {
-        console.log('⚠️ Infinite Scroll: Partial page received', {
-          received: lastPage.length,
-          expected: expectedCount,
-          ratio: lastPage.length / expectedCount
-        });
-        // Wir versuchen trotzdem noch eine Seite mehr, falls es noch mehr Artikel gibt
       }
 
       // Berechne nächsten Timestamp (1 Sekunde vor dem letzten Event)
       const lastCreated = lastPage[lastPage.length - 1].created_at;
-      const nextPageParam = lastCreated - 1;
-
-      console.log('➡️ Infinite Scroll: Next page param', {
-        lastPageLength: lastPage.length,
-        lastCreated: lastCreated,
-        lastCreatedDate: new Date(lastCreated * 1000).toISOString(),
-        nextPageParam,
-        totalPagesSoFar: allPages.length,
-        totalArticles: allPages.reduce((sum, page) => sum + page.length, 0)
-      });
-
-      return nextPageParam;
+      return lastCreated - 1;
     },
     initialPageParam: undefined,
     staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime * 2,
@@ -351,7 +276,6 @@ export function usePlaces() {
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
 
-      console.log('Querying for places...');
       const events = await nostr.query(
         [
           {
@@ -363,38 +287,12 @@ export function usePlaces() {
         { signal }
       );
 
-      console.log('🔍 usePlaces: Found total longform events:', events.length);
-
       // Validiere und filtere Plätze
       const validPlaces = events.filter(event => {
         const isValid = validateLongformArticle(event);
         const isPlace = isPlaceEvent(event);
-
-        const eventInfo = {
-          kind: event.kind,
-          identifier: event.tags.find(([name]) => name === 'd')?.[1],
-          type: event.tags.find(([name]) => name === 'type')?.[1],
-          name: event.tags.find(([name]) => name === 'name')?.[1],
-          title: event.tags.find(([name]) => name === 'title')?.[1],
-          tTags: event.tags.filter(([name]) => name === 't').map(([, value]) => value),
-          isValid,
-          isPlace,
-          willInclude: isValid && isPlace
-        };
-
-        console.log('📍 Place check for event:', event.id, eventInfo);
-
         return isValid && isPlace;
       });
-
-      console.log('✅ usePlaces: Valid places after filtering:', validPlaces.length);
-      if (validPlaces.length > 0) {
-        console.log('📋 Places:', validPlaces.map(e => ({
-          id: e.id,
-          name: e.tags.find(([name]) => name === 'name')?.[1],
-          type: e.tags.find(([name]) => name === 'type')?.[1]
-        })));
-      }
 
       // Sortiere nach Datum (neueste zuerst)
       return validPlaces.sort((a, b) => b.created_at - a.created_at);

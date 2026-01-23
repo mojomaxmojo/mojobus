@@ -203,12 +203,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       // Upload all files
       const uploadedUrls: string[] = [];
       for (const fileObj of files) {
-        console.log('Uploading file:', fileObj.file.name, 'Size:', fileObj.file.size, 'Type:', fileObj.file.type);
-
         try {
-          console.log('Starting upload attempt for:', fileObj.file.name);
           const uploadResult = await uploadFile(fileObj.file);
-          console.log('Upload successful, result:', uploadResult);
 
           if (!uploadResult) {
             throw new Error('Upload returned null');
@@ -224,8 +220,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             throw new Error('Upload returned empty array');
           }
 
-          console.log('Processing upload result array:', uploadResult);
-
           // Find the URL tag (format: ['url', 'https://...'])
           const urlTag = uploadResult.find(tag => Array.isArray(tag) && tag.length >= 2 && tag[0] === 'url');
 
@@ -240,14 +234,12 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
             if (potentialUrlTag) {
               uploadedUrls.push(potentialUrlTag[1]);
-              console.log('Using fallback URL tag:', potentialUrlTag[1]);
             } else {
               console.error('No URL tag found in upload result:', uploadResult);
               throw new Error('No URL found in upload result');
             }
           } else {
             uploadedUrls.push(urlTag[1]);
-            console.log('Successfully uploaded:', urlTag[1]);
           }
         } catch (uploadError) {
           console.error('Upload failed for file:', fileObj.file.name, uploadError);
@@ -301,9 +293,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         ...additionalTags
       ];
 
-      console.log('Publishing event with tags:', tags);
-      console.log('Content length:', content.length);
-
       // Publish to Nostr
       try {
         publishEvent({
@@ -311,7 +300,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
           content,
           tags
         });
-        console.log('Event published successfully');
       } catch (publishError) {
         console.error('Publish failed:', publishError);
         throw new Error(`Publishing failed: ${publishError.message}`);
@@ -1176,14 +1164,10 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       const eventType = editEvent.tags?.find((tag: any) => tag[0] === 'type')?.[1];
       const isPlaceType = eventType === 'place';
 
-      console.log('[PlaceForm] Event type:', eventType, 'isPlaceType:', isPlaceType);
-
       // Wenn es ein place-Event ist, den Content bereinigen und verwenden (HTML)
       // Wenn es ein altes article-Event ist, Markdown zu HTML konvertieren
       let contentToSet = '';
       if (isPlaceType) {
-        console.log('[PlaceForm] Neuer Platz (type=place) mit HTML-Content, bereinigen und verwenden');
-
         // Content bereinigen - ALLE strukturierten Daten entfernen
         let cleanContent = editEvent.content || '';
 
@@ -1208,8 +1192,6 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
         contentToSet = cleanContent || '';
       } else {
-        console.log('[PlaceForm] Alter Platz (type=article) mit Markdown-Content, konvertiere zu HTML');
-
         // Content bereinigen
         let cleanContent = editEvent.content || '';
 
@@ -1375,10 +1357,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   };
 
   const handleSubmit = () => {
-    console.log('[PlaceForm] handleSubmit called');
-
     if (!name.trim()) {
-      console.log('[PlaceForm] Name is empty, showing error');
       toast({
         title: 'Fehler',
         description: 'Bitte gib einen Namen fuer den Ort ein.',
@@ -1386,8 +1365,6 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       });
       return;
     }
-
-    console.log('[PlaceForm] Creating place event with name:', name.trim());
 
     // Create NIP-23 compliant content for place
     // WICHTIG: Strukturierte Daten werden NUR als Tags gespeichert, nicht im Content!
@@ -1488,16 +1465,11 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       countryTags.forEach(tag => tags.push(['t', tag]));
     }
 
-    console.log('[PlaceForm] Publishing event with kind:', 30023);
-    console.log('[PlaceForm] Tags:', tags);
-
     publishEvent({
       kind: 30023, // Long-form event for places
       content,
       tags
     });
-
-    console.log('[PlaceForm] Event published, showing toast');
 
     toast({
       title: 'Erfolg!',
@@ -1517,7 +1489,6 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
     // Redirect to plaetze page after successful publish
     setTimeout(() => {
-      console.log('[PlaceForm] Redirecting to /plaetze');
       navigate('/plaetze');
     }, 1000);
   };
@@ -1605,7 +1576,6 @@ Beschreibe hier den Ort, was macht ihn besonders...
             maxLength={30000}
             onImageUpload={(url) => {
               // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
-              console.log('Image uploaded:', url);
             }}
           />
         </div>
@@ -1858,11 +1828,9 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       const hasHtmlTags = /<[a-z][\s\S]*>/i.test(editEvent.content || '');
       if (hasHtmlTags) {
         // Content ist bereits HTML - direkt verwenden
-        console.log('[ArticleForm] Content ist bereits HTML, wird nicht konvertiert');
         setContent(editEvent.content || '');
       } else {
         // Content ist Markdown - zu HTML konvertieren
-        console.log('[ArticleForm] Content ist Markdown, wird zu HTML konvertiert');
         setContent(markdownToHtml(editEvent.content || ''));
       }
 
@@ -2274,7 +2242,6 @@ Schreibe deinen Artikel hier...
             maxLength={50000}
             onImageUpload={(url) => {
               // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
-              console.log('Image uploaded:', url);
             }}
           />
         </div>
@@ -2508,7 +2475,6 @@ function useEditData(editEventId: string | null) {
         }
       } catch (error) {
         // If decoding fails, try using as raw hex ID
-        console.log('Using raw event ID:', editEventId);
         eventId = editEventId;
       }
 
@@ -2537,14 +2503,6 @@ export function Publish() {
   const editType = searchParams.get('type');
   const [activeTab, setActiveTab] = useState(editType || 'media');
   const { data: editEvent } = useEditData(editEventId);
-
-  // Debug logs
-  console.log('Publish Debug:', {
-    editEventId,
-    editType,
-    activeTab,
-    searchParams: Object.fromEntries(searchParams.entries())
-  });
 
   if (!user) {
     return (

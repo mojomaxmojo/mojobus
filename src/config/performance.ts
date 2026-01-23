@@ -19,7 +19,7 @@ export const INFINITE_SCROLL_CONFIG = {
   // Höhere Werte = mehr JS im Speicher, aber weniger Requests
   // WICHTIG: Viele Relays haben ein internes Limit (oft 100-200 Events pro Query).
   // Ein kleinerer Limit (25-50) stellt sicher, dass alle Artikel geladen werden.
-  itemsPerPage: 25, // Reduziert für bessere Relay-Kompatibilität
+  itemsPerPage: 15, // Optimiert für bessere Performance und UX
 
   // Max. Anzahl an Artikeln, die im DOM gerendert werden (für Virtualisierung)
   // Nur relevant wenn virtualization: true
@@ -31,7 +31,7 @@ export const INFINITE_SCROLL_CONFIG = {
 
   // Aktiviere Virtualisierung für extrem lange Listen (1000+ Artikel)
   // Reduziert DOM-Elemente drastisch für bessere Performance
-  virtualization: false,
+  virtualization: true,
 
   // Trigger-Threshold für Infinite Scroll (0.0 - 1.0)
   // 0.1 = Lade nächste Seite wenn 10% des Loaders sichtbar sind
