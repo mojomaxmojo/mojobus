@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 import { defineConfig } from "vitest/config";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
 
@@ -12,11 +13,21 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
+    nodePolyfills({
+      // Whether to polyfill specific globals.
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+      },
+      // Whether to polyfill `process` and `Buffer` for the `browser` field in package.json
+      process: true,
+      buffer: true,
+    }),
   ],
   // Node.js polyfills for nostr-tools
   define: {
     'process.env': '{}',
-    'global': 'globalThis',
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'nostr-tools', 'buffer', '@nostrify/react', '@nostrify/nostrify'],

@@ -25,7 +25,7 @@
  * - imgproxy (self-hosted): 'https://imgproxy.mojobus.co'
  * - Cloudflare Images: 'https://your-cloudflare-images.cloudflare.com'
  */
-export const IMAGE_SERVICE_URL = process.env.NEXT_PUBLIC_IMAGE_SERVICE_URL || 'https://images.weserv.nl';
+export const IMAGE_SERVICE_URL = import.meta.env.VITE_IMAGE_SERVICE_URL || 'https://images.weserv.nl';
 
 /**
  * Image Service Typ
@@ -37,14 +37,14 @@ export const IMAGE_SERVICE_URL = process.env.NEXT_PUBLIC_IMAGE_SERVICE_URL || 'h
  * - 'cloudflare': Cloudflare Images Format
  */
 export const IMAGE_SERVICE_TYPE: 'weserv' | 'imgproxy' | 'cloudflare' =
-  (process.env.NEXT_PUBLIC_IMAGE_SERVICE_TYPE as any) || 'weserv';
+  (import.meta.env.VITE_IMAGE_SERVICE_TYPE as any) || 'weserv';
 
 /**
  * Enable/Disable den Image Service
  * Setze auf false, um Bild-Optimierung komplett zu deaktivieren
  * (Falleback zu Original-Bildern)
  */
-export const ENABLE_IMAGE_SERVICE = process.env.NEXT_PUBLIC_ENABLE_IMAGE_SERVICE !== 'false';
+export const ENABLE_IMAGE_SERVICE = import.meta.env.VITE_ENABLE_IMAGE_SERVICE !== 'false';
 
 /**
  * Standard-Bildqualität (1-100)
