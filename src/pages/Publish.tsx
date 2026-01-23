@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { ImageOptimizationToggle } from '@/components/ImageOptimizationToggle';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -419,6 +420,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       <Card>
         <CardHeader>
           <CardTitle>Bilderdetails</CardTitle>
+          <ImageOptimizationToggle className="mt-4" />
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -918,6 +920,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         <CardDescription>
           Kurze Updates, Gedanken und Momente fuer deine Vanlife-Gemeinschaft
         </CardDescription>
+        <ImageOptimizationToggle className="mt-4" />
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
