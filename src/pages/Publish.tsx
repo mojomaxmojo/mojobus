@@ -12,9 +12,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
-import { useUploadFile } from '@/hooks/useUploadFile';
+import { useUploadWithProgress, type UploadProgress } from '@/hooks/useUploadWithProgress';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { ImageOptimizationToggle } from '@/components/ImageOptimizationToggle';
+import { UploadProgressIndicator } from '@/components/UploadProgressIndicator';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -77,8 +78,20 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
-  const { mutateAsync: uploadFile } = useUploadFile();
+  const { mutateAsync: uploadFileWithProgress } = useUploadWithProgress((progress) => {
+    setUploadProgress(prev => {
+      const existingIndex = prev.findIndex(p => p.fileIndex === progress.fileIndex);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = progress;
+        return updated;
+      }
+      return [...prev, progress];
+    });
+  });
   const { mutate: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
 
@@ -200,12 +213,19 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       return;
     }
 
+    setIsUploading(true);
+    setUploadProgress([]);
+
     try {
-      // Upload all files
+      // Upload all files with progress tracking
       const uploadedUrls: string[] = [];
-      for (const fileObj of files) {
+      for (const [fileIndex, fileObj] of files.entries()) {
         try {
-          const uploadResult = await uploadFile(fileObj.file);
+          const uploadResult = await uploadFileWithProgress({
+            file: fileObj.file,
+            fileIndex,
+            totalFiles: files.length,
+          });
 
           if (!uploadResult) {
             throw new Error('Upload returned null');
@@ -299,42 +319,50 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         publishEvent({
           kind: 1, // Text note with media attachments
           content,
-          tags
+          tags,
         });
+
+        toast({
+          title: 'Erfolg!',
+          description: 'Bilder erfolgreich veroeffentlicht.'
+        });
+
+        // Reset form and redirect
+        setFiles([]);
+        setTitle('');
+        setDescription('');
+        setMainCategory('');
+        setSelectedSubTags([]);
+        setDate('');
+        setCustomTags('');
+        setLocation('');
+        setSelectedCountry('');
+        setDetailedTags([]);
+        setUploadProgress([]);
+        setImageUrls([]);
+
+        // Redirect to home page after successful publish
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
       } catch (publishError) {
-        console.error('Publish failed:', publishError);
-        throw new Error(`Publishing failed: ${publishError.message}`);
+        console.error('Publish error:', publishError);
+        toast({
+          title: 'Fehler',
+          description: 'Post konnte nicht veroeffentlicht werden.',
+          variant: 'destructive'
+        });
+        throw publishError;
       }
-
-      toast({
-        title: 'Erfolg!',
-        description: 'Bilder erfolgreich hochgeladen und veroeffentlicht.'
-      });
-
-      // Reset form and redirect
-      setFiles([]);
-      setTitle('');
-      setDescription('');
-      setMainCategory('');
-      setSelectedSubTags([]);
-      setDetailedTags([]);
-      setCustomTags('');
-      setLocation('');
-      setSelectedCountry('');
-      setDate(''); // Wird im useEffect neu auf aktuelles Datum gesetzt
-
-      // Redirect to bilder page after successful publish
-      setTimeout(() => {
-        navigate('/bilder');
-      }, 1000);
-
     } catch (error) {
-      console.error('Complete upload error:', error);
+      console.error('Form submission error:', error);
       toast({
         title: 'Fehler',
-        description: `Upload fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`,
+        description: error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten.',
         variant: 'destructive'
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -733,13 +761,31 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
           <Button
             onClick={handleSubmit}
             className="w-full"
-            disabled={files.length === 0}
+            disabled={files.length === 0 || isUploading}
           >
-            <Upload className="h-4 w-4 mr-2" />
-            Bilder veroeffentlichen
+            {isUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Verarbeite...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Bilder veroeffentlichen
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>
+
+      {/* Upload Progress */}
+      {uploadProgress.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <UploadProgressIndicator progress={uploadProgress} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -753,9 +799,21 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
-  const { mutateAsync: uploadFile } = useUploadFile();
+  const { mutateAsync: uploadFileWithProgress } = useUploadWithProgress((progress) => {
+    setUploadProgress(prev => {
+      const existingIndex = prev.findIndex(p => p.fileIndex === progress.fileIndex);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = progress;
+        return updated;
+      }
+      return [...prev, progress];
+    });
+  });
   const navigate = useNavigate();
 
   // Load edit data
@@ -811,12 +869,24 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const uploadImages = async () => {
     if (imageFiles.length === 0) return;
 
+    setIsUploading(true);
+    setUploadProgress([]);
+
     try {
       const uploadedUrls: string[] = [];
-      for (const file of imageFiles) {
-        const [urlTag] = await uploadFile(file);
-        uploadedUrls.push(urlTag[1]); // URL is in second position
+      for (const [fileIndex, file] of imageFiles.entries()) {
+        const uploadResult = await uploadFileWithProgress({
+          file,
+          fileIndex,
+          totalFiles: imageFiles.length,
+        });
+
+        const urlTag = uploadResult?.find(tag => tag[0] === 'url');
+        if (urlTag) {
+          uploadedUrls.push(urlTag[1]);
+        }
       }
+
       setImageUrls(prev => [...prev, ...uploadedUrls]);
       setImageFiles([]);
       toast({
@@ -829,6 +899,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         description: 'Bild-Upload fehlgeschlagen. Bitte versuche es erneut.',
         variant: 'destructive'
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -977,10 +1049,19 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                 <Button
                   onClick={uploadImages}
                   size="sm"
-                  disabled={imageFiles.length === 0}
+                  disabled={imageFiles.length === 0 || isUploading}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Hochladen
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Verarbeite...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Hochladen
+                    </>
+                  )}
                 </Button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -1151,9 +1232,20 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   const [manualTags, setManualTags] = useState<string[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
-  const { mutateAsync: uploadFile } = useUploadFile();
+  const { mutateAsync: uploadFileWithProgress } = useUploadWithProgress((progress) => {
+    setUploadProgress(prev => {
+      const existingIndex = prev.findIndex(p => p.fileIndex === progress.fileIndex);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = progress;
+        return updated;
+      }
+      return [...prev, progress];
+    });
+  });
   const navigate = useNavigate();
 
   // Load edit data
@@ -1304,13 +1396,29 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
   const handleImageFile = async (file: File) => {
     setIsUploading(true);
+    setUploadProgress([{
+      fileIndex: 0,
+      totalFiles: 1,
+      fileName: file.name,
+      stage: 'optimizing',
+      originalSize: file.size,
+    }]);
+
     try {
-      const [urlTag] = await uploadFile(file);
-      setImage(urlTag[1]); // URL is in second position
-      toast({
-        title: 'Upload erfolgreich!',
-        description: 'Titelbild wurde hochgeladen.',
+      const uploadResult = await uploadFileWithProgress({
+        file,
+        fileIndex: 0,
+        totalFiles: 1,
       });
+
+      const urlTag = uploadResult?.find(tag => tag[0] === 'url');
+      if (urlTag) {
+        setImage(urlTag[1]); // URL is in second position
+        toast({
+          title: 'Upload erfolgreich!',
+          description: 'Titelbild wurde hochgeladen.',
+        });
+      }
     } catch (error) {
       toast({
         title: 'Fehler',
@@ -1319,15 +1427,23 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       });
     } finally {
       setIsUploading(false);
+      setUploadProgress([]);
     }
   };
 
   const handleAdditionalImagesUpload = async (files: File[]) => {
     try {
       const newUrls: string[] = [];
-      for (const file of files) {
-        const [urlTag] = await uploadFile(file);
-        newUrls.push(urlTag[1]);
+      for (const [fileIndex, file] of files.entries()) {
+        const uploadResult = await uploadFileWithProgress({
+          file,
+          fileIndex,
+          totalFiles: files.length,
+        });
+        const urlTag = uploadResult?.find(tag => tag[0] === 'url');
+        if (urlTag) {
+          newUrls.push(urlTag[1]);
+        }
       }
       setAdditionalImages(prev => [...prev, ...newUrls]);
     } catch (error) {
@@ -1336,6 +1452,8 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         description: 'Upload zusatzlicher Bilder fehlgeschlagen.',
         variant: 'destructive'
       });
+    } finally {
+      setUploadProgress([]);
     }
   };
 
@@ -1814,9 +1932,20 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [publishedAt, setPublishedAt] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
-  const { mutateAsync: uploadFile } = useUploadFile();
+  const { mutateAsync: uploadFileWithProgress } = useUploadWithProgress((progress) => {
+    setUploadProgress(prev => {
+      const existingIndex = prev.findIndex(p => p.fileIndex === progress.fileIndex);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = progress;
+        return updated;
+      }
+      return [...prev, progress];
+    });
+  });
   const navigate = useNavigate();
 
   // Load edit data
@@ -1955,13 +2084,29 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
   const handleImageUpload = async (file: File) => {
     setIsUploading(true);
+    setUploadProgress([{
+      fileIndex: 0,
+      totalFiles: 1,
+      fileName: file.name,
+      stage: 'optimizing',
+      originalSize: file.size,
+    }]);
+
     try {
-      const [urlTag] = await uploadFile(file);
-      setImage(urlTag[1]); // URL is in second position
-      toast({
-        title: 'Upload erfolgreich!',
-        description: 'Titelbild wurde hochgeladen.',
+      const uploadResult = await uploadFileWithProgress({
+        file,
+        fileIndex: 0,
+        totalFiles: 1,
       });
+
+      const urlTag = uploadResult?.find(tag => tag[0] === 'url');
+      if (urlTag) {
+        setImage(urlTag[1]); // URL is in second position
+        toast({
+          title: 'Upload erfolgreich!',
+          description: 'Titelbild wurde hochgeladen.',
+        });
+      }
     } catch (error) {
       toast({
         title: 'Fehler',
@@ -1970,6 +2115,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       });
     } finally {
       setIsUploading(false);
+      setUploadProgress([]);
     }
   };
 
