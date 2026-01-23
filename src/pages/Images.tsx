@@ -4,20 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RelaySelector } from '@/components/RelaySelector';
 import { Button } from '@/components/ui/button';
-import { Link, useParams, useLocation } from 'react-router-dom';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { ExternalLink, Calendar, User, ArrowRight, Eye, Camera, Trash2 } from 'lucide-react';
 import { NOSTR_CONFIG } from '@/config/nostr';
-import { useNavigate } from 'react-router-dom';
-import { nip19 } from 'nostr-tools';
-import { createCategoryFilter } from '@/config/contentCategories';
 import { useAuthor } from '@/hooks/useAuthor';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
 import { MAIN_MENU } from '@/config/menu';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrDelete } from '@/hooks/useNostrDelete';
 import { useToast } from '@/hooks/useToast';
-import { generateSrcset, generateSizes } from '@/lib/imageUtils';
-import { useState } from 'react';
+import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getImagePlaceholder } from '@/lib/imageUtils';
+import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -470,16 +467,17 @@ function ImageCardComponent({
   return (
     <div className="relative w-full">
       <Card onClick={handleImageClick} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group w-full">
-        {images.length > 0 && (
-          <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
-            <img
-              src={images[0]}
-              srcSet={generateSrcset(images[0])}
-              sizes="100vw"
-              alt="Reisebild"
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+         {images.length > 0 && (
+           <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
+             <img
+               src={getGalleryThumbnailUrl(images[0])}
+               srcSet={generateSrcset(images[0], 'gallery')}
+               sizes={generateSizes('card')}
+               alt="Reisebild"
+               className="w-full h-full object-cover"
+               loading="lazy"
+               decoding="async"
+             />
 
             {/* Hover overlay with eye icon */}
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

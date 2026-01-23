@@ -107,6 +107,16 @@ export function getListThumbnailUrl(imageUrl: string): string {
 }
 
 /**
+ * Generates a thumbnail URL optimized for gallery/image cards
+ *
+ * @param imageUrl - Original image URL
+ * @returns Thumbnail URL (400x400, quality 80)
+ */
+export function getGalleryThumbnailUrl(imageUrl: string): string {
+  return getThumbnailUrl(imageUrl, 400, 80);
+}
+
+/**
  * Generates a thumbnail URL optimized for article headers
  *
  * @param imageUrl - Original image URL
@@ -126,21 +136,33 @@ export function getArticleHeaderUrl(imageUrl: string): string {
  * Uses the configured image service for ALL images
  *
  * @param imageUrl - Original image URL
+ * @param type - Image type: 'card' (default) or 'gallery' for larger images
  * @returns srcset string for img element
  */
-export function generateSrcset(imageUrl: string): string {
+export function generateSrcset(imageUrl: string, type: 'card' | 'gallery' = 'card'): string {
   if (!imageUrl) return '';
 
-  const sizes = [
-    { width: 300, descriptor: '300w' },
-    { width: 600, descriptor: '600w' },
-    { width: 900, descriptor: '900w' },
-    { width: 1200, descriptor: '1200w' },
+  // Card sizes: 300-1200px (kleiner, schneller)
+  const cardSizes = [
+    { width: 300, descriptor: '300w', quality: 80 },
+    { width: 600, descriptor: '600w', quality: 85 },
+    { width: 900, descriptor: '900w', quality: 85 },
+    { width: 1200, descriptor: '1200w', quality: 90 },
   ];
 
+  // Gallery sizes: 400-1600px (größer, für Bildergalerien)
+  const gallerySizes = [
+    { width: 400, descriptor: '400w', quality: 80 },
+    { width: 800, descriptor: '800w', quality: 85 },
+    { width: 1200, descriptor: '1200w', quality: 85 },
+    { width: 1600, descriptor: '1600w', quality: 90 },
+  ];
+
+  const sizes = type === 'gallery' ? gallerySizes : cardSizes;
+
   return sizes
-    .map(({ width, descriptor }) => {
-      const url = getThumbnailUrl(imageUrl, width, 85);
+    .map(({ width, descriptor, quality }) => {
+      const url = getThumbnailUrl(imageUrl, width, quality);
       return `${url} ${descriptor}`;
     })
     .join(', ');
