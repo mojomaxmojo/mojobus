@@ -102,6 +102,8 @@ export function Home() {
     staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
   });
 
+  const isLoading = articlesLoading || placesLoading;
+
   const contentItems: ContentItem[] = [];
 
   if (articles && Array.isArray(articles)) {
