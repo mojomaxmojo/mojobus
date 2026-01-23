@@ -16,7 +16,6 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';
@@ -27,7 +26,6 @@ type ContentItem = {
 
 export function Home() {
   const { nostr } = useNostr();
-  const { user } = useCurrentUser();
 
   // SEO Meta Tags
   useHead({
@@ -52,12 +50,12 @@ export function Home() {
   const { data: places, isLoading: placesLoading } = usePlaces();
 
   const { data: noteEvents = [] } = useQuery({
-    queryKey: ['home-notes', user?.pubkey || 'all', NOSTR_CONFIG.authorPubkeys],
+    queryKey: ['home-notes', NOSTR_CONFIG.authorPubkeys],
     queryFn: async ({ signal }) => {
       const events = await nostr.query([
         {
           kinds: [NOSTR_CONFIG.kinds.note],
-          authors: user?.pubkey ? [user.pubkey] : NOSTR_CONFIG.authorPubkeys,
+          authors: NOSTR_CONFIG.authorPubkeys,
           '#t': ['note', 'notiz'],
           limit: 20,
         }
@@ -68,12 +66,12 @@ export function Home() {
   });
 
   const { data: imageEvents = [] } = useQuery({
-    queryKey: ['home-media', user?.pubkey || 'all', NOSTR_CONFIG.authorPubkeys],
+    queryKey: ['home-media', NOSTR_CONFIG.authorPubkeys],
     queryFn: async ({ signal }) => {
       const events = await nostr.query([
         {
           kinds: [1, 30023], // Text notes und longform articles
-          authors: user?.pubkey ? [user.pubkey] : NOSTR_CONFIG.authorPubkeys,
+          authors: NOSTR_CONFIG.authorPubkeys,
           '#t': ['medien', 'media', 'bilder', 'images'],
           limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
         }
@@ -83,7 +81,6 @@ export function Home() {
         total: events.length,
         limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
         timeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
-        currentUser: user?.pubkey ? user.pubkey.slice(0, 8) + '...' : 'not logged in',
       });
 
       return events.filter((event) => {

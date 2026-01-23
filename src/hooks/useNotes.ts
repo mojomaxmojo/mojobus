@@ -10,23 +10,16 @@ import type { NostrEvent } from '@nostrify/nostrify';
  */
 export function useNotes() {
   const { nostr } = useNostr();
-  const { user } = useCurrentUser();
 
   return useInfiniteQuery({
-    queryKey: ['notes', user?.pubkey || 'all', NOSTR_CONFIG.authorPubkeys],
+    queryKey: ['notes', NOSTR_CONFIG.authorPubkeys],
     queryFn: async ({ pageParam, signal }) => {
       const filter: any = {
         kinds: [NOSTR_CONFIG.kinds.note],
         '#t': ['note', 'notiz'], // Nur Notes mit #t note oder #t notiz
         limit: 30, // Reduziert - Relays geben oft mehr zurück als angefordert
-        authors: user?.pubkey ? [user.pubkey] : undefined, // Wenn eingeloggt, nur eigene
+        authors: NOSTR_CONFIG.authorPubkeys,
       };
-
-      // Hole gültige Autoren-Pubkeys nur wenn nicht eingeloggt
-      const authorPubkeys = getValidAuthorPubkeys();
-      if (authorPubkeys.length > 0 && !user?.pubkey) {
-        filter.authors = authorPubkeys;
-      }
 
       if (pageParam) {
         filter.until = pageParam;
@@ -82,7 +75,6 @@ export function useNotes() {
  */
 export function useNote(eventId: string) {
   const { nostr } = useNostr();
-  const { user } = useCurrentUser();
 
   return useQuery({
     queryKey: ['note', eventId],
@@ -100,14 +92,6 @@ export function useNote(eventId: string) {
       );
 
       const event = events[0] || null;
-
-      // Wenn eingeloggt, prüfe ob der User Autor ist
-      if (user && event) {
-        if (event.pubkey !== user.pubkey) {
-          console.warn('Note gehört nicht dem eingeloggten User');
-          return null;
-        }
-      }
 
       return event;
     },
