@@ -8,6 +8,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
  * Validiert ein Longform Artikel Event (NIP-23) oder Platz Event
  */
 function validateLongformArticle(event: NostrEvent): boolean {
+  if (!event) return false;
   if (event.kind !== NOSTR_CONFIG.kinds.longform) return false;
 
   // Benötigte Tags: d (identifier)
@@ -16,7 +17,8 @@ function validateLongformArticle(event: NostrEvent): boolean {
   if (!d) return false;
 
   // Content sollte vorhanden sein
-  if (!event.content || event.content.trim().length === 0) return false;
+  const content = event.content || '';
+  if (content.trim().length === 0) return false;
 
   // STRIKTERE VALIDIERUNG: Prüfe auf MojoBus-spezifische Tags
   // Option 1: title-Tag muss vorhanden sein
@@ -46,10 +48,12 @@ function validateLongformArticle(event: NostrEvent): boolean {
  * Prüft ob ein Event ein Platz ist (hat type=place, #t place, #t places, oder identifier beginnt mit "place-")
  */
 function isPlaceEvent(event: NostrEvent): boolean {
+  if (!event || !event.tags) return false;
+
   const typeTag = event.tags.find(([name]) => name === 'type')?.[1];
   const placeTag = event.tags.some(([name, value]) => name === 't' && ['place', 'places'].includes(value));
   const identifier = event.tags.find(([name]) => name === 'd')?.[1] || '';
-  const hasPlaceIdentifier = identifier.startsWith('place-');
+  const hasPlaceIdentifier = identifier && identifier.startsWith('place-');
 
   return typeTag === 'place' || placeTag || hasPlaceIdentifier;
 }
@@ -59,16 +63,18 @@ function isPlaceEvent(event: NostrEvent): boolean {
  */
 export function extractArticleMetadata(event: NostrEvent) {
   const d = event.tags.find(([name]) => name === 'd')?.[1] || '';
+  const content = event.content || '';
+
   const title = event.tags.find(([name]) => name === 'title')?.[1] ||
                 event.tags.find(([name]) => name === 'name')?.[1] ||
-                extractTitleFromContent(event.content) || 'Ohne Titel';
+                extractTitleFromContent(content) || 'Ohne Titel';
 
   // Versuche summary-Tag zu extrahieren, wenn nicht vorhanden, generiere aus Content
   let summary = event.tags.find(([name]) => name === 'summary')?.[1] || '';
 
   // Wenn kein summary-Tag existiert, generiere aus dem Content (nach dem Titel)
-  if (!summary) {
-    let contentToExtract = event.content || '';
+  if (!summary && content) {
+    let contentToExtract = content;
 
     // Schritt 1: Entferne HTML-Elemente mit strukturierten Daten
     // H1 Titel
@@ -138,7 +144,7 @@ export function extractArticleMetadata(event: NostrEvent) {
     image,
     publishedAt: published_at ? parseInt(published_at) : event.created_at,
     tags,
-    content: event.content,
+    content,
   };
 }
 
@@ -146,6 +152,10 @@ export function extractArticleMetadata(event: NostrEvent) {
  * Extrahiert Titel aus dem Content (für Markdown-Format mit # Titel)
  */
 function extractTitleFromContent(content: string): string | null {
+  if (!content || typeof content !== 'string') {
+    return null;
+  }
+
   const lines = content.split('\n');
   const firstLine = lines[0]?.trim();
 
