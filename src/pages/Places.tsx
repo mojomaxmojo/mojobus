@@ -5,12 +5,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { MapPin, Search, Calendar, User } from 'lucide-react';
 import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { RelaySelector } from '@/components/RelaySelector';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
-import { Main_MENU } from '@/config/menu';
+import { filterEventsByCountry, countries } from '@/lib/countryDetection';
+import { nip19 } from 'nostr-tools';
+import { MAIN_MENU } from '@/config/menu';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
