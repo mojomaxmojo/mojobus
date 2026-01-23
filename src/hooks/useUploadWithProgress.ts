@@ -9,16 +9,43 @@ import {
   shouldOptimizeImage,
 } from '@/config/imageOptimization';
 
-export function useUploadFile() {
+export interface UploadProgress {
+  fileIndex: number;
+  totalFiles: number;
+  fileName: string;
+  stage: 'optimizing' | 'uploading' | 'backup' | 'complete' | 'error';
+  optimizationProgress?: number;
+  uploadProgress?: number;
+  backupProgress?: number;
+  originalSize?: number;
+  optimizedSize?: number;
+  error?: string;
+}
+
+export function useUploadWithProgress(onProgress?: (progress: UploadProgress) => void) {
   const { user, users } = useCurrentUser();
 
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, fileIndex, totalFiles }: {
+      file: File;
+      fileIndex: number;
+      totalFiles: number;
+    }) => {
       if (!user || users.length === 0) {
         throw new Error('Must be logged in to upload files');
       }
 
       let fileToUpload = file;
+      const originalSize = file.size;
+
+      // Benachrichtige über Start
+      onProgress?.({
+        fileIndex,
+        totalFiles,
+        fileName: file.name,
+        stage: 'optimizing',
+        originalSize,
+      });
 
       // Prüfe, ob Bildoptimierung aktiviert ist und das Bild optimiert werden soll
       const enableOptimization = localStorage.getItem('image-optimization-enabled');
@@ -43,6 +70,17 @@ export function useUploadFile() {
             compressionRatio: `${((1 - fileToUpload.size / file.size) * 100).toFixed(1)}%`,
             format: fileToUpload.type,
           });
+
+          // Benachrichtige über optimierung fertig
+          onProgress?.({
+            fileIndex,
+            totalFiles,
+            fileName: file.name,
+            stage: 'optimizing',
+            optimizationProgress: 100,
+            originalSize,
+            optimizedSize: fileToUpload.size,
+          });
         } catch (optimizationError) {
           console.warn('⚠️ Image optimization failed, uploading original file:', optimizationError);
           // Bei Fehler das Original hochladen
@@ -50,6 +88,16 @@ export function useUploadFile() {
         }
       } else {
         console.log('📤 Skipping image optimization (disabled or not applicable)');
+        // Benachrichtige über Überspringen der Optimierung
+        onProgress?.({
+          fileIndex,
+          totalFiles,
+          fileName: file.name,
+          stage: 'optimizing',
+          optimizationProgress: 100,
+          originalSize,
+          optimizedSize: originalSize,
+        });
       }
 
       // Hole autor-spezifische Blossom-Server-Konfiguration
@@ -75,6 +123,17 @@ export function useUploadFile() {
       console.log('Backup blossom server:', backupServer);
       console.log('Using blossom servers:', blossomConfig ? `Author-specific (${blossomConfig.authorId})` : 'Default');
 
+      // Benachrichtige über Upload-Start
+      onProgress?.({
+        fileIndex,
+        totalFiles,
+        fileName: file.name,
+        stage: 'uploading',
+        uploadProgress: 0,
+        originalSize,
+        optimizedSize: fileToUpload.size,
+      });
+
       // Uploade auf primäre Server
       const primaryUploader = new BlossomUploader({
         servers: primaryServers,
@@ -83,8 +142,21 @@ export function useUploadFile() {
 
       try {
         console.log('Uploading to primary servers...');
+
+        // Simuliere Upload-Progress (da BlossomUploader keinen nativen Progress-Callback hat)
         const primaryTags = await primaryUploader.upload(fileToUpload);
         console.log('Primary upload completed, tags:', primaryTags);
+
+        // Benachrichtige über Upload fertig
+        onProgress?.({
+          fileIndex,
+          totalFiles,
+          fileName: file.name,
+          stage: 'uploading',
+          uploadProgress: 100,
+          originalSize,
+          optimizedSize: fileToUpload.size,
+        });
 
         // Extrahiere die URL vom primären Upload
         const primaryUrl = primaryTags.find(tag => Array.isArray(tag) && tag[0] === 'url')?.[1];
@@ -92,6 +164,17 @@ export function useUploadFile() {
         if (!primaryUrl) {
           throw new Error('No URL found in primary upload result');
         }
+
+        // Benachrichtige über Backup-Upload
+        onProgress?.({
+          fileIndex,
+          totalFiles,
+          fileName: file.name,
+          stage: 'backup',
+          backupProgress: 0,
+          originalSize,
+          optimizedSize: fileToUpload.size,
+        });
 
         // Uploade auf Backup-Server (parallel)
         console.log('Uploading to backup server:', backupServer);
@@ -105,6 +188,17 @@ export function useUploadFile() {
           const backupTags = await backupUploader.upload(fileToUpload);
           console.log('Backup upload completed, tags:', backupTags);
 
+          // Benachrichtige über Backup fertig
+          onProgress?.({
+            fileIndex,
+            totalFiles,
+            fileName: file.name,
+            stage: 'backup',
+            backupProgress: 100,
+            originalSize,
+            optimizedSize: fileToUpload.size,
+          });
+
           // Kombiniere Tags: Primäre Tags + Backup URL
           const combinedTags = [
             ...primaryTags,
@@ -112,9 +206,42 @@ export function useUploadFile() {
           ];
 
           console.log('Combined tags:', combinedTags);
+
+          // Benachrichtige über Fertigstellung
+          onProgress?.({
+            fileIndex,
+            totalFiles,
+            fileName: file.name,
+            stage: 'complete',
+            originalSize,
+            optimizedSize: fileToUpload.size,
+          });
+
           return combinedTags;
         } catch (backupError) {
           console.warn('Backup upload failed, but primary upload succeeded:', backupError);
+
+          // Benachrichtige über Backup-Fehler, aber immer noch erfolgreich
+          onProgress?.({
+            fileIndex,
+            totalFiles,
+            fileName: file.name,
+            stage: 'backup',
+            backupProgress: 100,
+            originalSize,
+            optimizedSize: fileToUpload.size,
+          });
+
+          // Benachrichtige über Fertigstellung
+          onProgress?.({
+            fileIndex,
+            totalFiles,
+            fileName: file.name,
+            stage: 'complete',
+            originalSize,
+            optimizedSize: fileToUpload.size,
+          });
+
           // Gib trotzdem die primären Tags zurück
           return primaryTags;
         }
@@ -127,6 +254,18 @@ export function useUploadFile() {
           code: uploadError.code,
           status: uploadError.status
         });
+
+        // Benachrichtige über Fehler
+        onProgress?.({
+          fileIndex,
+          totalFiles,
+          fileName: file.name,
+          stage: 'error',
+          error: uploadError.message || 'Upload fehlgeschlagen',
+          originalSize,
+          optimizedSize: fileToUpload.size,
+        });
+
         throw uploadError;
       }
     },
