@@ -231,13 +231,16 @@ function Places() {
 }
 
 const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
-  const metadata = extractArticleMetadata(place);
+  // place already has title, image, location, created_at, author from transform
+  // No need to call extractArticleMetadata again
+  const title = place.title || 'Ort ohne Titel';
+  const image = place.image;
 
   // Optimized thumbnail URL (200px, quality 80) with srcset
-  const thumbnailUrl = metadata.image ? getListThumbnailUrl(metadata.image) : null;
-  const srcset = metadata.image ? generateSrcset(metadata.image) : undefined;
+  const thumbnailUrl = image ? getListThumbnailUrl(image) : null;
+  const srcset = image ? generateSrcset(image) : undefined;
   const sizes = generateSizes('card');
-  const placeholderColor = metadata.image ? getImagePlaceholder(metadata.image) : undefined;
+  const placeholderColor = image ? getImagePlaceholder(image) : undefined;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
@@ -253,7 +256,7 @@ const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
               src={thumbnailUrl}
               srcSet={srcset}
               sizes={sizes}
-              alt={metadata.title}
+              alt={title}
               className="w-full h-full object-cover"
               loading="lazy"
               decoding="async"
@@ -263,7 +266,7 @@ const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
         <CardHeader className="flex-1">
           <CardTitle className="line-clamp-2 hover:text-ocean-600 transition-colors flex items-center gap-2">
             <MapPin className="h-4 w-4 text-ocean-600" />
-            {metadata.title}
+            {title}
           </CardTitle>
           {place.location && (
             <CardDescription className="flex items-center gap-1">
