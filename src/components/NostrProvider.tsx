@@ -41,15 +41,11 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
     const useAuthorConfig = authorRelays.isAuthorConfig;
 
     // READ configuration (queries)
-    readRelayUrls.current = useAuthorConfig
-      ? authorRelays.readRelays
-      : config.read?.relayUrls || [];
-    readMaxRelays.current = useAuthorConfig
-      ? authorRelays.readMaxRelays
-      : config.read?.maxRelays || 3;
-    readQueryTimeout.current = useAuthorConfig
-      ? authorRelays.queryTimeout
-      : config.read?.queryTimeout || 3000;
+    // IMMER öffentliche Relays für Queries verwenden (niemals nur private author-relays!)
+    // Damit werden ALLE Artikel/Notes angezeigt, egal ob eingeloggt oder nicht
+    readRelayUrls.current = config.read?.relayUrls || [];
+    readMaxRelays.current = config.read?.maxRelays || 3;
+    readQueryTimeout.current = config.read?.queryTimeout || 3000;
 
     // WRITE configuration (publishing)
     writeRelayUrls.current = useAuthorConfig
