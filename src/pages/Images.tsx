@@ -15,6 +15,7 @@ import { useNostrDelete } from '@/hooks/useNostrDelete';
 import { useToast } from '@/hooks/useToast';
 import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getImagePlaceholder } from '@/lib/imageUtils';
 import { useState, useMemo, memo, useEffect, useRef } from 'react';
+import { nip19 } from 'nostr-tools';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -445,7 +446,7 @@ function ImageCardComponent({
     setIsDeleting(true);
     try {
       await deleteNote({
-        eventIds: event.id,
+        eventIds: [event.id],
         reason: "Echte Fehler: Delete Event (Kind 5) verwenden"
       });
 
