@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2 } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle2, UploadCloud } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ import MAIN_MENU from '@/config/menu';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
+import { Progress } from '@/components/ui/progress';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -77,6 +78,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
@@ -200,10 +203,16 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       return;
     }
 
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: files.length, status: 'Upload wird gestartet...' });
+
     try {
       // Upload all files
       const uploadedUrls: string[] = [];
-      for (const fileObj of files) {
+      for (let i = 0; i < files.length; i++) {
+        const fileObj = files[i];
+        setUploadProgress({ current: i, total: files.length, status: `Lade "${fileObj.name}" hochladen...` });
+
         try {
           const uploadResult = await uploadFile(fileObj.file);
 
@@ -252,6 +261,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
           throw new Error(`Upload failed for ${fileObj.file.name}: ${uploadError.message}`);
         }
       }
+
+      setUploadProgress({ current: files.length, total: files.length, status: 'Event wird veroeffentlicht...' });
 
       // Create content with file URLs
       const content = `${title ? `# ${title}\n\n` : ''}${description ? `${description}\n\n` : ''}${uploadedUrls.join('\n\n')}`;
@@ -306,6 +317,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         throw new Error(`Publishing failed: ${publishError.message}`);
       }
 
+      setUploadProgress({ current: files.length, total: files.length, status: '✅ Erfolgreich!' });
+
       toast({
         title: 'Erfolg!',
         description: 'Bilder erfolgreich hochgeladen und veroeffentlicht.'
@@ -335,6 +348,11 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         description: `Upload fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`,
         variant: 'destructive'
       });
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => {
+        setUploadProgress({ current: 0, total: 0, status: '' });
+      }, 3000);
     }
   };
 
@@ -730,13 +748,56 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             </div>
           )}
 
+          {/* Upload Progress */}
+          {isUploading && (
+            <Card className="border-ocean-200 dark:border-ocean-800 bg-ocean-50 dark:bg-ocean-950">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {uploadProgress.current < uploadProgress.total ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-ocean-600" />
+                      ) : (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      )}
+                      <div className="space-y-1">
+                        <p className="font-medium text-ocean-900 dark:text-ocean-100">
+                          {uploadProgress.status}
+                        </p>
+                        <p className="text-sm text-ocean-600 dark:text-ocean-400">
+                          {uploadProgress.current} von {uploadProgress.total} Dateien hochgeladen
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-sm">
+                      {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
+                    </Badge>
+                  </div>
+                  <Progress
+                    value={(uploadProgress.current / uploadProgress.total) * 100}
+                    className="h-2"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Button
             onClick={handleSubmit}
             className="w-full"
-            disabled={files.length === 0}
+            disabled={files.length === 0 || isUploading}
           >
-            <Upload className="h-4 w-4 mr-2" />
-            Bilder veroeffentlichen
+            {isUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {uploadProgress.status || 'Wird hochgeladen...'}
+              </>
+            ) : (
+              <>
+                <UploadCloud className="h-4 w-4 mr-2" />
+                Bilder veroeffentlichen
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>
