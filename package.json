@@ -214,7 +214,7 @@
     "p-locate": "^6.0.0",
     "path-exists": "^5.0.0",
     "path-parse": "^1.0.7",
-    "pkg-dir": "^9.0.0",
+    "pkg-dir": "^7.0.0",
     "postcss": "^8.4.47",
     "process": "^0.11.10",
     "stream-browserify": "^3.0.0",

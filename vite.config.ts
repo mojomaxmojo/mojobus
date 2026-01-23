@@ -30,7 +30,14 @@ export default defineConfig(() => ({
     'process.env': '{}',
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'nostr-tools', 'buffer', '@nostrify/react', '@nostrify/nostrify'],
+    include: [
+      'react',
+      'react-dom',
+      'nostr-tools',
+      'buffer',
+      '@nostrify/react',
+      '@nostrify/nostrify',
+    ],
     force: true,
   },
   build: {
