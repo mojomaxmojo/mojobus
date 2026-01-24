@@ -1,4 +1,5 @@
-import { useParams, Link } from 'react-router-dom';
+import React, { memo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -15,10 +16,7 @@ import { Search, Calendar, User, Dog, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { memo, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
-// @ts-nocheck
-// @ts-ignore
 import { useHead } from '@unhead/react';
 
 export function Leon() {
