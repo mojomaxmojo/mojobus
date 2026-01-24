@@ -156,16 +156,35 @@ export const RELAYS: RelayConfig[] = [
 // ============================================================================
 
 export const RELAY_PRESETS = {
-  // Mittel (2 schnelle Relays)
-  mittel: {
-    name: 'Mittel',
-    description: '2 schnelle Relays für gute Performance',
-    relayUrls: [
-      'wss://nos.lol',
-      'wss://relay.damus.io',
-    ],
-    maxRelays: 2,
+  // Schnelle Konfiguration (ein Relay für maximale Performance)
+  fast: {
+    name: 'Fast',
+    description: 'Ein schneller Relay für maximale Performance',
+    relayUrls: ['wss://relay.damus.io'],
+    maxRelays: 1,
     queryTimeout: 2000,
+  },
+
+  // Schnelle Konfiguration (mehrere schnelle Relays)
+  fastall: {
+    name: 'Fast (Alle)',
+    description: 'Mehrere schnelle Relays (Damus, Nostr.Band, Strfry)',
+    relayUrls: [
+      'wss://relay.damus.io',
+      'wss://relay.nostr.band',
+      'wss://nostr.strfry.net',
+    ],
+    maxRelays: 3,
+    queryTimeout: 2000,
+  },
+
+  // Schnelle Konfiguration (ein Relay für maximale Performance)
+  ultrafast: {
+    name: 'Ultra Fast',
+    description: 'Schnellster Relay für maximale Performance',
+    relayUrls: ['wss://nos.lol'],
+    maxRelays: 1,
+    queryTimeout: 1500,
   },
 
   // Groß (3 schnelle + 1 mittelmäßiger Relay)

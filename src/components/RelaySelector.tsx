@@ -35,10 +35,12 @@ export function RelaySelector() {
 
   // Detect current preset from read configuration
   const [selectedPreset, setSelectedPreset] = useState<string>(
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.mittel.relayUrls[0] ? 'mittel' :
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.gross.relayUrls[0] ? 'gross' :
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.voll.relayUrls[0] ? 'voll' :
-    'mittel' // Default
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.fast.relayUrls[0] ? 'fast' :
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.fastAll.relayUrls[0] ? 'fastall' :
+    config.read?.relayUrls?.length === 2 && config.read?.relayUrls?.[0] === RELAY_PRESETS.mittel.relayUrls[0] ? 'mittel' :
+    config.read?.relayUrls?.length === 3 && config.read?.relayUrls?.[0] === RELAY_PRESETS.gross.relayUrls[0] ? 'gross' :
+    config.read?.relayUrls?.length === 7 && config.read?.relayUrls?.[0] === RELAY_PRESETS.voll.relayUrls[0] ? 'voll' :
+    'balanced' // Default
   );
 
   const applyPreset = async (preset: string) => {
@@ -49,32 +51,41 @@ export function RelaySelector() {
         console.log("Applying relay preset:", preset);
         console.log("New relay configuration:", presetConfig);
 
-        // Apply preset to both READ and WRITE configuration
-        const readRelayUrls = presetConfig.relayUrls || [];
-        const readMaxRelays = presetConfig.maxRelays || 1;
-        const readQueryTimeout = presetConfig.queryTimeout || 2000;
-        const writeRelayUrls = presetConfig.relayUrls || [];
-        const writeMaxRelays = presetConfig.maxRelays || 1;
-        const writeActiveRelay = presetConfig.relayUrls?.[0] || '';
+  // Apply preset to both READ and WRITE configuration
+        // Neue Presets verwenden jetzt RELAYS-Liste
+        const presetConfig = RELAY_PRESETS[preset as keyof typeof RELAY_PRESETS];
 
-        updateConfig((currentConfig) => ({
-          ...currentConfig,
-          read: {
-            relayUrls: readRelayUrls,
-            maxRelays: readMaxRelays,
-            queryTimeout: readQueryTimeout,
-          },
-          write: {
-            relayUrls: writeRelayUrls,
-            maxRelays: writeMaxRelays,
-            activeRelay: writeActiveRelay,
-          },
-          // Update legacy fields for backward compatibility
-          relayUrls: presetConfig.relayUrls || [],
-          activeRelay: presetConfig.relayUrls?.[0] || '',
-          maxRelays: presetConfig.maxRelays || 1,
-          queryTimeout: presetConfig.queryTimeout || 2000,
-        }));
+        if (presetConfig) {
+          try {
+            console.log("Applying relay preset:", preset);
+            console.log("New relay configuration:", presetConfig);
+
+            // Apply preset to both READ and WRITE configuration
+            const readRelayUrls = presetConfig.relayUrls || [];
+            const readMaxRelays = presetConfig.maxRelays || 1;
+            const readQueryTimeout = presetConfig.queryTimeout || 2000;
+            const writeRelayUrls = presetConfig.relayUrls || [];
+            const writeMaxRelays = presetConfig.maxRelays || 1;
+            const writeActiveRelay = presetConfig.relayUrls?.[0] || '';
+
+            updateConfig((currentConfig) => ({
+              ...currentConfig,
+              read: {
+                relayUrls: readRelayUrls,
+                maxRelays: readMaxRelays,
+                queryTimeout: readQueryTimeout,
+              },
+              write: {
+                relayUrls: writeRelayUrls,
+                maxRelays: writeMaxRelays,
+                activeRelay: writeActiveRelay,
+              },
+              // Update legacy fields for backward compatibility
+              relayUrls: presetConfig.relayUrls || [],
+              activeRelay: presetConfig.relayUrls?.[0] || '',
+              maxRelays: presetConfig.maxRelays || 1,
+              queryTimeout: presetConfig.queryTimeout || 2000,
+            }));
 
         setSelectedPreset(preset);
         toast({
