@@ -507,7 +507,7 @@ function ImageCardComponent({
               {metadata?.picture ? (
                 <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                   <img
-                    src={metadata.picture}
+                    src={getGalleryThumbnailUrl(metadata.picture)}
                     alt={metadata.name || 'Autor'}
                     className="w-full h-full object-cover"
                     loading="lazy"
