@@ -166,19 +166,6 @@ export const RELAY_PRESETS = {
   },
 
   // Schnelle Konfiguration (mehrere schnelle Relays)
-  fastall: {
-    name: 'Fast (Alle)',
-    description: 'Mehrere schnelle Relays (Damus, Nostr.Band, Strfry)',
-    relayUrls: [
-      'wss://relay.damus.io',
-      'wss://relay.nostr.band',
-      'wss://nostr.strfry.net',
-    ],
-    maxRelays: 3,
-    queryTimeout: 2000,
-  },
-
-  // Schnelle Konfiguration (ein Relay für maximale Performance)
   ultrafast: {
     name: 'Ultra Fast',
     description: 'Schnellster Relay für maximale Performance',
@@ -187,29 +174,92 @@ export const RELAY_PRESETS = {
     queryTimeout: 1500,
   },
 
-  // Groß (3 schnelle + 1 mittelmäßiger Relay)
-  gross: {
-    name: 'Groß',
-    description: '3 schnelle Relays + 1 mittelmäßiger für Balance',
-    relayUrls: [
-      'wss://nos.lol',
-      'wss://relay.damus.io',
-      'wss://nostr.band',
-    ],
-    maxRelays: 3,
-    queryTimeout: 3000,
-  },
-
-  // Voll (ALLE verfügbaren Relays)
-  voll: {
-    name: 'Voll',
-    description: 'Alle verfügbaren Relays (7 Stück)',
+  // Balanced Konfiguration (Performance & Reliability)
+  balanced: {
+    name: 'Balanced',
+    description: 'Ausgewogene Konfiguration für gute Performance und Zuverlässigkeit',
     relayUrls: [
       'wss://nos.lol',
       'wss://relay.damus.io',
       'wss://relay.primal.net',
       'wss://nostr.band',
-      'wss://relay.nostr.band',
+      'wss://relay.le.nos.social',
+      'wss://nostr.bitcoiner.social',
+      'wss://relay.mojobus.co',
+    ],
+    maxRelays: 4,
+    queryTimeout: 3000,
+  },
+
+  // Reliable Konfiguration (maximale Zuverlässigkeit)
+  reliable: {
+    name: 'Reliable',
+    description: 'Mehrere Relays für maximale Zuverlässigkeit',
+    relayUrls: [
+      'wss://nos.lol',
+      'wss://relay.damus.io',
+      'wss://relay.primal.net',
+      'wss://nostr.band',
+      'wss://relay.le.nos.social',
+      'wss://nostr.bitcoiner.social',
+      'wss://relay.mojobus.co',
+      'wss://nostr.band',
+      'wss://relay.primal.net',
+      'wss://nostr.strfry.net',
+      'wss://relay.le.nos.social',
+      'wss://nostr.bitcoiner.social',
+      'wss://relay.mojobus.co',
+    ],
+    maxRelays: 6,
+    queryTimeout: 4000,
+  },
+
+  // Search-optimiert (für Such-Queries)
+  search: {
+    name: 'Search (Alle)',
+    description: 'Sämtliche Relays mit Search-Unterstützung',
+    relayUrls: [
+      'wss://nostr.bitcoiner.social',
+      'wss://nostr.band',
+      'wss://relay.damus.io',
+      'wss://relay.primal.net',
+    ],
+    maxRelays: 3,
+    queryTimeout: 5000,
+  },
+
+  // Storage-Optimiert (ALLE gute Speicher-Relays)
+  storage: {
+    name: 'Storage',
+    description: 'ALLE Relays mit guter Speicherung',
+    relayUrls: [
+      'wss://relay.damus.io',
+      'wss://relay.le.nos.social',
+      'wss://nos.lol',
+      'wss://nostr.band',
+      'wss://relay.primal.net',
+      'wss://nostr.bitcoiner.social',
+      'wss://relay.mojobus.co',
+    ],
+    maxRelays: 5,
+    queryTimeout: 4000,
+  },
+
+  // Max-Reliable (maximale Redundanz - ALLE verfügbaren Relays)
+  maxreliable: {
+    name: 'Max Reliable',
+    description: 'Maximale Redundanz mit allen verfügbaren Relays',
+    relayUrls: [
+      'wss://nos.lol',
+      'wss://relay.damus.io',
+      'wss://relay.primal.net',
+      'wss://nostr.band',
+      'wss://nostr.strfry.net',
+      'wss://relay.le.nos.social',
+      'wss://nostr.bitcoiner.social',
+      'wss://relay.mojobus.co',
+      'wss://nostr.band',
+      'wss://relay.primal.net',
       'wss://nostr.strfry.net',
       'wss://relay.le.nos.social',
       'wss://nostr.bitcoiner.social',
