@@ -14,6 +14,7 @@ import { CommentsSection } from '@/components/comments/CommentsSection';
 import { NoteContent } from '@/components/NoteContent';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
+import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getArticleHeaderUrl } from '@/lib/imageUtils';
 
 interface ImageEvent {
   id: string;
@@ -312,10 +313,13 @@ export function ImageDetail() {
                   onClick={() => openFullscreen(0)}
                 >
                   <img
-                    src={images[0]}
+                    src={getArticleHeaderUrl(images[0])}
+                    srcSet={generateSrcset(images[0], 'gallery')}
+                    sizes={generateSizes('header')}
                     alt="Reisebild"
                     className="w-full object-cover bg-gray-100 dark:bg-gray-900 max-h-[800px]"
-                    loading="lazy"
+                    loading="eager"
+                    decoding="sync"
                   />
 
                   {/* Hover overlay */}
@@ -346,7 +350,9 @@ export function ImageDetail() {
                         onClick={() => openFullscreen(index + 1)}
                       >
                         <img
-                          src={img}
+                          src={getGalleryThumbnailUrl(img)}
+                          srcSet={generateSrcset(img, 'card')}
+                          sizes={generateSizes('card')}
                           alt={`Bild ${index + 2}`}
                           className="w-full h-32 object-cover transition-transform group-hover:scale-105"
                           loading="lazy"
@@ -410,7 +416,7 @@ export function ImageDetail() {
                   {metadata?.picture ? (
                     <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                       <img
-                        src={metadata.picture}
+                        src={getGalleryThumbnailUrl(metadata.picture)}
                         alt={metadata.name || 'Autor'}
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -603,7 +609,9 @@ export function ImageDetail() {
 
           {/* Main image */}
           <img
-            src={images[currentImageIndex]}
+            src={getArticleHeaderUrl(images[currentImageIndex])}
+            srcSet={generateSrcset(images[currentImageIndex], 'gallery')}
+            sizes="(max-width: 640px) 400px, (max-width: 1024px) 800px, (max-width: 1280px) 1200px, 1600px"
             alt={`Bild ${currentImageIndex + 1}`}
             className="max-h-[90vh] max-w-[90vw] object-contain"
             onClick={() => setIsImageFullscreen(false)}
