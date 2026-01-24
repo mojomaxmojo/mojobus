@@ -25,9 +25,8 @@ export function Leon() {
   // Alle Leon-Artikel abrufen mit Infinite Scroll
   const { data: articles, isLoading, error, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteLongformArticles({
     kinds: [30023],
-    '#t': LEON_CONFIG.tags,
+    '#t': ['leon'],
     limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage,
-    authors: LEON_CONFIG.authorPubkeys,
   });
 
   // Infinite Scroll trigger
@@ -48,14 +47,23 @@ export function Leon() {
     return articles?.pages.flat() || [];
   }, [articles]);
 
+  // Filter Leon articles by tags (client-side filtering like RVLife)
+  const leonArticles = React.useMemo(() => {
+    return allArticles.filter(article => {
+      const eventTags = article.tags.filter(([name]) => name === 't').map(([, value]) => value);
+      // Prüfe ob der Artikel mindestens ein Leon-Tag hat
+      return eventTags.some(tag => LEON_CONFIG.tags.includes(tag));
+    });
+  }, [allArticles]);
+
   // Filter articles by search term
   const filteredArticles = React.useMemo(() => {
     if (!searchTerm.trim()) {
-      return allArticles;
+      return leonArticles;
     }
 
     const query = searchTerm.toLowerCase();
-    return allArticles.filter((article: NostrEvent) => {
+    return leonArticles.filter((article: NostrEvent) => {
       const metadata = extractArticleMetadata(article);
       return (
         metadata.title.toLowerCase().includes(query) ||
@@ -64,7 +72,7 @@ export function Leon() {
         metadata.tags.some((tag: string) => tag.toLowerCase().includes(query))
       );
     });
-  }, [allArticles, searchTerm]);
+  }, [leonArticles, searchTerm]);
 
   // Simple SEO Meta Tags
   const pageTitle = `Leon Stories (${filteredArticles.length}) - MojoBus`;
