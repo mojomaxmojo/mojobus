@@ -13,49 +13,19 @@ interface PresetOption {
 
 const PRESET_OPTIONS: PresetOption[] = [
   {
-    value: "ultrafast",
-    label: "Ultra Fast",
-    description: "Schnellster einzelner Relay (READ)",
+    value: "mittel",
+    label: "Mittel",
+    description: "2 schnelle Relays für gute Performance",
   },
   {
-    value: "fast",
-    label: "Fast",
-    description: "Schnelle Ladezeiten, minimale Latency",
+    value: "gross",
+    label: "Groß",
+    description: "3 schnelle Relays + 1 mittelmäßiger für Balance",
   },
   {
-    value: "balanced",
-    label: "Balanced",
-    description: "Ausgewogene Performance und Zuverlässigkeit",
-  },
-  {
-    value: "reliable",
-    label: "Reliable",
-    description: "Maximale Zuverlässigkeit mit mehreren Relays",
-  },
-  {
-    value: "fastall",
-    label: "Fast (Alle)",
-    description: "Alle schnellen Relays (Damus, Nostr.Band, Strfry)",
-  },
-  {
-    value: "ultrareliable",
-    label: "Ultra Reliable",
-    description: "Maximale Redundanz mit 6 zuverlässigen Relays (READ/WRITE)",
-  },
-  {
-    value: "maxreliable",
-    label: "Max Reliable",
-    description: "Maximale Redundanz mit 7 zuverlässigen Relays (READ/WRITE/SUCHEN)",
-  },
-  {
-    value: "searchall",
-    label: "Search (Alle)",
-    description: "Sämtliche Relays mit Search-Unterstützung",
-  },
-  {
-    value: "storage",
-    label: "Storage",
-    description: "ALLE Relays mit guter Speicherung",
+    value: "voll",
+    label: "Voll",
+    description: "Alle verfügbaren Relays (7 Stück)",
   },
 ];
 
@@ -65,16 +35,10 @@ export function RelaySelector() {
 
   // Detect current preset from read configuration
   const [selectedPreset, setSelectedPreset] = useState<string>(
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.ultrafast.relayUrls[0] ? 'ultrafast' :
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.fast.relayUrls[0] ? 'fast' :
-    config.read?.relayUrls?.length === 2 && config.read?.relayUrls?.[0] === RELAY_PRESETS.balanced.relayUrls[0] ? 'balanced' :
-    config.read?.relayUrls?.length === 3 && config.read?.relayUrls?.[0] === RELAY_PRESETS.reliable.relayUrls[0] ? 'reliable' :
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.fastAll.relayUrls[0] ? 'fastall' :
-    config.read?.relayUrls?.length === 6 && config.read?.relayUrls?.[0] === RELAY_PRESETS.ultrareliable.relayUrls[0] ? 'ultrareliable' :
-    config.read?.relayUrls?.length === 7 && config.read?.relayUrls?.[0] === RELAY_PRESETS.maxreliable.relayUrls[0] ? 'maxreliable' :
-    config.read?.relayUrls?.length === 5 && config.read?.relayUrls?.[0] === RELAY_PRESETS.searchall.relayUrls[0] ? 'searchall' :
-    config.read?.relayUrls?.length === 4 && config.read?.relayUrls?.[0] === RELAY_PRESETS.storage.relayUrls[0] ? 'storage' :
-    'balanced' // Default
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.mittel.relayUrls[0] ? 'mittel' :
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.gross.relayUrls[0] ? 'gross' :
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.voll.relayUrls[0] ? 'voll' :
+    'mittel' // Default
   );
 
   const applyPreset = async (preset: string) => {
@@ -86,7 +50,6 @@ export function RelaySelector() {
         console.log("New relay configuration:", presetConfig);
 
         // Apply preset to both READ and WRITE configuration
-        // Legacy- und neue Presets korrekt anwenden
         const readRelayUrls = presetConfig.relayUrls || [];
         const readMaxRelays = presetConfig.maxRelays || 1;
         const readQueryTimeout = presetConfig.queryTimeout || 2000;
@@ -179,45 +142,45 @@ Wähle einen Relay-Preset für optimale Performance
 </SelectContent>
 </Select>
 </div>
-<p className="text-xs text-muted-foreground">
-Automatische Anpassung aller Relay-Einstellungen
-</p>
+  <p className="text-xs text-muted-foreground">
+    4 Presets für verschiedene Einsatzszenarien
+  </p>
 
-{selectedPreset && (
-<div className="bg-muted/50 rounded-lg p-4 space-y-3">
-<h4 className="text-sm font-medium mb-2">Gewähltes Preset: {selectedPreset}</h4>
-<div className="text-xs text-muted-foreground">
-{PRESET_OPTIONS.find(o => o.value === selectedPreset)?.description}
-</div>
+  {selectedPreset && (
+    <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+      <h4 className="text-sm font-medium mb-2">Gewähltes Preset: {selectedPreset}</h4>
+      <div className="text-xs text-muted-foreground">
+        {PRESET_OPTIONS.find(o => o.value === selectedPreset)?.description}
+      </div>
 
-<div className="grid grid-cols-2 gap-4 text-xs">
-<div>
-<span className="font-medium">Relays (READ):</span>
-<div className="text-muted-foreground">
-{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.relayUrls.join(", ") || "-"}
-</div>
-</div>
-<div>
-<span className="font-medium">Max Relays:</span>
-<div className="text-muted-foreground">
-{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.maxRelays || "-"}
-</div>
-</div>
-<div>
-<span className="font-medium">Timeout:</span>
-<div className="text-muted-foreground">
-{RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.queryTimeout ? `${RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS].queryTimeout / 1000}s` : "-"}
-</div>
-</div>
-<div>
-<span className="font-medium">Deduplizierung:</span>
-<div className="text-muted-foreground">
-{config.enableDeduplication ? "Aktiv" : "Inaktiv"}
-</div>
-</div>
-</div>
-</div>
-)}
+      <div className="grid grid-cols-2 gap-4 text-xs">
+        <div>
+          <span className="font-medium">Relays:</span>
+          <div className="text-muted-foreground">
+            {RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.relayUrls.join(", ") || "-"}
+          </div>
+        </div>
+        <div>
+          <span className="font-medium">Max Relays:</span>
+          <div className="text-muted-foreground">
+            {RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.maxRelays || "-"}
+          </div>
+        </div>
+        <div>
+          <span className="font-medium">Timeout:</span>
+          <div className="text-muted-foreground">
+            {RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS]?.queryTimeout ? `${RELAY_PRESETS[selectedPreset as keyof typeof RELAY_PRESETS].queryTimeout / 1000}s` : "-"}
+          </div>
+        </div>
+        <div>
+          <span className="font-medium">Deduplizierung:</span>
+          <div className="text-muted-foreground">
+            {config.enableDeduplication ? "Aktiv" : "Inaktiv"}
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
 </div>
 );
 }
