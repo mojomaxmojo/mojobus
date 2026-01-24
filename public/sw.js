@@ -6,11 +6,19 @@
 // ============================================================================
 // CACHE-KONFIGURATION
 // ============================================================================
-const CACHE_VERSION = 6; // Cache Version erhöhen (war 5, jetzt 6)
+const CACHE_VERSION = 7; // Cache Version erhöhen (war 6, jetzt 7)
 const CACHE_NAME = `mojobus-v${CACHE_VERSION}`; // Version aus Konfiguration
+
+// Cache-Zeiten (in Sekunden)
+const CACHE_TIMES = {
+  STATIC_ASSETS: 30 * 24 * 60 * 60, // 30 Tage (CSS, JS, Fonts)
+  IMAGES: 365 * 24 * 60 * 60, // 1 Jahr (Bilder sind immutable!)
+  API: 5 * 60, // 5 Minuten (API-Endpunkte)
+};
 
 console.log('[Service Worker] Cache Version:', CACHE_VERSION);
 console.log('[Service Worker] Cache Name:', CACHE_NAME);
+console.log('[Service Worker] Bild-Cache-Zeit:', CACHE_TIMES.IMAGES / (24 * 60 * 60), 'Tage (1 Jahr für immutable Assets)');
 
 // ============================================================================
 // CACHE-STRATEGIEN
@@ -19,7 +27,9 @@ console.log('[Service Worker] Cache Name:', CACHE_NAME);
 /**
  * Cache-First Strategie
  * Versucht zuerst Cache, dann Network
- * Für Assets die sich selten ändern (CSS, JS, Icons)
+ * Für Assets die sich nie ändern (Bilder) oder selten ändern (CSS, JS, Icons)
+ * BILDER: 1 Jahr Cache (immutable URLs)
+ * ASSETS: 30 Tage Cache
  */
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
@@ -132,6 +142,7 @@ async function networkOnly(request) {
 
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Install Event - Cache Version:', CACHE_VERSION);
+  console.log('[Service Worker] Bild-Cache-Zeit:', CACHE_TIMES.IMAGES / (24 * 60 * 60), 'Tage (1 Jahr für immutable Assets)');
 
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -234,13 +245,15 @@ if (url.pathname.startsWith('/assets/')) {
 
 // 3. 🚀 OPTIMIZATION: Cache-First für optimierte Bilder (images.weserv.nl)
 // Reduziert Bild-Ladezeiten drastisch durch aggressives Caching
+// BILDER SIND IMMUTABLE → 1 Jahr Cache ist sicher!
 if (url.hostname.includes('images.weserv.nl')) {
   event.respondWith(cacheFirst(request));
   return;
 }
 
 // 4. Cache-First für Blossom-Bilder (blossom.primal.net)
-// Aggressives Caching für alle Bilder
+// BILDER SIND IMMUTABLE → 1 Jahr Cache ist sicher!
+// Blossom URLs haben eindeutige Hashes → neue Bilder haben neue URLs
 if (url.hostname.includes('blossom.primal.net') || url.pathname.match(/\.(png|jpg|jpeg|gif|webp|avif|svg)$/i)) {
   event.respondWith(cacheFirst(request));
   return;
