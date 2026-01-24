@@ -197,9 +197,8 @@ export function Leon() {
                         </Button>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}
