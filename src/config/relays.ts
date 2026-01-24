@@ -44,6 +44,21 @@ export interface RelayConfig {
 }
 
 // ============================================================================
+// PRESET TYPES
+// ============================================================================
+
+export type RelayPresetType = 'mojobus' | 'fast' | 'balanced' | 'mojo_publish' | 'mojo_blossom' | 'susanne_publish' | 'susanne_blossom';
+
+export interface RelayPreset {
+  name: string;
+  description: string;
+  relayUrls?: string[];
+  maxRelays?: number;
+  queryTimeout?: number;
+  blossomUrl?: string;
+}
+
+// ============================================================================
 // VERFÜGBARE RELAYS
 // ============================================================================
 
@@ -156,67 +171,75 @@ export const RELAYS: RelayConfig[] = [
 // ============================================================================
 
 export const RELAY_PRESETS = {
-  // Schnelle Konfiguration (ein Relay für maximale Performance)
+  // MojoBus Preset - Hauptkonfiguration für MojoBus Blog
+  mojobus: {
+    name: 'MojoBus',
+    description: 'MojoBus Relays (relay.mojobus.co + Backup)',
+    relayUrls: [
+      'wss://relay.mojobus.co',
+      'wss://relays.mojobus.co',
+    ],
+    maxRelays: 2,
+    queryTimeout: 2000,
+  },
+
+  // Fast Preset - Maximale Performance mit einem schnellen Relay
   fast: {
     name: 'Fast',
     description: 'Ein schneller Relay für maximale Performance',
-    relayUrls: ['wss://relay.damus.io'],
-    maxRelays: 1,
-    queryTimeout: 2000,
-  },
-
-  // Schnelle Konfiguration (mehrere schnelle Relays)
-  fastall: {
-    name: 'Fast (Alle)',
-    description: 'Mehrere schnelle Relays (Damus, Nostr.Band, Strfry)',
     relayUrls: [
-      'wss://relay.damus.io',
-      'wss://relay.nostr.band',
-      'wss://nostr.strfry.net',
-    ],
-    maxRelays: 3,
-    queryTimeout: 2000,
-  },
-
-  // Schnelle Konfiguration (ein Relay für maximale Performance)
-  ultrafast: {
-    name: 'Ultra Fast',
-    description: 'Schnellster Relay für maximale Performance',
-    relayUrls: ['wss://nos.lol'],
-    maxRelays: 1,
-    queryTimeout: 1500,
-  },
-
-  // Groß (3 schnelle + 1 mittelmäßiger Relay)
-  gross: {
-    name: 'Groß',
-    description: '3 schnelle Relays + 1 mittelmäßiger für Balance',
-    relayUrls: [
-      'wss://nos.lol',
-      'wss://relay.damus.io',
-      'wss://nostr.band',
-    ],
+       'wss://relay.mojobus.co',
+       'wss://relays.mojobus.co',
+       'wss://relay.primal.net',
+      ],
     maxRelays: 3,
     queryTimeout: 3000,
   },
 
-  // Voll (ALLE verfügbaren Relays)
-  voll: {
-    name: 'Voll',
-    description: 'Alle verfügbaren Relays (7 Stück)',
+  // Balanced Preset - Ausgewogene Mischung für Besucher
+  balanced: {
+    name: 'Balanced',
+    description: 'Ausgewogene Mischung aus schnellen und zuverlässigen Relays',
     relayUrls: [
+       'wss://relay.mojobus.co',
+       'wss://relays.mojobus.co',
+       'wss://relay.primal.net',
       'wss://nos.lol',
-      'wss://relay.damus.io',
-      'wss://relay.primal.net',
-      'wss://nostr.band',
-      'wss://relay.nostr.band',
-      'wss://nostr.strfry.net',
-      'wss://relay.le.nos.social',
-      'wss://nostr.bitcoiner.social',
-      'wss://relay.mojobus.co',
     ],
-    maxRelays: 7,
+    maxRelays: 4,
     queryTimeout: 4000,
+  },
+
+  // ============================================================================
+  // AUTOR-SPEZIFISCHE PRESETS
+  // ============================================================================
+
+  // Mojo Presets
+  mojo_publish: {
+    name: 'Mojo Publish',
+    description: 'Mojo Veröffentlichen-Relay (relay.mojobus.co)',
+    relayUrls: ['wss://relay.mojobus.co'],
+    maxRelays: 1,
+    queryTimeout: 3000,
+  },
+  mojo_blossom: {
+    name: 'Mojo Blossom',
+    description: 'Mojo Blossom Server für Datei-Uploads',
+    blossomUrl: 'https://relay.mojobus.co',
+  },
+
+  // Susanne Presets
+  susanne_publish: {
+    name: 'Susanne Publish',
+    description: 'Susanne Veröffentlichen-Relay (relays.mojobus.co)',
+    relayUrls: ['wss://relays.mojobus.co'],
+    maxRelays: 1,
+    queryTimeout: 3000,
+  },
+  susanne_blossom: {
+    name: 'Susanne Blossom',
+    description: 'Susanne Blossom Server für Datei-Uploads',
+    blossomUrl: 'https://relays.mojobus.co',
   },
 } as const;
 
