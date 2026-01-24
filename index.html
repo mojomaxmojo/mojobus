@@ -36,11 +36,29 @@
     <meta name="theme-color" content="#0891B2" />
     <meta name="msapplication-TileColor" content="#0891B2" />
 
-    <!-- 🔥 PERFORMANCE: Asset Preloading -->
+    <!-- 🔥 PERFORMANCE: Critical Preloading für bessere Ladezeit -->
+    <!-- DNS-Prefetch für externe Ressourcen -->
+    <link rel="dns-prefetch" href="https://images.weserv.nl" />
+    <link rel="dns-prefetch" href="https://blossom.primal.net" />
+    <link rel="dns-prefetch" href="https://relay.nostr.band" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+    <!-- Preconnect für kritische externe Ressourcen (TCP-Handshake vorab) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://blossom.primal.net" />
     <link rel="preconnect" href="https://relay.nostr.band" />
+    <link rel="preconnect" href="https://images.weserv.nl" crossorigin />
+
+    <!-- Preload kritische Assets -->
+    <link rel="preload" href="/mojobuslogo.png" as="image" type="image/png" fetchpriority="high" />
+    <link rel="preload" href="/favicon-32x32.png" as="image" type="image/png" />
+    <link rel="preload" href="/apple-touch-icon.png" as="image" type="image/png" />
+
+    <!-- Preload Fonts für schnelleres First Contentful Paint -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" /></noscript>
 
     <!-- Service Worker Registration -->
     <script>

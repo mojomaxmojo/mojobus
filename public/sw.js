@@ -127,7 +127,7 @@ async function networkOnly(request) {
 }
 
 // ============================================================================
-// INSTALL EVENT (Cache-Invalidierung)
+// INSTALL EVENT (Cache-Invalidierung & Precaching)
 // ============================================================================
 
 self.addEventListener('install', (event) => {
@@ -136,6 +136,28 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Cache opened:', cache);
+
+      // 🚀 OPTIMIZATION: Precache kritische Assets
+      const CRITICAL_ASSETS = [
+        '/mojobuslogo.png',
+        '/favicon-32x32.png',
+        '/favicon-16x16.png',
+        '/apple-touch-icon.png',
+      ];
+
+      // Cache kritische Assets parallel
+      const precachePromises = CRITICAL_ASSETS.map((url) => {
+        return fetch(url).then((response) => {
+          if (response.ok) {
+            return cache.put(url, response);
+          }
+          return Promise.resolve();
+        }).catch((error) => {
+          console.warn('[Service Worker] Failed to precache:', url, error);
+          return Promise.resolve();
+        });
+      });
+
       // Cache Version speichern
       const cacheVersionRequest = new Request('/api/cache-version');
       const cacheVersionResponse = new Response(
@@ -148,7 +170,8 @@ self.addEventListener('install', (event) => {
           }
         }
       );
-      return cache.put(cacheVersionRequest, cacheVersionResponse);
+
+      return Promise.all([...precachePromises, cache.put(cacheVersionRequest, cacheVersionResponse)]);
     }).catch((error) => {
       console.error('[Service Worker] Install failed:', error);
     })
@@ -193,42 +216,56 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // ============================================================================
-  // CACHE-STRATEGIE AUSWAHL
-  // ============================================================================
+// ============================================================================
+// CACHE-STRATEGIE AUSWAHL
+// ============================================================================
 
-  // 1. Cache-First für Assets (CSS, JS, Icons, Fonts)
-  if (url.pathname.match(/\.(css|js|woff|woff2|ttf|eot|otf)$/i)) {
-    event.respondWith(cacheFirst(request));
-    return;
-  }
+// 1. Cache-First für Assets (CSS, JS, Icons, Fonts)
+if (url.pathname.match(/\.(css|js|woff|woff2|ttf|eot|otf)$/i)) {
+  event.respondWith(cacheFirst(request));
+  return;
+}
 
-  // 2. Cache-First für Assets-Verzeichnis
-  if (url.pathname.startsWith('/assets/')) {
-    event.respondWith(cacheFirst(request));
-    return;
-  }
+// 2. Cache-First für Assets-Verzeichnis
+if (url.pathname.startsWith('/assets/')) {
+  event.respondWith(cacheFirst(request));
+  return;
+}
 
-  // 3. Network-First für HTML-Seiten
-  if (url.pathname.match(/\.html$/) || url.pathname === '/') {
-    event.respondWith(networkFirst(request));
-    return;
-  }
+// 3. 🚀 OPTIMIZATION: Cache-First für optimierte Bilder (images.weserv.nl)
+// Reduziert Bild-Ladezeiten drastisch durch aggressives Caching
+if (url.hostname.includes('images.weserv.nl')) {
+  event.respondWith(cacheFirst(request));
+  return;
+}
 
-  // 4. Stale-While-Revalidate für API-Endpunkte
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(staleWhileRevalidate(request));
-    return;
-  }
+// 4. Cache-First für Blossom-Bilder (blossom.primal.net)
+// Aggressives Caching für alle Bilder
+if (url.hostname.includes('blossom.primal.net') || url.pathname.match(/\.(png|jpg|jpeg|gif|webp|avif|svg)$/i)) {
+  event.respondWith(cacheFirst(request));
+  return;
+}
 
-  // 5. Network-Only für Nostr-Relays und WebSockets
-  if (url.protocol === 'wss:' || url.hostname.includes('nos.lol') || url.hostname.includes('relay.')) {
-    event.respondWith(networkOnly(request));
-    return;
-  }
-
-  // Default: Network-First für alles andere
+// 5. Network-First für HTML-Seiten
+if (url.pathname.match(/\.html$/) || url.pathname === '/') {
   event.respondWith(networkFirst(request));
+  return;
+}
+
+// 6. Stale-While-Revalidate für API-Endpunkte
+if (url.pathname.startsWith('/api/')) {
+  event.respondWith(staleWhileRevalidate(request));
+  return;
+}
+
+// 7. Network-Only für Nostr-Relays und WebSockets
+if (url.protocol === 'wss:' || url.hostname.includes('nos.lol') || url.hostname.includes('relay.')) {
+  event.respondWith(networkOnly(request));
+  return;
+}
+
+// Default: Network-First für alles andere
+event.respondWith(networkFirst(request));
 });
 
 // ============================================================================

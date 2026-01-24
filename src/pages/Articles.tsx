@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
-import { useAuthor } from '@/hooks/useAuthor';
+import { useAuthors } from '@/hooks/useAuthors';
 import { genUserName } from '@/lib/genUserName';
 import { RelaySelector } from '@/components/RelaySelector';
 import { filterEventsByCountry } from '@/lib/countryDetection';
@@ -49,6 +49,21 @@ function Articles() {
     return data?.pages.flat() || [];
   }, [data]);
 
+  // 🔥 OPTIMIZATION 1: Extrahiere alle unique pubkeys für Batching
+  // Reduziert 15 Queries zu 1 Query pro Seite
+  const uniquePubkeys = useMemo(() => {
+    const set = new Set<string>();
+    allArticles.forEach(article => {
+      if (article.pubkey) {
+        set.add(article.pubkey);
+      }
+    });
+    return Array.from(set);
+  }, [allArticles]);
+
+  // 🔥 OPTIMIZATION 1: Batch-Abruf aller Autoren-Profile (statt pro Artikel)
+  const authors = useAuthors(uniquePubkeys);
+
   // Filter articles mit intelligenter Ländererkennung
   const filteredArticles = useMemo(() => {
     let filtered = [...allArticles];
@@ -86,6 +101,16 @@ function Articles() {
 
     return filtered.sort((a, b) => b.created_at - a.created_at);
   }, [allArticles, searchQuery, selectedTag, selectedAuthor, currentCountry, country]);
+
+  // 🔥 OPTIMIZATION 2: Cache Artikel-Metadata um Duplikate zu vermeiden
+  // Wird für jedes ArticleCard wiederverwendet statt neu berechnet
+  const articlesMetadata = useMemo(() => {
+    const map = new Map();
+    filteredArticles.forEach(article => {
+      map.set(article.id, extractArticleMetadata(article));
+    });
+    return map;
+  }, [filteredArticles]);
 
   const articleCount = allArticles.length;
 
@@ -287,7 +312,11 @@ function Articles() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredArticles.map((article) => (
-                  <ArticleCard key={article.id} article={article} />
+                  <ArticleCard
+                    key={article.id}
+                    article={article}
+                    authorsMap={authors.data || new Map()}
+                  />
                 ))}
               </div>
 
@@ -351,10 +380,19 @@ function Articles() {
   );
 }
 
-const ArticleCard = memo(function ArticleCard({ article }: { article: NostrEvent }) {
-  const metadata = extractArticleMetadata(article);
-  const author = useAuthor(article.pubkey);
-  const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
+const ArticleCard = memo(function ArticleCard({
+  article,
+  authorsMap,
+}: {
+  article: NostrEvent;
+  authorsMap: Map<string, { event?: NostrEvent; metadata?: any }>;
+}) {
+  // 🔥 OPTIMIZATION 2: Gecachte Metadata statt neu berechnet
+  const metadata = articlesMetadata.get(article.id) || extractArticleMetadata(article);
+
+  // 🔥 OPTIMIZATION 1: Autoren aus Batching-Map statt separatem Query
+  const author = authorsMap.get(article.pubkey);
+  const authorName = author?.metadata?.name || genUserName(article.pubkey);
 
   // Generate naddr identifier for article
   const naddr = nip19.naddrEncode({
