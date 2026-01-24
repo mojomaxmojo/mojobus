@@ -24,7 +24,7 @@ const PRESET_OPTIONS: PresetOption[] = [
   },
   {
     value: "voll",
-    label: "Voll",
+    label: "Groß",
     description: "Alle verfügbaren Relays (7 Stück)",
   },
 ];
