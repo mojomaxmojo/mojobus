@@ -11,17 +11,21 @@ interface PresetOption {
   description: string;
 }
 
-
 const PRESET_OPTIONS: PresetOption[] = [
   {
-    value: "balanced",
-    label: "Balanced",
-    description: "Ausgewogene Konfiguration für gute Performance und Zuverlässigkeit",
+    value: "mittel",
+    label: "Mittel",
+    description: "2 schnelle Relays für gute Performance",
   },
   {
-    value: "reliable",
-    label: "Reliable",
-    description: "Mehrere Relays für maximale Zuverlässigkeit",
+    value: "gross",
+    label: "Groß",
+    description: "3 schnelle Relays + 1 mittelmäßiger für Balance",
+  },
+  {
+    value: "voll",
+    label: "Voll",
+    description: "Alle verfügbaren Relays (7 Stück)",
   },
 ];
 
@@ -31,9 +35,11 @@ export function RelaySelector() {
 
   // Detect current preset from read configuration
   const [selectedPreset, setSelectedPreset] = useState<string>(
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.balanced.relayUrls[0] ? 'balanced' :
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.reliable.relayUrls[0] ? 'reliable' :
-    config.read?.relayUrls?.[0] === RELAY_PRESETS.search.relayUrls[0] ? 'search' :
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.fast.relayUrls[0] ? 'fast' :
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.fastAll.relayUrls[0] ? 'fastall' :
+    config.read?.relayUrls?.length === 2 && config.read?.relayUrls?.[0] === RELAY_PRESETS.mittel.relayUrls[0] ? 'mittel' :
+    config.read?.relayUrls?.length === 3 && config.read?.relayUrls?.[0] === RELAY_PRESETS.gross.relayUrls[0] ? 'gross' :
+    config.read?.relayUrls?.length === 7 && config.read?.relayUrls?.[0] === RELAY_PRESETS.voll.relayUrls[0] ? 'voll' :
     'balanced' // Default
   );
 
