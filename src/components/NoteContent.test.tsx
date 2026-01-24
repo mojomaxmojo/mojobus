@@ -93,13 +93,14 @@ describe('NoteContent', () => {
       </TestApp>
     );
 
-    const nostrHashtag = screen.getByRole('link', { name: '#nostr' });
-    const bitcoinHashtag = screen.getByRole('link', { name: '#bitcoin' });
-    
+    // Find hashtags by text content instead of role
+    const nostrHashtag = screen.getByText('#nostr');
+    const bitcoinHashtag = screen.getByText('#bitcoin');
+
     expect(nostrHashtag).toBeInTheDocument();
     expect(bitcoinHashtag).toBeInTheDocument();
-    expect(nostrHashtag).toHaveAttribute('href', '/t/nostr');
-    expect(bitcoinHashtag).toHaveAttribute('href', '/t/bitcoin');
+    expect(nostrHashtag.closest('a')?.getAttribute('href')).toBe('/t/nostr');
+    expect(bitcoinHashtag.closest('a')?.getAttribute('href')).toBe('/t/bitcoin');
   });
 
   it('generates deterministic names for users without metadata and styles them differently', () => {
