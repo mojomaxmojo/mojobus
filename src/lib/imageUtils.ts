@@ -35,8 +35,9 @@ function isAlreadyOptimized(imageUrl: string): boolean {
     // Prüfe ob es eine Image-Service URL ist
     if (url.hostname.includes('images.weserv.nl') ||
         url.hostname.includes('imgproxy.mojobus.co') ||
-        url.hostname.includes('cloudflareimages.cloudflare.com')) {
-      console.log('[imageUtils] URL already optimized:', imageUrl.substring(0, 80) + '...');
+        url.hostname.includes('cloudflareimages.cloudflare.com') ||
+        url.hostname.includes('24242.io')) { // Blossom Server ausnehmen
+      console.log('[imageUtils] URL already optimized or from Blossom:', imageUrl.substring(0, 80) + '...');
       return true;
     }
 
@@ -273,6 +274,7 @@ export function isBlossomImage(imageUrl: string): boolean {
       'cdn.blossom.nostr.land',
       'cdn.nostrcheck.me',
       'media.nostr.band',
+      '24242.io', // MojoBus Blossom server
     ];
 
     return blossomServers.some(server => hostname.includes(server));

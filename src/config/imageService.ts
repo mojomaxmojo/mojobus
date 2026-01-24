@@ -90,8 +90,9 @@ export function generateImageUrl(
     // Wenn die URL bereits eine Image-Service URL ist, direkt zurückgeben
     if (url.hostname.includes('images.weserv.nl') ||
         url.hostname.includes('imgproxy.mojobus.co') ||
-        url.hostname.includes('cloudflareimages.cloudflare.com')) {
-      console.log('[imageService] URL already optimized:', imageUrl.substring(0, 80) + '...');
+        url.hostname.includes('cloudflareimages.cloudflare.com') ||
+        url.hostname.includes('24242.io')) { // Blossom Server ausnehmen
+      console.log('[imageService] URL already optimized or from Blossom:', imageUrl.substring(0, 80) + '...');
       return imageUrl;
     }
   } catch (error) {
