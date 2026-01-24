@@ -9,6 +9,7 @@ import { MapPin, Search, Calendar, User } from 'lucide-react';
 import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
+import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { RelaySelector } from '@/components/RelaySelector';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
@@ -31,12 +32,16 @@ function Places() {
     return events.map((event: NostrEvent) => {
       const metadata = extractArticleMetadata(event);
 
+      // ✅ DYNAMISCHES RELAY basierend auf Autor (aus relays.ts)
+      const authorRelayConfig = getAuthorRelayConfigByPubkey(event.pubkey);
+      const relay = authorRelayConfig?.activeRelay || 'wss://relay.mojobus.co';
+
       // Generate naddr identifier for place
       const naddr = nip19.naddrEncode({
         kind: event.kind,
         pubkey: event.pubkey,
         identifier: metadata.identifier,
-        relays: ['wss://relay.mojobus.co']
+        relays: [relay]
       });
 
       const locationTag = event.tags.find(([name]) => name === 'location')?.[1];

@@ -15,6 +15,7 @@ import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
+import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { useInView } from 'react-intersection-observer';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { MAIN_MENU } from '@/config/menu';
@@ -394,12 +395,16 @@ const ArticleCard = memo(function ArticleCard({
   const author = authorsMap.get(article.pubkey);
   const authorName = author?.metadata?.name || genUserName(article.pubkey);
 
+  // ✅ DYNAMISCHES RELAY basierend auf Autor (aus relays.ts)
+  const authorRelayConfig = getAuthorRelayConfigByPubkey(article.pubkey);
+  const relay = authorRelayConfig?.activeRelay || 'wss://relay.mojobus.co';
+
   // Generate naddr identifier for article
   const naddr = nip19.naddrEncode({
     kind: article.kind,
     pubkey: article.pubkey,
     identifier: metadata.identifier,
-    relays: ['wss://relay.mojobus.co']
+    relays: [relay]
   });
 
   // Optimized thumbnail URL (200px, quality 80) with srcset

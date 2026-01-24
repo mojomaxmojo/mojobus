@@ -8,13 +8,14 @@ import { Separator } from '@/components/ui/separator';
 import { useLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
+import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { Search, Calendar, User, Home, ChefHat, Compass, Truck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 
 export function RVLife() {
   const { category } = useParams<{ category: string }>();
@@ -258,12 +259,16 @@ const RVLifeArticleCard = memo(function RVLifeArticleCard({ article }: { article
   const author = useAuthor(article.pubkey);
   const authorName = author.data?.metadata?.name || genUserName(article.pubkey);
 
+  // ✅ DYNAMISCHES RELAY basierend auf Autor (aus relays.ts)
+  const authorRelayConfig = getAuthorRelayConfigByPubkey(article.pubkey);
+  const relay = authorRelayConfig?.activeRelay || 'wss://relay.mojobus.co';
+
   // Generate naddr identifier for article
   const naddr = nip19.naddrEncode({
     kind: article.kind,
     pubkey: article.pubkey,
     identifier: metadata.identifier,
-    relays: ['wss://relay.mojobus.co']
+    relays: [relay]
   });
 
   // Optimized thumbnail URL via images.weserv.nl
