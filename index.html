@@ -35,6 +35,14 @@
     <link rel="canonical" href="https://mojobus.org/" />
     <meta name="theme-color" content="#0891B2" />
     <meta name="msapplication-TileColor" content="#0891B2" />
+    <meta name="msapplication-TileImage" content="/icon.png" />
+
+    <!-- Favicon & App Icons -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/icon.png" color="#0891B2" />
 
     <!-- 🔥 PERFORMANCE: Critical Preloading für bessere Ladezeit -->
     <!-- DNS-Prefetch für externe Ressourcen -->
@@ -52,6 +60,7 @@
     <link rel="preconnect" href="https://images.weserv.nl" crossorigin />
 
     <!-- Preload kritische Assets -->
+    <link rel="preload" href="/icon.png" as="image" type="image/png" fetchpriority="high" />
     <link rel="preload" href="/mojobuslogo.png" as="image" type="image/png" fetchpriority="high" />
     <link rel="preload" href="/favicon-32x32.png" as="image" type="image/png" />
     <link rel="preload" href="/apple-touch-icon.png" as="image" type="image/png" />

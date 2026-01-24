@@ -150,10 +150,11 @@ self.addEventListener('install', (event) => {
 
       // 🚀 OPTIMIZATION: Precache kritische Assets
       const CRITICAL_ASSETS = [
+        '/icon.png',
+        '/apple-touch-icon.png',
         '/mojobuslogo.png',
         '/favicon-32x32.png',
         '/favicon-16x16.png',
-        '/apple-touch-icon.png',
       ];
 
       // Cache kritische Assets parallel
