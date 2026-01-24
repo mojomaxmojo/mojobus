@@ -24,7 +24,7 @@ export const IMAGE_OPTIMIZATION_MAX_HEIGHT = 1600;
  * WebP Qualität (0.0 - 1.0)
  * Empfohlener Bereich: 0.75 - 0.85 für gute Balance zwischen Qualität und Dateigröße
  */
-export const IMAGE_OPTIMIZATION_QUALITY = 0.8;
+export const IMAGE_OPTIMIZATION_QUALITY = 0.85;
 
 /**
  * Output-Format für die Optimierung

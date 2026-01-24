@@ -40,14 +40,10 @@ const queryClient = new QueryClient({
   },
 });
 
-  // Default Konfiguration wird jetzt aus verschiedenen Config-Modulen importiert
+  // Default Konfiguration wird jetzt aus relays.ts importiert (neue Struktur mit read/write)
   const defaultConfig: AppConfig = {
     theme: THEME_CONFIG.defaultTheme,
-    relayUrls: DEFAULT_RELAY_CONFIG.relayUrls, // Fallback für uneingelogte: Nur 1 Relay (schnell)
-    activeRelay: DEFAULT_RELAY_CONFIG.activeRelay,
-    maxRelays: DEFAULT_PERFORMANCE_CONFIG.relay.maxRelaysForQueries, // Limitiert auf 1 für bessere Performance
-    enableDeduplication: DEFAULT_PERFORMANCE_CONFIG.relay.enableDeduplication,
-    queryTimeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
+    ...DEFAULT_RELAY_CONFIG, // Spreads die gesamte Konfiguration (read, write, enableDeduplication)
   };
 
 export function App() {
