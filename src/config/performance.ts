@@ -418,7 +418,8 @@ export const NETWORK_CONFIG = {
     // Domains zum Preconnecten
     domains: [
       'https://blossom.primal.net',
-      'https://relay.nostr.band',
+      'https://relay.mojobus.co',
+      'https://relays.mojobus.co',
       'https://fonts.googleapis.com',
       'https://fonts.gstatic.com',
     ],

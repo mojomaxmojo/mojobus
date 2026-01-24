@@ -399,7 +399,7 @@ const ArticleCard = memo(function ArticleCard({
     kind: article.kind,
     pubkey: article.pubkey,
     identifier: metadata.identifier,
-    relays: ['wss://relay.nostr.band']
+    relays: ['wss://relay.mojobus.co']
   });
 
   // Optimized thumbnail URL (200px, quality 80) with srcset

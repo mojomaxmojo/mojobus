@@ -263,7 +263,7 @@ const RVLifeArticleCard = memo(function RVLifeArticleCard({ article }: { article
     kind: article.kind,
     pubkey: article.pubkey,
     identifier: metadata.identifier,
-    relays: ['wss://relay.nostr.band']
+    relays: ['wss://relay.mojobus.co']
   });
 
   // Optimized thumbnail URL via images.weserv.nl

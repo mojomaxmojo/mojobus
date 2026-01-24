@@ -36,7 +36,7 @@ function Places() {
         kind: event.kind,
         pubkey: event.pubkey,
         identifier: metadata.identifier,
-        relays: ['wss://relay.nostr.band']
+        relays: ['wss://relay.mojobus.co']
       });
 
       const locationTag = event.tags.find(([name]) => name === 'location')?.[1];
