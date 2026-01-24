@@ -30,7 +30,7 @@ import {
 import { useState } from 'react';
 import { useHead } from '@unhead/react';
 import { nip19, type AddressPointer } from 'nostr-tools';
-import { getArticleHeaderUrl, generateSrcset, generateSizes } from '@/lib/imageUtils';
+import { getArticleHeaderUrl, generateSrcset, generateSizes, getResponsiveImageUrl } from '@/lib/imageUtils';
 
 interface ArticleViewProps {
   naddr: AddressPointer;
@@ -165,6 +165,19 @@ function MarkdownWithLinks({ content }: { content: string }) {
               >
                 {children}
               </a>
+            );
+          },
+          img: ({ src, alt }) => {
+            if (!src) return null;
+            return (
+              <img
+                src={getArticleHeaderUrl(src)}
+                srcSet={generateSrcset(src, 'gallery')}
+                sizes={generateSizes('hero')}
+                alt={alt || ''}
+                className="w-full h-auto rounded-lg"
+                loading="lazy"
+              />
             );
           },
         }}
