@@ -317,6 +317,7 @@ function Articles() {
                     key={article.id}
                     article={article}
                     authorsMap={authors.data || new Map()}
+                    articlesMetadata={articlesMetadata}
                   />
                 ))}
               </div>
@@ -384,9 +385,11 @@ function Articles() {
 const ArticleCard = memo(function ArticleCard({
   article,
   authorsMap,
+  articlesMetadata,
 }: {
   article: NostrEvent;
   authorsMap: Map<string, { event?: NostrEvent; metadata?: any }>;
+  articlesMetadata: Map<string, any>;
 }) {
   // 🔥 OPTIMIZATION 2: Gecachte Metadata statt neu berechnet
   const metadata = articlesMetadata.get(article.id) || extractArticleMetadata(article);
