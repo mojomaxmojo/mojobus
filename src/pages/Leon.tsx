@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +17,9 @@ import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { memo, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
+// @ts-nocheck
+// @ts-ignore
+import { useHead } from '@unhead/react';
 
 export function Leon() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,8 +27,9 @@ export function Leon() {
   // Alle Leon-Artikel abrufen mit Infinite Scroll
   const { data: articles, isLoading, error, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteLongformArticles({
     kinds: [30023],
-    '#t': ['leon'],
+    '#t': LEON_CONFIG.tags,
     limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage,
+    authors: LEON_CONFIG.authorPubkeys,
   });
 
   // Infinite Scroll trigger
@@ -36,42 +39,40 @@ export function Leon() {
   });
 
   // Fetch more articles when scroll trigger is visible
-  useEffect(() => {
+  React.useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Kombiniere alle Seiten und entferne Duplikate
-  const allLeonArticles = () => {
-    if (!articles) return [];
-    const flattened = articles?.pages.flat() || [];
-    return flattened;
-  };
+  // Flatten all pages
+  const allArticles = React.useMemo(() => {
+    return articles?.pages.flat() || [];
+  }, [articles]);
 
-  // Filtere articles nach Suchbegriff
-  const filteredArticles = allLeonArticles().filter(article => {
-    const metadata = extractArticleMetadata(article);
+  // Filter articles by search term
+  const filteredArticles = React.useMemo(() => {
+    if (!searchTerm.trim()) {
+      return allArticles;
+    }
 
-    // Suchfilter (case-insensitive für Titel, Summary und Content)
-    if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase();
+    const query = searchTerm.toLowerCase();
+    return allArticles.filter((article: NostrEvent) => {
+      const metadata = extractArticleMetadata(article);
       return (
         metadata.title.toLowerCase().includes(query) ||
         metadata.summary.toLowerCase().includes(query) ||
-        metadata.content.toLowerCase().includes(query)
+        metadata.content.toLowerCase().includes(query) ||
+        metadata.tags.some((tag: string) => tag.toLowerCase().includes(query))
       );
-    }
-
-    return true;
-  });
-
-  const articleCount = allLeonArticles().length;
+    });
+  }, [allArticles, searchTerm]);
 
   // Simple SEO Meta Tags
   const pageTitle = `Leon Stories (${filteredArticles.length}) - MojoBus`;
   const pageDescription = `Entdecke ${filteredArticles.length} Geschichten von Leon (Lionhunter) - unser Hund, unser Begleiter beim Vanlife.`;
 
+  // Simple SEO Meta Tags
   useHead({
     title: pageTitle,
     meta: [
@@ -110,37 +111,6 @@ export function Leon() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen py-12">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="text-center space-y-4">
-              <div className="text-6xl mb-4">🦁</div>
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-                Verbindungsfehler
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Es ist ein Fehler aufgetreten beim Laden der Leon Stories.
-              </p>
-              <div className="space-y-2">
-                <Button onClick={() => window.location.reload()} className="w-full">
-                  🔄 Seite neu laden
-                </Button>
-                <Link to="/">
-                  <Button variant="outline" className="w-full">
-                    Zur Startseite
-                  </Button>
-                </Link>
-                <RelaySelector className="w-full" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const hasContent = filteredArticles.length > 0;
 
   return (
@@ -148,35 +118,32 @@ export function Leon() {
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="text-center space-y-4">
+            <div className="flex items-center justify-center gap-3">
+              <Dog className="h-12 w-12 text-amber-600 dark:text-amber-400" />
+            </div>
             <h1 className="text-4xl md:text-5xl font-bold">
-              <span className="flex items-center justify-center gap-3">
-                <span className="text-3xl">🦁</span>
-                Leon Stories
-              </span>
+              Leon Stories 🦁
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Abenteuer und Geschichten von Leon (Lionhunter) - unser Hund, unser Begleiter beim Vanlife.
+              {filteredArticles.length > 0
+                ? `Abenteuer und Geschichten von Leon (Lionhunter) - unser treuer Begleiter beim Vanlife`
+                : 'Keine Stories gefunden'}
             </p>
             <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <span className="font-semibold">{filteredArticles.length}</span>
-                <span>Geschichten{filteredArticles.length !== 1 ? 'n' : ''}</span>
+                <span>Stories</span>
               </span>
-              {articleCount > filteredArticles.length && (
-                <span className="text-xs text-muted-foreground">
-                  (von {articleCount} insgesamt)
-                </span>
-              )}
             </div>
           </div>
 
-          {/* Search Input */}
-          <div className="max-w-md mx-auto">
-            <div className="relative">
+          {/* Search */}
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+            <div className="relative flex-1 w-full md:w-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Leon Geschichten durchsuchen..."
+                placeholder="Leon Stories durchsuchen..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="pl-10 w-full"
@@ -199,7 +166,7 @@ export function Leon() {
                   {isFetchingNextPage && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>Lade mehr Leon Stories...</span>
+                      <span>Lade mehr Stories...</span>
                     </div>
                   )}
                 </div>
@@ -211,33 +178,28 @@ export function Leon() {
                 <Card className="border-dashed">
                   <CardContent className="py-12 px-8 text-center">
                     <div className="space-y-6">
-                      <div className="text-6xl mb-4">🦁</div>
+                      <div className="flex justify-center mb-4">
+                        <Dog className="h-16 w-16 text-muted-foreground" />
+                      </div>
                       <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
                         Keine Leon Stories gefunden
                       </h2>
                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                         {searchTerm
-                          ? `Für deine Suche nach "${searchTerm}" wurden keine Leon Stories gefunden. Versuche andere Suchbegriffe.`
-                          : 'Noch keine Leon Stories veröffentlicht. Schau bald wieder vorbei!'}
+                          ? `Keine Stories gefunden für "${searchTerm}". Versuche andere Suchbegriffe.`
+                          : 'Noch keine Stories von Leon veröffentlicht.'
+                        }
                       </p>
                       <div className="space-y-2">
-                        {searchTerm && (
-                          <Link to="/">
-                            <Button variant="outline" className="w-full">
-                              Alle Leon Stories anzeigen
-                            </Button>
-                          </Link>
-                        )}
-                        <div className="flex gap-2">
-                          <Button onClick={() => window.location.reload()}>
-                            🔄 Seite neu laden
-                          </Button>
-                          <RelaySelector className="w-full" />
-                        </div>
+                        <Button onClick={() => window.location.href = '/veroeffentlichen'}>
+                          <span className="mr-2">Story</span>
+                          schreiben
+                        </Button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
               </div>
             </div>
           )}
@@ -285,32 +247,41 @@ const LeonArticleCard = memo(function LeonArticleCard({ article }: { article: No
               srcSet={srcset}
               sizes={sizes}
               alt={metadata.title}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover"
               loading="lazy"
               decoding="async"
             />
           </div>
         )}
         <CardHeader className="flex-1">
-          <div className="flex items-start gap-2">
-            <div className="flex-1">
-              <CardTitle className="line-clamp-2">{metadata.title}</CardTitle>
-              {metadata.summary && (
-                <CardDescription className="line-clamp-3">{metadata.summary}</CardDescription>
-              )}
-            </div>
-          </div>
+          <CardTitle className="line-clamp-2 hover:text-blue-600 transition-colors">
+            {metadata.title}
+          </CardTitle>
+          <CardDescription className="line-clamp-3">
+            {metadata.summary}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex-1">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{authorName}</span>
-            <span>•</span>
-            <time>{new Date(metadata.publishedAt * 1000).toLocaleDateString('de-DE')}</time>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <User className="h-3 w-3" />
+                <span className="truncate max-w-[120px]">{authorName}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-3 w-3" />
+                <time>
+                  {new Date(metadata.publishedAt * 1000).toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </time>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Link>
     </Card>
   );
 });
-
-export default Leon;
