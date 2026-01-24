@@ -165,40 +165,66 @@ export const RELAY_PRESETS = {
     queryTimeout: 2000,
   },
 
-  // Balanced Konfiguration (Performance & Reliability)
+  // Fast (mit ALLE verfügbaren fast Relays)
+  fastAll: {
+    name: 'Fast (Alle)',
+    description: 'Alle schnellen Relays (Damus, Nostr.Band, Strfry)',
+    relayUrls: [
+      'wss://nos.lol',         // Ditto
+      'wss://relay.damus.io',  // Damus
+      'wss://nostr.band',      // Nostr.Band
+      'wss://relay.nostr.band', // Nostr.Band (Backup)
+      'wss://nostr.strfry.net', // Strfry
+    ],
+    maxRelays: 4,
+    queryTimeout: 2000,
+  },
+
+  // Balanced Konfiguration (Performance & Reliability mit ALLE verfügbaren Relays)
   balanced: {
     name: 'Balanced',
     description: 'Ausgewogene Konfiguration für gute Performance und Zuverlässigkeit',
     relayUrls: [
       'wss://nos.lol',
-      'wss://relay.primal.net',
+      'wss://relay.damus.io',    // Damus - etabliert
+      'wss://relay.primal.net',  // Primal - Enterprise-Grade
+      'wss://nostr.band',        // Nostr.Band - Schnelle Suche
+      'wss://relay.le.nos.social', // Relayer - spezialisiert
     ],
-    maxRelays: 2,
+    maxRelays: 4,
     queryTimeout: 3000,
   },
 
-  // Reliable Konfiguration (maximale Zuverlässigkeit)
+  // Reliable Konfiguration (maximale Zuverlässigkeit mit ALLE verfügbaren Relays)
   reliable: {
     name: 'Reliable',
     description: 'Mehrere Relays für maximale Zuverlässigkeit',
     relayUrls: [
-      'wss://nos.lol',
-      'wss://relay.damus.io',
-      'wss://relay.primal.net',
+      'wss://nos.lol',           // Ditto - schnell, zuverlässig
+      'wss://relay.damus.io',    // Damus - etabliert, zuverlässig
+      'wss://relay.primal.net',  // Primal - Enterprise-Grade
+      'wss://nostr.band',        // Nostr.Band - Schnelle Suche
+      'wss://nostr.strfry.net',  // Strfry - High-Performance
+      'wss://relay.le.nos.social', // Relayer - spezialisiert
+      'wss://nostr.bitcoiner.social', // Bitcoiner - Bitcoin-Community
+      'wss://relay.mojobus.co',  // MojoBus Private
     ],
-    maxRelays: 3,
+    maxRelays: 6,
     queryTimeout: 4000,
   },
 
-  // Search-optimiert (für Such-Queries)
+  // Search-optimiert (für Such-Queries mit ALLE verfügbaren Relays)
   search: {
     name: 'Search Optimized',
-    description: 'Optimiert für Such-Queries mit Search-Relays',
+    description: 'Optimiert für Such-Queries mit ALLE Such-Relays',
     relayUrls: [
-      'wss://nos.lol',
-      'wss://nostr.bitcoiner.social',
+      'wss://nostr.bitcoiner.social', // Bitcoiner
+      'wss://relay.nostr.band',        // Nostr.Band
+      'wss://relay.damus.io',         // Damus - Fallback
+      'wss://relay.primal.net',       // Primal - Fallback
+      'wss://nostr.strfry.net',        // Strfry - Fallback
     ],
-    maxRelays: 2,
+    maxRelays: 5,
     queryTimeout: 5000,
   },
 
@@ -215,31 +241,81 @@ export const RELAY_PRESETS = {
     queryTimeout: 1500,
   },
 
-  // Ultra-Reliable (maximale Redundanz - 5 Relays)
+  // Ultra-Reliable (maximale Redundanz - ALLE verfügbaren Relays)
   ultrareliable: {
     name: 'Ultra Reliable',
-    description: 'Maximale Redundanz mit 5 zuverlässigen Relays',
+    description: 'Maximale Redundanz mit ALLE zuverlässigen Relays (Lesen, Schreiben, Suchen)',
     relayUrls: [
       'wss://nos.lol',           // Ditto - schnell, zuverlässig
       'wss://relay.damus.io',    // Damus - etabliert, zuverlässig
       'wss://relay.primal.net',  // Primal - Enterprise-Grade
-      'wss://nostr.strfry.net', // Strfry - High-Performance
+      'wss://nostr.strfry.net',  // Strfry - High-Performance
+      'wss://nostr.band',        // Nostr.Band - Schnelle Suche
+      'wss://nostr.bitcoiner.social', // Bitcoiner - Bitcoin-Community
       'wss://relay.mojobus.co',  // MojoBus Private - privates Relay
     ],
-    maxRelays: 5,
+    maxRelays: 6,
     queryTimeout: 3000,
   },
 
-  // Storage-Optimiert (beste Langzeit-Speicherung)
+  // Search-Optimiert (ALLE Such-Relays)
+  searchall: {
+    name: 'Alle Such-Relays',
+    description: 'Sämtliche Relays mit Search-Unterstützung',
+    relayUrls: [
+      'wss://nostr.bitcoiner.social', // Bitcoiner
+      'wss://relay.nostr.band',        // Nostr.Band
+      'wss://relay.damus.io',         // Fallback für Suche
+    ],
+    maxRelays: 3,
+    queryTimeout: 5000,
+  },
+
+  // Storage-Optimiert (ALLE gute Speicher-Relays)
   storage: {
     name: 'Storage Optimized',
-    description: 'Optimiert für Langzeit-Speicherung der Events',
+    description: 'ALLE Relays mit guter Speicherung',
     relayUrls: [
       'wss://relay.damus.io',    // Damus - gute Speicherung
       'wss://relay.le.nos.social', // Relayer - spezialisiert auf Speicherung
       'wss://nos.lol',           // Ditto - zuverlässige Speicherung
+      'wss://nostr.band',        // Nostr.Band - Backup
+      'wss://relay.primal.net',  // Primal - Enterprise-Grade
     ],
-    maxRelays: 3,
+    maxRelays: 5,
+    queryTimeout: 4000,
+  },
+
+  // Max-Reliable (maximale Redundanz - ALLE verfügbaren Relays)
+  maxreliable: {
+    name: 'Max Reliable',
+    description: 'Maximale Redundanz mit ALLE verfügbaren Relays',
+    relayUrls: [
+      'wss://nos.lol',           // Ditto - schnell, zuverlässig
+      'wss://relay.damus.io',    // Damus - etabliert, zuverlässig
+      'wss://relay.primal.net',  // Primal - Enterprise-Grade
+      'wss://nostr.strfry.net',  // Strfry - High-Performance
+      'wss://relay.le.nos.social', // Relayer - spezialisiert
+      'wss://nostr.band',        // Nostr.Band - Schnelle Suche
+      'wss://nostr.bitcoiner.social', // Bitcoiner - Bitcoin-Community
+      'wss://relay.mojobus.co',  // MojoBus Private
+    ],
+    maxRelays: 7,
+    queryTimeout: 4000,
+  },
+
+  // Storage-Optimiert (ALLE gute Speicher-Relays)
+  storage: {
+    name: 'Storage Optimized',
+    description: 'ALLE Relays mit guter Speicherung',
+    relayUrls: [
+      'wss://relay.damus.io',    // Damus - gute Speicherung
+      'wss://relay.le.nos.social', // Relayer - spezialisiert auf Speicherung
+      'wss://nos.lol',           // Ditto - zuverlässige Speicherung
+      'wss://nostr.band',        // Nostr.Band - Backup
+      'wss://relay.primal.net',  // Primal - Enterprise-Grade
+    ],
+    maxRelays: 5,
     queryTimeout: 4000,
   },
 
@@ -251,8 +327,11 @@ export const RELAY_PRESETS = {
       'wss://relay.mojobus.co',  // MojoBus Private - privates Relay (Haupt-Relay)
       'wss://nos.lol',           // Ditto - Backup für Zuverlässigkeit
       'wss://relay.primal.net',  // Primal - weiterer Backup
+      'wss://nostr.band',        // Nostr.Band - zusätzliche Backup
+      'wss://relay.damus.io',         // Damus - zusätzlicher Backup
+      'wss://nostr.strfry.net',      // Strfry - zusätzlicher Backup
     ],
-    maxRelays: 3,
+    maxRelays: 6,
     queryTimeout: 3000,
   },
 } as const;

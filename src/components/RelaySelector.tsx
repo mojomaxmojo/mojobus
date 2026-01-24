@@ -33,9 +33,29 @@ const PRESET_OPTIONS: PresetOption[] = [
     description: "Maximale Zuverlässigkeit mit mehreren Relays",
   },
   {
+    value: "fastall",
+    label: "Fast (Alle)",
+    description: "Alle schnellen Relays (Damus, Nostr.Band, Strfry)",
+  },
+  {
     value: "ultrareliable",
     label: "Ultra Reliable",
-    description: "Maximale Redundanz mit 4 Relays (WRITE)",
+    description: "Maximale Redundanz mit 6 zuverlässigen Relays (READ/WRITE)",
+  },
+  {
+    value: "maxreliable",
+    label: "Max Reliable",
+    description: "Maximale Redundanz mit 7 zuverlässigen Relays (READ/WRITE/SUCHEN)",
+  },
+  {
+    value: "searchall",
+    label: "Search (Alle)",
+    description: "Sämtliche Relays mit Search-Unterstützung",
+  },
+  {
+    value: "storage",
+    label: "Storage",
+    description: "ALLE Relays mit guter Speicherung",
   },
 ];
 
@@ -48,8 +68,12 @@ export function RelaySelector() {
     config.read?.relayUrls?.[0] === RELAY_PRESETS.ultrafast.relayUrls[0] ? 'ultrafast' :
     config.read?.relayUrls?.[0] === RELAY_PRESETS.fast.relayUrls[0] ? 'fast' :
     config.read?.relayUrls?.length === 2 && config.read?.relayUrls?.[0] === RELAY_PRESETS.balanced.relayUrls[0] ? 'balanced' :
-    config.read?.relayUrls?.length === 3 ? 'reliable' :
-    config.write?.relayUrls?.length === 4 ? 'ultrareliable' :
+    config.read?.relayUrls?.length === 3 && config.read?.relayUrls?.[0] === RELAY_PRESETS.reliable.relayUrls[0] ? 'reliable' :
+    config.read?.relayUrls?.[0] === RELAY_PRESETS.fastAll.relayUrls[0] ? 'fastall' :
+    config.read?.relayUrls?.length === 6 && config.read?.relayUrls?.[0] === RELAY_PRESETS.ultrareliable.relayUrls[0] ? 'ultrareliable' :
+    config.read?.relayUrls?.length === 7 && config.read?.relayUrls?.[0] === RELAY_PRESETS.maxreliable.relayUrls[0] ? 'maxreliable' :
+    config.read?.relayUrls?.length === 5 && config.read?.relayUrls?.[0] === RELAY_PRESETS.searchall.relayUrls[0] ? 'searchall' :
+    config.read?.relayUrls?.length === 4 && config.read?.relayUrls?.[0] === RELAY_PRESETS.storage.relayUrls[0] ? 'storage' :
     'balanced' // Default
   );
 
@@ -62,24 +86,48 @@ export function RelaySelector() {
         console.log("New relay configuration:", presetConfig);
 
         // Apply preset to both READ and WRITE configuration
+        // Legacy- und neue Presets korrekt anwenden
+        const readRelayUrls = presetConfig.relayUrls || [];
+        const readMaxRelays = presetConfig.maxRelays || 1;
+        const readQueryTimeout = presetConfig.queryTimeout || 2000;
+        const writeRelayUrls = presetConfig.relayUrls || [];
+        const writeMaxRelays = presetConfig.maxRelays || 1;
+        const writeActiveRelay = presetConfig.relayUrls?.[0] || '';
+
         updateConfig((currentConfig) => ({
           ...currentConfig,
           read: {
-            relayUrls: presetConfig.relayUrls,
-            maxRelays: presetConfig.maxRelays,
-            queryTimeout: presetConfig.queryTimeout,
+            relayUrls: readRelayUrls,
+            maxRelays: readMaxRelays,
+            queryTimeout: readQueryTimeout,
           },
           write: {
-            relayUrls: presetConfig.relayUrls,
-            maxRelays: presetConfig.maxRelays,
-            activeRelay: presetConfig.relayUrls[0],
+            relayUrls: writeRelayUrls,
+            maxRelays: writeMaxRelays,
+            activeRelay: writeActiveRelay,
           },
           // Update legacy fields for backward compatibility
-          relayUrls: presetConfig.relayUrls,
-          activeRelay: presetConfig.relayUrls[0],
-          maxRelays: presetConfig.maxRelays,
-          queryTimeout: presetConfig.queryTimeout,
+          relayUrls: presetConfig.relayUrls || [],
+          activeRelay: presetConfig.relayUrls?.[0] || '',
+          maxRelays: presetConfig.maxRelays || 1,
+          queryTimeout: presetConfig.queryTimeout || 2000,
         }));
+
+        setSelectedPreset(preset);
+        toast({
+          title: 'Relay-Preset angewendet',
+          description: `${presetConfig.name} wurde aktiviert.`,
+        });
+      } catch (error) {
+        console.error("Failed to apply preset:", error);
+        toast({
+          title: 'Fehler',
+          description: 'Konnte Relay-Preset nicht anwenden.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
 
         setSelectedPreset(preset);
         toast({
