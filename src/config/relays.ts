@@ -183,7 +183,7 @@ export const RELAY_PRESETS = {
 
   // Voll (ALLE verfügbaren Relays)
   voll: {
-    name: 'Groß',
+    name: 'Voll',
     description: 'Alle verfügbaren Relays (7 Stück)',
     relayUrls: [
       'wss://nos.lol',
