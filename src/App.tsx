@@ -40,15 +40,15 @@ const queryClient = new QueryClient({
   },
 });
 
-// Default Konfiguration wird jetzt aus verschiedenen Config-Modulen importiert
-const defaultConfig: AppConfig = {
-  theme: THEME_CONFIG.defaultTheme,
-  relayUrls: DEFAULT_RELAY_CONFIG.relayUrls,
-  activeRelay: DEFAULT_RELAY_CONFIG.activeRelay,
-  maxRelays: DEFAULT_PERFORMANCE_CONFIG.relay.maxRelaysForQueries,
-  enableDeduplication: DEFAULT_PERFORMANCE_CONFIG.relay.enableDeduplication,
-  queryTimeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
-};
+  // Default Konfiguration wird jetzt aus verschiedenen Config-Modulen importiert
+  const defaultConfig: AppConfig = {
+    theme: THEME_CONFIG.defaultTheme,
+    relayUrls: DEFAULT_RELAY_CONFIG.relayUrls, // Fallback für uneingelogte: Nur 1 Relay (schnell)
+    activeRelay: DEFAULT_RELAY_CONFIG.activeRelay,
+    maxRelays: DEFAULT_PERFORMANCE_CONFIG.relay.maxRelaysForQueries, // Limitiert auf 1 für bessere Performance
+    enableDeduplication: DEFAULT_PERFORMANCE_CONFIG.relay.enableDeduplication,
+    queryTimeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
+  };
 
 export function App() {
   return (
