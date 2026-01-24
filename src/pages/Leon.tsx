@@ -9,6 +9,7 @@ import { useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/use
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { getAuthorRelayConfigByPubkey } from '@/config/relays';
+import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { LEON_CONFIG } from '@/config/leon';
 import { Search, Calendar, User, Dog, Loader2 } from 'lucide-react';

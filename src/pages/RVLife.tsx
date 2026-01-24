@@ -9,6 +9,7 @@ import { useLongformArticles, extractArticleMetadata } from '@/hooks/useLongform
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { getAuthorRelayConfigByPubkey } from '@/config/relays';
+import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { Search, Calendar, User, Home, ChefHat, Compass, Truck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';

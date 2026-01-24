@@ -15,6 +15,7 @@ import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
 import { nip19 } from 'nostr-tools';
 import { MAIN_MENU } from '@/config/menu';
+import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
