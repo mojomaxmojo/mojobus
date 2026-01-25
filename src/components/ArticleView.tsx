@@ -467,7 +467,7 @@ export function ArticleView({ naddr }: ArticleViewProps) {
                   <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
                 )}
               </div>
-              {article && !isAuthor && (
+              {article && (
                 <div>
                   <ZapButton target={article} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
                 </div>
