@@ -22,7 +22,7 @@ export function About() {
       { name: 'twitter:description', content: 'Lerne Mojo und unser Leben als Perpetual Traveler kennen. 🌍🧭🌊' },
     ],
     link: [
-      { rel: 'canonical', href: 'https://mojobus.cc/about' }
+      { rel: 'canonical', href: 'https://mojobus.co/about' }
     ]
   });
   const validAuthors = getValidAuthors();
@@ -146,7 +146,7 @@ export function About() {
                   <Key className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-muted-foreground">NIP-05</div>
-                    <div className="font-mono text-sm truncate">mojomojo@iris.to</div>
+                    <div className="font-mono text-sm truncate">mojo@mojobus.co</div>
                   </div>
                 </div>
 
@@ -155,12 +155,12 @@ export function About() {
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-muted-foreground">Website</div>
                     <a
-                      href="http://mojobus.org"
+                      href="http://mojobus.co"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline truncate block"
                     >
-                      mojobus.org
+                      mojobus.co
                     </a>
                   </div>
                 </div>
