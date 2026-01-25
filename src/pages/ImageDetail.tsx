@@ -449,7 +449,7 @@ export function ImageDetail() {
                       {metadata?.nip05 || 'Kein NIP-05'}
                     </p>
                   </div>
-                  {events && (
+                  {user && events && (
                     <div>
                       <ZapButton target={events} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
                     </div>

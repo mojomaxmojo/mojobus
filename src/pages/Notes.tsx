@@ -377,7 +377,7 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
                       </span>
                     </div>
                   )}
-                  <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
+                  {user && <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
                 </div>
               </div>
             </div>
