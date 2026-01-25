@@ -547,7 +547,7 @@ function ImageCardComponent({
                  ))}
                </div>
              </div>
-             <div className="flex items-center gap-3 pt-2 border-t">
+             <div className="flex items-center gap-3 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
                <LikeButton target={event} />
                <ZapButton target={event} />
              </div>

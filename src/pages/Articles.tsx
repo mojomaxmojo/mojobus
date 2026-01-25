@@ -466,7 +466,7 @@ const ArticleCard = memo(function ArticleCard({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 pt-3 border-t">
+          <div className="flex items-center gap-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
             <LikeButton target={article} />
             <ZapButton target={article} />
           </div>

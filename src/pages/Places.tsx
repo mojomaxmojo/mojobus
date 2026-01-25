@@ -301,7 +301,7 @@ const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 pt-3 border-t">
+          <div className="flex items-center gap-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
             <LikeButton target={place} />
             <ZapButton target={place} />
           </div>

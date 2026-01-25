@@ -403,7 +403,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
               <time>{new Date(item.date * 1000).toLocaleDateString('de-DE')}</time>
             </div>
           </div>
-          <div className="flex items-center gap-3 pt-3 border-t">
+          <div className="flex items-center gap-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
             <LikeButton target={item.event} />
             <ZapButton target={item.event} />
           </div>
