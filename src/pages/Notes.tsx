@@ -12,7 +12,7 @@ import { useNotes, extractNoteTags, extractNoteImages } from '@/hooks/useNotes';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
-import { Calendar, Search, Trash2, Zap } from 'lucide-react';
+import { Calendar, Search, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -34,9 +34,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from 'lucide-react';
-import { ZapButton } from '@/components/ZapButton';
-import { useZaps } from '@/hooks/useZaps';
-import { useWallet } from '@/hooks/useWallet';
 
 export function Notes() {
   const { country } = useParams();
@@ -300,14 +297,6 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
   const { mutate: deleteNote } = useNostrDelete();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
-  const { webln, activeNWC } = useWallet();
-
-  // Fetch zap statistics for this note
-  const { totalSats, isLoading: zapsLoading } = useZaps(
-    [note],
-    webln,
-    activeNWC
-  );
 
   const authorName = author.data?.metadata?.name || genUserName(note.pubkey);
   const authorAvatar = author.data?.metadata?.picture;
@@ -353,35 +342,24 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
                 {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
                 <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
-               <div className="flex-1 min-w-0">
-                 <div className="font-semibold truncate">{authorName}</div>
-                 <div className="flex items-center gap-[30px] mt-1">
-                   {author.data?.metadata?.nip05 && (
-                     <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
-                   )}
-                   <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
-                 </div>
-                 <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                   <Calendar className="h-3 w-3" />
-                   <time>
-                     {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
-                       year: 'numeric',
-                       month: 'short',
-                       day: 'numeric',
-                       hour: '2-digit',
-                       minute: '2-digit',
-                     })}
-                   </time>
-                   {(totalSats > 0 || zapsLoading) && (
-                     <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400 text-xs ml-2">
-                       <Zap className="h-3 w-3" />
-                       <span className="font-medium">
-                         {zapsLoading ? '...' : totalSats.toLocaleString()}
-                       </span>
-                     </div>
-                   )}
-                 </div>
-               </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold truncate">{authorName}</span>
+                  <span className="text-muted-foreground">•</span>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    <time>
+                      {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </time>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
@@ -433,10 +411,9 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
       </Card>
       </Link>
 
-      {/* Action Buttons */}
-      <div className="absolute top-2 right-2 flex gap-1">
-        {/* Delete Button - nur für den Autor sichtbar */}
-        {isAuthor && (
+      {/* Delete Button - nur für den Autor sichtbar */}
+      {isAuthor && (
+        <div className="absolute top-2 right-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -469,8 +446,8 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 });

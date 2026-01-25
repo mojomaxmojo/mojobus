@@ -11,7 +11,7 @@ import { CommentsSection } from '@/components/comments/CommentsSection';
 import { RelaySelector } from '@/components/RelaySelector';
 import { NoteContent } from '@/components/NoteContent';
 import { extractNoteTags, extractNoteImages } from '@/hooks/useNotes';
-import { Calendar, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink, Zap } from 'lucide-react';
+import { Calendar, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import NotFound from '@/pages/NotFound';
 import {
@@ -30,9 +30,6 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
 import { nip19 } from 'nostr-tools';
-import { ZapButton } from '@/components/ZapButton';
-import { useZaps } from '@/hooks/useZaps';
-import { useWallet } from '@/hooks/useWallet';
 
 interface NoteViewProps {
   eventId: string;
@@ -77,7 +74,6 @@ export function NoteView({ eventId }: NoteViewProps) {
   const { mutate: createEvent } = useNostrPublish();
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const { webln, activeNWC } = useWallet();
 
   const { data: note, isLoading } = useQuery({
     queryKey: ['note', eventId],
@@ -102,13 +98,6 @@ export function NoteView({ eventId }: NoteViewProps) {
 
   const author = useAuthor(note?.pubkey || '');
   const isAuthor = user?.pubkey === note?.pubkey;
-
-  // Fetch zap statistics for this note
-  const { totalSats, zapCount, isLoading: zapsLoading } = useZaps(
-    note ? [note] : [],
-    webln,
-    activeNWC
-  );
 
   // Extract location from note
   const locationTag = note?.tags.find(([name]) => name === 'location');
@@ -279,40 +268,22 @@ export function NoteView({ eventId }: NoteViewProps) {
                   {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
                   <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0 flex items-start gap-2">
-                  <div>
-                    <div className="font-semibold">{authorName}</div>
-                    <div className="flex items-center gap-[30px] mt-1">
-                      {author.data?.metadata?.nip05 && (
-                        <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
-                      )}
-                      {note && <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <time>
-                          {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </time>
-                      </div>
-                      {(totalSats > 0 || zapsLoading) && (
-                        <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
-                          <Zap className="h-3 w-3" />
-                          <span className="font-medium">
-                            {zapsLoading ? '...' : totalSats.toLocaleString()} sats
-                          </span>
-                          {zapCount > 1 && (
-                            <span className="text-xs">({zapCount})</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold">{authorName}</div>
+                  {author.data?.metadata?.nip05 && (
+                    <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
+                  )}
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                    <Calendar className="h-3 w-3" />
+                    <time>
+                      {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </time>
                   </div>
                 </div>
               </div>
