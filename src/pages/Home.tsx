@@ -38,7 +38,7 @@ export function Home() {
       { property: 'og:type', content: 'website' }
     ],
     link: [
-      { rel: 'canonical', href: 'https://mojobus.org' }
+      { rel: 'canonical', href: 'https://mojobus.co' }
     ]
   });
 
