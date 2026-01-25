@@ -31,6 +31,8 @@ import {
 // @ts-ignore
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
+import { LikeButton } from '@/components/LikeButton';
+import { ZapButton } from '@/components/ZapButton';
 
 interface ImageEvent {
   id: string;
@@ -501,50 +503,56 @@ function ImageCardComponent({
             })}
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {metadata?.picture ? (
-                <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                  <img
-                    src={getGalleryThumbnailUrl(metadata.picture)}
-                    alt={metadata.name || 'Autor'}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-              ) : (
-                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                  <User className="h-4 w-4 text-gray-500" />
-                </div>
-              )}
-              <span className="text-sm text-gray-600 dark:text-gray-400 flex-1 truncate">
-                {metadata?.name || 'MojoBus Team'}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              {/* Quick view hint */}
-              <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
-                <span>Klick</span>
-                <ArrowRight className="h-3 w-3" />
-              </div>
-              {images.map((img, index) => (
-                <Button
-                  key={index}
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open(img, '_blank');
-                  }}
-                  className="h-8 w-8 p-0"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
+         <CardContent className="pt-0">
+           <div className="space-y-3">
+             <div className="flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                 {metadata?.picture ? (
+                   <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                     <img
+                       src={getGalleryThumbnailUrl(metadata.picture)}
+                       alt={metadata.name || 'Autor'}
+                       className="w-full h-full object-cover"
+                       loading="lazy"
+                     />
+                   </div>
+                 ) : (
+                   <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                     <User className="h-4 w-4 text-gray-500" />
+                   </div>
+                 )}
+                 <span className="text-sm text-gray-600 dark:text-gray-400 flex-1 truncate">
+                   {metadata?.name || 'MojoBus Team'}
+                 </span>
+               </div>
+               <div className="flex items-center gap-1">
+                 {/* Quick view hint */}
+                 <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
+                   <span>Klick</span>
+                   <ArrowRight className="h-3 w-3" />
+                 </div>
+                 {images.map((img, index) => (
+                   <Button
+                     key={index}
+                     variant="ghost"
+                     size="sm"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       window.open(img, '_blank');
+                     }}
+                     className="h-8 w-8 p-0"
+                   >
+                     <ExternalLink className="h-4 w-4" />
+                   </Button>
+                 ))}
+               </div>
+             </div>
+             <div className="flex items-center gap-3 pt-2 border-t">
+               <LikeButton target={event} />
+               <ZapButton target={event} />
+             </div>
+           </div>
+         </CardContent>
       </Card>
 
       {/* Delete Button - nur für den Autor sichtbar */}
