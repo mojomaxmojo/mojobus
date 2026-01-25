@@ -23,16 +23,14 @@ export function ZapButton({
   const { data: author } = useAuthor(target?.pubkey || '');
   const { webln, activeNWC } = useWallet();
 
-  // Debug: Log props
-  if (target) {
-    console.log('[ZapButton] Rendered with:', {
-      targetId: target.id,
-      targetKind: target.kind,
-      user: user?.pubkey,
-      isAuthor: user?.pubkey === target.pubkey,
-      showCount,
-    });
-  }
+  console.log('[ZapButton] === RENDER START ===', {
+    hasTarget: !!target,
+    hasUser: !!user,
+    userPubkey: user?.pubkey,
+    targetId: target?.id,
+    targetKind: target?.kind,
+    showCount,
+  });
 
   // Only fetch data if not provided externally
   const { totalSats: fetchedTotalSats, isLoading } = useZaps(
@@ -43,7 +41,7 @@ export function ZapButton({
 
   // Don't show zap button if target is missing
   if (!target) {
-    console.log('[ZapButton] No target provided, returning null');
+    console.log('[ZapButton] No target, returning null');
     return null;
   }
 
@@ -53,22 +51,22 @@ export function ZapButton({
   const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
   const showLoading = externalZapData?.isLoading || isLoading;
 
-  console.log('[ZapButton] Rendering zap button:', { totalSats, showLoading });
+  console.log('[ZapButton] === WILL RENDER ===', { totalSats, showLoading, className });
 
   return (
     <ZapDialog target={target}>
-      <div className={`flex items-center gap-1 ${className}`}>
-        <Zap className="h-4 w-4" />
-        <span className="text-xs">
-          {showLoading ? (
-            '...'
-          ) : showCount ? (
-            totalSats > 0 ? `${totalSats.toLocaleString()}` : 'Zap'
-          ) : (
-            null
-          )}
-        </span>
-      </div>
+        <div className={`flex items-center gap-1 ${className}`}>
+          <Zap className="h-4 w-4" />
+          <span className="text-xs">
+            {showLoading ? (
+              '...'
+            ) : showCount ? (
+              totalSats > 0 ? `${totalSats.toLocaleString()}` : 'Zap'
+            ) : (
+              null
+            )}
+          </span>
+        </div>
     </ZapDialog>
   );
 }
