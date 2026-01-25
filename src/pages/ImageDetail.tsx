@@ -416,17 +416,11 @@ export function ImageDetail() {
             </Card>
 
              {/* Comments Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-ocean-600" />
-                  Kommentare
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CommentsSection root={events} />
-              </CardContent>
-            </Card>
+             <Card>
+               <CardContent className="py-4">
+                 <CommentsSection root={events} />
+               </CardContent>
+             </Card>
           </div>
 
           {/* Sidebar */}
