@@ -388,29 +388,32 @@ export function ImageDetail() {
 
             {/* Actions Section */}
             <Card>
-              <CardContent className="space-y-3 py-4">
-                 <Button
-                   variant="outline"
-                   className="w-full"
-                   onClick={() => {
-                     if (navigator.share) {
-                       // Use Web Share API if available
-                       navigator.share?.({
-                         title: 'Bild von MojoBus',
-                         text: events.content,
-                         url: window.location.href
-                       });
-                     } else {
-                       // Fallback: Copy to clipboard
-                       navigator.clipboard.writeText(window.location.href);
-                       setCopied(true);
-                       toast({
-                         title: 'Link kopiert!',
-                         description: 'Der Link zur Bild wurde in die Zwischenablage kopiert.',
-                       });
-                       setTimeout(() => setCopied(false), 2000);
-                     }
-                   }}
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <LikeButton target={events} />
+                  <ZapButton target={events} />
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      if (navigator.share) {
+                        // Use Web Share API if available
+                        navigator.share?.({
+                          title: 'Bild von MojoBus',
+                          text: events.content,
+                          url: window.location.href
+                        });
+                      } else {
+                        // Fallback: Copy to clipboard
+                        navigator.clipboard.writeText(window.location.href);
+                        setCopied(true);
+                        toast({
+                          title: 'Link kopiert!',
+                          description: 'Der Link zur Bild wurde in die Zwischenablage kopiert.',
+                        });
+                        setTimeout(() => setCopied(false), 2000);
+                      }
+                    }}
                    >
                     {copied ? (
                       <>
@@ -430,12 +433,9 @@ export function ImageDetail() {
                             Link kopieren
                          </>
                        )}
-                     </>
-                   )}
-                 </Button>
-                 <div className="flex items-center gap-3 pt-3 border-t">
-                  <LikeButton target={events} />
-                  <ZapButton target={events} />
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
