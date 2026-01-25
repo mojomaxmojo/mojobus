@@ -41,13 +41,13 @@ export function ZapButton({
     activeNWC
   );
 
-  // Don't show zap button if target is missing or user is not logged in
-  if (!target || !user) {
-    console.log('[ZapButton] No target or no logged in user, returning null');
+  // Don't show zap button if target is missing
+  if (!target) {
+    console.log('[ZapButton] No target provided, returning null');
     return null;
   }
 
-  // ZapButton für alle eingeloggten User sichtbar (auch Autor)
+  // ZapButton ist jetzt für alle User sichtbar (auch nicht-eingeloggt)
 
   if (user && user.pubkey === target.pubkey) {
     console.log('[ZapButton] User is author, hiding zap button');

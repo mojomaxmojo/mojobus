@@ -356,6 +356,7 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold truncate">{authorName}</span>
+                  <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
                   <span className="text-muted-foreground">•</span>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Calendar className="h-3 w-3" />
@@ -377,7 +378,6 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
                       </span>
                     </div>
                   )}
-                  {user && <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
                 </div>
               </div>
             </div>

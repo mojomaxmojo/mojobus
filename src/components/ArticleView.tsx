@@ -434,44 +434,43 @@ export function ArticleView({ naddr }: ArticleViewProps) {
                 {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
                 <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1 font-semibold">
-                    <User className="h-3 w-3" />
-                    <span>{authorName}</span>
-                  </div>
-                  <span className="text-muted-foreground">•</span>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <time>
-                      {new Date(metadata.publishedAt * 1000).toLocaleDateString('de-DE', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </time>
-                  </div>
-                  {(totalSats > 0 || zapsLoading) && (
-                    <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
-                      <Zap className="h-3 w-3" />
-                      <span className="font-medium">
-                        {zapsLoading ? '...' : totalSats.toLocaleString()} sats
-                      </span>
-                      {zapCount > 1 && (
-                        <span className="text-xs">({zapCount})</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {author.data?.metadata?.nip05 && (
-                  <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
-                )}
-              </div>
-              {user && article && (
+              <div className="flex-1 flex items-start gap-2">
                 <div>
-                  <ZapButton target={article} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 font-semibold">
+                      <User className="h-3 w-3" />
+                      <span>{authorName}</span>
+                    </div>
+                    {article && <ZapButton target={article} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
+                  </div>
+                  {author.data?.metadata?.nip05 && (
+                    <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      <time>
+                        {new Date(metadata.publishedAt * 1000).toLocaleDateString('de-DE', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </time>
+                    </div>
+                    {(totalSats > 0 || zapsLoading) && (
+                      <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                        <Zap className="h-3 w-3" />
+                        <span className="font-medium">
+                          {zapsLoading ? '...' : totalSats.toLocaleString()} sats
+                        </span>
+                        {zapCount > 1 && (
+                          <span className="text-xs">({zapCount})</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
             </Link>
 
 

@@ -279,42 +279,42 @@ export function NoteView({ eventId }: NoteViewProps) {
                   {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
                   <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold">{authorName}</div>
-                  {author.data?.metadata?.nip05 && (
-                    <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
-                  )}
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      <time>
-                        {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </time>
+                <div className="flex-1 min-w-0 flex items-start gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold">{authorName}</div>
+                      {note && <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
                     </div>
-                    {(totalSats > 0 || zapsLoading) && (
-                      <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
-                        <Zap className="h-3 w-3" />
-                        <span className="font-medium">
-                          {zapsLoading ? '...' : totalSats.toLocaleString()} sats
-                        </span>
-                        {zapCount > 1 && (
-                          <span className="text-xs">({zapCount})</span>
-                        )}
-                      </div>
+                    {author.data?.metadata?.nip05 && (
+                      <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
                     )}
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <time>
+                          {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </time>
+                      </div>
+                      {(totalSats > 0 || zapsLoading) && (
+                        <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                          <Zap className="h-3 w-3" />
+                          <span className="font-medium">
+                            {zapsLoading ? '...' : totalSats.toLocaleString()} sats
+                          </span>
+                          {zapCount > 1 && (
+                            <span className="text-xs">({zapCount})</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                {user && note && (
-                  <div>
-                    <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
-                  </div>
-                )}
               </div>
 
 

@@ -443,17 +443,17 @@ export function ImageDetail() {
                       <User className="h-4 w-4 text-gray-500" />
                     </div>
                   )}
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {metadata?.nip05 || 'Kein NIP-05'}
-                    </p>
-                  </div>
-                  {user && events && (
+                  <div className="flex-1 flex items-start gap-2">
                     <div>
-                      <ZapButton target={events} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
+                        {events && <ZapButton target={events} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {metadata?.nip05 || 'Kein NIP-05'}
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {(totalSats > 0 || zapsLoading) && (
