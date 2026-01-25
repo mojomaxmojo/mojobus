@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RelaySelector } from '@/components/RelaySelector';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User, Copy, Check } from 'lucide-react';
 import { useAuthor } from '@/hooks/useAuthor';
 import { PostActions } from '@/components/PostActions';
 import { CommentsSection } from '@/components/comments/CommentsSection';
@@ -17,6 +17,7 @@ import { nip19 } from 'nostr-tools';
 import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getArticleHeaderUrl } from '@/lib/imageUtils';
 import { LikeButton } from '@/components/LikeButton';
 import { ZapButton } from '@/components/ZapButton';
+import { useToast } from '@/hooks/useToast';
 
 interface ImageEvent {
   id: string;
@@ -30,8 +31,10 @@ export function ImageDetail() {
   const { nip19: noteId } = useParams();
   const navigate = useNavigate();
   const { nostr } = useNostr();
+  const { toast } = useToast();
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   // Decode nip19 to get event ID
   let eventId = noteId;
@@ -386,23 +389,51 @@ export function ImageDetail() {
             {/* Actions Section */}
             <Card>
               <CardContent className="space-y-3 py-4">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (navigator.share) {
-                      navigator.share?.({
-                        title: 'Bild von MojoBus',
-                        text: events.content,
-                        url: window.location.href
-                      });
-                    }
-                  }}
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Teilen
-                </Button>
-                <div className="flex items-center gap-3 pt-3 border-t">
+                 <Button
+                   variant="outline"
+                   className="w-full"
+                   onClick={() => {
+                     if (navigator.share) {
+                       // Use Web Share API if available
+                       navigator.share?.({
+                         title: 'Bild von MojoBus',
+                         text: events.content,
+                         url: window.location.href
+                       });
+                     } else {
+                       // Fallback: Copy to clipboard
+                       navigator.clipboard.writeText(window.location.href);
+                       setCopied(true);
+                       toast({
+                         title: 'Link kopiert!',
+                         description: 'Der Link zur Bild wurde in die Zwischenablage kopiert.',
+                       });
+                       setTimeout(() => setCopied(false), 2000);
+                     }
+                   }}
+                   >
+                    {copied ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2 text-green-600" />
+                        Kopiert!
+                      </>
+                    ) : (
+                      <>
+                        {navigator.share ? (
+                          <>
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Teilen
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Link kopieren
+                         </>
+                       )}
+                     </>
+                   )}
+                 </Button>
+                 <div className="flex items-center gap-3 pt-3 border-t">
                   <LikeButton target={events} />
                   <ZapButton target={events} />
                 </div>
