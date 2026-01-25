@@ -387,9 +387,25 @@ export function ImageDetail() {
                   <NoteContent event={events} className="text-base" />
                 </div>
               </CardContent>
+             </Card>
+
+            {/* Actions Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5 text-red-500" />
+                  Aktionen
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <LikeButton target={events} />
+                  <ZapButton target={events} />
+                </div>
+              </CardContent>
             </Card>
 
-            {/* Comments Section */}
+             {/* Comments Section */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -508,49 +524,9 @@ export function ImageDetail() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+             )}
 
-             {/* Actions */}
-             <Card>
-               <CardHeader>
-                 <CardTitle className="flex items-center gap-2">
-                   <Share2 className="h-5 w-5 text-ocean-600" />
-                   Aktionen
-                 </CardTitle>
-               </CardHeader>
-               <CardContent className="space-y-3">
-                 <Button
-                   variant="outline"
-                   className="w-full"
-                   onClick={() => {
-                     if (navigator.share) {
-                       navigator.share?.({
-                         title: 'Bild von MojoBus',
-                         text: events.content,
-                         url: window.location.href
-                       });
-                     }
-                   }}
-                 >
-                   <Share2 className="h-4 w-4 mr-2" />
-                   Teilen
-                 </Button>
-
-                 {/* Like & Zap Buttons */}
-                 <div className="flex items-center gap-3 pt-3 border-t">
-                   <LikeButton target={events} />
-                   <ZapButton target={events} />
-                 </div>
-
-                 <PostActions
-                   event={events}
-                   onDelete={() => {
-                     setTimeout(() => navigate('/bilder'), 1000);
-                   }}
-                 />
-               </CardContent>
-             </Card>
-          </div>
+           </div>
         </div>
       </div>
 
