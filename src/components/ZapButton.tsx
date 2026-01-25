@@ -30,40 +30,27 @@ export function ZapButton({
     activeNWC
   );
 
-  // Check if zap button is enabled
-  const canZap = user && target && user.pubkey !== target.pubkey && (author?.metadata?.lud16 || author?.metadata?.lud06);
-  const isLoggedIn = !!user;
-  const hasLightningAddress = author?.metadata?.lud16 || author?.metadata?.lud06;
-  const isAuthor = user && target && user.pubkey === target.pubkey;
-
-  // Use external data if provided, otherwise use fetched data
-  const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
-  const showLoading = externalZapData?.isLoading || isLoading;
-
-  // EINFACHER RENDER - immer ⚡ Icon, nur Text und Farbe ändern
-  let stateColor = 'bg-gray-100 dark:bg-gray-800';
-  let stateText = 'Zap';
-
-  if (!isLoggedIn) {
-    stateColor = 'bg-red-100 dark:bg-red-900/20';
-    stateText = 'Login zum Zappen';
-  } else if (isAuthor) {
-    stateColor = 'bg-yellow-100 dark:bg-yellow-900/20';
-    stateText = 'Eigener Post';
-  } else if (!hasLightningAddress) {
-    stateColor = 'bg-gray-100 dark:bg-gray-800';
-    stateText = 'Keine LN-Adresse';
-  } else {
-    stateColor = 'bg-green-100 dark:bg-green-900/20';
-    stateText = showLoading ? '...' : showCount && totalSats > 0 ? `${totalSats.toLocaleString()} sats` : 'Zap';
-  }
+  // DEBUGGING: Immer rendern ohne Bedingungen
+  console.log('[ZapButton SIMPLE DEBUG]', {
+    target: target ? 'EXISTS' : 'NULL',
+    user: user ? 'EXISTS' : 'NULL',
+    author: author ? 'EXISTS' : 'NULL',
+    userPubkey: user?.pubkey,
+    targetPubkey: target?.pubkey,
+  });
 
   return (
-    <ZapDialog target={target}>
-      <div className={`flex items-center gap-1 ${className} ${stateColor} p-2 rounded hover:opacity-80 transition-opacity`}>
-        <span className="text-xl">⚡</span>
-        <span className="text-xs font-medium">{stateText}</span>
+    <div className="bg-blue-500 text-white p-4 rounded mt-2 border-4 border-yellow-400">
+      <div className="text-xl font-bold">⚡ ZAP BUTTON TEST</div>
+      <div className="text-sm mt-2">
+        {target ? 'Target: ' + target.id.substring(0, 8) + '...' : 'Target: NULL'}
       </div>
-    </ZapDialog>
+      <div className="text-sm">
+        {user ? 'User: ' + user.pubkey.substring(0, 8) + '...' : 'User: NULL'}
+      </div>
+      <div className="text-sm">
+        {author?.metadata?.lud16 ? 'LN: lud16=' + author.metadata.lud16.substring(0, 20) + '...' : 'LN: KEIN lud16'}
+      </div>
+    </div>
   );
 }
