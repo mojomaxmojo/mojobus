@@ -11,7 +11,6 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { filterEventsByCountry } from '@/lib/countryDetection';
 import { COUNTRIES } from '@/config';
 import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
-import { ZapButton } from '@/components/ZapButton';
 import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -418,60 +417,56 @@ const ArticleCard = memo(function ArticleCard({
   const placeholderColor = metadata.image ? getImagePlaceholder(metadata.image) : undefined;
 
   return (
-    <div className="flex flex-col h-full">
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow flex-1 mb-2">
-        <Link to={`/${naddr}`} className="flex flex-col h-full">
-          {thumbnailUrl && (
-            <div
-              className="aspect-video overflow-hidden bg-muted"
-              style={{
-                backgroundColor: placeholderColor,
-              }}
-            >
-              <img
-                src={thumbnailUrl}
-                srcSet={srcset}
-                sizes={sizes}
-                alt={metadata.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-          )}
-          <CardHeader className="flex-1">
-            <CardTitle className="line-clamp-2 hover:text-blue-600 transition-colors">
-              {metadata.title}
-            </CardTitle>
-            <CardDescription className="line-clamp-3">
-              {metadata.summary}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-3">
-                  <User className="h-3 w-3" />
-                  <span className="truncate max-w-[120px]">{authorName}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-3 w-3" />
-                  <time>
-                    {new Date(metadata.publishedAt * 1000).toLocaleDateString('de-DE', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </time>
-                </div>
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
+      <Link to={`/${naddr}`} className="flex flex-col h-full">
+        {thumbnailUrl && (
+          <div
+            className="aspect-video overflow-hidden bg-muted"
+            style={{
+              backgroundColor: placeholderColor,
+            }}
+          >
+            <img
+              src={thumbnailUrl}
+              srcSet={srcset}
+              sizes={sizes}
+              alt={metadata.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        )}
+        <CardHeader className="flex-1">
+          <CardTitle className="line-clamp-2 hover:text-blue-600 transition-colors">
+            {metadata.title}
+          </CardTitle>
+          <CardDescription className="line-clamp-3">
+            {metadata.summary}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <User className="h-3 w-3" />
+                <span className="truncate max-w-[120px]">{authorName}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-3 w-3" />
+                <time>
+                  {new Date(metadata.publishedAt * 1000).toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </time>
               </div>
             </div>
-          </CardContent>
-        </Link>
-      </Card>
-      {/* Zap Button - für alle eingeloggten Nutzer außer Autor */}
-      <ZapButton target={article} />
-    </div>
+          </div>
+        </CardContent>
+      </Link>
+    </Card>
   );
 });
 

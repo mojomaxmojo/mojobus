@@ -3,6 +3,7 @@ import { useZaps } from '@/hooks/useZaps';
 import { useWallet } from '@/hooks/useWallet';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAuthor } from '@/hooks/useAuthor';
+import { Zap } from 'lucide-react';
 import type { Event } from 'nostr-tools';
 
 interface ZapButtonProps {
@@ -14,7 +15,7 @@ interface ZapButtonProps {
 
 export function ZapButton({
   target,
-  className = "text-xs",
+  className = "text-xs ml-1",
   showCount = true,
   zapData: externalZapData
 }: ZapButtonProps) {
@@ -24,37 +25,34 @@ export function ZapButton({
 
   // Only fetch data if not provided externally
   const { totalSats: fetchedTotalSats, isLoading } = useZaps(
-    externalZapData ? [] : target ?? [],
+    externalZapData ? [] : target ?? [], // Empty array prevents fetching if external data provided
     webln,
     activeNWC
   );
 
-  // Check conditions
-  const isLoggedIn = !!user;
-  const isAuthor = user && target && user.pubkey === target.pubkey;
-  const hasLightningAddress = author?.metadata?.lud16 || author?.metadata?.lud06;
-  const canZap = isLoggedIn && !isAuthor && hasLightningAddress;
-
-  // Only render ZapDialog when we can zap, otherwise render simple icon
-  if (canZap) {
-    return (
-      <ZapDialog target={target}>
-        <div className={`flex items-center ${className} hover:scale-125 hover:text-yellow-500 transition-all duration-200 cursor-pointer`}>
-          <span className="text-xl">⚡</span>
-          {showCount && fetchedTotalSats > 0 && (
-            <span className="text-xs ml-1 text-muted-foreground">
-              {fetchedTotalSats.toLocaleString()}
-            </span>
-          )}
-        </div>
-      </ZapDialog>
-    );
+  // Don't show zap button if user is not logged in, is the author, or author has no lightning address
+  if (!user || !target || user.pubkey === target.pubkey || (!author?.metadata?.lud16 && !author?.metadata?.lud06)) {
+    return null;
   }
 
-  // Disabled state - simple icon without click
+  // Use external data if provided, otherwise use fetched data
+  const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
+  const showLoading = externalZapData?.isLoading || isLoading;
+
   return (
-    <div className={`flex items-center ${className} opacity-50 cursor-not-allowed`}>
-      <span className="text-xl">⚡</span>
-    </div>
+    <ZapDialog target={target}>
+      <div className={`flex items-center gap-1 ${className}`}>
+        <Zap className="h-4 w-4" />
+        <span className="text-xs">
+          {showLoading ? (
+            '...'
+          ) : showCount && totalSats > 0 ? (
+            `${totalSats.toLocaleString()}`
+          ) : (
+            'Zap'
+          )}
+        </span>
+      </div>
+    </ZapDialog>
   );
 }
