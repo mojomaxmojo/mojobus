@@ -445,13 +445,13 @@ export function ImageDetail() {
                   )}
                   <div className="flex-1 flex items-start gap-2">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
-                        {events && <ZapButton target={events} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
-                      </div>
+                      <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
                       <p className="text-sm text-muted-foreground">
                         {metadata?.nip05 || 'Kein NIP-05'}
                       </p>
+                      <div className="flex items-center gap-[30px] mt-2">
+                        {events && <ZapButton target={events} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
+                      </div>
                     </div>
                   </div>
                 </div>

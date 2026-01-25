@@ -281,13 +281,13 @@ export function NoteView({ eventId }: NoteViewProps) {
                 </Avatar>
                 <div className="flex-1 min-w-0 flex items-start gap-2">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-semibold">{authorName}</div>
+                    <div className="font-semibold">{authorName}</div>
+                    <div className="flex items-center gap-[30px] mt-1">
+                      {author.data?.metadata?.nip05 && (
+                        <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
+                      )}
                       {note && <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
                     </div>
-                    {author.data?.metadata?.nip05 && (
-                      <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
-                    )}
                     <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />

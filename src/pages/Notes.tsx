@@ -353,33 +353,35 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
                 {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
                 <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold truncate">{authorName}</span>
-                  <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
-                  <span className="text-muted-foreground">•</span>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <time>
-                      {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </time>
-                  </div>
-                  {(totalSats > 0 || zapsLoading) && (
-                    <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400 text-xs">
-                      <Zap className="h-3 w-3" />
-                      <span className="font-medium">
-                        {zapsLoading ? '...' : totalSats.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+               <div className="flex-1 min-w-0">
+                 <div className="font-semibold truncate">{authorName}</div>
+                 <div className="flex items-center gap-[30px] mt-1">
+                   {author.data?.metadata?.nip05 && (
+                     <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
+                   )}
+                   <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
+                 </div>
+                 <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                   <Calendar className="h-3 w-3" />
+                   <time>
+                     {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
+                       year: 'numeric',
+                       month: 'short',
+                       day: 'numeric',
+                       hour: '2-digit',
+                       minute: '2-digit',
+                     })}
+                   </time>
+                   {(totalSats > 0 || zapsLoading) && (
+                     <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400 text-xs ml-2">
+                       <Zap className="h-3 w-3" />
+                       <span className="font-medium">
+                         {zapsLoading ? '...' : totalSats.toLocaleString()}
+                       </span>
+                     </div>
+                   )}
+                 </div>
+               </div>
             </div>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">

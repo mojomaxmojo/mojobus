@@ -436,16 +436,16 @@ export function ArticleView({ naddr }: ArticleViewProps) {
               </Avatar>
               <div className="flex-1 flex items-start gap-2">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 font-semibold">
-                      <User className="h-3 w-3" />
-                      <span>{authorName}</span>
-                    </div>
+                  <div className="flex items-center gap-1 font-semibold">
+                    <User className="h-3 w-3" />
+                    <span>{authorName}</span>
+                  </div>
+                  <div className="flex items-center gap-[30px] mt-1">
+                    {author.data?.metadata?.nip05 && (
+                      <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
+                    )}
                     {article && <ZapButton target={article} showCount={false} className="text-yellow-600 dark:text-yellow-400" />}
                   </div>
-                  {author.data?.metadata?.nip05 && (
-                    <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
-                  )}
                   <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
