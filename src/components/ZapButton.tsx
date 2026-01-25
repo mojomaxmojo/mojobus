@@ -3,7 +3,7 @@ import { useZaps } from '@/hooks/useZaps';
 import { useWallet } from '@/hooks/useWallet';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAuthor } from '@/hooks/useAuthor';
-import { Zap } from 'lucide-react';
+import { Zap, Lock, LogIn, ZapOff } from 'lucide-react';
 import type { Event } from 'nostr-tools';
 
 interface ZapButtonProps {
@@ -15,7 +15,7 @@ interface ZapButtonProps {
 
 export function ZapButton({
   target,
-  className = "text-xs ml-1",
+  className = "text-xs",
   showCount = true,
   zapData: externalZapData
 }: ZapButtonProps) {
@@ -30,18 +30,47 @@ export function ZapButton({
     activeNWC
   );
 
-  // Don't show zap button if user is not logged in, is the author, or author has no lightning address
-  if (!user || !target || user.pubkey === target.pubkey || (!author?.metadata?.lud16 && !author?.metadata?.lud06)) {
-    return null;
-  }
+  // Check if zap button is enabled
+  const canZap = user && target && user.pubkey !== target.pubkey && (author?.metadata?.lud16 || author?.metadata?.lud06);
+  const isLoggedIn = !!user;
+  const hasLightningAddress = author?.metadata?.lud16 || author?.metadata?.lud06;
+  const isAuthor = user && target && user.pubkey === target.pubkey;
 
   // Use external data if provided, otherwise use fetched data
   const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
   const showLoading = externalZapData?.isLoading || isLoading;
 
+  // Show different states based on availability
+  if (!isLoggedIn) {
+    return (
+      <div className={`flex items-center gap-1 ${className} text-muted-foreground opacity-70`}>
+        <LogIn className="h-4 w-4" />
+        <span className="text-xs">Login zum Zappen</span>
+      </div>
+    );
+  }
+
+  if (isAuthor) {
+    return (
+      <div className={`flex items-center gap-1 ${className} text-muted-foreground opacity-50`}>
+        <Lock className="h-4 w-4" />
+        <span className="text-xs">Eigener Post</span>
+      </div>
+    );
+  }
+
+  if (!hasLightningAddress) {
+    return (
+      <div className={`flex items-center gap-1 ${className} text-muted-foreground opacity-70`}>
+        <ZapOff className="h-4 w-4" />
+        <span className="text-xs">Keine LN-Adresse</span>
+      </div>
+    );
+  }
+
   return (
     <ZapDialog target={target}>
-      <div className={`flex items-center gap-1 ${className}`}>
+      <div className={`flex items-center gap-1 ${className} hover:text-ocean-600 transition-colors cursor-pointer`}>
         <Zap className="h-4 w-4" />
         <span className="text-xs">
           {showLoading ? (
