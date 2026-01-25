@@ -15,6 +15,8 @@ import { NoteContent } from '@/components/NoteContent';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
 import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getArticleHeaderUrl } from '@/lib/imageUtils';
+import { LikeButton } from '@/components/LikeButton';
+import { ZapButton } from '@/components/ZapButton';
 
 interface ImageEvent {
   id: string;
@@ -508,40 +510,46 @@ export function ImageDetail() {
               </Card>
             )}
 
-            {/* Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Share2 className="h-5 w-5 text-ocean-600" />
-                  Aktionen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (navigator.share) {
-                      navigator.share?.({
-                        title: 'Bild von MojoBus',
-                        text: events.content,
-                        url: window.location.href
-                      });
-                    }
-                  }}
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Teilen
-                </Button>
+             {/* Actions */}
+             <Card>
+               <CardHeader>
+                 <CardTitle className="flex items-center gap-2">
+                   <Share2 className="h-5 w-5 text-ocean-600" />
+                   Aktionen
+                 </CardTitle>
+               </CardHeader>
+               <CardContent className="space-y-3">
+                 <Button
+                   variant="outline"
+                   className="w-full"
+                   onClick={() => {
+                     if (navigator.share) {
+                       navigator.share?.({
+                         title: 'Bild von MojoBus',
+                         text: events.content,
+                         url: window.location.href
+                       });
+                     }
+                   }}
+                 >
+                   <Share2 className="h-4 w-4 mr-2" />
+                   Teilen
+                 </Button>
 
-                <PostActions
-                  event={events}
-                  onDelete={() => {
-                    setTimeout(() => navigate('/bilder'), 1000);
-                  }}
-                />
-              </CardContent>
-            </Card>
+                 {/* Like & Zap Buttons */}
+                 <div className="flex items-center gap-3 pt-3 border-t">
+                   <LikeButton target={events} />
+                   <ZapButton target={events} />
+                 </div>
+
+                 <PostActions
+                   event={events}
+                   onDelete={() => {
+                     setTimeout(() => navigate('/bilder'), 1000);
+                   }}
+                 />
+               </CardContent>
+             </Card>
           </div>
         </div>
       </div>
