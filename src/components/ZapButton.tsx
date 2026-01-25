@@ -23,6 +23,17 @@ export function ZapButton({
   const { data: author } = useAuthor(target?.pubkey || '');
   const { webln, activeNWC } = useWallet();
 
+  // Debug: Log props
+  if (target) {
+    console.log('[ZapButton] Rendered with:', {
+      targetId: target.id,
+      targetKind: target.kind,
+      user: user?.pubkey,
+      isAuthor: user?.pubkey === target.pubkey,
+      showCount,
+    });
+  }
+
   // Only fetch data if not provided externally
   const { totalSats: fetchedTotalSats, isLoading } = useZaps(
     externalZapData ? [] : target ?? [], // Empty array prevents fetching if external data provided
@@ -31,13 +42,21 @@ export function ZapButton({
   );
 
   // Don't show zap button if target is missing or user is the author
-  if (!target || (user && user.pubkey === target.pubkey)) {
+  if (!target) {
+    console.log('[ZapButton] No target provided, returning null');
+    return null;
+  }
+
+  if (user && user.pubkey === target.pubkey) {
+    console.log('[ZapButton] User is author, hiding zap button');
     return null;
   }
 
   // Use external data if provided, otherwise use fetched data
   const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
   const showLoading = externalZapData?.isLoading || isLoading;
+
+  console.log('[ZapButton] Rendering zap button:', { totalSats, showLoading });
 
   return (
     <ZapDialog target={target}>
@@ -46,10 +65,10 @@ export function ZapButton({
         <span className="text-xs">
           {showLoading ? (
             '...'
-          ) : showCount && totalSats > 0 ? (
-            `${totalSats.toLocaleString()}`
+          ) : showCount ? (
+            totalSats > 0 ? `${totalSats.toLocaleString()}` : 'Zap'
           ) : (
-            'Zap'
+            null
           )}
         </span>
       </div>
