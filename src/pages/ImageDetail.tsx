@@ -374,19 +374,13 @@ export function ImageDetail() {
               </Card>
             )}
 
-            {/* Content and Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-ocean-600" />
-                  Beschreibung
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose prose-gray dark:prose-invert max-w-none">
-                  <NoteContent event={events} className="text-base" />
-                </div>
-              </CardContent>
+             {/* Content and Description */}
+             <Card>
+               <CardContent className="py-4">
+                 <div className="prose prose-gray dark:prose-invert max-w-none">
+                   <NoteContent event={events} className="text-base" />
+                 </div>
+               </CardContent>
              </Card>
 
             {/* Actions Section */}
