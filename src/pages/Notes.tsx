@@ -12,7 +12,7 @@ import { useNotes, extractNoteTags, extractNoteImages } from '@/hooks/useNotes';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
-import { Calendar, Search, Trash2 } from 'lucide-react';
+import { Calendar, Search, Trash2, Zap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -34,6 +34,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from 'lucide-react';
+import { ZapButton } from '@/components/ZapButton';
+import { useZaps } from '@/hooks/useZaps';
+import { useWallet } from '@/hooks/useWallet';
 
 export function Notes() {
   const { country } = useParams();
@@ -297,6 +300,14 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
   const { mutate: deleteNote } = useNostrDelete();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { webln, activeNWC } = useWallet();
+
+  // Fetch zap statistics for this note
+  const { totalSats, isLoading: zapsLoading } = useZaps(
+    [note],
+    webln,
+    activeNWC
+  );
 
   const authorName = author.data?.metadata?.name || genUserName(note.pubkey);
   const authorAvatar = author.data?.metadata?.picture;
@@ -358,6 +369,14 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
                       })}
                     </time>
                   </div>
+                  {(totalSats > 0 || zapsLoading) && (
+                    <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400 text-xs">
+                      <Zap className="h-3 w-3" />
+                      <span className="font-medium">
+                        {zapsLoading ? '...' : totalSats.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -411,9 +430,17 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
       </Card>
       </Link>
 
-      {/* Delete Button - nur für den Autor sichtbar */}
-      {isAuthor && (
-        <div className="absolute top-2 right-2">
+      {/* Action Buttons */}
+      <div className="absolute top-2 right-2 flex gap-1">
+        {/* Zap Button - nur für eingeloggte User, nicht für Autor */}
+        {user && !isAuthor && (
+          <div className="opacity-80 hover:opacity-100">
+            <ZapButton target={note} showCount={false} className="h-8 w-8 p-0 text-xs" />
+          </div>
+        )}
+
+        {/* Delete Button - nur für den Autor sichtbar */}
+        {isAuthor && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -446,8 +473,8 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 });

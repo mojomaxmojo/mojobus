@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RelaySelector } from '@/components/RelaySelector';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User, Zap } from 'lucide-react';
 import { useAuthor } from '@/hooks/useAuthor';
 import { PostActions } from '@/components/PostActions';
 import { CommentsSection } from '@/components/comments/CommentsSection';
@@ -15,6 +15,10 @@ import { NoteContent } from '@/components/NoteContent';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
 import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getArticleHeaderUrl } from '@/lib/imageUtils';
+import { ZapButton } from '@/components/ZapButton';
+import { useZaps } from '@/hooks/useZaps';
+import { useWallet } from '@/hooks/useWallet';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 interface ImageEvent {
   id: string;
@@ -30,6 +34,8 @@ export function ImageDetail() {
   const { nostr } = useNostr();
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { user } = useCurrentUser();
+  const { webln, activeNWC } = useWallet();
 
   // Decode nip19 to get event ID
   let eventId = noteId;
@@ -76,6 +82,16 @@ export function ImageDetail() {
 
   const author = useAuthor(events?.pubkey);
   const metadata = author.data?.metadata;
+
+  // Fetch zap statistics for this image
+  const { totalSats, zapCount, isLoading: zapsLoading } = useZaps(
+    events ? [events] : [],
+    webln,
+    activeNWC
+  );
+
+  // Check if current user is author
+  const isAuthor = user?.pubkey === events?.pubkey;
 
   const extractImages = (content: string): string[] => {
     if (!content) return [];
@@ -435,10 +451,28 @@ export function ImageDetail() {
                   </div>
                 </div>
 
+                {(totalSats > 0 || zapsLoading) && (
+                  <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+                    <Zap className="h-4 w-4" />
+                    <span className="font-medium">
+                      {zapsLoading ? '...' : totalSats.toLocaleString()} sats
+                    </span>
+                    {zapCount > 1 && (
+                      <span className="text-xs">({zapCount} Zaps)</span>
+                    )}
+                  </div>
+                )}
+
                 {metadata?.about && (
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {metadata.about}
                   </p>
+                )}
+
+                {events && !isAuthor && (
+                  <div>
+                    <ZapButton target={events} showCount={false} className="text-xs" />
+                  </div>
                 )}
               </CardContent>
             </Card>

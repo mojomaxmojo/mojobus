@@ -8,7 +8,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { RelaySelector } from '@/components/RelaySelector';
-import { Calendar, User, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
+import { Calendar, User, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { TextWithLinks } from '@/components/TextWithLinks';
@@ -31,6 +31,9 @@ import { useState } from 'react';
 import { useHead } from '@unhead/react';
 import { nip19, type AddressPointer } from 'nostr-tools';
 import { getArticleHeaderUrl, generateSrcset, generateSizes, getResponsiveImageUrl } from '@/lib/imageUtils';
+import { ZapButton } from '@/components/ZapButton';
+import { useZaps } from '@/hooks/useZaps';
+import { useWallet } from '@/hooks/useWallet';
 
 interface ArticleViewProps {
   naddr: AddressPointer;
@@ -195,9 +198,17 @@ export function ArticleView({ naddr }: ArticleViewProps) {
   const { mutate: createEvent } = useNostrPublish();
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { webln, activeNWC } = useWallet();
 
   // Check if current user is author
   const isAuthor = user?.pubkey === naddr.pubkey;
+
+  // Fetch zap statistics for this article
+  const { totalSats, zapCount, isLoading: zapsLoading } = useZaps(
+    article ? [article] : [],
+    webln,
+    activeNWC
+  );
 
   // Dynamic SEO Meta Tags
   useHead(() => {
@@ -440,9 +451,25 @@ export function ArticleView({ naddr }: ArticleViewProps) {
                       })}
                     </time>
                   </div>
+                  {(totalSats > 0 || zapsLoading) && (
+                    <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                      <Zap className="h-3 w-3" />
+                      <span className="font-medium">
+                        {zapsLoading ? '...' : totalSats.toLocaleString()} sats
+                      </span>
+                      {zapCount > 1 && (
+                        <span className="text-xs">({zapCount})</span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {author.data?.metadata?.nip05 && (
                   <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
+                )}
+                {article && !isAuthor && (
+                  <div className="mt-2">
+                    <ZapButton target={article} showCount={false} className="text-xs" />
+                  </div>
                 )}
               </div>
             </Link>

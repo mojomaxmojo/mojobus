@@ -1,16 +1,20 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
+import { ZapButton } from '@/components/ZapButton';
+import type { Event } from 'nostr-tools';
 
 interface AuthorInfoProps {
   pubkey: string;
+  event?: Event | null;
   showAvatar?: boolean;
+  showZapButton?: boolean;
   className?: string;
 }
 
-export function AuthorInfo({ pubkey, showAvatar = true, className = '' }: AuthorInfoProps) {
+export function AuthorInfo({ pubkey, event, showAvatar = true, showZapButton = true, className = '' }: AuthorInfoProps) {
   const { data: author } = useAuthor(pubkey);
-  
+
   const authorName = author?.data?.metadata?.name || genUserName(pubkey);
   const authorAvatar = author?.data?.metadata?.picture;
 
@@ -23,6 +27,9 @@ export function AuthorInfo({ pubkey, showAvatar = true, className = '' }: Author
         </Avatar>
       )}
       <span className="text-sm font-medium">{authorName}</span>
+      {showZapButton && event && (
+        <ZapButton target={event} className="text-xs ml-1" showCount={true} />
+      )}
     </div>
   );
 }

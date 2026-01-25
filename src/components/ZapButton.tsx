@@ -30,8 +30,8 @@ export function ZapButton({
     activeNWC
   );
 
-  // Don't show zap button if user is not logged in, is the author, or author has no lightning address
-  if (!user || !target || user.pubkey === target.pubkey || (!author?.metadata?.lud16 && !author?.metadata?.lud06)) {
+  // Don't show zap button if target is missing or user is the author
+  if (!target || (user && user.pubkey === target.pubkey)) {
     return null;
   }
 
