@@ -47,12 +47,7 @@ export function ZapButton({
     return null;
   }
 
-  // ZapButton ist jetzt für alle User sichtbar (auch nicht-eingeloggt)
-
-  if (user && user.pubkey === target.pubkey) {
-    console.log('[ZapButton] User is author, hiding zap button');
-    return null;
-  }
+  // ZapButton ist jetzt für alle User sichtbar (auch nicht-eingeloggt, auch Autor)
 
   // Use external data if provided, otherwise use fetched data
   const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
