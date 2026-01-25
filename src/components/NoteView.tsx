@@ -309,12 +309,12 @@ export function NoteView({ eventId }: NoteViewProps) {
                       </div>
                     )}
                   </div>
-                  {note && !isAuthor && (
-                    <div className="mt-2">
-                      <ZapButton target={note} showCount={false} className="text-xs" />
-                    </div>
-                  )}
                 </div>
+                {note && !isAuthor && (
+                  <div>
+                    <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                )}
               </div>
 
 

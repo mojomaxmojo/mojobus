@@ -449,6 +449,11 @@ export function ImageDetail() {
                       {metadata?.nip05 || 'Kein NIP-05'}
                     </p>
                   </div>
+                  {events && !isAuthor && (
+                    <div>
+                      <ZapButton target={events} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
+                    </div>
+                  )}
                 </div>
 
                 {(totalSats > 0 || zapsLoading) && (
@@ -467,12 +472,6 @@ export function ImageDetail() {
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {metadata.about}
                   </p>
-                )}
-
-                {events && !isAuthor && (
-                  <div>
-                    <ZapButton target={events} showCount={false} className="text-xs" />
-                  </div>
                 )}
               </CardContent>
             </Card>

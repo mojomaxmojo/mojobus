@@ -377,6 +377,9 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
                       </span>
                     </div>
                   )}
+                  {user && !isAuthor && (
+                    <ZapButton target={note} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
+                  )}
                 </div>
               </div>
             </div>
@@ -432,13 +435,6 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
 
       {/* Action Buttons */}
       <div className="absolute top-2 right-2 flex gap-1">
-        {/* Zap Button - nur für eingeloggte User, nicht für Autor */}
-        {user && !isAuthor && (
-          <div className="opacity-80 hover:opacity-100">
-            <ZapButton target={note} showCount={false} className="h-8 w-8 p-0 text-xs" />
-          </div>
-        )}
-
         {/* Delete Button - nur für den Autor sichtbar */}
         {isAuthor && (
           <AlertDialog>

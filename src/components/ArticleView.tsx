@@ -466,12 +466,12 @@ export function ArticleView({ naddr }: ArticleViewProps) {
                 {author.data?.metadata?.nip05 && (
                   <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
                 )}
-                {article && !isAuthor && (
-                  <div className="mt-2">
-                    <ZapButton target={article} showCount={false} className="text-xs" />
-                  </div>
-                )}
               </div>
+              {article && !isAuthor && (
+                <div>
+                  <ZapButton target={article} showCount={false} className="text-yellow-600 dark:text-yellow-400" />
+                </div>
+              )}
             </Link>
 
 
