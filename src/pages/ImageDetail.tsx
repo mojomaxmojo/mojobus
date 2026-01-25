@@ -391,13 +391,7 @@ export function ImageDetail() {
 
             {/* Actions Section */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-red-500" />
-                  Aktionen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 py-4">
                 <Button
                   variant="outline"
                   className="w-full"
