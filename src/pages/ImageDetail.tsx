@@ -392,11 +392,11 @@ export function ImageDetail() {
                 <div className="flex items-center gap-3">
                   <LikeButton target={events} />
                   <ZapButton target={events} />
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      if (navigator.share) {
+                   <Button
+                     variant="outline"
+                     className="max-w-[50%] flex-1"
+                     onClick={() => {
+                       if (navigator.share) {
                         // Use Web Share API if available
                         navigator.share?.({
                           title: 'Bild von MojoBus',
