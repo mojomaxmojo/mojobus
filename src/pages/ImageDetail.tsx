@@ -397,8 +397,24 @@ export function ImageDetail() {
                   Aktionen
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
+              <CardContent className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share?.({
+                        title: 'Bild von MojoBus',
+                        text: events.content,
+                        url: window.location.href
+                      });
+                    }
+                  }}
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Teilen
+                </Button>
+                <div className="flex items-center gap-3 pt-3 border-t">
                   <LikeButton target={events} />
                   <ZapButton target={events} />
                 </div>
