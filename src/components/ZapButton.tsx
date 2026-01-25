@@ -50,15 +50,27 @@ export function ZapButton({
   else if (!hasLightningAddress) bgColor = 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700';
   else bgColor = 'bg-green-100 dark:bg-green-900/20 hover:bg-green-200 dark:hover:bg-green-900/30';
 
-  // Always render - never return null
+  // Conditionally render ZapDialog only when we can zap
+  if (canZap) {
+    return (
+      <ZapDialog target={target}>
+        <div
+          className={`flex items-center gap-1 ${className} ${bgColor} p-2 rounded transition-colors cursor-pointer`}
+        >
+          <span className="text-xl">⚡</span>
+          <span className="text-xs font-medium">{text}</span>
+        </div>
+      </ZapDialog>
+    );
+  }
+
+  // Otherwise render disabled button without ZapDialog wrapper
   return (
-    <ZapDialog target={canZap ? target : null}>
-      <div
-        className={`flex items-center gap-1 ${className} ${bgColor} p-2 rounded transition-colors cursor-${canZap ? 'pointer' : 'default'}`}
-      >
-        <span className="text-xl">⚡</span>
-        <span className="text-xs font-medium">{text}</span>
-      </div>
-    </ZapDialog>
+    <div
+      className={`flex items-center gap-1 ${className} ${bgColor} p-2 rounded transition-colors cursor-default`}
+    >
+      <span className="text-xl">⚡</span>
+      <span className="text-xs font-medium">{text}</span>
+    </div>
   );
 }
