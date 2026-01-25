@@ -34,6 +34,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from 'lucide-react';
+import { ZapButton } from '@/components/ZapButton';
 
 export function Notes() {
   const { country } = useParams();
@@ -410,6 +411,11 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
         </CardContent>
       </Card>
       </Link>
+
+      {/* Zap Button - für alle eingeloggten Nutzer außer Autor */}
+      <div className="mt-2">
+        <ZapButton target={note} />
+      </div>
 
       {/* Delete Button - nur für den Autor sichtbar */}
       {isAuthor && (

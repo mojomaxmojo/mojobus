@@ -19,6 +19,7 @@ import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
+import { ZapButton } from '@/components/ZapButton';
 
 function Places() {
   const { country } = useParams();
@@ -249,59 +250,63 @@ const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
   const placeholderColor = image ? getImagePlaceholder(image) : undefined;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
-      <Link to={`/${place.naddr}`} className="flex flex-col h-full">
-        {thumbnailUrl && (
-          <div
-            className="aspect-video overflow-hidden bg-muted"
-            style={{
-              backgroundColor: placeholderColor,
-            }}
-          >
-            <img
-              src={thumbnailUrl}
-              srcSet={srcset}
-              sizes={sizes}
-              alt={title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-        )}
-        <CardHeader className="flex-1">
-          <CardTitle className="line-clamp-2 hover:text-ocean-600 transition-colors flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-ocean-600" />
-            {title}
-          </CardTitle>
-          {place.location && (
-            <CardDescription className="flex items-center gap-1">
-              📍 {place.location}
-            </CardDescription>
+    <div className="flex flex-col h-full">
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow flex-1 mb-2">
+        <Link to={`/${place.naddr}`} className="flex flex-col h-full">
+          {thumbnailUrl && (
+            <div
+              className="aspect-video overflow-hidden bg-muted"
+              style={{
+                backgroundColor: placeholderColor,
+              }}
+            >
+              <img
+                src={thumbnailUrl}
+                srcSet={srcset}
+                sizes={sizes}
+                alt={title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
           )}
-        </CardHeader>
-        <CardContent className="flex-1">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-3">
-                <User className="h-3 w-3" />
-                <span className="truncate max-w-[120px]">{place.author.slice(0, 8)}...</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-3 w-3" />
-                <time>
-                  {new Date(place.created_at * 1000).toLocaleDateString('de-DE', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </time>
+          <CardHeader className="flex-1">
+            <CardTitle className="line-clamp-2 hover:text-ocean-600 transition-colors flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-ocean-600" />
+              {title}
+            </CardTitle>
+            {place.location && (
+              <CardDescription className="flex items-center gap-1">
+                📍 {place.location}
+              </CardDescription>
+            )}
+          </CardHeader>
+          <CardContent className="flex-1">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center gap-3">
+                  <User className="h-3 w-3" />
+                  <span className="truncate max-w-[120px]">{place.author.slice(0, 8)}...</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-3 w-3" />
+                  <time>
+                    {new Date(place.created_at * 1000).toLocaleDateString('de-DE', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </time>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Link>
-    </Card>
+          </CardContent>
+        </Link>
+      </Card>
+      {/* Zap Button - für alle eingeloggten Nutzer */}
+      <ZapButton target={place} />
+    </div>
   );
 });
 
