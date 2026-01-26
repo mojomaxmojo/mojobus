@@ -32,6 +32,7 @@ import { useZaps } from '@/hooks/useZaps';
 import { useWallet } from '@/hooks/useWallet';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { Event } from 'nostr-tools';
+import { QRCodeSVG } from '@qrcode/svg';
 
 interface ZapDialogProps {
   target: Event;

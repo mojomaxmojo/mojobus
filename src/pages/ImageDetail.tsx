@@ -108,19 +108,13 @@ export function ImageDetail() {
   };
 
   // Only compute these if events is loaded
-  // Extract image URLs from content and im tags
-  const contentImages = events ? extractImages(events.content) : [];
-  // Extract images from 'im' tags (for kind 1111 events that reference images)
-  const tagImages = events?.tags
-    .filter(([name]) => name === 'im')
-    .map(([, url]) => url) || [];
+  const images = events ? extractImages(events.content) : [];
+  const tags = events ? extractTags(events) : [];
 
-  const allImages = [...contentImages, ...tagImages];
-  const tags = events ? extractTags(events);
-
-  // More lenient validation: Treat as image if it has ANY image source
+  // Determine if this should be treated as an image event
+  // Only check if we're not loading and have an event
   const isValidImageEvent = !isLoading && events && (
-    allImages.length > 0 ||
+    images.length > 0 ||
     tags.some(tag =>
       ['medien', 'media', 'bilder', 'images', 'photo', 'image', 'video', 'audio'].includes(tag)
     )
@@ -129,9 +123,7 @@ export function ImageDetail() {
   console.log('Image validation:', {
     isLoading,
     eventExists: !!events,
-    contentImagesCount: contentImages.length,
-    tagImagesCount: tagImages.length,
-    totalImagesCount: allImages.length,
+    imagesCount: images.length,
     tagsFound: tags,
     isValid: isValidImageEvent
   });
