@@ -19,6 +19,7 @@ import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { useInView } from 'react-intersection-observer';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { MAIN_MENU } from '@/config/menu';
+import { SocialBar } from '@/components/SocialBar';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
@@ -466,6 +467,7 @@ const ArticleCard = memo(function ArticleCard({
           </div>
         </CardContent>
       </Link>
+      <SocialBar event={article} compact />
     </Card>
   );
 });

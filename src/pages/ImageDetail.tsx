@@ -12,6 +12,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { PostActions } from '@/components/PostActions';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { NoteContent } from '@/components/NoteContent';
+import { SocialBar } from '@/components/SocialBar';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
 import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getArticleHeaderUrl } from '@/lib/imageUtils';
@@ -380,12 +381,16 @@ export function ImageDetail() {
                   Beschreibung
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="prose prose-gray dark:prose-invert max-w-none">
-                  <NoteContent event={events} className="text-base" />
-                </div>
-              </CardContent>
-            </Card>
+               <CardContent>
+                 <div className="prose prose-gray dark:prose-invert max-w-none">
+                   <NoteContent event={events} className="text-base" />
+                 </div>
+               </CardContent>
+             </Card>
+
+             <SocialBar event={events} />
+
+             {/* Comments Section */}
 
             {/* Comments Section */}
             <Card>

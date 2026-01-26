@@ -8,6 +8,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { RelaySelector } from '@/components/RelaySelector';
+import { SocialBar } from '@/components/SocialBar';
 import { Calendar, User, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -382,8 +383,12 @@ export function ArticleView({ naddr }: ArticleViewProps) {
                     <Trash2 className="h-4 w-4 mr-2" />
                     Löschen
                   </Button>
-                </div>
-              )}
+               </div>
+             )}
+
+             <SocialBar event={article} />
+
+             {/* Divider */}
             </div>
 
             {/* Tags */}

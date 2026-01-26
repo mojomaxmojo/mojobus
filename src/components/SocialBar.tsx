@@ -1,0 +1,182 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { ZapButton } from '@/components/ZapButton';
+import { MessageSquare, Repeat2, Heart } from 'lucide-react';
+import { useSocialCounts } from '@/hooks/useSocialCounts';
+import { useLikeActions, useRepostActions } from '@/hooks/useSocialActions';
+import { useComments } from '@/hooks/useComments';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import type { NostrEvent } from '@nostrify/nostrify';
+import { cn } from '@/lib/utils';
+
+interface SocialBarProps {
+  /** The target event to interact with */
+  event: NostrEvent;
+  /** Compact mode for card views (smaller buttons, horizontal layout) */
+  compact?: boolean;
+  /** Optional custom className */
+  className?: string;
+}
+
+/**
+ * SocialBar component showing and handling all social interactions
+ * - Comments (NIP-22, Kind 1111)
+ * - Reposts (Kind 6)
+ * - Zaps (Lightning payments)
+ * - Likes (Kind 7 reactions)
+ */
+export function SocialBar({ event, compact = false, className }: SocialBarProps) {
+  const { user } = useCurrentUser();
+  const { like } = useLikeActions();
+  const { repost } = useRepostActions();
+
+  // Fetch social counts
+  const { data: counts, isLoading } = useSocialCounts(event);
+
+  // Fetch comments for count (useComments returns structure with allComments)
+  const { data: commentsData } = useComments(event);
+  const commentCount = commentsData?.allComments?.length || 0;
+
+  // Local state for like and repost interactions (optimistic UI)
+  const [isLiking, setIsLiking] = useState(false);
+  const [isReposting, setIsReposting] = useState(false);
+
+  const handleLike = async () => {
+    if (isLiking) return;
+    setIsLiking(true);
+    await like(event);
+    setIsLiking(false);
+  };
+
+  const handleRepost = async () => {
+    if (isReposting) return;
+    setIsReposting(true);
+    await repost(event);
+    setIsReposting(false);
+  };
+
+  if (compact) {
+    // Compact version for card views
+    return (
+      <div className={cn("flex items-center justify-between px-4 py-2 border-t", className)}>
+        {/* Comments */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+          asChild
+        >
+          <a href={`/${event.id}`}>
+            <MessageSquare className="h-4 w-4" />
+            <span className="text-xs">
+              {isLoading ? '...' : commentCount}
+            </span>
+          </a>
+        </Button>
+
+        {/* Reposts */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+          onClick={handleRepost}
+          disabled={isReposting || !user}
+        >
+          <Repeat2 className={cn("h-4 w-4", isReposting && "animate-pulse")} />
+          <span className="text-xs">
+            {isReposting ? '...' : (isLoading ? '...' : counts?.reposts ?? 0)}
+          </span>
+        </Button>
+
+        {/* Zaps */}
+        <div className="flex-1">
+          <ZapButton
+            target={event}
+            showCount={true}
+            className="flex items-center gap-1 text-xs ml-1 text-muted-foreground hover:text-foreground"
+          />
+        </div>
+
+        {/* Likes */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground hover:text-red-500"
+          onClick={handleLike}
+          disabled={isLiking || !user}
+        >
+          <Heart className={cn("h-4 w-4", isLiking && "animate-pulse")} />
+          <span className="text-xs">
+            {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
+          </span>
+        </Button>
+      </div>
+    );
+  }
+
+  // Full version for detail views
+  return (
+    <div className={cn("flex items-center gap-2 pt-4 border-t", className)}>
+      {/* Comments */}
+      <Button
+        variant="ghost"
+        size="default"
+        className="gap-2 flex-1"
+        asChild
+      >
+        <a href={`#comments`}>
+          <MessageSquare className="h-5 w-5" />
+          <span>Kommentare</span>
+          {!isLoading && commentCount > 0 && (
+            <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+              {commentCount}
+            </span>
+          )}
+        </a>
+      </Button>
+
+      {/* Reposts */}
+      <Button
+        variant="ghost"
+        size="default"
+        className="gap-2 flex-1"
+        onClick={handleRepost}
+        disabled={isReposting || !user}
+      >
+        <Repeat2 className={cn("h-5 w-5", isReposting && "animate-pulse")} />
+        <span>Repost</span>
+        {!isLoading && counts?.reposts > 0 && (
+          <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+            {counts.reposts}
+          </span>
+        )}
+      </Button>
+
+      {/* Zaps */}
+      <div className="flex-1">
+        <ZapButton
+          target={event}
+          showCount={true}
+          className="flex items-center gap-2"
+        />
+      </div>
+
+      {/* Likes */}
+      <Button
+        variant="ghost"
+        size="default"
+        className="gap-2 flex-1 hover:text-red-500"
+        onClick={handleLike}
+        disabled={isLiking || !user}
+      >
+        <Heart className={cn("h-5 w-5", isLiking && "animate-pulse")} />
+        <span>Like</span>
+        {!isLoading && counts?.likes > 0 && (
+          <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+            {counts.likes}
+          </span>
+        )}
+      </Button>
+    </div>
+  );
+}

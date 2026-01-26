@@ -16,6 +16,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
+import { SocialBar } from '@/components/SocialBar';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';
@@ -356,8 +357,8 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
   const placeholderColor = thumbnailUrl ? getImagePlaceholder(thumbnailUrl) : undefined;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      <Link to={link}>
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+      <Link to={link} className="flex flex-col h-full">
         {thumbnailUrl ? (
           <div
             className="aspect-video overflow-hidden bg-muted"
@@ -393,7 +394,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{authorName}</span>
             <span>•</span>
@@ -401,6 +402,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
           </div>
         </CardContent>
       </Link>
+      <SocialBar event={item.event} compact />
     </Card>
   );
 });

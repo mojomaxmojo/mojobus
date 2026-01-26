@@ -22,6 +22,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrDelete } from '@/hooks/useNostrDelete';
 import { useToast } from '@/hooks/useToast';
 import { generateSrcset, generateSizes } from '@/lib/imageUtils';
+import { SocialBar } from '@/components/SocialBar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -410,6 +411,7 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
         </CardContent>
       </Card>
       </Link>
+      <SocialBar event={note} compact />
 
       {/* Delete Button - nur für den Autor sichtbar */}
       {isAuthor && (

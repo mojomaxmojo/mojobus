@@ -16,6 +16,7 @@ import { filterEventsByCountry, countries } from '@/lib/countryDetection';
 import { nip19 } from 'nostr-tools';
 import { MAIN_MENU } from '@/config/menu';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
+import { SocialBar } from '@/components/SocialBar';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
@@ -301,6 +302,7 @@ const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
           </div>
         </CardContent>
       </Link>
+      <SocialBar event={place} compact />
     </Card>
   );
 });
