@@ -106,12 +106,12 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-gray-300 hover:text-gray-800 min-w-0 transition-colors"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-gray-700 min-w-0 transition-colors"
           asChild
         >
-          <a href={`/${event.id}`}>
-            <MessageSquare className="h-4 w-4 flex-shrink-0" />
-            <span className="text-xs truncate">
+          <a href={`/${event.id}`} className="group">
+            <MessageSquare className="h-4 w-4 flex-shrink-0 group-hover:fill-gray-300 transition-colors" />
+            <span className="text-xs truncate group-hover:text-gray-700">
               {isLoading ? '...' : commentCount}
             </span>
           </a>
@@ -121,12 +121,12 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-green-400 hover:text-green-700 min-w-0 transition-colors"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-green-600 min-w-0 transition-colors group"
           onClick={handleRepost}
           disabled={isReposting || !user}
         >
-          <Repeat2 className={cn("h-4 w-4 flex-shrink-0", isReposting && "animate-pulse")} />
-          <span className="text-xs truncate">
+          <Repeat2 className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-green-400", isReposting && "animate-pulse")} />
+          <span className="text-xs truncate group-hover:text-green-600">
             {isReposting ? '...' : (isLoading ? '...' : counts?.reposts ?? 0)}
           </span>
         </Button>
@@ -148,12 +148,12 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-red-500 hover:text-red-700 min-w-0 transition-colors"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-red-600 min-w-0 transition-colors group"
           onClick={handleLike}
           disabled={isLiking || !user}
         >
-          <Heart className={cn("h-4 w-4 flex-shrink-0", isLiking && "animate-pulse")} />
-          <span className="text-xs truncate">
+          <Heart className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-red-500", isLiking && "animate-pulse")} />
+          <span className="text-xs truncate group-hover:text-red-600">
             {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
           </span>
         </Button>
@@ -162,10 +162,10 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-blue-400 hover:text-blue-700 min-w-0 transition-colors"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-blue-600 min-w-0 transition-colors group"
           onClick={handleShare}
         >
-          <Share2 className="h-4 w-4 flex-shrink-0" />
+          <Share2 className="h-4 w-4 flex-shrink-0 group-hover:fill-blue-400" />
         </Button>
       </div>
     );
@@ -178,12 +178,12 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-gray-300 hover:text-gray-800 min-w-0 transition-colors"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-gray-700 min-w-0 transition-colors"
         asChild
       >
-        <a href={`#comments`}>
-          <MessageSquare className="h-4 w-4 flex-shrink-0" />
-          <span className="text-xs truncate">
+        <a href={`#comments`} className="group">
+          <MessageSquare className="h-4 w-4 flex-shrink-0 group-hover:fill-gray-300 transition-colors" />
+          <span className="text-xs truncate group-hover:text-gray-700">
             {isLoading ? '...' : commentCount}
           </span>
         </a>
@@ -193,12 +193,12 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-green-400 hover:text-green-700 min-w-0 transition-colors"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-green-600 min-w-0 transition-colors group"
         onClick={handleRepost}
         disabled={isReposting || !user}
       >
-        <Repeat2 className={cn("h-4 w-4 flex-shrink-0", isReposting && "animate-pulse")} />
-        <span className="text-xs truncate">
+        <Repeat2 className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-green-400", isReposting && "animate-pulse")} />
+        <span className="text-xs truncate group-hover:text-green-600">
           {isReposting ? '...' : (isLoading ? '...' : counts?.reposts ?? 0)}
         </span>
       </Button>
@@ -220,12 +220,12 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-red-500 hover:text-red-700 min-w-0 transition-colors"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-red-600 min-w-0 transition-colors group"
         onClick={handleLike}
         disabled={isLiking || !user}
       >
-        <Heart className={cn("h-4 w-4 flex-shrink-0", isLiking && "animate-pulse")} />
-        <span className="text-xs truncate">
+        <Heart className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-red-500", isLiking && "animate-pulse")} />
+        <span className="text-xs truncate group-hover:text-red-600">
           {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
         </span>
       </Button>
@@ -234,10 +234,10 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-blue-400 hover:text-blue-700 min-w-0 flex justify-center transition-colors"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-blue-600 min-w-0 flex justify-center transition-colors group"
         onClick={handleShare}
       >
-        <Share2 className="h-4 w-4 flex-shrink-0" />
+        <Share2 className="h-4 w-4 flex-shrink-0 group-hover:fill-blue-400" />
       </Button>
     </div>
   );
