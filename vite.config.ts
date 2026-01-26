@@ -37,6 +37,7 @@ export default defineConfig(() => ({
       'buffer',
       '@nostrify/react',
       '@nostrify/nostrify',
+      'dijkstrajs',
     ],
     force: true,
   },
@@ -61,7 +62,8 @@ export default defineConfig(() => ({
         // Suppress external import warnings from node_modules
         // These are usually peer dependencies that will be resolved at runtime
         if (warning.code === 'UNRESOLVED_IMPORT' &&
-            warning.message.includes('node_modules')) {
+            (warning.message.includes('node_modules') ||
+             warning.message.includes('dijkstrajs'))) {
           return;
         }
         warn(warning);
