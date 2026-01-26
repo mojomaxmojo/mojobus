@@ -41,9 +41,9 @@ export function ZapButton({
 
   return (
     <ZapDialog target={target}>
-      <div className={`flex items-center gap-1 ${className}`}>
-        <Zap className="h-4 w-4 hover:fill-yellow-500 hover:text-yellow-500 transition-colors" />
-        <span className="text-xs">
+      <div className={`flex items-center gap-1 group ${className}`}>
+        <Zap className="h-4 w-4 group-hover:fill-yellow-500 group-hover:text-yellow-500 transition-colors" />
+        <span className="text-xs group-hover:text-yellow-500 transition-colors">
           {showLoading ? (
             '...'
           ) : showCount && totalSats > 0 ? (

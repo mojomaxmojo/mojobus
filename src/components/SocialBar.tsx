@@ -136,9 +136,9 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
           target={event}
           showCount={false}
         >
-          <div className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground group min-w-0">
-            <ZapIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-yellow-500 transition-colors" />
-            <span className="truncate">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground group min-w-0">
+            <ZapIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:fill-yellow-500 group-hover:text-yellow-500 transition-colors" />
+            <span className="truncate group-hover:text-yellow-500 transition-colors">
               {isLoading ? '...' : zapCount}
             </span>
           </div>
@@ -208,9 +208,9 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         target={event}
         showCount={false}
       >
-        <div className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground group min-w-0">
-          <ZapIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-yellow-500 transition-colors" />
-          <span className="truncate">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground group min-w-0">
+          <ZapIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:fill-yellow-500 group-hover:text-yellow-500 transition-colors" />
+          <span className="truncate group-hover:text-yellow-500 transition-colors">
             {isLoading ? '...' : zapCount}
           </span>
         </div>
