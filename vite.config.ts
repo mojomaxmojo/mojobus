@@ -20,7 +20,7 @@ export default defineConfig(() => ({
         global: true,
         process: true,
       },
-      // Whether to polyfill `process` and `Buffer` for the `browser` field in package.json
+      // Whether to polyfill `process` and `Buffer` for `browser` field in package.json
       process: true,
       buffer: true,
     }),
@@ -43,7 +43,7 @@ export default defineConfig(() => ({
   build: {
     rollupOptions: {
       output: {
-        // Add hash to filenames for code busting
+        // Add hash to filenames for cache busting
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
@@ -53,8 +53,8 @@ export default defineConfig(() => ({
         inlineDynamicImports: false,
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
-        // Deaktiviere manuelle Chunks um zirkuläre Abhängigkeiten zu vermeiden
-        // Vite/Rollup kümmert sich automatisch um das Chapping
+        // Deactivate manual chunks to avoid circular dependencies
+        // Vite/Rollup warns itself about the chunking
         manualChunks: undefined,
       },
       onwarn(warning, warn) {
@@ -99,7 +99,7 @@ export default defineConfig(() => ({
       return !log.includes("React Router Future Flag Warning");
     },
     env: {
-      DEBUG_PRINT_LIMIT: '0', // Suppress DOM output that exceeds AI context windows
+      DEBUG_PRINT_LIMIT: '0', // Suppress DOM output that exceeds AI context window
     },
   },
   resolve: {
@@ -112,6 +112,8 @@ export default defineConfig(() => ({
       util: 'util',
       process: 'process',
     },
+    // Mark dijkstrajs as external to fix Vite resolution error
+    external: ['dijkstrajs'],
   },
   // Additional configuration to handle CommonJS
   css: {
