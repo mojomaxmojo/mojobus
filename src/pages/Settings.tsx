@@ -268,21 +268,21 @@ export function Settings() {
                         </p>
                       </button>
 
-                      {/* Balanced Preset */}
+                      {/* Reliable Preset */}
                       <button
-                        onClick={() => handlePresetChange('balanced')}
+                        onClick={() => handlePresetChange('reliable')}
                         className={`p-4 rounded-lg border-2 transition-all text-left ${
-                          selectedPreset === 'balanced'
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
+                          selectedPreset === 'reliable'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/20'
                             : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <Gauge className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          <span className="font-semibold">Balanced</span>
+                          <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          <span className="font-semibold">Reliable</span>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Ausgewogene Performance und Zuverlässigkeit
+                          Maximale Zuverlässigkeit mit mehreren Relays
                         </p>
                       </button>
                     </div>
