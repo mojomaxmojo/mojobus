@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ZapButton } from '@/components/ZapButton';
-import { MessageSquare, Repeat2, Heart, Share2 } from 'lucide-react';
+import { MessageSquare, Repeat2, Heart, Share2, Zap as ZapIcon } from 'lucide-react';
 import { useSocialCounts } from '@/hooks/useSocialCounts';
 import { useLikeActions, useRepostActions } from '@/hooks/useSocialActions';
 import { useComments } from '@/hooks/useComments';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useZaps } from '@/hooks/useZaps';
+import { useWallet } from '@/hooks/useWallet';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { cn } from '@/lib/utils';
 import { nip19 } from 'nostr-tools';
@@ -30,6 +32,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   const { user } = useCurrentUser();
   const { like } = useLikeActions();
   const { repost } = useRepostActions();
+  const { webln, activeNWC } = useWallet();
 
   // Fetch social counts
   const { data: counts, isLoading } = useSocialCounts(event);
@@ -37,6 +40,9 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   // Fetch comments for count (useComments returns structure with allComments)
   const { data: commentsData } = useComments(event);
   const commentCount = commentsData?.allComments?.length || 0;
+
+  // Fetch zaps for count
+  const { zapCount } = useZaps(event, webln, activeNWC);
 
   // Local state for like and repost interactions (optimistic UI)
   const [isLiking, setIsLiking] = useState(false);
@@ -73,6 +79,11 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
     }
   };
 
+  const handleZap = () => {
+    // Open zap dialog
+    // This will be handled by ZapDialog trigger
+  };
+
   const handleLike = async () => {
     if (isLiking) return;
     setIsLiking(true);
@@ -90,17 +101,17 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   if (compact) {
     // Compact version for card views
     return (
-      <div className={cn("flex items-center justify-between px-4 py-2 border-t", className)}>
+      <div className={cn("flex items-center gap-1 px-4 py-2 border-t w-full overflow-visible", className)}>
         {/* Comments */}
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
           asChild
         >
           <a href={`/${event.id}`}>
-            <MessageSquare className="h-4 w-4" />
-            <span className="text-xs">
+            <MessageSquare className="h-4 w-4 flex-shrink-0" />
+            <span className="text-xs truncate">
               {isLoading ? '...' : commentCount}
             </span>
           </a>
@@ -110,35 +121,39 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
           onClick={handleRepost}
           disabled={isReposting || !user}
         >
-          <Repeat2 className={cn("h-4 w-4", isReposting && "animate-pulse")} />
-          <span className="text-xs">
+          <Repeat2 className={cn("h-4 w-4 flex-shrink-0", isReposting && "animate-pulse")} />
+          <span className="text-xs truncate">
             {isReposting ? '...' : (isLoading ? '...' : counts?.reposts ?? 0)}
           </span>
         </Button>
 
-        {/* Zaps */}
-        <div className="flex-1">
-          <ZapButton
-            target={event}
-            showCount={true}
-            className="flex items-center gap-1 text-xs ml-1 text-muted-foreground hover:text-foreground"
-          />
-        </div>
+        {/* Zaps - Custom with yellow lightning on hover */}
+        <ZapButton
+          target={event}
+          showCount={false}
+        >
+          <div className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground group min-w-0">
+            <ZapIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-yellow-500 transition-colors" />
+            <span className="truncate">
+              {isLoading ? '...' : zapCount}
+            </span>
+          </div>
+        </ZapButton>
 
         {/* Likes */}
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground hover:text-red-500"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground hover:text-red-500 min-w-0"
           onClick={handleLike}
           disabled={isLiking || !user}
         >
-          <Heart className={cn("h-4 w-4", isLiking && "animate-pulse")} />
-          <span className="text-xs">
+          <Heart className={cn("h-4 w-4 flex-shrink-0", isLiking && "animate-pulse")} />
+          <span className="text-xs truncate">
             {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
           </span>
         </Button>
@@ -147,10 +162,10 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
           onClick={handleShare}
         >
-          <Share2 className="h-4 w-4" />
+          <Share2 className="h-4 w-4 flex-shrink-0" />
         </Button>
       </div>
     );
@@ -158,17 +173,17 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
 
   // Full version for detail views
   return (
-    <div className={cn("flex items-center justify-between px-4 py-2 border-t", className)}>
+    <div className={cn("flex items-center gap-1 px-4 py-2 border-t w-full overflow-visible", className)}>
       {/* Comments */}
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
         asChild
       >
         <a href={`#comments`}>
-          <MessageSquare className="h-4 w-4" />
-          <span className="text-xs">
+          <MessageSquare className="h-4 w-4 flex-shrink-0" />
+          <span className="text-xs truncate">
             {isLoading ? '...' : commentCount}
           </span>
         </a>
@@ -178,35 +193,39 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
         onClick={handleRepost}
         disabled={isReposting || !user}
       >
-        <Repeat2 className={cn("h-4 w-4", isReposting && "animate-pulse")} />
-        <span className="text-xs">
+        <Repeat2 className={cn("h-4 w-4 flex-shrink-0", isReposting && "animate-pulse")} />
+        <span className="text-xs truncate">
           {isReposting ? '...' : (isLoading ? '...' : counts?.reposts ?? 0)}
         </span>
       </Button>
 
-      {/* Zaps */}
-      <div className="flex-1">
-        <ZapButton
-          target={event}
-          showCount={true}
-          className="flex items-center gap-1 text-xs ml-1 text-muted-foreground hover:text-foreground"
-        />
-      </div>
+      {/* Zaps - Custom with yellow lightning on hover */}
+      <ZapButton
+        target={event}
+        showCount={false}
+      >
+        <div className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground group min-w-0">
+          <ZapIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover:text-yellow-500 transition-colors" />
+          <span className="truncate">
+            {isLoading ? '...' : zapCount}
+          </span>
+        </div>
+      </ZapButton>
 
       {/* Likes */}
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground hover:text-red-500"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground hover:text-red-500 min-w-0"
         onClick={handleLike}
         disabled={isLiking || !user}
       >
-        <Heart className={cn("h-4 w-4", isLiking && "animate-pulse")} />
-        <span className="text-xs">
+        <Heart className={cn("h-4 w-4 flex-shrink-0", isLiking && "animate-pulse")} />
+        <span className="text-xs truncate">
           {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
         </span>
       </Button>
@@ -215,10 +234,10 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0 flex justify-center"
         onClick={handleShare}
       >
-        <Share2 className="h-4 w-4" />
+        <Share2 className="h-4 w-4 flex-shrink-0" />
       </Button>
     </div>
   );
