@@ -106,7 +106,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-gray-300 hover:text-gray-800 min-w-0 transition-colors"
           asChild
         >
           <a href={`/${event.id}`}>
@@ -121,7 +121,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-green-400 hover:text-green-700 min-w-0 transition-colors"
           onClick={handleRepost}
           disabled={isReposting || !user}
         >
@@ -148,7 +148,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground hover:text-red-500 min-w-0"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-red-500 hover:text-red-700 min-w-0 transition-colors"
           onClick={handleLike}
           disabled={isLiking || !user}
         >
@@ -162,7 +162,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-blue-400 hover:text-blue-700 min-w-0 transition-colors"
           onClick={handleShare}
         >
           <Share2 className="h-4 w-4 flex-shrink-0" />
@@ -178,7 +178,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-gray-300 hover:text-gray-800 min-w-0 transition-colors"
         asChild
       >
         <a href={`#comments`}>
@@ -193,7 +193,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-green-400 hover:text-green-700 min-w-0 transition-colors"
         onClick={handleRepost}
         disabled={isReposting || !user}
       >
@@ -220,7 +220,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground hover:text-red-500 min-w-0"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-red-500 hover:text-red-700 min-w-0 transition-colors"
         onClick={handleLike}
         disabled={isLiking || !user}
       >
@@ -234,7 +234,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground min-w-0 flex justify-center"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:fill-blue-400 hover:text-blue-700 min-w-0 flex justify-center transition-colors"
         onClick={handleShare}
       >
         <Share2 className="h-4 w-4 flex-shrink-0" />
