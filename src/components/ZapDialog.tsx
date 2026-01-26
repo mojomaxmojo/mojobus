@@ -32,7 +32,7 @@ import { useZaps } from '@/hooks/useZaps';
 import { useWallet } from '@/hooks/useWallet';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { Event } from 'nostr-tools';
-import { QRCodeSVG } from '@qrcode/react';
+import QRCode from 'qrcode';
 
 interface ZapDialogProps {
   target: Event;
@@ -234,6 +234,7 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
 ));
 ZapContent.displayName = 'ZapContent';
 
+
 export function ZapDialog({ target, children, className }: ZapDialogProps) {
   const [open, setOpen] = useState(false);
   const { user } = useCurrentUser();
@@ -272,17 +273,14 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
       }
 
       try {
-        const url = `data:image/svg+xml;base64,${btoa(
-          <QRCodeSVG
-            value={invoice.toUpperCase()}
-            size={512}
-            bgColor="#FFFFFF"
-            fgColor="#000000"
-            level="M"
-            includeMargin={true}
-            marginSize={2}
-          />
-        )}`;
+        const url = await QRCode.toDataURL(invoice.toUpperCase(), {
+          width: 512,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF',
+          },
+        });
 
         if (!isCancelled) {
           setQrCodeUrl(url);

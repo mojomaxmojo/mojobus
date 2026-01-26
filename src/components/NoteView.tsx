@@ -64,7 +64,7 @@ const generateOSMUrl = (lat: number, lng: number) => {
 
 // Generate OpenStreetMap search URL for text locations
 const generateOSMSearchUrl = (position: string) => {
-  // Clean and encode position for search
+  // Clean and encode the position for search
   const searchQuery = encodeURIComponent(position);
   return `https://www.openstreetmap.org/search?query=${searchQuery}`;
 };
@@ -216,115 +216,7 @@ export function NoteView({ eventId }: NoteViewProps) {
                       Zurück zu den Notes
                     </Link>
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const authorName = author.data?.metadata?.name || genUserName(note.pubkey);
-  const authorAvatar = author.data?.metadata?.picture;
-  const tags = extractNoteTags(note);
-  const images = extractNoteImages(note);
-
-  return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-3xl mx-auto space-y-8">
-          <div className="flex items-center justify-between">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/notes">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Zurück zu den Notes
-              </Link>
-            </Button>
-
-            {isAuthor && (
-              <div className="flex gap-2">
-                <Button asChild variant="outline" size="sm">
-                  <Link to={`/veroeffentlichen?edit=${note.id}&type=note`}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Bearbeiten
-                  </Link>
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Löschen
-                </Button>
               </div>
-            )}
-          </div>
-
-          <Card>
-            <CardContent className="pt-6 space-y-6">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-12 w-12">
-                  {authorAvatar && <AvatarImage src={authorAvatar} alt={authorName} />}
-                  <AvatarFallback>{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold">{authorName}</div>
-                  {author.data?.metadata?.nip05 && (
-                    <p className="text-xs text-muted-foreground">✓ {author.data.metadata.nip05}</p>
-                  )}
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                    <Calendar className="h-3 w-3" />
-                    <time>
-                      {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </time>
-                  </div>
-                </div>
-              </div>
-
-
-
-              <div className="space-y-2">
-                <div className="whitespace-pre-wrap break-words">
-                  <NoteContent event={note} className="text-sm" />
-                </div>
-              </div>
-
-              {images.length > 0 && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    {images.map((url, index) => (
-                      <img
-                        key={index}
-                        src={url}
-                        alt={`Note image ${index + 1}`}
-                        className="w-full h-auto rounded-lg"
-                        loading="lazy"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {tags.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="gap-1">
-                        <Hash className="h-3 w-3" />
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 

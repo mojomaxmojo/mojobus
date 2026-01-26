@@ -20,7 +20,7 @@ export default defineConfig(() => ({
         global: true,
         process: true,
       },
-      // Whether to polyfill `process` and `Buffer` for `browser` field in package.json
+      // Whether to polyfill `process` and `Buffer` for the `browser` field in package.json
       process: true,
       buffer: true,
     }),
@@ -43,7 +43,7 @@ export default defineConfig(() => ({
   build: {
     rollupOptions: {
       output: {
-        // Add hash to filenames for cache busting
+        // Add hash to filenames for code busting
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
@@ -53,17 +53,15 @@ export default defineConfig(() => ({
         inlineDynamicImports: false,
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
-        // Deactivate manual chunks to avoid circular dependencies
-        // Vite/Rollup warns itself about the chunking
+        // Deaktiviere manuelle Chunks um zirkuläre Abhängigkeiten zu vermeiden
+        // Vite/Rollup kümmert sich automatisch um das Chapping
         manualChunks: undefined,
       },
       onwarn(warning, warn) {
-        // Suppress warnings about dijkstrajs and serviceWorker.ts dynamic imports
-        // These are known issues that don't affect functionality
-        if (warning.code === 'MODULE_NOT_FOUND' &&
-            (warning.message.includes('dijkstrajs') ||
-             warning.message.includes('serviceWorker.ts') ||
-             warning.message.includes('commonjs-external'))) {
+        // Suppress external import warnings from node_modules
+        // These are usually peer dependencies that will be resolved at runtime
+        if (warning.code === 'UNRESOLVED_IMPORT' &&
+            warning.message.includes('node_modules')) {
           return;
         }
         warn(warning);
@@ -101,7 +99,7 @@ export default defineConfig(() => ({
       return !log.includes("React Router Future Flag Warning");
     },
     env: {
-      DEBUG_PRINT_LIMIT: '0', // Suppress DOM output that exceeds AI context window
+      DEBUG_PRINT_LIMIT: '0', // Suppress DOM output that exceeds AI context windows
     },
   },
   resolve: {
