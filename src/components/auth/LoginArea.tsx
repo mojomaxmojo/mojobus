@@ -1,7 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, UserPlus } from '@/lib/icons';
 import { Button } from '@/components/ui/button.tsx';
 import LoginDialog from './LoginDialog';
@@ -18,6 +18,19 @@ export function LoginArea({ className }: LoginAreaProps) {
   const { currentUser } = useLoggedInAccounts();
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
+
+  // Listen for show-login event to open dialog from anywhere in the app
+  useEffect(() => {
+    const handleShowLogin = () => {
+      setLoginDialogOpen(true);
+    };
+
+    window.addEventListener('show-login', handleShowLogin);
+
+    return () => {
+      window.removeEventListener('show-login', handleShowLogin);
+    };
+  }, []);
 
   const handleLogin = () => {
     setLoginDialogOpen(false);
