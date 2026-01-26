@@ -85,6 +85,11 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   };
 
   const handleLike = async () => {
+    if (!user) {
+      // Show login dialog for non-logged-in users
+      window.dispatchEvent(new CustomEvent('show-login'));
+      return;
+    }
     if (isLiking) return;
     setIsLiking(true);
     await like(event);
@@ -92,6 +97,11 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   };
 
   const handleRepost = async () => {
+    if (!user) {
+      // Show login dialog for non-logged-in users
+      window.dispatchEvent(new CustomEvent('show-login'));
+      return;
+    }
     if (isReposting) return;
     setIsReposting(true);
     await repost(event);
@@ -123,7 +133,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
           size="sm"
           className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-green-600 min-w-0 transition-colors group"
           onClick={handleRepost}
-          disabled={isReposting || !user}
+          disabled={isReposting}
         >
           <Repeat2 className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-green-400", isReposting && "animate-pulse")} />
           <span className="text-xs truncate group-hover:text-green-600">
@@ -150,7 +160,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
           size="sm"
           className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-[hsl(313,100%,49%)] min-w-0 transition-colors group"
           onClick={handleLike}
-          disabled={isLiking || !user}
+          disabled={isLiking}
         >
           <Heart className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-[hsl(313,100%,49%)]", isLiking && "animate-pulse")} />
           <span className="text-xs truncate group-hover:text-[hsl(313,100%,49%)]">
@@ -195,7 +205,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         size="sm"
         className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-green-600 min-w-0 transition-colors group"
         onClick={handleRepost}
-        disabled={isReposting || !user}
+        disabled={isReposting}
       >
         <Repeat2 className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-green-400", isReposting && "animate-pulse")} />
         <span className="text-xs truncate group-hover:text-green-600">
@@ -222,7 +232,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         size="sm"
         className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-[hsl(313,100%,49%)] min-w-0 transition-colors group"
         onClick={handleLike}
-        disabled={isLiking || !user}
+        disabled={isLiking}
       >
         <Heart className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-[hsl(313,100%,49%)]", isLiking && "animate-pulse")} />
         <span className="text-xs truncate group-hover:text-[hsl(313,100%,49%)]">

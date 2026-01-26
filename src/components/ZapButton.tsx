@@ -30,18 +30,31 @@ export function ZapButton({
     activeNWC
   );
 
-  // Don't show zap button if user is not logged in, is the author, or author has no lightning address
-  if (!user || !target || user.pubkey === target.pubkey || (!author?.metadata?.lud16 && !author?.metadata?.lud06)) {
-    return null;
-  }
-
   // Use external data if provided, otherwise use fetched data
   const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
   const showLoading = externalZapData?.isLoading || isLoading;
 
+  // Don't show zap button if target is missing, is the author, or author has no lightning address
+  // (but show it for non-logged-in users)
+  if (!target || (user && user.pubkey === target.pubkey) || (!author?.metadata?.lud16 && !author?.metadata?.lud06)) {
+    return null;
+  }
+
+  const handleZapClick = (e: React.MouseEvent) => {
+    if (!user) {
+      // Show login dialog for non-logged-in users
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(new CustomEvent('show-login'));
+    }
+  };
+
   return (
     <ZapDialog target={target}>
-      <div className={`flex items-center gap-1 group ${className}`}>
+      <div
+        className={`flex items-center gap-1 group ${className}`}
+        onClick={handleZapClick}
+      >
         <Zap className="h-4 w-4 group-hover:fill-yellow-500 group-hover:text-yellow-500 transition-colors" />
         <span className="text-xs group-hover:text-yellow-500 transition-colors">
           {showLoading ? (

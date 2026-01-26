@@ -249,6 +249,11 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
 
+  // Don't show zap dialog if author has no lightning address
+  if (!author?.metadata?.lud06 && !author?.metadata?.lud16) {
+    return null;
+  }
+
   useEffect(() => {
     if (target) {
       setComment('Zapped with MKStack!');
@@ -355,7 +360,27 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
     zap,
   };
 
-  if (!user || user.pubkey === target.pubkey || !author?.metadata?.lud06 && !author?.metadata?.lud16) {
+  const handleTriggerClick = () => {
+    if (!user) {
+      // Show login dialog for non-logged-in users
+      window.dispatchEvent(new CustomEvent('show-login'));
+    }
+  };
+
+  if (!user) {
+    // For non-logged-in users, just show the trigger that opens login
+    return (
+      <div
+        className={`cursor-pointer ${className || ''}`}
+        onClick={handleTriggerClick}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  // Don't show zap dialog if user is the author
+  if (user.pubkey === target.pubkey) {
     return null;
   }
 
