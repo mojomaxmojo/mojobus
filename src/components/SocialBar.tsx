@@ -60,13 +60,17 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
     try {
       if ([1, 1111].includes(event.kind)) {
         shareUrl = `${window.location.origin}/${nip19.noteEncode(event.id)}`;
-      } else {
+      } else if (event?.pubkey && event?.kind) {
+        const dTag = event.tags?.find(([name]) => name === 'd')?.[1] || '';
         const naddr = nip19.naddrEncode({
           kind: event.kind,
           pubkey: event.pubkey,
-          identifier: event.tags?.find(([name]) => name === 'd')?.[1] || '',
+          identifier: dTag,
         });
         shareUrl = `${window.location.origin}/${naddr}`;
+      } else {
+        console.error('Cannot share: missing event properties');
+        return;
       }
     } catch (error) {
       console.error('Failed to encode nip19 identifier:', error);
@@ -87,6 +91,27 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
     } else {
       // Fallback: Copy to clipboard
       await navigator.clipboard.writeText(shareUrl);
+    }
+  };
+
+  const getCommentHref = (evt: typeof event) => {
+    try {
+      if (!evt?.id) return '#comments';
+      if ([1, 1111].includes(evt.kind)) {
+        return nip19.noteEncode(evt.id);
+      }
+      if (evt?.pubkey && evt?.kind) {
+        const dTag = evt.tags?.find(([name]) => name === 'd')?.[1] || '';
+        return nip19.naddrEncode({
+          kind: evt.kind,
+          pubkey: evt.pubkey,
+          identifier: dTag,
+        });
+      }
+      return '#comments';
+    } catch (error) {
+      console.error('Failed to create comment href:', error);
+      return '#comments';
     }
   };
 
@@ -130,15 +155,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
           className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-gray-700 min-w-0 transition-colors"
           asChild
         >
-          <a href={event?.id && [1, 1111].includes(event.kind)
-            ? `/${nip19.noteEncode(event.id)}`
-            : event?.pubkey && event?.tags?.some(([name]) => name === 'd')
-            ? `/${nip19.naddrEncode({
-                kind: event.kind,
-                pubkey: event.pubkey,
-                identifier: event.tags?.find(([name]) => name === 'd')?.[1] || '',
-              })}`
-            : '#comments'} className="group">
+          <a href={`/${getCommentHref(event)}`} className="group">
             <MessageSquare className="h-4 w-4 flex-shrink-0 group-hover:fill-gray-300 transition-colors" />
             <span className="text-xs truncate group-hover:text-gray-700">
               {isLoading ? '...' : commentCount}
