@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RelaySelector } from '@/components/RelaySelector';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User, Copy, Check } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { useAuthor } from '@/hooks/useAuthor';
 import { PostActions } from '@/components/PostActions';
 import { CommentsSection } from '@/components/comments/CommentsSection';
@@ -15,9 +15,6 @@ import { NoteContent } from '@/components/NoteContent';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
 import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getArticleHeaderUrl } from '@/lib/imageUtils';
-import { LikeButton } from '@/components/LikeButton';
-import { ZapButton } from '@/components/ZapButton';
-import { useToast } from '@/hooks/useToast';
 
 interface ImageEvent {
   id: string;
@@ -31,10 +28,8 @@ export function ImageDetail() {
   const { nip19: noteId } = useParams();
   const navigate = useNavigate();
   const { nostr } = useNostr();
-  const { toast } = useToast();
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [copied, setCopied] = useState(false);
 
   // Decode nip19 to get event ID
   let eventId = noteId;
@@ -377,75 +372,33 @@ export function ImageDetail() {
               </Card>
             )}
 
-             {/* Content and Description */}
-             <Card>
-               <CardContent className="py-4">
-                 <div className="prose prose-gray dark:prose-invert max-w-none">
-                   <NoteContent event={events} className="text-base" />
-                 </div>
-               </CardContent>
-             </Card>
-
-            {/* Actions Section */}
+            {/* Content and Description */}
             <Card>
-              <CardContent className="py-4">
-                <div className="flex items-center gap-3">
-                  <LikeButton target={events} />
-                  <ZapButton target={events} />
-                   <Button
-                     variant="outline"
-                     className="max-w-[50%] flex-1"
-                     onClick={() => {
-                       if (navigator.share) {
-                        // Use Web Share API if available
-                        navigator.share?.({
-                          title: 'Bild von MojoBus',
-                          text: events.content,
-                          url: window.location.href
-                        });
-                      } else {
-                        // Fallback: Copy to clipboard
-                        navigator.clipboard.writeText(window.location.href);
-                        setCopied(true);
-                        toast({
-                          title: 'Link kopiert!',
-                          description: 'Der Link zur Bild wurde in die Zwischenablage kopiert.',
-                        });
-                        setTimeout(() => setCopied(false), 2000);
-                      }
-                    }}
-                   >
-                    {copied ? (
-                      <>
-                        <Check className="h-4 w-4 mr-2 text-green-600" />
-                        Kopiert!
-                      </>
-                    ) : (
-                      <>
-                        {navigator.share ? (
-                          <>
-                            <Share2 className="h-4 w-4 mr-2" />
-                            Teilen
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Link kopieren
-                         </>
-                       )}
-                      </>
-                    )}
-                  </Button>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-ocean-600" />
+                  Beschreibung
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-gray dark:prose-invert max-w-none">
+                  <NoteContent event={events} className="text-base" />
                 </div>
               </CardContent>
             </Card>
 
-             {/* Comments Section */}
-             <Card>
-               <CardContent className="py-4">
-                 <CommentsSection root={events} />
-               </CardContent>
-             </Card>
+            {/* Comments Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-ocean-600" />
+                  Kommentare
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CommentsSection root={events} />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
@@ -490,60 +443,106 @@ export function ImageDetail() {
               </CardContent>
             </Card>
 
-             {/* Image Metadata */}
-             <Card>
-               <CardContent className="space-y-3 py-4">
-                 <div className="flex items-center gap-2 text-sm">
-                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                   <span>{new Date(events.created_at * 1000).toLocaleDateString('de-DE', {
-                     year: 'numeric',
-                     month: 'long',
-                     day: 'numeric',
-                     hour: '2-digit',
-                     minute: '2-digit'
-                   })}</span>
-                 </div>
+            {/* Image Metadata */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-ocean-600" />
+                  Bild-Informationen
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>{new Date(events.created_at * 1000).toLocaleDateString('de-DE', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}</span>
+                </div>
 
-                 <div className="text-sm">
-                   <span className="font-medium">Anzahl Bilder:</span> {images.length}
-                 </div>
+                <div className="text-sm">
+                  <span className="font-medium">Anzahl Bilder:</span> {images.length}
+                </div>
 
-                 {images.length > 0 && (
-                   <div className="space-y-2">
-                     <div className="font-medium text-sm">Download-Optionen:</div>
-                     {images.map((img, index) => (
-                       <div key={index} className="flex items-center gap-2">
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={() => window.open(img, '_blank')}
-                         >
-                           <Download className="h-3 w-3 mr-1" />
-                           Bild {index + 1}
-                         </Button>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-               </CardContent>
-             </Card>
+                {images.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="font-medium text-sm">Download-Optionen:</div>
+                    {images.map((img, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(img, '_blank')}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Bild {index + 1}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-             {/* Tags */}
-             {tags.length > 0 && (
-               <Card>
-                 <CardContent className="py-4">
-                   <div className="flex flex-wrap gap-2">
-                     {tags.map(tag => (
-                       <Badge key={tag} variant="secondary" className="gap-1">
-                         #{tag}
-                       </Badge>
-                     ))}
-                   </div>
-                 </CardContent>
-               </Card>
-             )}
+            {/* Tags */}
+            {tags.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Share2 className="h-5 w-5 text-ocean-600" />
+                    Tags
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="gap-1">
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-           </div>
+            {/* Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Share2 className="h-5 w-5 text-ocean-600" />
+                  Aktionen
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share?.({
+                        title: 'Bild von MojoBus',
+                        text: events.content,
+                        url: window.location.href
+                      });
+                    }
+                  }}
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Teilen
+                </Button>
+
+                <PostActions
+                  event={events}
+                  onDelete={() => {
+                    setTimeout(() => navigate('/bilder'), 1000);
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 

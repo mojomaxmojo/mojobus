@@ -22,8 +22,6 @@ import { MAIN_MENU } from '@/config/menu';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
-import { LikeButton } from '@/components/LikeButton';
-import { ZapButton } from '@/components/ZapButton';
 
 function Articles() {
   const { country } = useParams();
@@ -447,7 +445,7 @@ const ArticleCard = memo(function ArticleCard({
             {metadata.summary}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col justify-between">
+        <CardContent className="flex-1">
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <div className="flex items-center gap-3">
@@ -465,10 +463,6 @@ const ArticleCard = memo(function ArticleCard({
                 </time>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
-            <LikeButton target={article} />
-            <ZapButton target={article} />
           </div>
         </CardContent>
       </Link>

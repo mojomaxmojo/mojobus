@@ -12,7 +12,7 @@ import { useNotes, extractNoteTags, extractNoteImages } from '@/hooks/useNotes';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
-import { Calendar, Search, Trash2, Hash } from 'lucide-react';
+import { Calendar, Search, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -34,8 +34,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from 'lucide-react';
-import { LikeButton } from '@/components/LikeButton';
-import { ZapButton } from '@/components/ZapButton';
 
 export function Notes() {
   const { country } = useParams();
@@ -409,12 +407,6 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
               )}
             </div>
           )}
-
-          {/* Like & Zap Buttons */}
-          <div className="flex items-center gap-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
-            <LikeButton target={note} />
-            <ZapButton target={note} />
-          </div>
         </CardContent>
       </Card>
       </Link>
@@ -459,6 +451,23 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
     </div>
   );
 });
- 
-export default Notes;
 
+function Hash({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <line x1="4" x2="20" y1="9" y2="9" />
+      <line x1="4" x2="20" y1="15" y2="15" />
+      <line x1="10" x2="8" y1="3" y2="21" />
+      <line x1="16" x2="14" y1="3" y2="21" />
+    </svg>
+  );
+}

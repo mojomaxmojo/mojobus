@@ -16,8 +16,6 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
-import { LikeButton } from '@/components/LikeButton';
-import { ZapButton } from '@/components/ZapButton';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';
@@ -395,17 +393,11 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-              <span>{authorName}</span>
-              <span>•</span>
-              <time>{new Date(item.date * 1000).toLocaleDateString('de-DE')}</time>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
-            <LikeButton target={item.event} />
-            <ZapButton target={item.event} />
+        <CardContent>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{authorName}</span>
+            <span>•</span>
+            <time>{new Date(item.date * 1000).toLocaleDateString('de-DE')}</time>
           </div>
         </CardContent>
       </Link>

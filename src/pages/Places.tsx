@@ -19,8 +19,6 @@ import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
-import { LikeButton } from '@/components/LikeButton';
-import { ZapButton } from '@/components/ZapButton';
 
 function Places() {
   const { country } = useParams();
@@ -282,7 +280,7 @@ const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
             </CardDescription>
           )}
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col justify-between">
+        <CardContent className="flex-1">
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <div className="flex items-center gap-3">
@@ -300,10 +298,6 @@ const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
                 </time>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
-            <LikeButton target={place} />
-            <ZapButton target={place} />
           </div>
         </CardContent>
       </Link>
