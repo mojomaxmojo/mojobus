@@ -158,40 +158,34 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
 
   // Full version for detail views
   return (
-    <div className={cn("flex items-center gap-2 pt-4 border-t", className)}>
+    <div className={cn("flex items-center justify-between px-4 py-2 border-t", className)}>
       {/* Comments */}
       <Button
         variant="ghost"
-        size="default"
-        className="gap-2 flex-1"
+        size="sm"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
         asChild
       >
         <a href={`#comments`}>
-          <MessageSquare className="h-5 w-5" />
-          <span>Kommentare</span>
-          {!isLoading && commentCount > 0 && (
-            <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-              {commentCount}
-            </span>
-          )}
+          <MessageSquare className="h-4 w-4" />
+          <span className="text-xs">
+            {isLoading ? '...' : commentCount}
+          </span>
         </a>
       </Button>
 
       {/* Reposts */}
       <Button
         variant="ghost"
-        size="default"
-        className="gap-2 flex-1"
+        size="sm"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
         onClick={handleRepost}
         disabled={isReposting || !user}
       >
-        <Repeat2 className={cn("h-5 w-5", isReposting && "animate-pulse")} />
-        <span>Repost</span>
-        {!isLoading && counts?.reposts > 0 && (
-          <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-            {counts.reposts}
-          </span>
-        )}
+        <Repeat2 className={cn("h-4 w-4", isReposting && "animate-pulse")} />
+        <span className="text-xs">
+          {isReposting ? '...' : (isLoading ? '...' : counts?.reposts ?? 0)}
+        </span>
       </Button>
 
       {/* Zaps */}
@@ -199,36 +193,32 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <ZapButton
           target={event}
           showCount={true}
-          className="flex items-center gap-2"
+          className="flex items-center gap-1 text-xs ml-1 text-muted-foreground hover:text-foreground"
         />
       </div>
 
       {/* Likes */}
       <Button
         variant="ghost"
-        size="default"
-        className="gap-2 flex-1 hover:text-red-500"
+        size="sm"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground hover:text-red-500"
         onClick={handleLike}
         disabled={isLiking || !user}
       >
-        <Heart className={cn("h-5 w-5", isLiking && "animate-pulse")} />
-        <span>Like</span>
-        {!isLoading && counts?.likes > 0 && (
-          <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-            {counts.likes}
-          </span>
-        )}
+        <Heart className={cn("h-4 w-4", isLiking && "animate-pulse")} />
+        <span className="text-xs">
+          {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
+        </span>
       </Button>
 
       {/* Share */}
       <Button
         variant="ghost"
-        size="default"
-        className="gap-2 flex-1"
+        size="sm"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
         onClick={handleShare}
       >
-        <Share2 className="h-5 w-5" />
-        <span>Teilen</span>
+        <Share2 className="h-4 w-4" />
       </Button>
     </div>
   );
