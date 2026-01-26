@@ -37,6 +37,9 @@ export default defineConfig(() => ({
       'buffer',
       '@nostrify/react',
       '@nostrify/nostrify',
+      // Include qrcode and its dependencies to ensure proper bundling
+      'qrcode',
+      'dijkstrajs',
     ],
     force: true,
   },
@@ -62,6 +65,11 @@ export default defineConfig(() => ({
         // These are usually peer dependencies that will be resolved at runtime
         if (warning.code === 'UNRESOLVED_IMPORT' &&
             warning.message.includes('node_modules')) {
+          return;
+        }
+        // Suppress dijkstrajs blank specifier warning - it's a subdep of qrcode
+        if (warning.code === 'MODULE_NOT_FOUND' &&
+            warning.message.includes('dijkstrajs')) {
           return;
         }
         warn(warning);
@@ -112,8 +120,7 @@ export default defineConfig(() => ({
       util: 'util',
       process: 'process',
     },
-    // Mark dijkstrajs as external to fix Vite resolution error
-    external: ['dijkstrajs'],
+    // NOTE: Do NOT add dijkstrajs to external - it's a subdependency of qrcode and needs to be bundled
   },
   // Additional configuration to handle CommonJS
   css: {
