@@ -37,9 +37,6 @@ export default defineConfig(() => ({
       'buffer',
       '@nostrify/react',
       '@nostrify/nostrify',
-      // Include qrcode and its dependencies to ensure proper bundling
-      'qrcode',
-      'dijkstrajs',
     ],
     force: true,
   },
@@ -61,15 +58,12 @@ export default defineConfig(() => ({
         manualChunks: undefined,
       },
       onwarn(warning, warn) {
-        // Suppress external import warnings from node_modules
-        // These are usually peer dependencies that will be resolved at runtime
-        if (warning.code === 'UNRESOLVED_IMPORT' &&
-            warning.message.includes('node_modules')) {
-          return;
-        }
-        // Suppress dijkstrajs blank specifier warning - it's a subdep of qrcode
+        // Suppress warnings about dijkstrajs and serviceWorker.ts dynamic imports
+        // These are known issues that don't affect functionality
         if (warning.code === 'MODULE_NOT_FOUND' &&
-            warning.message.includes('dijkstrajs')) {
+            (warning.message.includes('dijkstrajs') ||
+             warning.message.includes('serviceWorker.ts') ||
+             warning.message.includes('commonjs-external'))) {
           return;
         }
         warn(warning);
@@ -120,7 +114,6 @@ export default defineConfig(() => ({
       util: 'util',
       process: 'process',
     },
-    // NOTE: Do NOT add dijkstrajs to external - it's a subdependency of qrcode and needs to be bundled
   },
   // Additional configuration to handle CommonJS
   css: {
