@@ -489,8 +489,8 @@ function ImageCardComponent({
           </div>
         )}
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl md:text-2xl line-clamp-2 group-hover:text-ocean-600 transition-colors">
-            {event.content.slice(0, 150).replace(/https?:\/\/[^\s]+/g, '').trim() || 'Bild ohne Titel'}
+          <CardTitle className="text-lg md:text-xl line-clamp-1 group-hover:text-ocean-600 transition-colors">
+            {event.content.slice(0, 80).replace(/https?:\/\/[^\s]+/g, '').trim() || 'Bild ohne Titel'}
           </CardTitle>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Calendar className="h-4 w-4" />
