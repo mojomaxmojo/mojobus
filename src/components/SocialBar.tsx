@@ -148,12 +148,12 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         <Button
           variant="ghost"
           size="sm"
-          className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-[rgb(202,7,124)] min-w-0 transition-colors group"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-[hsl(313,100%,49%)] min-w-0 transition-colors group"
           onClick={handleLike}
           disabled={isLiking || !user}
         >
-          <Heart className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-[rgb(202,7,124)]", isLiking && "animate-pulse")} />
-          <span className="text-xs truncate group-hover:text-[rgb(202,7,124)]">
+          <Heart className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-[hsl(313,100%,49%)]", isLiking && "animate-pulse")} />
+          <span className="text-xs truncate group-hover:text-[hsl(313,100%,49%)]">
             {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
           </span>
         </Button>
@@ -220,12 +220,12 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
       <Button
         variant="ghost"
         size="sm"
-        className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-[rgb(202,7,124)] min-w-0 transition-colors group"
+        className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-[hsl(313,100%,49%)] min-w-0 transition-colors group"
         onClick={handleLike}
         disabled={isLiking || !user}
       >
-        <Heart className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-[rgb(202,7,124)]", isLiking && "animate-pulse")} />
-        <span className="text-xs truncate group-hover:text-[rgb(202,7,124)]">
+        <Heart className={cn("h-4 w-4 flex-shrink-0 group-hover:fill-[hsl(313,100%,49%)]", isLiking && "animate-pulse")} />
+        <span className="text-xs truncate group-hover:text-[hsl(313,100%,49%)]">
           {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
         </span>
       </Button>
