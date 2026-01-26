@@ -216,47 +216,135 @@ export function NoteView({ eventId }: NoteViewProps) {
                       Zurück zu den Notes
                     </Link>
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-12">
+      <div className="container mx-auto px-4">
+        <div className="max-w-3xl mx-auto space-y-6">
+          <Button asChild variant="ghost" className="mb-4">
+            <Link to="/notes">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Zurück zu den Notes
+            </Link>
+          </Button>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3 mb-4">
+                <Link to={`/${nip19.npubEncode(note.pubkey)}`}>
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={author.data?.metadata?.picture} alt={author.data?.metadata?.name} />
+                    <AvatarFallback>{(author.data?.metadata?.name || genUserName(note.pubkey))[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Link>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Link to={`/${nip19.npubEncode(note.pubkey)}`} className="font-semibold hover:underline">
+                      {author.data?.metadata?.name || genUserName(note.pubkey)}
+                    </Link>
+                    {author.data?.metadata?.nip05 && (
+                      <Badge variant="secondary" className="text-xs">
+                        ✓
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(note.created_at * 1000).toLocaleDateString('de-DE', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                </div>
+                {isAuthor && (
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/note/${eventId}/edit`}>
+                        <Edit className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
+
+              <div className="whitespace-pre-wrap break-words mb-4">
+                <NoteContent event={note} />
+              </div>
+
+              {extractNoteImages(note).length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  {extractNoteImages(note).map((url, idx) => (
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`Note image ${idx + 1}`}
+                      className="rounded-lg w-full h-auto object-cover"
+                      loading="lazy"
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Position Display */}
+              {position && (
+                <div className="bg-muted/50 rounded-lg p-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-ocean-600" />
+                      <span className="font-medium">Position</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                      className="h-6 px-2 text-xs"
+                    >
+                      <a
+                        href={isGPS && lat !== null && lng !== null
+                          ? generateOSMUrl(lat, lng)
+                          : generateOSMSearchUrl(position)
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Karte
+                      </a>
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-sm">{position}</p>
+                </div>
+              )}
+
+              <SocialBar event={note} />
+
+              <CommentsSection
+                root={note}
+                title="Kommentare"
+                emptyStateMessage="Noch keine Kommentare"
+                emptyStateSubtitle="Sei der Erste, der einen Kommentar hinterlässt!"
+              />
             </CardContent>
           </Card>
-
-          <SocialBar event={note} />
-
-          {/* Position Display */}
-          {position && (
-            <div className="bg-muted/50 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-ocean-600" />
-                  <span className="font-medium">Position</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className="h-6 px-2 text-xs"
-                >
-                  <a
-                    href={generateOSMSearchUrl(position)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    Karte
-                  </a>
-                </Button>
-              </div>
-              <p className="mt-2 text-sm">{position}</p>
-            </div>
-          )}
-
-          <CommentsSection
-            root={note}
-            title="Kommentare"
-            emptyStateMessage="Noch keine Kommentare"
-            emptyStateSubtitle="Sei der Erste, der einen Kommentar hinterlässt!"
-          />
         </div>
       </div>
 
