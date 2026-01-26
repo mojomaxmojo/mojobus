@@ -32,7 +32,7 @@ import { useZaps } from '@/hooks/useZaps';
 import { useWallet } from '@/hooks/useWallet';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import type { Event } from 'nostr-tools';
-import { QRCodeSVG } from '@qrcode/react';
+import { QRCodeSVG } from '@qrcode/svg';
 
 interface ZapDialogProps {
   target: Event;
@@ -261,7 +261,7 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
     }
   }, [open, hasWebLN, detectWebLN]);
 
-  // Generate QR code
+  // Generate QR code using qrcode-generator
   useEffect(() => {
     let isCancelled = false;
 
@@ -272,17 +272,23 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
       }
 
       try {
-        const url = `data:image/svg+xml;base64,${btoa(
-          <QRCodeSVG
-            value={invoice.toUpperCase()}
-            size={512}
-            bgColor="#FFFFFF"
-            fgColor="#000000"
-            level="M"
-            includeMargin={true}
-            marginSize={2}
-          />
-        )}`;
+        // Use qrcode-generator to create QR code
+        const QRCode = (await import('qrcode-generator')).default;
+
+        const qr = QRCode(0, 'M');
+        qr.addData(invoice.toUpperCase());
+        qr.make();
+
+        const canvas = document.createElement('canvas');
+        await qr.toDataURL(canvas, {
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF',
+          },
+        });
+
+        const url = canvas.toDataURL('image/png');
 
         if (!isCancelled) {
           setQrCodeUrl(url);
