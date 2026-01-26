@@ -49,17 +49,28 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   const [isReposting, setIsReposting] = useState(false);
 
   const handleShare = async () => {
+    // Safety check: ensure event exists
+    if (!event?.id) {
+      console.error('Cannot share: event id is missing');
+      return;
+    }
+
     // Generate nip19 identifier for sharing
     let shareUrl = '';
-    if ([1, 1111].includes(event.kind)) {
-      shareUrl = `${window.location.origin}/${nip19.noteEncode(event.id)}`;
-    } else {
-      const naddr = nip19.naddrEncode({
-        kind: event.kind,
-        pubkey: event.pubkey,
-        identifier: event.tags.find(([name]) => name === 'd')?.[1] || '',
-      });
-      shareUrl = `${window.location.origin}/${naddr}`;
+    try {
+      if ([1, 1111].includes(event.kind)) {
+        shareUrl = `${window.location.origin}/${nip19.noteEncode(event.id)}`;
+      } else {
+        const naddr = nip19.naddrEncode({
+          kind: event.kind,
+          pubkey: event.pubkey,
+          identifier: event.tags?.find(([name]) => name === 'd')?.[1] || '',
+        });
+        shareUrl = `${window.location.origin}/${naddr}`;
+      }
+    } catch (error) {
+      console.error('Failed to encode nip19 identifier:', error);
+      return;
     }
 
     if (navigator.share) {
@@ -119,11 +130,15 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
           className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-gray-700 min-w-0 transition-colors"
           asChild
         >
-          <a href={`/${[1, 1111].includes(event.kind) ? nip19.noteEncode(event.id) : nip19.naddrEncode({
-            kind: event.kind,
-            pubkey: event.pubkey,
-            identifier: event.tags.find(([name]) => name === 'd')?.[1] || '',
-          })}`} className="group">
+          <a href={event?.id && [1, 1111].includes(event.kind)
+            ? `/${nip19.noteEncode(event.id)}`
+            : event?.pubkey && event?.tags?.some(([name]) => name === 'd')
+            ? `/${nip19.naddrEncode({
+                kind: event.kind,
+                pubkey: event.pubkey,
+                identifier: event.tags?.find(([name]) => name === 'd')?.[1] || '',
+              })}`
+            : '#comments'} className="group">
             <MessageSquare className="h-4 w-4 flex-shrink-0 group-hover:fill-gray-300 transition-colors" />
             <span className="text-xs truncate group-hover:text-gray-700">
               {isLoading ? '...' : commentCount}
