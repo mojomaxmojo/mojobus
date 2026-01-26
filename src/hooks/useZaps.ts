@@ -159,10 +159,10 @@ export function useZaps(
     }
 
     try {
-      if (!author.data || !author.data?.metadata || !author.data?.event ) {
+      if (!author.data?.metadata) {
         toast({
           title: 'Author not found',
-          description: 'Could not find the author of this item.',
+          description: 'Could not find author metadata.',
           variant: 'destructive',
         });
         setIsZapping(false);
