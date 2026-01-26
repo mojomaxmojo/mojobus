@@ -50,7 +50,7 @@ export function Settings() {
   const { toast } = useToast();
 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string>('fast');
+  const [selectedPreset, setSelectedPreset] = useState<string>('mojobus');
 
   // Apply relay preset
   const applyPreset = async (preset: string) => {
@@ -268,21 +268,21 @@ export function Settings() {
                         </p>
                       </button>
 
-                      {/* Reliable Preset */}
+                      {/* MojoBus Preset */}
                       <button
-                        onClick={() => handlePresetChange('reliable')}
+                        onClick={() => handlePresetChange('mojobus')}
                         className={`p-4 rounded-lg border-2 transition-all text-left ${
-                          selectedPreset === 'reliable'
+                          selectedPreset === 'mojobus'
                             ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/20'
                             : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                          <span className="font-semibold">Reliable</span>
+                          <span className="font-semibold">MojoBus</span>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Maximale Zuverlässigkeit mit mehreren Relays
+                          MojoBus Relays mit Backup
                         </p>
                       </button>
                     </div>
@@ -355,7 +355,7 @@ export function Settings() {
                             </div>
                           </SelectItem>
                         ))}
-                        {RELAY_PRESETS.reliable.relayUrls.map((url) => (
+                        {RELAY_PRESETS.mojobus.relayUrls.map((url) => (
                           <SelectItem key={url} value={url}>
                             <div>
                               <div className="font-medium font-mono">{url}</div>
