@@ -119,7 +119,11 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
           className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-gray-700 min-w-0 transition-colors"
           asChild
         >
-          <a href={`/${nip19.noteEncode(event.id)}`} className="group">
+          <a href={`/${[1, 1111].includes(event.kind) ? nip19.noteEncode(event.id) : nip19.naddrEncode({
+            kind: event.kind,
+            pubkey: event.pubkey,
+            identifier: event.tags.find(([name]) => name === 'd')?.[1] || '',
+          })}`} className="group">
             <MessageSquare className="h-4 w-4 flex-shrink-0 group-hover:fill-gray-300 transition-colors" />
             <span className="text-xs truncate group-hover:text-gray-700">
               {isLoading ? '...' : commentCount}
@@ -191,7 +195,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
         className="flex-1 gap-1 h-8 text-muted-foreground hover:bg-transparent hover:text-gray-700 min-w-0 transition-colors"
         asChild
       >
-        <a href={`#comments`} className="group">
+        <a href="#comments" className="group">
           <MessageSquare className="h-4 w-4 flex-shrink-0 group-hover:fill-gray-300 transition-colors" />
           <span className="text-xs truncate group-hover:text-gray-700">
             {isLoading ? '...' : commentCount}
