@@ -94,7 +94,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
     }
   };
 
-  const getCommentHref = (evt: typeof event) => {
+  const getCommentHref = (evt: NostrEvent | undefined | null) => {
     try {
       if (!evt?.id) return '#comments';
       if ([1, 1111].includes(evt.kind)) {
