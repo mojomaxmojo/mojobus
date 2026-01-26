@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ZapButton } from '@/components/ZapButton';
-import { MessageSquare, Repeat2, Heart } from 'lucide-react';
+import { MessageSquare, Repeat2, Heart, Share2 } from 'lucide-react';
 import { useSocialCounts } from '@/hooks/useSocialCounts';
 import { useLikeActions, useRepostActions } from '@/hooks/useSocialActions';
 import { useComments } from '@/hooks/useComments';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { cn } from '@/lib/utils';
+import { nip19 } from 'nostr-tools';
 
 interface SocialBarProps {
   /** The target event to interact with */
@@ -40,6 +41,37 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   // Local state for like and repost interactions (optimistic UI)
   const [isLiking, setIsLiking] = useState(false);
   const [isReposting, setIsReposting] = useState(false);
+
+  const handleShare = async () => {
+    // Generate nip19 identifier for sharing
+    let shareUrl = '';
+    if ([1, 1111].includes(event.kind)) {
+      shareUrl = `${window.location.origin}/${nip19.noteEncode(event.id)}`;
+    } else {
+      const naddr = nip19.naddrEncode({
+        kind: event.kind,
+        pubkey: event.pubkey,
+        identifier: event.tags.find(([name]) => name === 'd')?.[1] || '',
+      });
+      shareUrl = `${window.location.origin}/${naddr}`;
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Post von MojoBus',
+          text: event.content?.substring(0, 100) || 'Schau dir diesen Post an!',
+          url: shareUrl,
+        });
+      } catch (error) {
+        // User cancelled or share failed
+        console.error('Share error:', error);
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      await navigator.clipboard.writeText(shareUrl);
+    }
+  };
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -110,6 +142,16 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
             {isLiking ? '...' : (isLoading ? '...' : counts?.likes ?? 0)}
           </span>
         </Button>
+
+        {/* Share */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex-1 gap-1 h-8 text-muted-foreground hover:text-foreground"
+          onClick={handleShare}
+        >
+          <Share2 className="h-4 w-4" />
+        </Button>
       </div>
     );
   }
@@ -176,6 +218,17 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
             {counts.likes}
           </span>
         )}
+      </Button>
+
+      {/* Share */}
+      <Button
+        variant="ghost"
+        size="default"
+        className="gap-2 flex-1"
+        onClick={handleShare}
+      >
+        <Share2 className="h-5 w-5" />
+        <span>Teilen</span>
       </Button>
     </div>
   );
