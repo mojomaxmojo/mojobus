@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, forwardRef } from 'react';
 import { Zap, Copy, Check, ExternalLink, Sparkle, Sparkles, Star, Rocket, ArrowLeft, X } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -85,28 +84,101 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
 }, ref) => (
   <div ref={ref}>
     {invoice ? (
-      <div className="flex flex-col h-full min-h-0">
-        {/* Payment amount display */}
-        <div className="text-center pt-4">
-          <div className="text-2xl font-bold">{amount} sats</div>
+      <>
+        <div className="flex flex-col h-full min-h-0">
+          {/* Payment amount display */}
+          <div className="text-center pt-4">
+            <div className="text-2xl font-bold">{typeof amount === 'number' ? amount : '...'}</div>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="flex flex-col justify-center min-h-0 flex-1 px-2">
+            {/* QR Code */}
+            <div className="flex justify-center">
+              <Card className="p-3 [@media(max-height:680px)]:max-w-[65vw] max-w-[95vw] mx-auto">
+                <CardContent className="p-0 flex justify-center">
+                  {qrCodeUrl ? (
+                    <img
+                      src={qrCodeUrl}
+                      alt="Lightning Invoice QR Code"
+                      className="w-full h-auto aspect-square max-w-full object-contain"
+                    />
+                  ) : (
+                    <div className="w-full aspect-square bg-muted animate-pulse rounded" />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Invoice input */}
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="invoice">Lightning Invoice</Label>
+              <div className="flex gap-2 min-w-0">
+                <Input
+                  id="invoice"
+                  value={invoice}
+                  readOnly
+                  className="font-mono text-xs min-w-0 flex-1 overflow-hidden text-ellipsis"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopy}
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Payment buttons */}
+            <div className="space-y-3 mt-4">
+              {hasWebLN && (
+                <Button
+                  onClick={() => {
+                    const finalAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
+                    zap(finalAmount, comment);
+                  }}
+                  disabled={isZapping}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  {isZapping ? "Processing..." : "Pay with WebLN"}
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                onClick={openInWallet}
+                className="w-full"
+                size="lg"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open in Lightning Wallet
+              </Button>
+
+              <div className="text-xs sm:text-[.65rem] text-muted-foreground text-center">
+                Scan QR code or copy invoice to pay with any Lightning wallet.
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-center justify-center p-8 text-center">
+          <div className="text-sm text-muted-foreground mb-2">
+            Please wait for the invoice to be generated...
+          </div>
+          <div className="w-16 h-16 bg-muted rounded-full animate-pulse" />
         </div>
-
-        <Separator className="my-4" />
-
-        <div className="flex flex-col justify-center min-h-0 flex-1 px-2">
-          {/* QR Code */}
-          <div className="flex justify-center">
-            <Card className="p-3 [@media(max-height:680px)]:max-w-[65vw] max-w-[95vw] mx-auto">
-              <CardContent className="p-0 flex justify-center">
-                {qrCodeUrl ? (
-                  <img
-                    src={qrCodeUrl}
-                    alt="Lightning Invoice QR Code"
-                    className="w-full h-auto aspect-square max-w-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full aspect-square bg-muted animate-pulse rounded" />
-                )}
+      )}
+    </div>
               </CardContent>
             </Card>
           </div>
@@ -171,6 +243,7 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
         </div>
       </div>
     ) : (
+      <>
         <div className="grid gap-3 px-4 py-4 w-full overflow-hidden">
           <ToggleGroup
             type="single"
@@ -228,6 +301,7 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
             )}
           </Button>
         </div>
+      </>
     )}
   </div>
 ));
