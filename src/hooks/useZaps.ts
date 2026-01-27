@@ -5,8 +5,8 @@ import { useAppContext } from '@/hooks/useAppContext';
 import { useToast } from '@/hooks/useToast';
 import { useNWC } from '@/hooks/useNWCContext';
 import type { NWCConnection } from '@/hooks/useNWC';
-import { nip57 } from 'nostr-tools';
-import type { Event } from 'nostr-tools';
+import { nip57, finalizeEvent, getPublicKey } from 'nostr-tools';
+import type { Event, EventTemplate, UnsignedEvent } from 'nostr-tools';
 import type { WebLNProvider } from 'webln';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
@@ -198,49 +198,46 @@ export function useZaps(
       return;
     }
 
-    console.log('📝 ZAP REQUEST CREATED');
-    const event = (actualTarget.kind >= 30000 && actualTarget.kind < 40000)
+      // Create zap request - use appropriate event format based on kind
+      // For addressable events (30000-39999), pass the object to get 'a' tag
+      // For all other events, pass the ID string to get 'e' tag
+      const event = (actualTarget.kind >= 30000 && actualTarget.kind < 40000)
         ? actualTarget
         : actualTarget.id;
-    
-    const zapAmount = amount * 1000; // convert to millisats
-    console.log('   Zap amount (millisats):', zapAmount);
 
-    const zapRequest = nip57.makeZapRequest({
-      profile: actualTarget.pubkey,
-      event: event,
-      amount: zapAmount,
-      relays: [config.relayUrl],
-      comment
-    });
-    console.log('   Zap request:', zapRequest);
+      const zapAmount = amount * 1000; // convert to millisats
 
-    console.log('🔐 SIGNER CHECK:');
-    console.log('   user?.signer exists:', !!user?.signer);
-    console.log('   user.signer type:', typeof user?.signer);
-    console.log('   signEvent is function:', typeof user?.signer?.signEvent === 'function');
-
-    // Sign zap request (but don't publish to relays - only send to LNURL endpoint)
-    if (!user?.signer || typeof user.signer.signEvent !== 'function') {
-      console.error('❌ NO SIGNER AVAILABLE');
-      console.error('   User object:', user);
-      console.error('   user.signer:', user?.signer);
-      toast({
-        title: 'Cannot sign zap',
-        description: 'Please make sure you\'re logged in with a Nostr extension that supports signing.',
-        variant: 'destructive',
+      // Create the zap request with all required properties
+      const zapRequestTemplate = nip57.makeZapRequest({
+        profile: actualTarget.pubkey,
+        event: event,
+        amount: zapAmount,
+        relays: [config.relayUrl],
+        comment
       });
-      setIsZapping(false);
-      return;
-    }
 
-    console.log('✅ SIGNING ZAP REQUEST...');
-    const signedZapRequest = await user.signer.signEvent(zapRequest);
-    console.log('   Signed zap request:', signedZapRequest);
+      // Build a complete event template with all required fields
+      // Filter out any tags that contain null values (nostr-tools bug with relays tag)
+      const validTags = (zapRequestTemplate.tags || [])
+        .filter(tag => !tag.includes(null))
+        .map(tag => tag.filter((value): value is string => typeof value === 'string'));
 
-    try {
-      const res = await fetch(`${zapEndpoint}?amount=${zapAmount}&nostr=${encodeURI(JSON.stringify(signedZapRequest))}`);
-      const responseData = await res.json();
+      const zapRequestEventTemplate: EventTemplate = {
+        kind: 9734,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: validTags,
+        content: comment || '',
+      };
+
+      // Sign the zap request (but don't publish to relays - only send to LNURL endpoint)
+      if (!user.signer) {
+        throw new Error('No signer available');
+      }
+      const signedZapRequest = await user.signer.signEvent(zapRequestEventTemplate);
+
+      try {
+        const res = await fetch(`${zapEndpoint}?amount=${zapAmount}&nostr=${encodeURI(JSON.stringify(signedZapRequest))}`);
+            const responseData = await res.json();
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${responseData.reason || 'Unknown error'}`);
