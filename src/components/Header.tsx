@@ -37,6 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -106,7 +107,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
                     <Camera className="mr-2 h-4 w-4" />
-                    Natur & Erlebnisse
+                    Natur & Erlebnis
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
