@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { useLongformArticles, usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useNotes } from '@/hooks/useNotes';
@@ -255,17 +256,11 @@ export function Home() {
             </div>
 
             {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Card key={i}>
-                    <CardHeader>
-                      <Skeleton className="h-48 w-full rounded-md mb-4" />
-                      <Skeleton className="h-6 w-3/4" />
-                      <Skeleton className="h-4 w-full" />
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
+              <Card className="border-dashed">
+                <CardContent className="py-12 px-8 text-center">
+                  <LoadingSpinner size="lg" text="Lade Inhalte vom Relay..." />
+                </CardContent>
+              </Card>
             ) : recentItems.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {recentItems.map((item) => (

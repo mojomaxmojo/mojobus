@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -146,18 +147,12 @@ function Articles() {
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto space-y-6">
-            <Skeleton className="h-12 w-3/4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-48 w-full rounded-md mb-4" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            <Skeleton className="h-12 w-3/4 mx-auto" />
+            <Card className="border-dashed">
+              <CardContent className="py-16 px-8 text-center">
+                <LoadingSpinner size="lg" text="Lade Artikel vom Relay..." />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -96,17 +97,11 @@ export function DIY() {
 
           {/* Articles Grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-48 w-full rounded-md mb-4" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-full" />
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            <Card className="border-dashed">
+              <CardContent className="py-16 px-8 text-center">
+                <LoadingSpinner size="lg" text="Lade DIY Anleitungen vom Relay..." />
+              </CardContent>
+            </Card>
           ) : filteredArticles.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredArticles.map((article) => (

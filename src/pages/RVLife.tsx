@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
@@ -190,20 +191,11 @@ export function RVLife() {
       {/* Artikel Liste */}
       <div className="space-y-6">
         {isLoading && (
-          <>
-            {[...Array(3)].map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-2/3" />
-                </CardContent>
-              </Card>
-            ))}
-          </>
+          <Card className="border-dashed">
+            <CardContent className="py-16 px-8 text-center">
+              <LoadingSpinner size="lg" text="Lade RV Life Artikel vom Relay..." />
+            </CardContent>
+          </Card>
         )}
 
         {error && (

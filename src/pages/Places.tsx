@@ -2,6 +2,7 @@ import { useState, useMemo, memo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,17 +135,11 @@ function Places() {
 
           {/* Places Grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-48 w-full rounded-md mb-4" />
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-full" />
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            <Card className="border-dashed">
+              <CardContent className="py-16 px-8 text-center">
+                <LoadingSpinner size="lg" text="Lade Orte vom Relay..." />
+              </CardContent>
+            </Card>
           ) : sortedEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {sortedEvents.map((event) => (

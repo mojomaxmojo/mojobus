@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { RelaySelector } from '@/components/RelaySelector';
 import { Button } from '@/components/ui/button';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
@@ -170,17 +171,11 @@ function Images() {
               <Skeleton className="h-12 w-3/4 mx-auto" />
               <Skeleton className="h-6 w-1/2 mx-auto" />
             </div>
-            <div className="grid grid-cols-1 gap-8">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i}>
-                  <Skeleton className="h-96 w-full" />
-                  <CardHeader>
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            <Card className="border-dashed">
+              <CardContent className="py-16 px-8 text-center">
+                <LoadingSpinner size="lg" text="Lade Bilder vom Relay..." />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
