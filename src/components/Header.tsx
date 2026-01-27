@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoginActions } from '@/hooks/useLoginActions';
@@ -105,7 +106,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
                     <Camera className="mr-2 h-4 w-4" />
-                    Natur & Erlebnis
+                    Natur & Erlebnisse
                     <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -117,7 +118,7 @@ export function Header() {
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent className="w-56">
                       <DropdownMenuItem asChild>
-                        <Link to="/artikel/rvlife/kuche-essen" className="flex items-center gap-2">
+                        <Link to="/artikel/rvlife/kueche-essen" className="flex items-center gap-2">
                           <span>🍳</span>
                           Küche & Essen
                         </Link>
