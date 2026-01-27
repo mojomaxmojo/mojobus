@@ -169,79 +169,8 @@ const ZapContent = forwardRef<HTMLDivElement, ZapContentProps>(({
               </div>
             </div>
           </div>
-        </>
-      ) : (
-        <div className="flex items-center justify-center p-8 text-center">
-          <div className="text-sm text-muted-foreground mb-2">
-            Please wait for the invoice to be generated...
-          </div>
-          <div className="w-16 h-16 bg-muted rounded-full animate-pulse" />
         </div>
-      )}
-    </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Invoice input */}
-          <div className="space-y-2 mt-4">
-            <Label htmlFor="invoice">Lightning Invoice</Label>
-            <div className="flex gap-2 min-w-0">
-              <Input
-                id="invoice"
-                value={invoice}
-                readOnly
-                className="font-mono text-xs min-w-0 flex-1 overflow-hidden text-ellipsis"
-                onClick={(e) => e.currentTarget.select()}
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleCopy}
-                className="shrink-0"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Payment buttons */}
-          <div className="space-y-3 mt-4">
-            {hasWebLN && (
-              <Button
-                onClick={() => {
-                  const finalAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
-                  zap(finalAmount, comment);
-                }}
-                disabled={isZapping}
-                className="w-full"
-                size="lg"
-              >
-                <Zap className="h-4 w-4 mr-2" />
-                {isZapping ? "Processing..." : "Pay with WebLN"}
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              onClick={openInWallet}
-              className="w-full"
-              size="lg"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open in Lightning Wallet
-            </Button>
-
-            <div className="text-xs sm:text-[.65rem] text-muted-foreground text-center">
-              Scan the QR code or copy the invoice to pay with any Lightning wallet.
-            </div>
-          </div>
-        </div>
-      </div>
+      </>
     ) : (
       <>
         <div className="grid gap-3 px-4 py-4 w-full overflow-hidden">
