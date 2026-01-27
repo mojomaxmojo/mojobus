@@ -210,8 +210,15 @@ export function useZaps(
       });
 
       // Sign the zap request (but don't publish to relays - only send to LNURL endpoint)
-      if (!user.signer) {
-        throw new Error('No signer available');
+      if (!user?.signer || typeof user.signer.signEvent !== 'function') {
+        console.error('Signer not available:', user);
+        toast({
+          title: 'Cannot sign zap',
+          description: 'Please make sure you\'re logged in with a Nostr extension that supports signing.',
+          variant: 'destructive',
+        });
+        setIsZapping(false);
+        return;
       }
       const signedZapRequest = await user.signer.signEvent(zapRequest);
 
