@@ -12,99 +12,67 @@
 // CACHE-ZEITEN (in Millisekunden)
 // ============================================================================
 
+// Profile Cache (länger - ändern sich fast nie)
+export const CACHE_PROFILE_METADATA_STALE_TIME = 1000 * 60 * 60 * 24 * 7; // 7 Tage
+export const CACHE_PROFILE_METADATA_GC_TIME = 1000 * 60 * 60 * 24 * 14; // 14 Tage
+
+export const CACHE_PROFILE_RELAY_LISTS_STALE_TIME = 1000 * 60 * 60 * 24 * 30; // 30 Tage
+export const CACHE_PROFILE_RELAY_LISTS_GC_TIME = 1000 * 60 * 60 * 24 * 45; // 45 Tage
+
+// Listen Cache (24h - 1-2 Updates pro Tag)
+export const CACHE_LISTS_STALE_TIME = 1000 * 60 * 60 * 24; // 24 Stunden
+export const CACHE_LISTS_GC_TIME = 1000 * 60 * 60 * 24 * 3; // 3 Tage
+
+// Items Cache (24h - 1-2 Updates pro Tag)
+export const CACHE_ITEMS_STALE_TIME = 1000 * 60 * 60 * 24; // 24 Stunden
+export const CACHE_ITEMS_GC_TIME = 1000 * 60 * 60 * 24 * 3; // 3 Tage
+
+// Bilder Cache (1 Jahr - immutable URLs)
+export const CACHE_IMAGES_STALE_TIME = 1000 * 60 * 60 * 24 * 365; // 1 Jahr
+export const CACHE_IMAGES_GC_TIME = 1000 * 60 * 60 * 24 * 730; // 2 Jahre
+
+// Interaktionen Cache (12h - selten, aber öfter als Content)
+export const CACHE_INTERACTIONS_STALE_TIME = 1000 * 60 * 60 * 12; // 12 Stunden
+export const CACHE_INTERACTIONS_GC_TIME = 1000 * 60 * 60 * 24; // 24 Stunden
+
+// Kombinierte Query Cache (useContent Hook)
+export const CACHE_COMBINED_STALE_TIME = 1000 * 60 * 60 * 24; // 24 Stunden
+export const CACHE_COMBINED_GC_TIME = 1000 * 60 * 60 * 24 * 3; // 3 Tage
+
+// ============================================================================
+// CACHE-ZEITEN GRUPPIERT
+// ============================================================================
+
 export const CACHE_TIMES = {
-  // ============================================================================
-  // PROFILE CACHE (länger - ändern sich fast nie)
-  // ============================================================================
   profile: {
-    // Profil-Metadaten (kind 0): 7 Tage
-    // Namen, Bilder, NIP-05 ändern sich extrem selten
-    staleTime: 1000 * 60 * 60 * 24 * 7,  // 7 Tage
-    gcTime: 1000 * 60 * 60 * 24 * 14,     // 14 Tage
-
-    // Relay Lists (kind 10002): 30 Tage
-    // Relay-Konfigurationen ändern sich fast nie
-    staleTime: 1000 * 60 * 60 * 24 * 30,  // 30 Tage
-    gcTime: 1000 * 60 * 60 * 24 * 45,     // 45 Tage
+    metadata: {
+      staleTime: CACHE_PROFILE_METADATA_STALE_TIME,
+      gcTime: CACHE_PROFILE_METADATA_GC_TIME,
+    },
+    relayLists: {
+      staleTime: CACHE_PROFILE_RELAY_LISTS_STALE_TIME,
+      gcTime: CACHE_PROFILE_RELAY_LISTS_GC_TIME,
+    },
   },
-
-  // ============================================================================
-  // LISTEN CACHE (24h - 1-2 Updates pro Tag)
-  // ============================================================================
   lists: {
-    // Artikel-Listen: 24 Stunden
-    // Neue Artikel kommen nicht öfter als 1-2x pro Tag
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
-
-    // Note-Listen: 24 Stunden
-    // Neue Notes kommen nicht öfter als 1-2x pro Tag
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
-
-    // Platz-Listen: 24 Stunden
-    // Neue Plätze kommen selten hinzu
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
-
-    // Bild-Listen: 24 Stunden
-    // Neue Bilder kommen nicht oft hinzu
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
-
-    // Tag-Listen (Kategorien): 24 Stunden
-    // Tag-basierte Listen
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
+    staleTime: CACHE_LISTS_STALE_TIME,
+    gcTime: CACHE_LISTS_GC_TIME,
   },
-
-  // ============================================================================
-  // EINZELNE ITEMS CACHE (24h - 1-2 Updates pro Tag)
-  // ============================================================================
   items: {
-    // Einzelne Artikel: 24 Stunden
-    // Artikel werden selten aktualisiert
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
-
-    // Einzelne Notes: 24 Stunden
-    // Notes werden selten aktualisiert
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
-
-    // Einzelne Plätze: 24 Stunden
-    // Plätze werden selten aktualisiert
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
-
-    // Einzelne Bilder: 24 Stunden
-    // Bilder ändern sich nie (immutable URLs)
-    staleTime: 1000 * 60 * 60 * 24 * 365, // 1 Jahr (immutable)
-    gcTime: 1000 * 60 * 60 * 24 * 730,    // 2 Jahre
+    staleTime: CACHE_ITEMS_STALE_TIME,
+    gcTime: CACHE_ITEMS_GC_TIME,
   },
-
-  // ============================================================================
-  // INTERAKTIONEN CACHE (12h - selten, aber öfter als Content)
-  // ============================================================================
+  images: {
+    staleTime: CACHE_IMAGES_STALE_TIME,
+    gcTime: CACHE_IMAGES_GC_TIME,
+  },
   interactions: {
-    // Reaktionen (Likes, Reposts, Zaps): 12 Stunden
-    // Reaktionen kommen öfter vor als Content-Updates
-    staleTime: 1000 * 60 * 60 * 12,  // 12 Stunden
-    gcTime: 1000 * 60 * 60 * 24,     // 24 Stunden
-
-    // Kommentare: 12 Stunden
-    // Kommentare kommen öfter vor als Content-Updates
-    staleTime: 1000 * 60 * 60 * 12,  // 12 Stunden
-    gcTime: 1000 * 60 * 60 * 24,     // 24 Stunden
+    staleTime: CACHE_INTERACTIONS_STALE_TIME,
+    gcTime: CACHE_INTERACTIONS_GC_TIME,
   },
-
-  // ============================================================================
-  // KOMBINIERTE QUERY CACHE (useContent Hook)
-  // ============================================================================
   combined: {
-    // Kombinierte Content-Listen (Notes + Articles): 24 Stunden
-    staleTime: 1000 * 60 * 60 * 24,  // 24 Stunden
-    gcTime: 1000 * 60 * 60 * 24 * 3, // 3 Tage
+    staleTime: CACHE_COMBINED_STALE_TIME,
+    gcTime: CACHE_COMBINED_GC_TIME,
   },
 } as const;
 
@@ -119,32 +87,38 @@ export const CACHE_TIMES = {
 export const DEFAULT_CACHE_CONFIG = {
   // Profile (länger - ändern sich fast nie)
   profile: {
-    staleTime: CACHE_TIMES.profile.staleTime,
-    gcTime: CACHE_TIMES.profile.gcTime,
+    staleTime: CACHE_PROFILE_METADATA_STALE_TIME,
+    gcTime: CACHE_PROFILE_METADATA_GC_TIME,
   },
 
   // Listen (24h - 1-2 Updates pro Tag)
   lists: {
-    staleTime: CACHE_TIMES.lists.staleTime,
-    gcTime: CACHE_TIMES.lists.gcTime,
+    staleTime: CACHE_LISTS_STALE_TIME,
+    gcTime: CACHE_LISTS_GC_TIME,
   },
 
   // Einzelne Items (24h - 1-2 Updates pro Tag)
   items: {
-    staleTime: CACHE_TIMES.items.staleTime,
-    gcTime: CACHE_TIMES.items.gcTime,
+    staleTime: CACHE_ITEMS_STALE_TIME,
+    gcTime: CACHE_ITEMS_GC_TIME,
+  },
+
+  // Bilder (1 Jahr - immutable URLs)
+  images: {
+    staleTime: CACHE_IMAGES_STALE_TIME,
+    gcTime: CACHE_IMAGES_GC_TIME,
   },
 
   // Interaktionen (12h - seltener als Content, aber öfter als Profile)
   interactions: {
-    staleTime: CACHE_TIMES.interactions.staleTime,
-    gcTime: CACHE_TIMES.interactions.gcTime,
+    staleTime: CACHE_INTERACTIONS_STALE_TIME,
+    gcTime: CACHE_INTERACTIONS_GC_TIME,
   },
 
   // Kombinierte Query (useContent Hook)
   combined: {
-    staleTime: CACHE_TIMES.combined.staleTime,
-    gcTime: CACHE_TIMES.combined.gcTime,
+    staleTime: CACHE_COMBINED_STALE_TIME,
+    gcTime: CACHE_COMBINED_GC_TIME,
   },
 } as const;
 
