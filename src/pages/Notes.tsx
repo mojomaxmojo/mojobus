@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RelaySelector } from '@/components/RelaySelector';

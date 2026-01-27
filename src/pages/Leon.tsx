@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
@@ -240,7 +241,7 @@ const LeonArticleCard = memo(function LeonArticleCard({ article }: { article: No
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
       <Link to={`/${naddr}`} className="flex flex-col h-full">
-        {thumbnailUrl && (
+        {thumbnailUrl ? (
           <div
             className="aspect-video overflow-hidden bg-muted"
             style={{
@@ -257,6 +258,8 @@ const LeonArticleCard = memo(function LeonArticleCard({ article }: { article: No
               decoding="async"
             />
           </div>
+        ) : (
+          <ImagePlaceholder variant="leon" title={metadata.title} />
         )}
         <CardHeader className="flex-1">
           <CardTitle className="line-clamp-2 hover:text-blue-600 transition-colors">

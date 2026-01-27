@@ -2,6 +2,7 @@ import { useState, useMemo, memo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -10,12 +11,11 @@ import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { getAuthorRelayConfigByPubkey } from '@/config/relays';
-import { RelaySelector } from '@/components/RelaySelector';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
 import { nip19 } from 'nostr-tools';
+import type { NostrEvent } from '@nostrify/nostrify';
 import { MAIN_MENU } from '@/config/menu';
-import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { SocialBar } from '@/components/SocialBar';
 // @ts-nocheck
 // @ts-ignore
@@ -28,231 +28,174 @@ function Places() {
 
   const currentCountry = country ? countries[country as keyof typeof countries] : null;
 
-  const places = useMemo(() => {
-    if (!events) return [];
+  // Filter Events nach Country
+  const filteredEvents = currentCountry
+    ? filterEventsByCountry(events || [], currentCountry)
+    : events || [];
 
-    return events.map((event: NostrEvent) => {
-      const metadata = extractArticleMetadata(event);
+  // Filter Events nach Search Query
+  const searchedEvents = searchQuery
+    ? filteredEvents.filter(event => {
+        const metadata = extractArticleMetadata(event);
+        const title = metadata.title?.toLowerCase() || '';
+        const summary = metadata.summary?.toLowerCase() || '';
+        const tags = metadata.tags?.map(t => t.toLowerCase()).join(' ') || '';
+        const content = metadata.content?.toLowerCase() || '';
+        return (
+          title.includes(searchQuery.toLowerCase()) ||
+          summary.includes(searchQuery.toLowerCase()) ||
+          tags.includes(searchQuery.toLowerCase()) ||
+          content.includes(searchQuery.toLowerCase())
+        );
+      })
+    : filteredEvents;
 
-      // ✅ DYNAMISCHES RELAY basierend auf Autor (aus relays.ts)
-      const authorRelayConfig = getAuthorRelayConfigByPubkey(event.pubkey);
-      const relay = authorRelayConfig?.activeRelay || 'wss://relay.mojobus.co';
+  // Sortiere Events nach Datum (neueste zuerst)
+  const sortedEvents = useMemo(() => {
+    return [...searchedEvents].sort((a, b) => b.created_at - a.created_at);
+  }, [searchedEvents]);
 
-      // Generate naddr identifier for place
-      const naddr = nip19.naddrEncode({
-        kind: event.kind,
-        pubkey: event.pubkey,
-        identifier: metadata.identifier,
-        relays: [relay]
-      });
-
-      const locationTag = event.tags.find(([name]) => name === 'location')?.[1];
-
-      return {
-        id: event.id,
-        naddr,
-        title: metadata.title, // metadata.title now checks for both 'title' and 'name' tags
-        image: metadata.image,
-        location: locationTag || '',
-        created_at: metadata.publishedAt,
-        author: event.pubkey,
-        tags: metadata.tags
-      };
-    });
-  }, [events]);
-
-  const filteredPlaces = useMemo(() => {
-    let filtered = [...places];
-
-    // Country filter mit intelligenter Erkennung
-    if (currentCountry) {
-      filtered = filterEventsByCountry(filtered, country);
-    }
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(place =>
-        place.title.toLowerCase().includes(query) ||
-        place.location.toLowerCase().includes(query)
-      );
-    }
-
-    return filtered.sort((a, b) => b.created_at - a.created_at);
-  }, [places, searchQuery, currentCountry, country]);
-
-  const hasPlaces = filteredPlaces.length > 0;
-
-  // SEO Meta Tags
-  const pageTitle = currentCountry
-    ? `Plätze in ${currentCountry.name} ${currentCountry.flag} (${filteredPlaces.length}) - MojoBus`
-    : `Plätze (${filteredPlaces.length}) - MojoBus`;
-
-  const pageDescription = currentCountry
-    ? `Entdecke ${filteredPlaces.length} besondere Orte und Plätze in ${currentCountry.name}.`
-    : `Entdecke ${filteredPlaces.length} besondere Orte und Plätze aus unseren Reisen.`;
-
-  useHead({
-    title: pageTitle,
-    meta: [
-      { name: 'description', content: pageDescription },
-      { name: 'keywords', content: 'Vanlife, Camping, Orte, Plätze, Portugal, Spanien, Frankreich, Belgien, Luxemburg, Deutschland' },
-      { property: 'og:title', content: pageTitle },
-      { property: 'og:description', content: pageDescription },
-      { property: 'og:url', content: `https://mojobus.org/plaetze${country ? '/' + country : ''}` },
-      { property: 'og:type', content: 'website' }
-    ],
-    link: [
-      { rel: 'canonical', href: `https://mojobus.org/plaetze${country ? '/' + country : ''}` }
-    ]
-  });
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen py-12">
+  return (
+    <div className="min-h-screen">
+      <div className="bg-gradient-to-b from-primary/10 via-background to-background pt-[60px] pb-8 md:pb-16">
         <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto space-y-8">
-            <div className="text-center space-y-4">
-              <Skeleton className="h-12 w-3/4 mx-auto" />
-              <Skeleton className="h-6 w-1/2 mx-auto" />
+          <div className="max-w-4xl mx-auto text-center space-y-6">
+            <div className="flex justify-center mb-6">
+              <MapPin className="h-16 w-16 text-primary" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-48 w-full rounded-md mb-4" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+              {currentCountry ? `${currentCountry.name}` : 'Wilde Orte'}
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground">
+              {currentCountry
+                ? `Perfekte Camping- und Stellplätze in ${currentCountry.name}`
+                : 'Unser liebste Orte zum Vanlife und Wildcampen'
+              }
+            </p>
           </div>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl md:text-5xl font-bold">
-              {currentCountry ? (
-                <span className="flex items-center justify-center gap-3">
-                  <span className="text-3xl">{currentCountry.flag}</span>
-                  Plätze in {currentCountry.name}
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-3">
-                  <MapPin className="h-10 w-10 text-ocean-600" />
-                  Plätze
-                </span>
-              )}
-            </h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
-              {currentCountry
-                ? `Besondere Orte und Entdeckungen aus ${currentCountry.name}`
-                : 'Besondere Orte und Entdeckungen aus unseren Reisen durch Europa'
-              }
-            </p>
-            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-semibold">{filteredPlaces.length}</span>
-                <span>Plätze{currentCountry ? ` in ${currentCountry.name}` : ''}</span>
-              </span>
-              {currentCountry && (
-                <Link
-                  to="/plaetze"
-                  className="text-ocean-600 hover:text-ocean-700 underline"
-                >
-                  Alle Plätze anzeigen
-                </Link>
-              )}
+      <section className="bg-muted/30 pt-[42px] pb-16 md:pb-24">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Search and Filter */}
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex-1 w-full">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Orte suchen..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {country && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex-shrink-0"
+                  >
+                    <Link to="/plaetze">
+                      Alle Orte
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="flex justify-center">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Plätze durchsuchen..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-10 w-full"
-              />
+            {/* Country Selector */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                asChild
+                variant={!country ? 'default' : 'outline'}
+                className="flex-shrink-0"
+              >
+                <Link to="/plaetze">Alle</Link>
+              </Button>
+              {Object.entries(countries).map(([code, countryData]) => (
+                <Button
+                  key={code}
+                  asChild
+                  variant={country === code ? 'default' : 'outline'}
+                  className="flex-shrink-0"
+                >
+                  <Link to={`/plaetze/${code}`}>
+                    {countryData.flag} {countryData.name}
+                  </Link>
+                </Button>
+              ))}
             </div>
           </div>
 
           {/* Places Grid */}
-          {hasPlaces ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPlaces.map((place) => (
-                <PlaceCard key={place.id} place={place} />
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-48 w-full rounded-md mb-4" />
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          ) : sortedEvents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {sortedEvents.map((event) => (
+                <PlaceCard key={event.id} place={event} />
               ))}
             </div>
           ) : (
-            <div className="text-center py-20">
-              <div className="max-w-md mx-auto">
-                <Card className="border-dashed">
-                  <CardContent className="py-12 px-8 text-center">
-                    <div className="space-y-6">
-                      <div className="text-6xl mb-4">📍</div>
-                      <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-                        {currentCountry ? `Keine Plätze in ${currentCountry.name} gefunden` : 'Keine Plätze gefunden'}
-                      </h2>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        {currentCountry
-                          ? `Keine besonderen Orte aus ${currentCountry.name} gefunden. Sei der Erste!`
-                          : 'Keine besonderen Orte gefunden. Sei der Erste und teile einen Ort mit der Community!'
-                        }
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        {currentCountry && (
-                          <Link to="/plaetze">
-                            <Button variant="outline" className="w-full">
-                              Alle Plätze anzeigen
-                            </Button>
-                          </Link>
-                        )}
-                        <div className="flex gap-2">
-                          <Button onClick={() => window.location.href = '/veroeffentlichen?tab=place'}>
-                            <span className="mr-2">📍</span>
-                            Ort erstellen
-                          </Button>
-                          <RelaySelector className="w-full" />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <MapPin className="h-12 w-12 text-muted mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {searchQuery
+                    ? `Keine Orte gefunden für "${searchQuery}"`
+                    : 'Noch keine Orte veröffentlicht. Schau bald wieder vorbei! 🌊'
+                  }
+                </p>
+              </CardContent>
+            </Card>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
-  // place already has title, image, location, created_at, author from transform
-  // No need to call extractArticleMetadata again
-  const title = place.title || 'Ort ohne Titel';
-  const image = place.image;
+const PlaceCard = memo(function PlaceCard({ place }: { place: NostrEvent }) {
+  const metadata = extractArticleMetadata(place);
+  const author = useAuthor(place.pubkey);
+  const authorName = author.data?.metadata?.name || genUserName(place.pubkey);
+
+  const authorRelayConfig = getAuthorRelayConfigByPubkey(place.pubkey);
+  const relay = authorRelayConfig?.activeRelay || 'wss://relay.mojobus.co';
+
+  // Generate naddr identifier for place
+  const naddr = nip19.naddrEncode({
+    kind: place.kind,
+    pubkey: place.pubkey,
+    identifier: metadata.identifier,
+    relays: [relay]
+  });
 
   // Optimized thumbnail URL (200px, quality 80) with srcset
-  const thumbnailUrl = image ? getListThumbnailUrl(image) : null;
-  const srcset = image ? generateSrcset(image) : undefined;
+  const thumbnailUrl = metadata.image ? getListThumbnailUrl(metadata.image) : null;
+  const srcset = metadata.image ? generateSrcset(metadata.image) : undefined;
   const sizes = generateSizes('card');
-  const placeholderColor = image ? getImagePlaceholder(image) : undefined;
+  const placeholderColor = metadata.image ? getImagePlaceholder(metadata.image) : undefined;
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
-      <Link to={`/${place.naddr}`} className="flex flex-col h-full">
-        {thumbnailUrl && (
+      <Link to={`/${naddr}`} className="flex flex-col h-full">
+        {thumbnailUrl ? (
           <div
             className="aspect-video overflow-hidden bg-muted"
             style={{
@@ -263,46 +206,50 @@ const PlaceCard = memo(function PlaceCard({ place }: { place: any }) {
               src={thumbnailUrl}
               srcSet={srcset}
               sizes={sizes}
-              alt={title}
-              className="w-full h-full object-cover"
+              alt={metadata.title}
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               loading="lazy"
               decoding="async"
             />
           </div>
+        ) : (
+          <ImagePlaceholder variant="place" title={metadata.title} />
         )}
+
         <CardHeader className="flex-1">
-          <CardTitle className="line-clamp-2 hover:text-ocean-600 transition-colors flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-ocean-600" />
-            {title}
-          </CardTitle>
-          {place.location && (
-            <CardDescription className="flex items-center gap-1">
-              📍 {place.location}
-            </CardDescription>
-          )}
-        </CardHeader>
-        <CardContent className="flex-1">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-3">
-                <User className="h-3 w-3" />
-                <span className="truncate max-w-[120px]">{place.author.slice(0, 8)}...</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-3 w-3" />
-                <time>
-                  {new Date(place.created_at * 1000).toLocaleDateString('de-DE', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </time>
-              </div>
+          <div className="flex items-start gap-2">
+            <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <CardTitle className="line-clamp-2">{metadata.title}</CardTitle>
+              {metadata.summary && (
+                <CardDescription className="line-clamp-3">{metadata.summary}</CardDescription>
+              )}
             </div>
           </div>
+        </CardHeader>
+
+        <CardContent className="flex-1">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{authorName}</span>
+              <span>•</span>
+              <time>{new Date(place.created_at * 1000).toLocaleDateString('de-DE')}</time>
+            </div>
+
+            {metadata.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {metadata.tags.slice(0, 3).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
+
+        <SocialBar event={place} compact />
       </Link>
-      <SocialBar event={place} compact />
     </Card>
   );
 });

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { useLongformArticles, usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useNotes } from '@/hooks/useNotes';
 import { useNostr } from '@nostrify/react';
@@ -425,9 +426,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
             />
           </div>
         ) : (
-          <div className="aspect-video overflow-hidden bg-muted">
-            <Skeleton className="w-full h-full" />
-          </div>
+          <ImagePlaceholder variant={item.type === 'place' ? 'place' : item.type === 'image' ? 'image' : 'article'} />
         )}
         <CardHeader>
           <div className="flex items-start gap-2">

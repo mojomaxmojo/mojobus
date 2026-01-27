@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -190,7 +191,7 @@ const DIYArticleCard = memo(function DIYArticleCard({ article }: { article: Nost
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
       <Link to={`/${naddr}`} className="flex flex-col h-full">
-        {thumbnailUrl && (
+        {thumbnailUrl ? (
           <div
             className="aspect-video overflow-hidden bg-muted"
             style={{
@@ -207,6 +208,8 @@ const DIYArticleCard = memo(function DIYArticleCard({ article }: { article: Nost
               decoding="async"
             />
           </div>
+        ) : (
+          <ImagePlaceholder variant="diy" title={metadata.title} />
         )}
         <CardHeader className="flex-1">
           <div className="flex items-start gap-2">

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { useLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
@@ -281,7 +282,7 @@ const RVLifeArticleCard = memo(function RVLifeArticleCard({ article }: { article
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
       <Link to={`/${naddr}`} className="flex flex-col h-full">
-        {thumbnailUrl && (
+        {thumbnailUrl ? (
           <div
             className="aspect-video overflow-hidden bg-muted"
             style={{
@@ -293,11 +294,13 @@ const RVLifeArticleCard = memo(function RVLifeArticleCard({ article }: { article
               srcSet={srcset}
               sizes={sizes}
               alt={metadata.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               loading="lazy"
               decoding="async"
             />
           </div>
+        ) : (
+          <ImagePlaceholder variant="rvlife" title={metadata.title} />
         )}
         <CardHeader className="flex-1">
           <div className="flex items-center gap-2 mb-2">

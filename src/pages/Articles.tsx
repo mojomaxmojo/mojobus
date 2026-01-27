@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -420,7 +421,7 @@ const ArticleCard = memo(function ArticleCard({
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col h-full">
       <Link to={`/${naddr}`} className="flex flex-col h-full">
-        {thumbnailUrl && (
+        {thumbnailUrl ? (
           <div
             className="aspect-video overflow-hidden bg-muted"
             style={{
@@ -437,6 +438,8 @@ const ArticleCard = memo(function ArticleCard({
               decoding="async"
             />
           </div>
+        ) : (
+          <ImagePlaceholder variant="article" title={metadata.title} />
         )}
         <CardHeader className="flex-1">
           <CardTitle className="line-clamp-2 hover:text-blue-600 transition-colors">
