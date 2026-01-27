@@ -134,151 +134,155 @@ export function useZaps(
   }, []);
 
   const zap = async (amount: number, comment: string) => {
-    if (amount <= 0) {
-      return;
-    }
-
-    setIsZapping(true);
-    setInvoice(null); // Clear any previous invoice at start
-
-    if (!user) {
-      toast({
-        title: 'Login required',
-        description: 'You must be logged in to send a zap.',
-        variant: 'destructive',
-      });
-      setIsZapping(false);
-      return;
-    }
-
+    console.log('╔═══════════════════════════════════════════════');
+    console.log('🚀 ZAP FUNCTION CALLED');
+    console.log('📊 INPUT PARAMETERS:');
+    console.log('   Amount:', amount, '(type:', typeof amount, ')');
+    console.log('   Comment:', comment);
+    console.log('   User exists:', !!user);
+    console.log('   Actual target:', actualTarget);
+    
+    console.log('🔍 USER OBJECT DEBUG:');
+    console.log('   user:', user);
+    console.log('   user.signer:', user?.signer);
+    console.log('   Type of user.signer:', typeof user?.signer);
+    console.log('   Has signEvent method:', typeof user?.signer?.signEvent === 'function');
+    
+    console.log('🎯 AUTHOR DEBUG:');
+    console.log('   author.data:', author.data);
+    console.log('   author.data?.metadata:', author.data?.metadata);
+    console.log('   author.data?.event:', author.data?.event);
+    
     if (!actualTarget) {
+      console.error('❌ NO TARGET EVENT');
       toast({
         title: 'Event not found',
         description: 'Could not find event to zap.',
         variant: 'destructive',
       });
+      return;
+    }
+
+    if (!author.data?.metadata) {
+      console.error('❌ NO AUTHOR METADATA');
+      toast({
+        title: 'Author not found',
+        description: 'Could not find author metadata.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const { lud06, lud16 } = author.data.metadata;
+    if (!lud06 && !lud16) {
+      console.error('❌ NO LIGHTNING ADDRESS');
+      toast({
+        title: 'Lightning address not found',
+        description: 'The author does not have a lightning address configured.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    console.log('⚡ ZAP ENDPOINT RETRIEVAL');
+    const zapEndpoint = await nip57.getZapEndpoint(author.data.event);
+    console.log('   Zap endpoint:', zapEndpoint);
+
+    if (!zapEndpoint) {
+      console.error('❌ NO ZAP ENDPOINT');
+      toast({
+        title: 'Zap endpoint not found',
+        description: 'Could not find a zap endpoint for author.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    console.log('📝 ZAP REQUEST CREATED');
+    const event = (actualTarget.kind >= 30000 && actualTarget.kind < 40000)
+        ? actualTarget
+        : actualTarget.id;
+    
+    const zapAmount = amount * 1000; // convert to millisats
+    console.log('   Zap amount (millisats):', zapAmount);
+
+    const zapRequest = nip57.makeZapRequest({
+      profile: actualTarget.pubkey,
+      event: event,
+      amount: zapAmount,
+      relays: [config.relayUrl],
+      comment
+    });
+    console.log('   Zap request:', zapRequest);
+
+    console.log('🔐 SIGNER CHECK:');
+    console.log('   user?.signer exists:', !!user?.signer);
+    console.log('   user.signer type:', typeof user?.signer);
+    console.log('   signEvent is function:', typeof user?.signer?.signEvent === 'function');
+
+    // Sign zap request (but don't publish to relays - only send to LNURL endpoint)
+    if (!user?.signer || typeof user.signer.signEvent !== 'function') {
+      console.error('❌ NO SIGNER AVAILABLE');
+      console.error('   User object:', user);
+      console.error('   user.signer:', user?.signer);
+      toast({
+        title: 'Cannot sign zap',
+        description: 'Please make sure you\'re logged in with a Nostr extension that supports signing.',
+        variant: 'destructive',
+      });
       setIsZapping(false);
       return;
     }
 
+    console.log('✅ SIGNING ZAP REQUEST...');
+    const signedZapRequest = await user.signer.signEvent(zapRequest);
+    console.log('   Signed zap request:', signedZapRequest);
+
     try {
-      // Validate author
-      if (!author.data?.metadata) {
-        toast({
-          title: 'Author not found',
-          description: 'Could not find author metadata.',
-          variant: 'destructive',
-        });
-        setIsZapping(false);
-        return;
+      const res = await fetch(`${zapEndpoint}?amount=${zapAmount}&nostr=${encodeURI(JSON.stringify(signedZapRequest))}`);
+      const responseData = await res.json();
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${responseData.reason || 'Unknown error'}`);
       }
 
-      const { lud06, lud16 } = author.data.metadata;
-      if (!lud06 && !lud16) {
-        toast({
-          title: 'Lightning address not found',
-          description: 'The author does not have a lightning address configured.',
-          variant: 'destructive',
-        });
-        setIsZapping(false);
-        return;
+      const newInvoice = responseData.pr;
+      if (!newInvoice || typeof newInvoice !== 'string') {
+        throw new Error('Lightning service did not return a valid invoice');
       }
 
-      // Get zap endpoint using old reliable method
-      const zapEndpoint = await nip57.getZapEndpoint(author.data.event);
-      if (!zapEndpoint) {
-        toast({
-          title: 'Zap endpoint not found',
-          description: 'Could not find a zap endpoint for author.',
-          variant: 'destructive',
-        });
-        setIsZapping(false);
-        return;
-      }
+      console.log('💳 INVOICE RECEIVED');
+      console.log('   Invoice:', newInvoice);
 
-      // Create zap request - use appropriate event format based on kind
-      // For addressable events (30000-39999), pass object to get 'a' tag
-      // For all other events, pass ID string to get 'e' tag
-      const event = (actualTarget.kind >= 30000 && actualTarget.kind < 40000)
-        ? actualTarget
-        : actualTarget.id;
+      // Get current active NWC connection dynamically
+      const currentNWCConnection = getActiveConnection();
 
-      const zapAmount = amount * 1000; // convert to millisats
+      // Try NWC first if available and properly connected
+      if (currentNWCConnection && currentNWCConnection.connectionString && currentNWCConnection.isConnected) {
+        console.log('🟡 TRYING NWC PAYMENT');
+        
+        try {
+          await sendPayment(currentNWCConnection, newInvoice);
 
-      const zapRequest = nip57.makeZapRequest({
-        profile: actualTarget.pubkey,
-        event: event,
-        amount: zapAmount,
-        relays: [config.relayUrl],
-        comment
-      });
+          // Clear states immediately on success
+          setIsZapping(false);
+          setInvoice(null);
 
-      // Sign zap request (but don't publish to relays - only send to LNURL endpoint)
-      if (!user?.signer || typeof user.signer.signEvent !== 'function') {
-        console.error('Signer not available:', user);
-        toast({
-          title: 'Cannot sign zap',
-          description: 'Please make sure you\'re logged in with a Nostr extension that supports signing.',
-          variant: 'destructive',
-        });
-        setIsZapping(false);
-        return;
-      }
-      const signedZapRequest = await user.signer.signEvent(zapRequest);
+          toast({
+            title: 'Zap successful!',
+            description: `You sent ${amount} sats via NWC to ${author.data.metadata?.name || 'author'}.`,
+          });
 
-      try {
-        const res = await fetch(`${zapEndpoint}?amount=${zapAmount}&nostr=${encodeURI(JSON.stringify(signedZapRequest))}`);
-        const responseData = await res.json();
+          // Invalidate zap queries to refresh counts
+          queryClient.invalidateQueries({ queryKey: ['zaps'] });
 
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${responseData.reason || 'Unknown error'}`);
-        }
-
-        const newInvoice = responseData.pr;
-        if (!newInvoice || typeof newInvoice !== 'string') {
-          throw new Error('Lightning service did not return a valid invoice');
-        }
-
-        // Get current active NWC connection dynamically
-        const currentNWCConnection = getActiveConnection();
-
-        // Try NWC first if available and properly connected
-        if (currentNWCConnection && currentNWCConnection.connectionString && currentNWCConnection.isConnected) {
-          try {
-            await sendPayment(currentNWCConnection, newInvoice);
-
-            // Clear states immediately on success
-            setIsZapping(false);
-            setInvoice(null);
-
-            toast({
-              title: 'Zap successful!',
-              description: `You sent ${amount} sats via NWC to the author.`,
-            });
-
-            // Invalidate zap queries to refresh counts
-            queryClient.invalidateQueries({ queryKey: ['zaps'] });
-
-            // Close dialog last to ensure clean state
-            onZapSuccess?.();
-            return;
-          } catch (nwcError) {
-            console.error('NWC payment failed, falling back:', nwcError);
-
-            // Show specific NWC error to user for debugging
-            const errorMessage = nwcError instanceof Error ? nwcError.message : 'Unknown NWC error';
-            toast({
-              title: 'NWC payment failed',
-              description: `${errorMessage}. Falling back to other payment methods...`,
-              variant: 'destructive',
-            });
-
-                setInvoice(newInvoice);
-                setIsZapping(false);
-              }
-          }
-          
+          // Close dialog last to ensure clean state
+          onZapSuccess?.();
+          return;
         } catch (nwcError) {
+          console.error('❌ NWC PAYMENT FAILED');
+          console.error('   NWC error:', nwcError);
+
           // Show specific NWC error to user for debugging
           const errorMessage = nwcError instanceof Error ? nwcError.message : 'Unknown NWC error';
           toast({
@@ -290,54 +294,60 @@ export function useZaps(
           setInvoice(newInvoice);
           setIsZapping(false);
         }
-          
-        if (webln) {  // Try WebLN next
-          try {
-            await webln.sendPayment(newInvoice);
+      }
+      
+      if (webln) {
+        console.log('🟢 TRYING WEBLN PAYMENT');
+        
+        try {
+          await webln.sendPayment(newInvoice);
 
-            // Clear states immediately on success
-            setIsZapping(false);
-            setInvoice(null);
+          // Clear states immediately on success
+          setIsZapping(false);
+          setInvoice(null);
 
-            toast({
-              title: 'Zap successful!',
-              description: `You sent ${amount} sats to the author.`,
-            });
+          toast({
+            title: 'Zap successful!',
+            description: `You sent ${amount} sats via WebLN to ${author.data.metadata?.name || 'author'}.`,
+          });
 
-            // Invalidate zap queries to refresh counts
-            queryClient.invalidateQueries({ queryKey: ['zaps'] });
+          // Invalidate zap queries to refresh counts
+          queryClient.invalidateQueries({ queryKey: ['zaps'] });
 
-            // Close dialog last to ensure clean state
-            onZapSuccess?.();
-            return;
-          } catch (weblnError) {
-            console.error('webln payment failed, falling back:', weblnError);
+          // Close dialog last to ensure clean state
+          onZapSuccess?.();
+          return;
+        } catch (weblnError) {
+          console.error('❌ WEBLN PAYMENT FAILED');
+          console.error('   WebLN error:', weblnError);
 
-            // Show specific WebLN error to user for debugging
-            const errorMessage = weblnError instanceof Error ? weblnError.message : 'Unknown WebLN error';
-            toast({
-              title: 'WebLN payment failed',
-              description: `${errorMessage}. Falling back to other payment methods...`,
-              variant: 'destructive',
-            });
+          // Show specific WebLN error to user for debugging
+          const errorMessage = weblnError instanceof Error ? weblnError.message : 'Unknown WebLN error';
+          toast({
+            title: 'WebLN payment failed',
+            description: `${errorMessage}. Falling back to other payment methods...`,
+            variant: 'destructive',
+          });
 
-            setInvoice(newInvoice);
-            setIsZapping(false);
-          }
-        } else {  // Default - show QR code and manual Lightning URI
           setInvoice(newInvoice);
           setIsZapping(false);
         }
-      } catch (err) {
-        console.error('Zap error:', err);
-        toast({
-          title: 'Zap failed',
-          description: (err as Error).message,
-          variant: 'destructive',
-        });
+      } else { // Default - show QR code and manual Lightning URI
+        console.log('🔳 SHOWING QR CODE');
+        setInvoice(newInvoice);
         setIsZapping(false);
       }
-    };
+    } catch (err) {
+      console.error('❌ ZAP ERROR');
+      console.error('   Error:', err);
+      toast({
+        title: 'Zap failed',
+        description: (err as Error).message,
+        variant: 'destructive',
+      });
+      setIsZapping(false);
+    }
+  };
 
     return {
       zaps,
