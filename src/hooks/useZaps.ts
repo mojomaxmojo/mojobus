@@ -273,9 +273,22 @@ export function useZaps(
               variant: 'destructive',
             });
 
-            setInvoice(newInvoice);
-            setIsZapping(false);
+                setInvoice(newInvoice);
+                setIsZapping(false);
+              }
           }
+          
+        } catch (nwcError) {
+          // Show specific NWC error to user for debugging
+          const errorMessage = nwcError instanceof Error ? nwcError.message : 'Unknown NWC error';
+          toast({
+            title: 'NWC payment failed',
+            description: `${errorMessage}. Falling back to other payment methods...`,
+            variant: 'destructive',
+          });
+
+          setInvoice(newInvoice);
+          setIsZapping(false);
         }
           
         if (webln) {  // Try WebLN next
