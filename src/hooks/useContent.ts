@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useNostr } from '@/hooks/useNostr';
 import { NOSTR_CONFIG } from '@/config/nostr';
+import { DEFAULT_CACHE_CONFIG } from '@/config/cache';
 import { getValidAuthorPubkeys } from '@/lib/authors';
 import type { NostrEvent } from '@nostrify/nostrify';
 
@@ -140,8 +141,8 @@ export function useContent() {
       return nextPageParam;
     },
     initialPageParam: undefined,
-    staleTime: 1000 * 60 * 15, // 15 Minuten - erhöht für bessere Performance
-    gcTime: 1000 * 60 * 90, // 90 Minuten - erhöht für bessere Performance
+    staleTime: DEFAULT_CACHE_CONFIG.combined.staleTime, // 24 Stunden
+    gcTime: DEFAULT_CACHE_CONFIG.combined.gcTime, // 3 Tage
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
@@ -203,8 +204,8 @@ export function useContentByTags(tags: string[]) {
       return lastCreated - 1;
     },
     initialPageParam: undefined,
-    staleTime: 1000 * 60 * 15,
-    gcTime: 1000 * 60 * 90,
+    staleTime: DEFAULT_CACHE_CONFIG.lists.staleTime, // 24 Stunden
+    gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 Tage
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     enabled: tags.length > 0,
@@ -253,8 +254,8 @@ export function useContentEvent(eventId: string) {
 
       return event;
     },
-    staleTime: 1000 * 60 * 15,
-    gcTime: 1000 * 60 * 90,
+    staleTime: DEFAULT_CACHE_CONFIG.items.staleTime, // 24 Stunden
+    gcTime: DEFAULT_CACHE_CONFIG.items.gcTime, // 3 Tage
     enabled: !!eventId,
   });
 }

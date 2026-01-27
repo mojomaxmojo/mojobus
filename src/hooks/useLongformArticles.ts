@@ -1,6 +1,7 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { useNostr } from '@/hooks/useNostr';
 import { NOSTR_CONFIG } from '@/config/nostr';
+import { DEFAULT_CACHE_CONFIG } from '@/config/cache';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import type { NostrEvent } from '@nostrify/nostrify';
 
@@ -206,8 +207,8 @@ export function useLongformArticles(options?: {
       // Sortiere nach Datum (neueste zuerst)
       return validArticles.sort((a, b) => b.created_at - a.created_at);
     },
-    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
-    gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime,
+    staleTime: DEFAULT_CACHE_CONFIG.lists.staleTime, // 24 Stunden
+    gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 Tage
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
@@ -268,8 +269,8 @@ export function useInfiniteLongformArticles(options?: {
       return lastCreated - 1;
     },
     initialPageParam: undefined,
-    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime * 2,
-    gcTime: DEFAULT_PERFORMANCE_CONFIG.cache.gcTime,
+    staleTime: DEFAULT_CACHE_CONFIG.lists.staleTime, // 24 Stunden
+    gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 Tage
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
@@ -307,8 +308,8 @@ export function usePlaces() {
       // Sortiere nach Datum (neueste zuerst)
       return validPlaces.sort((a, b) => b.created_at - a.created_at);
     },
-    staleTime: NOSTR_CONFIG.cache.staleTime,
-    gcTime: NOSTR_CONFIG.cache.maxAge,
+    staleTime: DEFAULT_CACHE_CONFIG.lists.staleTime, // 24 Stunden
+    gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 Tage
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
@@ -344,8 +345,8 @@ export function useLongformArticle(identifier: string, authorPubkey: string) {
 
       return article;
     },
-    staleTime: NOSTR_CONFIG.cache.staleTime,
-    gcTime: NOSTR_CONFIG.cache.maxAge,
+    staleTime: DEFAULT_CACHE_CONFIG.items.staleTime, // 24 小时
+    gcTime: DEFAULT_CACHE_CONFIG.items.gcTime, // 3 天
     enabled: !!identifier && !!authorPubkey,
     refetchOnWindowFocus: false,
     refetchOnMount: false,

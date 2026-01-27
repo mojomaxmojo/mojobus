@@ -5,11 +5,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useLongformArticles, usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { useNotes } from '@/hooks/useNotes';
 import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { Waves, Compass, Sun, Anchor, MapPin } from 'lucide-react';
+import { Waves, Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -17,6 +17,7 @@ import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { SocialBar } from '@/components/SocialBar';
+import { useToast } from '@/hooks/useToast';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';
@@ -27,6 +28,8 @@ type ContentItem = {
 
 export function Home() {
   const { nostr } = useNostr();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // SEO Meta Tags
   useHead({
@@ -38,10 +41,45 @@ export function Home() {
       { property: 'og:description', content: 'Perpetual Traveler Blog. Unser Leben am Meer, vanlife, offgrid und Reisen.' },
       { property: 'og:type', content: 'website' }
     ],
-    link: [
-      { rel: 'canonical', href: 'https://mojobus.co' }
+      link: [
+        { rel: 'canonical', href: 'https://mojobus.co' }
     ]
   });
+
+  // Refresh-Funktion: Invalidiere und hole alle Daten neu
+  const handleRefresh = async () => {
+    try {
+      toast({
+        title: 'Aktualisiere Inhalte...',
+        description: 'Lade frische Daten von Nostr',
+      });
+
+      // Invalidiere alle relevanten Queries
+      await queryClient.invalidateQueries({
+        queryKey: ['longform-articles'],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['places'],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['home-notes'],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['home-media'],
+      });
+
+      toast({
+        title: '✅ Inhalte aktualisiert',
+        description: 'Frühe Inhalte werden angezeigt',
+      });
+    } catch (error) {
+      toast({
+        title: '❌ Aktualisierung fehlgeschlagen',
+        description: 'Bitte versuche es erneut',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const { data: articles, isLoading: articlesLoading } = useLongformArticles({
     kinds: [30023],
@@ -184,12 +222,22 @@ export function Home() {
               <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#oceanview</span>
               <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#btc</span>
             </div>
-            <div className="pt-6">
+            <div className="pt-6 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg" className="gap-2">
                 <Link to="/artikel">
                   <Compass className="h-5 w-5" />
                   Entdecke unsere Geschichten
                 </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={handleRefresh}
+                className="gap-2"
+                title="Inhalte aktualisieren"
+              >
+                <RefreshCw className="h-5 w-5" />
+                Aktualisieren
               </Button>
             </div>
           </div>

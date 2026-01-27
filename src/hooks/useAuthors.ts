@@ -1,6 +1,8 @@
 import { type NostrEvent, type NostrMetadata, NSchema as n } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
+import { DEFAULT_CACHE_CONFIG } from '@/config/cache';
+import { useMemo } from 'react';
 
 /**
  * Batching Hook für mehrere Autoren
@@ -48,11 +50,8 @@ export function useAuthors(pubkeys: string[]) {
       return authorsMap;
     },
     retry: 3,
-    staleTime: 5 * 60 * 1000, // 5 Minuten
-    gcTime: 10 * 60 * 1000, // 10 Minuten
+    staleTime: DEFAULT_CACHE_CONFIG.profile.staleTime, // 7 天
+    gcTime: DEFAULT_CACHE_CONFIG.profile.gcTime, // 14 天
     enabled: uniquePubkeys.length > 0,
   });
 }
-
-// Importiere useMemo
-import { useMemo } from 'react';

@@ -12,6 +12,7 @@ export * from './app';
 export * from './relays';
 export * from './blossom';
 export * from './imageService';
+export * from './cache';
 
 // Legacy exports for backward compatibility
 export { NOSTR_CONFIG, AUTHORS, DEFAULT_RELAYS } from './nostr';

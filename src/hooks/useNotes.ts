@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useNostr } from '@/hooks/useNostr';
 import { NOSTR_CONFIG } from '@/config/nostr';
+import { DEFAULT_CACHE_CONFIG } from '@/config/cache';
 import { getValidAuthorPubkeys } from '@/lib/authors';
 import type { NostrEvent } from '@nostrify/nostrify';
 
@@ -62,8 +63,8 @@ export function useNotes() {
       return nextPageParam;
     },
     initialPageParam: undefined,
-    staleTime: NOSTR_CONFIG.cache.staleTime,
-    gcTime: NOSTR_CONFIG.cache.maxAge,
+    staleTime: DEFAULT_CACHE_CONFIG.lists.staleTime, // 24 小时
+    gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 天
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
@@ -95,8 +96,8 @@ export function useNote(eventId: string) {
 
       return event;
     },
-    staleTime: NOSTR_CONFIG.cache.staleTime,
-    gcTime: NOSTR_CONFIG.cache.maxAge,
+    staleTime: DEFAULT_CACHE_CONFIG.items.staleTime, // 24 小时
+    gcTime: DEFAULT_CACHE_CONFIG.items.gcTime, // 3 天
     enabled: !!eventId,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
