@@ -27,6 +27,7 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
+import { extractLocationFromImage } from '@/lib/exif-utils';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -87,6 +88,11 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
+  const [gpsDetection, setGpsDetection] = useState<{ fileId: string | null; status: string; isDetecting: boolean }>({
+    fileId: null,
+    status: '',
+    isDetecting: false
+  });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
@@ -198,6 +204,91 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
   const removeFile = (id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  const handleGPSSelection = async (file: MediaFile) => {
+    // Nur für Bilder ausführbar
+    if (file.type !== 'image') {
+      toast({
+        title: 'Fehler',
+        description: 'GPS-Ermittlung ist nur für Bilder möglich',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setGpsDetection({
+      fileId: file.id,
+      status: 'Starte GPS-Ermittlung...',
+      isDetecting: true
+    });
+
+    try {
+      const locationResult = await extractLocationFromImage(
+        file.file,
+        (status) => {
+          setGpsDetection(prev => ({
+            ...prev,
+            status
+          }));
+        }
+      );
+
+      if (locationResult) {
+        setLocation(locationResult);
+
+        // Versuche auch das Land automatisch zu setzen
+        const countries: { [key: string]: string } = {
+          'portugal': 'portugal',
+          'spanien': 'spanien',
+          'spain': 'spanien',
+          'frankreich': 'frankreich',
+          'france': 'frankreich',
+          'belgien': 'belgien',
+          'belgium': 'belgien',
+          'deutschland': 'deutschland',
+          'germany': 'deutschland',
+          'luxemburg': 'luxemburg',
+          'luxembourg': 'luxemburg',
+          'italien': 'italien',
+          'italy': 'italien',
+          'kroatien': 'kroatien',
+          'croatia': 'kroatien'
+        };
+
+        const locationLower = locationResult.toLowerCase();
+        for (const [name, countryCode] of Object.entries(countries)) {
+          if (locationLower.includes(name)) {
+            setSelectedCountry(countryCode);
+            break;
+          }
+        }
+
+        toast({
+          title: '✅ Standort ermittelt!',
+          description: `${locationResult}`,
+        });
+      } else {
+        toast({
+          title: 'Hinweis',
+          description: 'Keine GPS-Daten oder Konnte Standort nicht ermitteln',
+          variant: 'default'
+        });
+      }
+    } catch (error) {
+      console.error('GPS detection error:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler bei der GPS-Ermittlung',
+        variant: 'destructive'
+      });
+    } finally {
+      setGpsDetection({
+        fileId: null,
+        status: '',
+        isDetecting: false
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -462,16 +553,51 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                     <p className="font-medium truncate">{file.name}</p>
                     <p className="text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeFile(file.id)}
-                  >
-                    Löschen
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeFile(file.id)}
+                    >
+                      Löschen
+                    </Button>
+                    {file.type === 'image' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGPSSelection(file)}
+                        disabled={gpsDetection.isDetecting}
+                        className="flex-1"
+                      >
+                        {gpsDetection.fileId === file.id && gpsDetection.isDetecting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            GPS...
+                          </>
+                        ) : (
+                          <>
+                            <MapPin className="h-4 w-4 mr-2" />
+                            GPS
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
+
+            {/* GPS Detection Progress */}
+            {gpsDetection.isDetecting && gpsDetection.status && (
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    {gpsDetection.status}
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
