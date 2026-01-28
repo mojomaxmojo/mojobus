@@ -1,23 +1,22 @@
 /**
  * EXIF und Geolocation Utilities für GPS-Extraktion aus Bildern
- * Robuster Parser für verschiedene EXIF-Formate
+ * Unterstützt Standard-EXIF und Google Pixel Text-Format
  */
 
 /**
  * EXIF-Daten aus ArrayBuffer lesen
- * Sehr robuster Parser, der mit verschiedenen EXIF-Strukturen umgehen kann
+ * Robuster Parser mit Unterstützung für verschiedene GPS-Formate
  */
 function readEXIFData(arrayBuffer: ArrayBuffer): any {
   try {
     const dataView = new DataView(arrayBuffer);
+    const exif: any = {};
 
     // Prüfen ob JPEG
     if (dataView.getUint8(0) !== 0xFF || dataView.getUint8(1) !== 0xD8) {
       console.log('Keine JPEG-Datei');
       return null;
     }
-
-    const exif: any = {};
 
     // Alle Marker durchsuchen
     const length = dataView.byteLength;
@@ -52,7 +51,7 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 
         offset += 4;
 
-        // TIFF-Header lesen
+        // TIFF Header lesen
         const byteOrder = dataView.getUint16(offset, false);
         const isBigEndian = byteOrder === 0x4D4D; // "MM" = Motorola (Big Endian)
 
@@ -108,10 +107,12 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 
             console.log('GPS IFD Offset:', gpsIFDOffsetActual.toString(16), 'GPS Einträge:', gpsNumEntries);
 
-            let lat: number[][] | null = null;
+            // Zuerst versuchen, Google Pixel Text-Format zu lesen
+            let lat: number[][] | string | null = null;
             let latRef: string | null = null;
-            let lon: number[][] | null = null;
+            let lon: number[][] | string | null = null;
             let lonRef: string | null = null;
+            let hasTextFormat = false;
 
             for (let j = 0; j < gpsNumEntries; j++) {
               const entryOffset = gpsIFDOffsetActual + 2 + (j * 12);
@@ -126,7 +127,101 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
                 valueOffset = entryOffset + 8;
               }
 
-              // GPS Latitude (Tag 0x0002)
+              // GPS Latitude als TEXT (Tag 0x0002)
+              if (tag === 0x0002 && type === 0x0002) {
+                const textLen = numValues - 1; // ASCII mit null terminator
+                let latText = '';
+                for (let k = 0; k < textLen; k++) {
+                  const charCode = dataView.getUint8(valueOffset + k);
+                  if (charCode === 0) break;
+                  latText += String.fromCharCode(charCode);
+                }
+                if (latText) {
+                  console.log('GPS Latitude als TEXT gefunden:', latText);
+                  lat = latText;
+                  hasTextFormat = true;
+                }
+              }
+
+              // GPS Longitude als TEXT (Tag 0x0004)
+              if (tag === 0x0004 && type === 0x0002) {
+                const textLen = numValues - 1; // ASCII mit null terminator
+                let lonText = '';
+                for (let k = 0; k < textLen; k++) {
+                  const charCode = dataView.getUint8(valueOffset + k);
+                  if (charCode === 0) break;
+                  lonText += String.fromCharCode(charCode);
+                }
+                if (lonText) {
+                  console.log('GPS Longitude als TEXT gefunden:', lonText);
+                  lon = lonText;
+                  hasTextFormat = true;
+                }
+              }
+
+              // GPS Latitude Ref (Tag 0x0001)
+              if (tag === 0x0001 && type === 0x0002) {
+                const textLen = numValues - 1;
+                latRef = '';
+                for (let k = 0; k < textLen; k++) {
+                  const charCode = dataView.getUint8(valueOffset + k);
+                  if (charCode === 0) break;
+                  latRef += String.fromCharCode(charCode);
+                }
+                console.log('GPS Latitude Ref (Text):', latRef);
+              }
+
+              // GPS Longitude Ref (Tag 0x0003)
+              if (tag === 0x0003 && type === 0x0002) {
+                const textLen = numValues - 1;
+                lonRef = '';
+                for (let k = 0; k < textLen; k++) {
+                  const charCode = dataView.getUint8(valueOffset + k);
+                  if (charCode === 0) break;
+                  lonRef += String.fromCharCode(charCode);
+                }
+                console.log('GPS Longitude Ref (Text):', lonRef);
+              }
+            }
+
+            // Wenn wir Text-Format haben, parsen wir es
+            if (hasTextFormat && typeof lat === 'string' && typeof lon === 'string') {
+              console.log('Verwende Google Pixel Text-Format');
+
+              const latNum = parseTextCoordinate(lat);
+              const lonNum = parseTextCoordinate(lon);
+
+              exif.GPSLatitude = latNum;
+              exif.GPSLatitudeRef = latRef;
+              exif.GPSLongitude = lonNum;
+              exif.GPSLongitudeRef = lonRef;
+
+              console.log('GPS-Koordinaten aus Text-Format:', {
+                lat: latNum,
+                latRef,
+                lon: lonNum,
+                lonRef
+              });
+
+              return exif;
+            }
+
+            // Standard EXIF Rational Format lesen
+            console.log('Versuche Standard EXIF Rational Format...');
+            for (let j = 0; j < gpsNumEntries; j++) {
+              const entryOffset = gpsIFDOffsetActual + 2 + (j * 12);
+              const tag = dataView.getUint16(entryOffset, isBigEndian);
+              const type = dataView.getUint16(entryOffset + 2, isBigEndian);
+              const numValues = dataView.getUint32(entryOffset + 4, isBigEndian);
+
+              let valueOffset = dataView.getUint32(entryOffset + 8, isBigEndian) + tiffStart;
+
+              // Kleine Werte direkt im Entry
+              if (numValues * 4 <= 4) {
+                valueOffset = entryOffset + 8;
+              }
+
+              // GPS Latitude (Tag 0x0002) als RATIONAL
               if (tag === 0x0002 && type === 0x0005 && numValues === 3) {
                 lat = [];
                 for (let k = 0; k < 3; k++) {
@@ -140,8 +235,9 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 
               // GPS Latitude Ref (Tag 0x0001)
               if (tag === 0x0001 && type === 0x0002) {
+                const textLen = numValues - 1;
                 latRef = '';
-                for (let k = 0; k < numValues - 1; k++) {
+                for (let k = 0; k < textLen; k++) {
                   const charCode = dataView.getUint8(valueOffset + k);
                   if (charCode === 0) break;
                   latRef += String.fromCharCode(charCode);
@@ -149,7 +245,7 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
                 console.log('GPS Latitude Ref:', latRef);
               }
 
-              // GPS Longitude (Tag 0x0004)
+              // GPS Longitude (Tag 0x0004) als RATIONAL
               if (tag === 0x0004 && type === 0x0005 && numValues === 3) {
                 lon = [];
                 for (let k = 0; k < 3; k++) {
@@ -163,8 +259,9 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 
               // GPS Longitude Ref (Tag 0x0003)
               if (tag === 0x0003 && type === 0x0002) {
+                const textLen = numValues - 1;
                 lonRef = '';
-                for (let k = 0; k < numValues - 1; k++) {
+                for (let k = 0; k < textLen; k++) {
                   const charCode = dataView.getUint8(valueOffset + k);
                   if (charCode === 0) break;
                   lonRef += String.fromCharCode(charCode);
@@ -173,14 +270,14 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
               }
             }
 
-            // Wenn wir alle GPS-Daten haben, speichern
-            if (lat && latRef && lon && lonRef) {
+            // Wenn wir Standard-Format haben
+            if (lat && typeof lat !== 'string' && lon && typeof lon !== 'string') {
               exif.GPSLatitude = lat;
               exif.GPSLatitudeRef = latRef;
               exif.GPSLongitude = lon;
               exif.GPSLongitudeRef = lonRef;
 
-              console.log('GPS-Daten vollständig:', {
+              console.log('GPS-Daten vollständig (Standard):', {
                 lat,
                 latRef,
                 lon,
@@ -206,6 +303,13 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
       return null;
     }
 
+    console.log('GPS-Daten vollständig:', {
+      lat: exif.GPSLatitude,
+      latRef: exif.GPSLatitudeRef,
+      lon: exif.GPSLongitude,
+      lonRef: exif.GPSLongitudeRef
+    });
+
     return exif;
   } catch (error) {
     console.error('Fehler beim Lesen der EXIF-Daten:', error);
@@ -214,23 +318,81 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 }
 
 /**
- * GPS-Koordinaten aus EXIF-Daten konvertieren
- * EXIF speichert Koordinaten als [Grad, Minuten, Sekunden] Arrays
+ * Text-Koordinaten im Google Pixel Format parsen
+ * Beispiel: "37º 4' 47.04" N
  */
-function convertDMSToDD(dms: number[][], ref: string): number {
-  if (!dms || dms.length !== 3) {
+function parseTextCoordinate(text: string): number[] | null {
+  try {
+    console.log('Parsing Text-Koordinate:', text);
+
+    // Muster: [Wert]º [Grad]' [Minuten]" [Sekunden].[Sekunden] [Ref]
+    // Beispiel: "37º 4' 47.04" N
+
+    const degreeMatch = text.match(/(\d+\.?\d*)\s*º\s*(\d+)\s*['′]\s*(\d+)\.(\d+)/);
+    if (!degreeMatch) {
+      console.log('Kein gültiges Text-Format gefunden');
+      return null;
+    }
+
+    const [, degrees, minutes, secondsStr, ref] = degreeMatch;
+    const [wholeSeconds, fractionalSeconds] = secondsStr.split('.');
+
+    const seconds = parseFloat(`${wholeSeconds}.${fractionalSeconds}`);
+
+    console.log('Geparste Werte:', { degrees, minutes, seconds, ref });
+
+    // Konvertieren zu DD (Decimal Degrees)
+    let dd = parseFloat(degrees) + parseFloat(minutes) / 60 + seconds / 3600;
+
+    if (ref === 'S' || ref === 'W') {
+      dd = dd * -1;
+    }
+
+    console.log('DD Ergebnis:', dd);
+
+    // Als Rational-Array zurückgeben (numer/denominator)
+    const denominator = 1000000; // Hohe Genauigkeit
+    const numerator = Math.round(dd * denominator);
+
+    return [[numerator, denominator], [60, 1], [3600, 1]];
+  } catch (error) {
+    console.error('Fehler beim Parsen der Text-Koordinate:', error);
+    return null;
+  }
+}
+
+/**
+ * GPS-Koordinaten aus EXIF-Daten konvertieren
+ * Unterstützt sowohl Standard-Rational-Arrays als Text-Format
+ */
+function convertDMSToDD(dms: number[][] | string, ref: string): number {
+  // Wenn String ist, parsen
+  if (typeof dms === 'string') {
+    const parsed = parseTextCoordinate(dms);
+    if (!parsed) {
+      console.log('Konnte Text-Koordinate nicht parsen:', dms);
+      return 0;
+    }
+
+    const [deg, min, sec] = parsed;
+    let dd = deg[0] / deg[1] + min[0] / min[1] + sec[0] / sec[1];
+
+    if (ref === 'S' || ref === 'W') {
+      dd = dd * -1;
+    }
+
+    console.log('Konvertiert von Text:', dms, 'zu DD:', dd);
+    return dd;
+  }
+
+  // Standard Rational-Array Format
+  if (!dms || !Array.isArray(dms) || dms.length !== 3) {
     console.log('Ungültiges DMS-Format:', dms);
     return 0;
   }
 
   const [degrees, minutes, seconds] = dms;
-
-  // Prüfen ob arrays
-  const deg = Array.isArray(degrees) ? degrees[0] / degrees[1] : degrees;
-  const min = Array.isArray(minutes) ? minutes[0] / minutes[1] : minutes;
-  const sec = Array.isArray(seconds) ? seconds[0] / seconds[1] : seconds;
-
-  let dd = deg + min / 60 + sec / 3600;
+  let dd = degrees[0] / degrees[1] + minutes[0] / minutes[1] + seconds[0] / seconds[1];
 
   // Süd und West sind negativ
   if (ref === 'S' || ref === 'W') {
@@ -269,6 +431,7 @@ export async function extractGPSFromImage(file: File): Promise<{ latitude: numbe
           exifData.GPSLongitudeRef
         );
 
+        console.log('GPS-Koordinaten:', { latitude, longitude });
         resolve({ latitude, longitude });
       } catch (error) {
         console.error('Fehler beim Lesen der EXIF-Daten:', error);
@@ -314,7 +477,6 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     }
 
     // Priorisierte Formatierung für Standort
-    // Versuche: Stadt, Region, Land
     const locationParts: string[] = [];
 
     if (data.address?.city) locationParts.push(data.address.city);
@@ -335,6 +497,8 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     const result = locationParts.length >= 2
       ? `${locationParts[0]}, ${locationParts[locationParts.length - 1]}`
       : locationParts.join(', ');
+
+    console.log('Nominatim Ergebnis:', result);
 
     return result || null;
   } catch (error) {
