@@ -256,11 +256,12 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             mediaFile.locationData = locationData;
             console.log('[GPS] Geocoding Ergebnis für:', mediaFile.name, locationData);
 
-            // Auto-fill Location-Feld mit erster gefundener Adresse
-            if (i === 0 && !location) {
-              setLocation(locationData.formatted || '');
-              console.log('[GPS] Standort-Feld ausgefüllt:', locationData.formatted);
-            }
+              // Auto-fill Location-Feld IMMER ausfüllen, wenn GPS gefunden wurde (für erstes Bild)
+              // Egal ob Feld vorher leer war oder nicht (funktioniert auch nach manuellem Löschen)
+              if (i === 0) {
+                setLocation(locationData.formatted || '');
+                console.log('[GPS] Standort-Feld ausgefüllt:', locationData.formatted);
+              }
 
             // Auto-select Land (wenn vorhanden)
             if (locationData.address?.country_code && !selectedCountry && i === 0) {
