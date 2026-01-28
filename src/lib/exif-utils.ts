@@ -2,12 +2,15 @@
  * EXIF und Geolocation Utilities für GPS-Extraktion aus Bildern
  */
 
-// @ts-ignore - exif-js hat kein vollständiges TypeScript Definitions-File
-declare const EXIF: any;
+// Dynamischer Import von exif-js (CommonJS Modul)
+let EXIF: any = null;
 
-// Importiere exif-js als default export
-import EXIFLib from 'exif-js';
-const EXIF = EXIFLib;
+async function getEXIF() {
+  if (!EXIF) {
+    EXIF = (await import('exif-js')).default;
+  }
+  return EXIF;
+}
 
 /**
  * GPS-Koordinaten aus EXIF-Daten konvertieren
@@ -31,6 +34,9 @@ function convertDMSToDD(dms: number[], ref: string): number {
  * @returns Promise mit { latitude, longitude } oder null wenn keine GPS-Daten vorhanden sind
  */
 export async function extractGPSFromImage(file: File): Promise<{ latitude: number; longitude: number } | null> {
+  // Lade EXIF-Bibliothek dynamisch
+  const exifLib = await getEXIF();
+
   return new Promise((resolve) => {
     const reader = new FileReader();
 
@@ -40,7 +46,7 @@ export async function extractGPSFromImage(file: File): Promise<{ latitude: numbe
         img.src = e.target?.result as string;
 
         img.onload = () => {
-          EXIF.getData(img as any, function() {
+          exifLib.getData(img as any, function() {
             const exifData = this as any;
 
             if (!exifData || !exifData.GPSLatitude || !exifData.GPSLongitude) {
