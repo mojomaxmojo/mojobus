@@ -96,8 +96,6 @@ export function ServiceWorkerSettings() {
       const version = await getCacheVersion();
       const cacheName = `mojobus-v${version}`;
 
-      console.log('[ServiceWorkerSettings] Lade Cache Info für:', cacheName);
-
       // Einfache Schätzung der Cache-Größe
       const cache = await caches.open(cacheName);
       const keys = await cache.keys();

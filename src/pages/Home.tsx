@@ -116,15 +116,9 @@ export function Home() {
           '#t': ['medien', 'media', 'bilder', 'images'],
           limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
         }
-      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) }); // Aus Performance-Konfiguration
+       ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) }); // Aus Performance-Konfiguration
 
-      console.log('[Home Page] Image Events Query:', {
-        total: events.length,
-        limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
-        timeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
-      });
-
-      return events.filter((event) => {
+       return events.filter((event) => {
         const content = event.content.toLowerCase();
         return content.includes('.jpg') ||
                content.includes('.jpeg') ||

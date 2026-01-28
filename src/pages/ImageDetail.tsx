@@ -51,8 +51,6 @@ export function ImageDetail() {
 
       const abortSignal = AbortSignal.any([signal, AbortSignal.timeout(3000)]);
 
-      console.log('Querying for event with ID:', eventId);
-
       const allEvents = await nostr.query([
         {
           ids: [eventId],
@@ -60,13 +58,9 @@ export function ImageDetail() {
         }
       ], { signal: abortSignal });
 
-      console.log('Found events:', allEvents.length);
-      console.log('Events data:', allEvents);
-
       const event = allEvents[0];
 
       if (!event) {
-        console.log('No event found with ID:', eventId);
         return null;
       }
 
@@ -120,14 +114,6 @@ export function ImageDetail() {
     )
   );
 
-  console.log('Image validation:', {
-    isLoading,
-    eventExists: !!events,
-    imagesCount: images.length,
-    tagsFound: tags,
-    isValid: isValidImageEvent
-  });
-
   // Handle keyboard navigation for fullscreen
   useEffect(() => {
     if (!isImageFullscreen) return;
@@ -171,52 +157,45 @@ export function ImageDetail() {
     setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
   };
 
-  // Only show invalid image error if NOT loading and NOT an image event
-  if (!isLoading && !isValidImageEvent) {
-    console.log('Event does not contain images or media tags, showing error');
-    console.log('Debug info:', {
-      event: events,
-      imagesCount: images.length,
-      tags: tags,
-      isValid: isValidImageEvent
-    });
-    return (
-      <div className="min-h-screen py-12">
-        <div className="container mx-auto px-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/bilder')}
-            className="mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zurück zu Bilder
-          </Button>
+   // Only show invalid image error if NOT loading and NOT an image event
+   if (!isLoading && !isValidImageEvent) {
+     return (
+       <div className="min-h-screen py-12">
+         <div className="container mx-auto px-4">
+           <Button
+             variant="ghost"
+             onClick={() => navigate('/bilder')}
+             className="mb-6"
+           >
+             <ArrowLeft className="h-4 w-4 mr-2" />
+             Zurück zu Bilder
+           </Button>
 
-          <Card className="border-dashed">
-            <CardContent className="py-12 px-8 text-center">
-              <div className="max-w-sm mx-auto space-y-6">
-                <h3 className="text-lg font-semibold text-red-600">
-                  Kein gültiges Bild
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Dieses Event wurde nicht als Bild-Ereignis klassifiziert.
-                </p>
-                <p className="text-sm text-gray-600">
-                  Bitte navigieren Sie zur Bildergalerie, um gültige Bilder zu finden.
-                </p>
-                <div className="space-y-2">
-                  <Button onClick={() => navigate('/bilder')}>
-                    Zur Bildergalerie
-                  </Button>
-                  <RelaySelector className="w-full" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+           <Card className="border-dashed">
+             <CardContent className="py-12 px-8 text-center">
+               <div className="max-w-sm mx-auto space-y-6">
+                 <h3 className="text-lg font-semibold text-red-600">
+                   Bild nicht gefunden
+                 </h3>
+                 <p className="text-muted-foreground mb-4">
+                   Das angegebene Bild konnte nicht geladen werden oder wurde bereits gelöscht.
+                 </p>
+                 <p className="text-sm text-gray-600">
+                   Möglicherweise ist die ID ungültig oder das Bild wurde entfernt.
+                 </p>
+                 <div className="space-y-2">
+                   <Button onClick={() => navigate('/bilder')}>
+                     Zurück zur Bildergalerie
+                   </Button>
+                   <RelaySelector className="w-full" />
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
+         </div>
+       </div>
+     );
+   }
 
   if (isLoading) {
     return (
@@ -251,7 +230,6 @@ export function ImageDetail() {
   }
 
   if (error || !events) {
-    console.log('Error or no events found');
     return (
       <div className="min-h-screen py-12">
         <div className="container mx-auto px-4">

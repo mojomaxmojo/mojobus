@@ -34,7 +34,6 @@ export function useReplaceableContentSimple({ dTag }: { dTag: string }) {
         queryKey: ['replaceable-content', dTag] 
       });
 
-      console.log(`Replaceable content published for d-tag: ${dTag}`);
       return event;
     } catch (error) {
       console.error('Failed to publish replaceable content:', error);

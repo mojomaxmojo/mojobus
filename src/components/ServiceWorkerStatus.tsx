@@ -37,22 +37,17 @@ export function ServiceWorkerStatus() {
     const cleanup = addOnlineStatusListener(
       () => {
         setOnline(true);
-        console.log('🌐 Gerät ist online');
       },
       () => {
         setOnline(false);
-        console.log('📡 Gerät ist offline');
       }
     );
 
     // Überwache Service Worker Updates
     const checkForUpdates = async () => {
       const update = await hasUpdate();
-      setHasUpdateAvailable(update);
-      if (update) {
-        console.log('✨ Neuer Service Worker verfügbar');
-      }
-    };
+       setHasUpdateAvailable(update);
+     };
 
     // Initial Check
     checkForUpdates();

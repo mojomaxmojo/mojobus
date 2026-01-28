@@ -21,11 +21,9 @@ export function useAutoSave(
     }
 
     timeoutRef.current = setTimeout(async () => {
-      try {
+       try {
         await saveFn(contentToSave);
         lastSaveRef.current = contentToSave;
-        
-        console.log(`Auto-saved at ${new Date().toLocaleTimeString()}`);
       } catch (error) {
         console.error('Auto-save failed:', error);
         toast({

@@ -16,8 +16,6 @@ const PlacesPage = () => {
           { kinds: [30023], '#t': ['place'], limit: 100 }
         ];
         const results = await nostr.query(filters);
-        console.log('[PlacesPage] Queried events:', results?.length);
-        console.log('[PlacesPage] Filter:', filters);
 
         // Filter events by checking for either #place tag or type=place tag
         const filteredResults = (results || []).filter((event: any) => {
@@ -25,8 +23,6 @@ const PlacesPage = () => {
           const hasTypeTag = event.tags?.some((tag: any) => tag[0] === 'type' && tag[1] === 'place');
           return hasPlaceTag || hasTypeTag;
         });
-
-        console.log('[PlacesPage] Filtered events:', filteredResults.length);
 
         return filteredResults;
       } catch (error) {
@@ -37,12 +33,10 @@ const PlacesPage = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const places = useMemo(() => {
-    if (!events || !Array.isArray(events)) return [];
+   const places = useMemo(() => {
+     if (!events || !Array.isArray(events)) return [];
 
-    console.log('[PlacesPage] Processing events:', events.length);
-
-    return events.map((event: any) => {
+     return events.map((event: any) => {
       const titleTag = event.tags.find((tag: any) => tag[0] === 'title');
       const imageTag = event.tags.find((tag: any) => tag[0] === 'image');
       const locationTag = event.tags.find((tag: any) => tag[0] === 'location');
@@ -55,12 +49,10 @@ const PlacesPage = () => {
         location: locationTag?.[1] || '',
         created_at: event.created_at,
         author: event.pubkey,
-        type: typeTag?.[1]
-      };
+         type: typeTag?.[1]
+       };
 
-      console.log('[PlacesPage] Processed place:', place);
-
-      return place;
+       return place;
     });
   }, [events]);
 

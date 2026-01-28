@@ -69,14 +69,9 @@ function Images() {
           '#t': ['medien', 'media', 'bilder', 'images'],
           limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
         }
-      ], { signal: abortSignal });
+       ], { signal: abortSignal });
 
-      console.log('[Images Page] Image Events Query:', {
-        total: allEvents.length,
-        country,
-      });
-
-      const imageEvents = allEvents.filter((event: ImageEvent) => {
+       const imageEvents = allEvents.filter((event: ImageEvent) => {
         const hasMediaType = event.tags.some(tag => tag[0] === 'type' && tag[1] === 'media');
         const content = event.content.toLowerCase();
         const hasImageUrls = content.includes('.jpg') ||
@@ -111,20 +106,12 @@ function Images() {
           }
           return hasNatureTag;
         });
-        console.log('[Images Page] Gefiltert nach Natur-Kategorie:', { natureCategory, result: natureFiltered.length });
         return natureFiltered;
       }
 
       const sortedEvents = [...imageEvents].sort((a, b) => b.created_at - a.created_at);
-      console.log('[Images Page] Sortierte Events:', sortedEvents.length);
 
       return sortedEvents;
-    },
-    onSuccess: (data) => {
-      console.log('[Images Page] Events geladen:', {
-        total: data.length,
-        country,
-      });
     },
   });
 

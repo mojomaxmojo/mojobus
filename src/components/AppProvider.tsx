@@ -66,7 +66,6 @@ export function AppProvider(props: AppProviderProps) {
           // BACKWARD COMPATIBILITY: Migrate old config to new config structure
           // If old config structure (relayUrls, activeRelay, etc.) exists, migrate to new structure
           if (parsed.relayUrls && !parsed.read) {
-            console.log('[AppProvider] Migrating old config to new structure');
 
             // Convert old config to new structure
             parsed.read = {
@@ -81,7 +80,7 @@ export function AppProvider(props: AppProviderProps) {
               activeRelay: parsed.activeRelay || parsed.relayUrls[0],
             };
 
-            console.log('[AppProvider] Migrated config:', {
+            parsed.write = {
               old: {
                 relayUrls: parsed.relayUrls,
                 activeRelay: parsed.activeRelay,
@@ -92,7 +91,9 @@ export function AppProvider(props: AppProviderProps) {
                 read: parsed.read,
                 write: parsed.write,
               },
-            });
+            };
+          } else {
+            // Use new config structure
           }
 
           return AppConfigSchema.parse(parsed);

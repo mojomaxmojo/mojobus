@@ -60,9 +60,6 @@ export function Settings() {
       try {
         const newRelays = presetConfig.relayUrls;
 
-        console.log("Applying relay preset:", preset);
-        console.log("New relay configuration:", presetConfig);
-
         // Update app config via updateConfig - this will trigger NostrProvider to update
         updateConfig((currentConfig) => ({
           ...currentConfig,

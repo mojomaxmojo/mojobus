@@ -134,7 +134,6 @@ export function PublishReplaceable() {
                 mode={editEventId ? 'edit' : 'create'}
                 onSave={(content) => {
                   // Handle save with conflict resolution if needed
-                  console.log('Content saved with replaceable system:', content);
                 }}
               />
             </div>

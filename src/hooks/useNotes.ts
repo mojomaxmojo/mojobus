@@ -24,41 +24,25 @@ export function useNotes() {
 
       if (pageParam) {
         filter.until = pageParam;
-        console.log('🔄 Notes Infinite Scroll: Fetching next page', { until: pageParam });
-      } else {
-        console.log('📄 Notes Infinite Scroll: Fetching first page');
       }
 
       const events = await nostr.query([filter], {
         signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
       });
 
-      console.log('📦 Notes Infinite Scroll: Received', events.length, 'events from relay (limit was 30)');
-
       // Wenn der Relay zu viele Events zurückgibt, auf max 30 pro Seite beschränken
       const MAX_PER_PAGE = 30;
       const paginatedEvents = events.slice(0, MAX_PER_PAGE);
-
-      if (events.length > MAX_PER_PAGE) {
-        console.log(`⚠️ Notes Infinite Scroll: Limiting to ${MAX_PER_PAGE} notes (received ${events.length})`);
-      }
 
       return paginatedEvents;
     },
     getNextPageParam: (lastPage) => {
       if (lastPage.length === 0) {
-        console.log('🚫 Notes Infinite Scroll: No more notes (empty page)');
         return undefined;
       }
 
       const lastCreated = lastPage[lastPage.length - 1].created_at;
       const nextPageParam = lastCreated - 1;
-
-      console.log('➡️ Notes Infinite Scroll: Next page param', {
-        lastPageLength: lastPage.length,
-        lastCreated,
-        nextPageParam
-      });
 
       return nextPageParam;
     },

@@ -22,7 +22,6 @@ function validateLongformArticle(event: NostrEvent): boolean {
   // STRIKTERE VALIDIERUNG: Prüfe auf MojoBus-spezifische Tags
   const title = event.tags.find(([name]) => name === 'title')?.[1];
   if (!title) {
-    console.log('⚠️ Event ohne title-Tag ignoriert:', event.id);
     return false;
   }
 
@@ -31,7 +30,6 @@ function validateLongformArticle(event: NostrEvent): boolean {
   const articleTag = event.tags.some(([name, value]) => name === 't' && value === 'artikel');
 
   if (typeTag !== 'article' && !articleTag) {
-    console.log('⚠️ Event ohne type=article oder #t artikel ignoriert:', event.id);
     return false;
   }
 
@@ -83,17 +81,11 @@ export function useContent() {
       // Timestamp-basierte Pagination
       if (pageParam) {
         filter.until = pageParam;
-        console.log('🔄 Content Infinite Scroll: Fetching next page', { until: pageParam });
-      } else {
-        console.log('📄 Content Infinite Scroll: Fetching first page');
       }
 
       const abortSignal = AbortSignal.any([signal!, AbortSignal.timeout(5000)]);
 
-      console.log('🚀 Combined Query: Fetching kinds [1, 30023] in ONE request');
       const events = await nostr.query([filter], { signal: abortSignal });
-
-      console.log('📦 Content: Received', events.length, 'events total (notes + articles)');
 
       // Trenne Events nach Typ
       const notes = events.filter(event => {
@@ -108,12 +100,6 @@ export function useContent() {
         return isValid && !isPlace; // Nur Artikel, keine Plätze
       });
 
-      console.log('✅ Content separated:', {
-        notes: notes.length,
-        articles: articles.length,
-        total: notes.length + articles.length
-      });
-
       // Gib getrennte Ergebnisse zurück
       return {
         notes,
@@ -124,19 +110,12 @@ export function useContent() {
     getNextPageParam: (lastPage) => {
       // Wenn keine Events mehr zurückgegeben wurden, sind wir fertig
       if (lastPage.allEvents.length === 0) {
-        console.log('🚫 Content Infinite Scroll: No more events (empty page)');
         return undefined;
       }
 
       // Berechne nächsten Timestamp (1 Sekunde vor dem letzten Event)
       const lastCreated = lastPage.allEvents[lastPage.allEvents.length - 1].created_at;
       const nextPageParam = lastCreated - 1;
-
-      console.log('➡️ Content Infinite Scroll: Next page param', {
-        lastPageLength: lastPage.allEvents.length,
-        lastCreated,
-        nextPageParam
-      });
 
       return nextPageParam;
     },
@@ -176,7 +155,6 @@ export function useContentByTags(tags: string[]) {
 
       const abortSignal = AbortSignal.any([signal!, AbortSignal.timeout(5000)]);
 
-      console.log('🚀 Tag Query: Fetching kinds [1, 30023] with tags', tags);
       const events = await nostr.query([filter], { signal: abortSignal });
 
       // Trenne Events nach Typ
