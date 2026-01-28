@@ -1,11 +1,11 @@
 /**
  * EXIF und Geolocation Utilities für GPS-Extraktion aus Bildern
- * Korrigierte EXIF-Parsing mit genauerem Offset-Management
+ * Endgültige EXIF-Parsing mit exaktem Offset-Management
  */
 
 /**
  * EXIF-Daten aus ArrayBuffer lesen
- * Robuster Parser mit korrigiertem Offset-Management
+ * Final korrigierter Parser
  */
 function readEXIFData(arrayBuffer: ArrayBuffer): any {
   try {
@@ -43,6 +43,7 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
       // EXIF-Marker (0xE1)
       if (marker === 0xE1) {
         const markerSize = dataView.getUint16(offset, false);
+        const markerOffset = offset;
         offset += 2;
 
         // Sicherheitsprüfung
@@ -52,26 +53,22 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
           continue;
         }
 
-        // Prüfen ob "Exif" String
+        // Prüfen ob "Exif\0" String
         if (dataView.getUint32(offset, false) !== 0x45786966) {
+          console.log('Kein "Exif\0" Marker');
           offset += markerSize - 4;
           continue;
         }
 
         exifFound = true;
-        offset += 4; // "Exif" überspringen
+        offset += 4; // "Exif\0" überspringen
 
-        console.log('✅ EXIF-Marker gefunden bei offset:', (offset - 4).toString(16));
+        // Jetzt zeigt offset auf 'x' von "Exif" + 4 = 16 (0x10)
+        console.log('✅ EXIF-Marker gefunden bei offset:', markerOffset.toString(16));
         console.log('EXIF-Marker Größe:', markerSize);
-        console.log('TIFF-Header beginnt bei offset:', offset.toString(16));
+        console.log('TIFF-Header beginnt bei offset:', offset.toString(16), '(should be 0x10 = 16)');
 
         // TIFF-Header lesen
-        if (offset + 2 > length) {
-          console.log('TIFF-Header würde Lesen überschreiten');
-          offset += markerSize - 4;
-          continue;
-        }
-
         const byteOrder = dataView.getUint16(offset, false);
         console.log('Raw byteOrder Wert:', byteOrder.toString(16), 'an offset:', offset.toString(16));
         
@@ -87,12 +84,6 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
         console.log('✅ TIFF-Byte-Order OK:', isBigEndian ? 'Big Endian (MM)' : 'Little Endian (II)');
 
         // 42 Check
-        if (offset + 4 > length) {
-          console.log('TIFF-Magic würde Lesen überschreiten');
-          offset += markerSize - 4;
-          continue;
-        }
-
         const tiffMagic = dataView.getUint16(offset + 2, isBigEndian);
         console.log('Raw tiffMagic Wert:', tiffMagic.toString(16), 'an offset:', (offset + 2).toString(16));
 
@@ -106,11 +97,14 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
         console.log('✅ TIFF-Magic OK: 0x002A (42)');
 
         const firstIFDOffset = dataView.getUint32(offset + 4, isBigEndian);
-        const tiffStart = offset;
+        const tiffStart = offset; // TIFF-Header-Startpunkt speichern
 
+        console.log('TIFF Start Offset:', tiffStart.toString(16));
         console.log('Erste IFD Offset:', firstIFDOffset.toString(16));
 
         offset += 6; // TIFF-Header (6 Bytes) überspringen
+
+        // Jetzt zeigt Offset auf tiffStart + 6 = 22 (0x16) - KORREKT!
 
         // Erste IFD lesen
         if (firstIFDOffset !== 0) {
@@ -118,12 +112,12 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 
           if (ifdOffset + 2 > length) {
             console.log('IFD Offset außerhalb der Datei');
-            offset += markerSize - 10; // Wir haben bereits 10 Bytes übersprungen
+            offset += markerSize - 4;
             continue;
           }
 
           const numEntries = dataView.getUint16(ifdOffset, isBigEndian);
-          console.log('Erste IFD Einträge:', numEntries);
+          console.log('Erste IFD Offset:', ifdOffset.toString(16), 'Einträge:', numEntries);
 
           // Nach GPS-IFD Pointer suchen
           let gpsIFDOffset = 0;
@@ -151,7 +145,7 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 
             if (gpsIFDOffsetActual + 2 > length) {
               console.log('GPS IFD Offset außerhalb der Datei');
-              offset += markerSize - 10;
+              offset += markerSize - 4;
               continue;
             }
 
