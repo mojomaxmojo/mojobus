@@ -1,114 +1,291 @@
 /**
  * EXIF und Geolocation Utilities für GPS-Extraktion aus Bildern
- * Einfache Implementierung ohne externe Library für bessere Stabilität
+ * Verbesserte EXIF-Parsing Implementierung
  */
 
 /**
- * EXIF-Daten aus ArrayBuffer lesen
+ * EXIF-Tags lesen aus DataView
  */
-function readEXIFData(dataView: DataView): any {
-  const exif: any = {};
-
-  if (dataView.getUint16(0, false) !== 0xFFD8) {
-    return null; // Keine JPEG-Datei
-  }
-
-  const length = dataView.byteLength;
-  let offset = 2;
-
-  while (offset < length) {
-    if (dataView.getUint16(offset, false) !== 0xFFE1) {
-      offset++;
-      continue;
-    }
-
-    offset += 2;
-
-    if (dataView.getUint32(offset, false) !== 0x45786966) {
-      break; // Keine EXIF-Signatur
-    }
-
-    offset += 6;
-
-    const bigEnd = dataView.getUint16(offset, false) === 0x4949;
-    offset += dataView.getUint32(offset + 4, bigEnd);
-
-    const tags = readTags(dataView, offset, dataView.getUint16(offset, bigEnd), bigEnd);
-
-    if (tags && tags['GPSLatitude'] && tags['GPSLongitude']) {
-      exif.GPSLatitude = tags['GPSLatitude'];
-      exif.GPSLongitude = tags['GPSLongitude'];
-      exif.GPSLatitudeRef = tags['GPSLatitudeRef'];
-      exif.GPSLongitudeRef = tags['GPSLongitudeRef'];
-    }
-
-    break;
-  }
-
-  return exif;
-}
-
-/**
- * EXIF-Tags lesen
- */
-function readTags(dataView: DataView, offset: number, numTags: number, bigEnd: boolean): any {
+function readEXIFTags(dataView: DataView, tiffOffset: number, dirOffset: number, numEntries: number, isBigEndian: boolean, subIFDOffset?: number): any {
   const tags: any = {};
 
-  for (let i = 0; i < numTags; i++) {
-    const tagOffset = offset + 2 + (i * 12);
-    const tag = dataView.getUint16(tagOffset, bigEnd);
-    const type = dataView.getUint16(tagOffset + 2, bigEnd);
-    const numValues = dataView.getUint32(tagOffset + 4, bigEnd);
-    const valueOffset = dataView.getUint32(tagOffset + 8, bigEnd) + 12;
+  for (let i = 0; i < numEntries; i++) {
+    const entryOffset = dirOffset + 2 + (i * 12);
+    const tag = dataView.getUint16(entryOffset, isBigEndian);
+    const type = dataView.getUint16(entryOffset + 2, isBigEndian);
+    const numValues = dataView.getUint32(entryOffset + 4, isBigEndian);
+    const valueOffset = dataView.getUint32(entryOffset + 8, isBigEndian) + tiffOffset;
 
+    // Wert lesen basierend auf Typ
     let value: any;
-    switch (type) {
-      case 1: // BYTE
-        value = dataView.getUint8(valueOffset);
-        break;
-      case 2: // ASCII
-        value = '';
-        for (let j = 0; j < numValues - 1; j++) {
-          value += String.fromCharCode(dataView.getUint8(valueOffset + j));
+
+    if (type === 1) { // BYTE
+      value = dataView.getUint8(valueOffset);
+    } else if (type === 2) { // ASCII
+      value = '';
+      for (let j = 0; j < numValues - 1; j++) {
+        const charCode = dataView.getUint8(valueOffset + j);
+        if (charCode === 0) break;
+        value += String.fromCharCode(charCode);
+      }
+    } else if (type === 3) { // SHORT
+      if (numValues === 1) {
+        value = dataView.getUint16(entryOffset + 8, isBigEndian);
+      } else {
+        value = dataView.getUint16(valueOffset, isBigEndian);
+      }
+    } else if (type === 4) { // LONG
+      value = dataView.getUint32(valueOffset, isBigEndian);
+    } else if (type === 5) { // RATIONAL
+      if (numValues === 1) {
+        const numerator = dataView.getUint32(valueOffset, isBigEndian);
+        const denominator = dataView.getUint32(valueOffset + 4, isBigEndian);
+        value = numerator / denominator;
+      } else {
+        value = [];
+        for (let j = 0; j < numValues; j++) {
+          const offset = valueOffset + (j * 8);
+          const numerator = dataView.getUint32(offset, isBigEndian);
+          const denominator = dataView.getUint32(offset + 4, isBigEndian);
+          value.push(numerator / denominator);
         }
-        break;
-      case 3: // SHORT
-        value = dataView.getUint16(valueOffset, bigEnd);
-        break;
-      case 4: // LONG
-        value = dataView.getUint32(valueOffset, bigEnd);
-        break;
-      case 5: // RATIONAL
-        value = dataView.getUint32(valueOffset, bigEnd) / dataView.getUint32(valueOffset + 4, bigEnd);
-        break;
-      case 10: // SRATIONAL
-        value = [
-          dataView.getInt32(valueOffset, bigEnd),
-          dataView.getInt32(valueOffset + 4, bigEnd)
-        ];
-        break;
+      }
+    } else if (type === 10) { // SRATIONAL
+      if (numValues === 1) {
+        const numerator = dataView.getInt32(valueOffset, isBigEndian);
+        const denominator = dataView.getInt32(valueOffset + 4, isBigEndian);
+        value = numerator / denominator;
+      } else {
+        value = [];
+        for (let j = 0; j < numValues; j++) {
+          const offset = valueOffset + (j * 8);
+          const numerator = dataView.getInt32(offset, isBigEndian);
+          const denominator = dataView.getInt32(offset + 4, isBigEndian);
+          value.push([numerator, denominator]);
+        }
+      }
     }
 
-    // GPS-Tags
+    // GPS-Tags speichern
     if (tag === 0x0001) tags['GPSLatitudeRef'] = value;
     if (tag === 0x0002 && numValues === 3) {
-      tags['GPSLatitude'] = [
-        [dataView.getUint32(valueOffset, bigEnd), dataView.getUint32(valueOffset + 4, bigEnd)],
-        [dataView.getUint32(valueOffset + 8, bigEnd), dataView.getUint32(valueOffset + 12, bigEnd)],
-        [dataView.getUint32(valueOffset + 16, bigEnd), dataView.getUint32(valueOffset + 20, bigEnd)]
-      ];
+      tags['GPSLatitude'] = [];
+      for (let j = 0; j < 3; j++) {
+        const offset = valueOffset + (j * 8);
+        const numerator = dataView.getUint32(offset, isBigEndian);
+        const denominator = dataView.getUint32(offset + 4, isBigEndian);
+        tags['GPSLatitude'].push([numerator, denominator]);
+      }
     }
     if (tag === 0x0003) tags['GPSLongitudeRef'] = value;
     if (tag === 0x0004 && numValues === 3) {
-      tags['GPSLongitude'] = [
-        [dataView.getUint32(valueOffset, bigEnd), dataView.getUint32(valueOffset + 4, bigEnd)],
-        [dataView.getUint32(valueOffset + 8, bigEnd), dataView.getUint32(valueOffset + 12, bigEnd)],
-        [dataView.getUint32(valueOffset + 16, bigEnd), dataView.getUint32(valueOffset + 20, bigEnd)]
-      ];
+      tags['GPSLongitude'] = [];
+      for (let j = 0; j < 3; j++) {
+        const offset = valueOffset + (j * 8);
+        const numerator = dataView.getUint32(offset, isBigEndian);
+        const denominator = dataView.getUint32(offset + 4, isBigEndian);
+        tags['GPSLongitude'].push([numerator, denominator]);
+      }
+    }
+  }
+
+  // Sub-IFD (GPS-IFD) lesen
+  if (subIFDOffset !== undefined && subIFDOffset !== 0) {
+    const gpsIFDOffset = dataView.getUint32(dirOffset + 2 + (numEntries * 12), isBigEndian) + tiffOffset;
+    const gpsNumEntries = dataView.getUint16(gpsIFDOffset, isBigEndian);
+
+    for (let i = 0; i < gpsNumEntries; i++) {
+      const entryOffset = gpsIFDOffset + 2 + (i * 12);
+      const tag = dataView.getUint16(entryOffset, isBigEndian);
+      const type = dataView.getUint16(entryOffset + 2, isBigEndian);
+      const numValues = dataView.getUint32(entryOffset + 4, isBigEndian);
+      const valueOffset = dataView.getUint32(entryOffset + 8, isBigEndian) + tiffOffset;
+
+      // GPS-Tags
+      if (tag === 0x0001 && type === 2) { // GPSLatitudeRef
+        tags['GPSLatitudeRef'] = '';
+        for (let j = 0; j < numValues - 1; j++) {
+          const charCode = dataView.getUint8(valueOffset + j);
+          if (charCode === 0) break;
+          tags['GPSLatitudeRef'] += String.fromCharCode(charCode);
+        }
+      }
+      if (tag === 0x0002 && type === 5 && numValues === 3) { // GPSLatitude
+        tags['GPSLatitude'] = [];
+        for (let j = 0; j < 3; j++) {
+          const offset = valueOffset + (j * 8);
+          const numerator = dataView.getUint32(offset, isBigEndian);
+          const denominator = dataView.getUint32(offset + 4, isBigEndian);
+          tags['GPSLatitude'].push([numerator, denominator]);
+        }
+      }
+      if (tag === 0x0003 && type === 2) { // GPSLongitudeRef
+        tags['GPSLongitudeRef'] = '';
+        for (let j = 0; j < numValues - 1; j++) {
+          const charCode = dataView.getUint8(valueOffset + j);
+          if (charCode === 0) break;
+          tags['GPSLongitudeRef'] += String.fromCharCode(charCode);
+        }
+      }
+      if (tag === 0x0004 && type === 5 && numValues === 3) { // GPSLongitude
+        tags['GPSLongitude'] = [];
+        for (let j = 0; j < 3; j++) {
+          const offset = valueOffset + (j * 8);
+          const numerator = dataView.getUint32(offset, isBigEndian);
+          const denominator = dataView.getUint32(offset + 4, isBigEndian);
+          tags['GPSLongitude'].push([numerator, denominator]);
+        }
+      }
     }
   }
 
   return tags;
+}
+
+/**
+ * EXIF-Daten aus ArrayBuffer lesen
+ */
+function readEXIFData(arrayBuffer: ArrayBuffer): any {
+  const dataView = new DataView(arrayBuffer);
+  const exif: any = {};
+
+  // Prüfen ob JPEG
+  if (dataView.getUint16(0, false) !== 0xFFD8) {
+    console.log('Keine JPEG-Datei');
+    return null;
+  }
+
+  // Nach EXIF-Marker suchen
+  const length = dataView.byteLength;
+  let offset = 2;
+
+  while (offset < length) {
+    // Marker finden
+    if (dataView.getUint8(offset) !== 0xFF) {
+      offset++;
+      continue;
+    }
+
+    const marker = dataView.getUint8(offset + 1);
+
+    // EXIF-Marker (0xE1)
+    if (marker === 0xE1) {
+      const size = dataView.getUint16(offset + 2, false);
+
+      // Prüfen ob "Exif" String
+      if (dataView.getUint32(offset + 4, false) !== 0x45786966) {
+        offset += 2 + size;
+        continue;
+      }
+
+      const tiffOffset = offset + 10;
+
+      // TIFF Header
+      const byteOrder = dataView.getUint16(tiffOffset, false);
+      const isBigEndian = byteOrder === 0x4D4D; // "MM" = Motorola (Big Endian)
+
+      if (byteOrder !== 0x4D4D && byteOrder !== 0x4949) {
+        console.log('Ungültiges TIFF-Byte-Order');
+        return null;
+      }
+
+      // 42 Check
+      if (dataView.getUint16(tiffOffset + 2, isBigEndian) !== 0x002A) {
+        console.log('Ungültiges TIFF-Magic-Number');
+        return null;
+      }
+
+      // Erste IFD Offset
+      const firstIFDOffset = dataView.getUint32(tiffOffset + 4, isBigEndian) + tiffOffset;
+      const numEntries = dataView.getUint16(firstIFDOffset, isBigEndian);
+
+      // GPS-IFD Offset finden
+      let gpsIFDOffset = 0;
+      for (let i = 0; i < numEntries; i++) {
+        const entryOffset = firstIFDOffset + 2 + (i * 12);
+        const tag = dataView.getUint16(entryOffset, isBigEndian);
+
+        if (tag === 0x8825) { // GPS IFD Pointer
+          gpsIFDOffset = dataView.getUint32(entryOffset + 8, isBigEndian);
+          break;
+        }
+      }
+
+      // GPS-IFD lesen
+      if (gpsIFDOffset !== 0) {
+        const gpsIFDOffsetActual = gpsIFDOffset + tiffOffset;
+        const gpsNumEntries = dataView.getUint16(gpsIFDOffsetActual, isBigEndian);
+
+        for (let i = 0; i < gpsNumEntries; i++) {
+          const entryOffset = gpsIFDOffsetActual + 2 + (i * 12);
+          const tag = dataView.getUint16(entryOffset, isBigEndian);
+          const type = dataView.getUint16(entryOffset + 2, isBigEndian);
+          const numValues = dataView.getUint32(entryOffset + 4, isBigEndian);
+
+          let valueOffset = dataView.getUint32(entryOffset + 8, isBigEndian) + tiffOffset;
+
+          // Kleine Werte können direkt im Entry stehen
+          if (numValues * 4 <= 4) {
+            valueOffset = entryOffset + 8;
+          }
+
+          // GPS-Tags
+          if (tag === 0x0001 && type === 2) { // GPSLatitudeRef
+            exif['GPSLatitudeRef'] = '';
+            for (let j = 0; j < numValues - 1; j++) {
+              const charCode = dataView.getUint8(valueOffset + j);
+              if (charCode === 0) break;
+              exif['GPSLatitudeRef'] += String.fromCharCode(charCode);
+            }
+          }
+          if (tag === 0x0002 && type === 5 && numValues === 3) { // GPSLatitude
+            exif['GPSLatitude'] = [];
+            for (let j = 0; j < 3; j++) {
+              const offset = valueOffset + (j * 8);
+              const numerator = dataView.getUint32(offset, isBigEndian);
+              const denominator = dataView.getUint32(offset + 4, isBigEndian);
+              exif['GPSLatitude'].push([numerator, denominator]);
+            }
+          }
+          if (tag === 0x0003 && type === 2) { // GPSLongitudeRef
+            exif['GPSLongitudeRef'] = '';
+            for (let j = 0; j < numValues - 1; j++) {
+              const charCode = dataView.getUint8(valueOffset + j);
+              if (charCode === 0) break;
+              exif['GPSLongitudeRef'] += String.fromCharCode(charCode);
+            }
+          }
+          if (tag === 0x0004 && type === 5 && numValues === 3) { // GPSLongitude
+            exif['GPSLongitude'] = [];
+            for (let j = 0; j < 3; j++) {
+              const offset = valueOffset + (j * 8);
+              const numerator = dataView.getUint32(offset, isBigEndian);
+              const denominator = dataView.getUint32(offset + 4, isBigEndian);
+              exif['GPSLongitude'].push([numerator, denominator]);
+            }
+          }
+        }
+      }
+
+      break;
+    }
+
+    offset += 2 + dataView.getUint16(offset + 2, false);
+  }
+
+  if (!exif.GPSLatitude || !exif.GPSLongitude) {
+    console.log('Keine GPS-Daten gefunden');
+    return null;
+  }
+
+  console.log('EXIF-Daten gefunden:', {
+    latitude: exif.GPSLatitude,
+    latitudeRef: exif.GPSLatitudeRef,
+    longitude: exif.GPSLongitude,
+    longitudeRef: exif.GPSLongitudeRef
+  });
+
+  return exif;
 }
 
 /**
@@ -139,8 +316,7 @@ export async function extractGPSFromImage(file: File): Promise<{ latitude: numbe
     reader.onload = (e) => {
       try {
         const arrayBuffer = e.target?.result as ArrayBuffer;
-        const dataView = new DataView(arrayBuffer);
-        const exifData = readEXIFData(dataView);
+        const exifData = readEXIFData(arrayBuffer);
 
         if (!exifData || !exifData.GPSLatitude || !exifData.GPSLongitude) {
           resolve(null); // Keine GPS-Daten
