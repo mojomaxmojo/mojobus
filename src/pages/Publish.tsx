@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Globe, Navigation } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,7 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
+import { extractGPSFromImage, reverseGeocode, createNostrGPSTags, formatCoordinates, type Coordinates, type LocationData } from '@/lib/geocoding';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -53,17 +54,19 @@ const subCategories = {
   natur: ['tiere', 'blumen', 'strand', 'berge', 'wald', 'meer']
 };
 
-interface MediaFile {
-  id: string;
-  file: File;
-  url?: string;
-  name: string;
-  type: string;
-  size: number;
-  preview?: string;
-  uploaded?: boolean;
-  tags?: string[];
-}
+ interface MediaFile {
+   id: string;
+   file: File;
+   url?: string;
+   name: string;
+   type: string;
+   size: number;
+   preview?: string;
+   uploaded?: boolean;
+   tags?: string[];
+   gpsCoordinates?: Coordinates;
+   locationData?: LocationData;
+ }
 
 interface UploadProgress {
   current: number;
@@ -187,6 +190,48 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
     }));
 
+    // GPS-Daten aus Bildern extrahieren
+    newFiles.forEach(async (mediaFile) => {
+      if (mediaFile.type === 'image') {
+        try {
+          const coordinates = await extractGPSFromImage(mediaFile.file);
+          if (coordinates) {
+            console.log('[GPS] GPS-Daten gefunden:', coordinates);
+            mediaFile.gpsCoordinates = coordinates;
+
+            // Reverse Geocoding für Adresse
+            const locationData = await reverseGeocode(coordinates);
+            if (locationData) {
+              mediaFile.locationData = locationData;
+              console.log('[GPS] Standort:', locationData.formatted);
+
+              // Auto-fill Location-Feld mit Adresse
+              if (!location) {
+                setLocation(locationData.formatted || '');
+              }
+
+              // Auto-select Land (wenn vorhanden)
+              if (locationData.address?.country_code && !selectedCountry) {
+                const countryMap: Record<string, string> = {
+                  'PT': 'portugal',
+                  'ES': 'spanien',
+                  'FR': 'frankreich',
+                  'BE': 'belgien',
+                  'DE': 'deutschland',
+                  'LU': 'luxemburg',
+                };
+                if (countryMap[locationData.address.country_code]) {
+                  setSelectedCountry(countryMap[locationData.address.country_code]);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[GPS] Fehler beim Extrahieren:', error);
+        }
+      }
+    });
+
     setFiles(prev => [...prev, ...newFiles]);
   };
 
@@ -297,13 +342,26 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         !countryList.includes(tag.replace('#', '').toLowerCase())
       );
 
-      // Collect all tags from different sources
-      const allTags = [
-        ...selectedSubTags,
-        ...detailedTags,
-        ...customTagsWithoutCountry,
-        ...(selectedCountry ? getCountryTag(selectedCountry) : []) // Country-Tags nur hinzufügen, wenn gewählt
-      ];
+       // Collect all tags from different sources
+       const allTags = [
+         ...selectedSubTags,
+         ...detailedTags,
+         ...customTagsWithoutCountry,
+         ...(selectedCountry ? getCountryTag(selectedCountry) : []), // Country-Tags nur hinzufügen, wenn gewählt
+       ];
+
+       // Extract GPS tags from files
+       const gpsTags: string[][] = [];
+       files.forEach(file => {
+         if (file.locationData) {
+           const locationGPSTags = createNostrGPSTags(file.locationData);
+           gpsTags.push(...locationGPSTags);
+           console.log('[GPS] Tags für Datei:', file.name, locationGPSTags);
+         }
+       });
+
+       // Add GPS tags to allTags
+       allTags.push(...gpsTags);
 
       // Always add #mojobus as mandatory tag for /veroeffentlichen
       const mojobusTag = 'mojobus';
@@ -456,20 +514,31 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                       {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
                       {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
                       {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
-                    </div>
-                  )}
-                  <div className="text-sm">
-                    <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeFile(file.id)}
-                  >
-                    Löschen
-                  </Button>
-                </div>
+                     </div>
+                   )}
+                   <div className="text-sm flex-1">
+                     <p className="font-medium truncate">{file.name}</p>
+                     <p className="text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                     {file.gpsCoordinates && (
+                       <Badge variant="secondary" className="mt-1 text-xs flex items-center gap-1">
+                         <MapPin className="h-3 w-3" />
+                         GPS: {formatCoordinates(file.gpsCoordinates)}
+                       </Badge>
+                     )}
+                     {file.locationData && file.locationData.address?.display_name && (
+                       <p className="text-xs text-gray-500 mt-1 truncate" title={file.locationData.address.display_name}>
+                         {file.locationData.address.display_name}
+                       </p>
+                     )}
+                   </div>
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     onClick={() => removeFile(file.id)}
+                   >
+                     Löschen
+                   </Button>
+                 </div>
               ))}
             </div>
           </CardContent>
