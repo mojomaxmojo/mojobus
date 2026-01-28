@@ -90,6 +90,9 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
+  const [isExtractingGPS, setIsExtractingGPS] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<string>('');
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
@@ -190,49 +193,106 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
     }));
 
-    // GPS-Daten aus Bildern extrahieren
-    newFiles.forEach(async (mediaFile) => {
-      if (mediaFile.type === 'image') {
+    // GPS-Daten werden NICHT mehr automatisch extrahiert
+    // Wird erst beim Klick auf "Medien hochladen" Button ausgelöst
+
+    setFiles(prev => [...prev, ...newFiles]);
+  };
+
+  /**
+   * GPS-Daten aus Bildern extrahieren und Geocoding durchführen
+   * Wird beim Klick auf "Medien hochladen" Button aufgerufen
+   */
+  const extractGPSAndGeocode = async (): Promise<void> => {
+    const imageFiles = files.filter(f => f.type === 'image');
+    if (imageFiles.length === 0) {
+      console.log('[GPS] Keine Bilder vorhanden, GPS-Extraktion übersprungen');
+      return;
+    }
+
+    setIsExtractingGPS(true);
+    setGpsStatus('📡 GPS-Daten werden aus Bildern extrahiert...');
+
+    try {
+      // GPS aus allen Bildern extrahieren
+      for (let i = 0; i < imageFiles.length; i++) {
+        const mediaFile = imageFiles[i];
+        setGpsStatus(`📡 GPS extrahieren aus Bild ${i + 1}/${imageFiles.length}...`);
+
         try {
           const coordinates = await extractGPSFromImage(mediaFile.file);
           if (coordinates) {
-            console.log('[GPS] GPS-Daten gefunden:', coordinates);
+            console.log('[GPS] GPS-Daten gefunden für:', mediaFile.name, coordinates);
             mediaFile.gpsCoordinates = coordinates;
 
-            // Reverse Geocoding für Adresse
-            const locationData = await reverseGeocode(coordinates);
-            if (locationData) {
-              mediaFile.locationData = locationData;
-              console.log('[GPS] Standort:', locationData.formatted);
+            setGpsStatus(`📡 GPS gefunden für "${mediaFile.name}"`);
+          }
+        } catch (error) {
+          console.error('[GPS] Fehler beim Extrahieren aus', mediaFile.name, error);
+        }
+      }
 
-              // Auto-fill Location-Feld mit Adresse
-              if (!location) {
-                setLocation(locationData.formatted || '');
-              }
+      // Prüfen ob GPS-Daten gefunden wurden
+      const filesWithGPS = files.filter(f => f.gpsCoordinates);
+      if (filesWithGPS.length === 0) {
+        setGpsStatus('⚠️ Keine GPS-Daten in den Bildern gefunden');
+        setIsExtractingGPS(false);
+        setTimeout(() => setGpsStatus(''), 3000);
+        return;
+      }
 
-              // Auto-select Land (wenn vorhanden)
-              if (locationData.address?.country_code && !selectedCountry) {
-                const countryMap: Record<string, string> = {
-                  'PT': 'portugal',
-                  'ES': 'spanien',
-                  'FR': 'frankreich',
-                  'BE': 'belgien',
-                  'DE': 'deutschland',
-                  'LU': 'luxemburg',
-                };
-                if (countryMap[locationData.address.country_code]) {
-                  setSelectedCountry(countryMap[locationData.address.country_code]);
-                }
+      // Geocoding für alle gefundenen GPS-Koordinaten
+      setIsExtractingGPS(false);
+      setIsGeocoding(true);
+      setGpsStatus(`🗺️ Geocoding für ${filesWithGPS.length} Standorte...`);
+
+      for (let i = 0; i < filesWithGPS.length; i++) {
+        const mediaFile = filesWithGPS[i];
+        if (mediaFile.gpsCoordinates) {
+          setGpsStatus(`🗺️ Geocoding Standort ${i + 1}/${filesWithGPS.length}...`);
+
+          const locationData = await reverseGeocode(mediaFile.gpsCoordinates);
+          if (locationData) {
+            mediaFile.locationData = locationData;
+            console.log('[GPS] Geocoding Ergebnis für:', mediaFile.name, locationData);
+
+            // Auto-fill Location-Feld mit erster gefundener Adresse
+            if (i === 0 && !location) {
+              setLocation(locationData.formatted || '');
+              console.log('[GPS] Standort-Feld ausgefüllt:', locationData.formatted);
+            }
+
+            // Auto-select Land (wenn vorhanden)
+            if (locationData.address?.country_code && !selectedCountry && i === 0) {
+              const countryMap: Record<string, string> = {
+                'PT': 'portugal',
+                'ES': 'spanien',
+                'FR': 'frankreich',
+                'BE': 'belgien',
+                'DE': 'deutschland',
+                'LU': 'luxemburg',
+              };
+              if (countryMap[locationData.address.country_code]) {
+                setSelectedCountry(countryMap[locationData.address.country_code]);
+                console.log('[GPS] Land ausgewählt:', countryMap[locationData.address.country_code]);
               }
             }
           }
-        } catch (error) {
-          console.error('[GPS] Fehler beim Extrahieren:', error);
         }
       }
-    });
 
-    setFiles(prev => [...prev, ...newFiles]);
+      // Erfolgsmeldung
+      setGpsStatus(`✅ GPS & Standort für ${filesWithGPS.length} Bilder ermittelt`);
+      setTimeout(() => setGpsStatus(''), 5000);
+
+    } catch (error) {
+      console.error('[GPS] Fehler bei GPS-Extraktion:', error);
+      setGpsStatus('❌ Fehler beim Laden der GPS-Daten');
+      setTimeout(() => setGpsStatus(''), 3000);
+    } finally {
+      setIsExtractingGPS(false);
+      setIsGeocoding(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -245,7 +305,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     setFiles(prev => prev.filter(f => f.id !== id));
   };
 
-  const handleSubmit = async () => {
+   const handleSubmit = async () => {
     if (files.length === 0) {
       toast({
         title: 'Fehler',
@@ -254,6 +314,9 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       });
       return;
     }
+
+    // STAGE 0: GPS-Daten aus Bildern extrahieren
+    await extractGPSAndGeocode();
 
     setIsUploading(true);
     setUploadProgress({ current: 0, total: files.length, stage: 'upload', status: '📤 Upload zu Blossom wird gestartet...' });
@@ -962,28 +1025,68 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             </Card>
           )}
 
+          {/* GPS/Geocoding Status */}
+          {(isExtractingGPS || isGeocoding || gpsStatus) && (
+            <Card className="border-2 border-ocean-200 dark:border-ocean-800 bg-ocean-50 dark:bg-ocean-950">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    {isExtractingGPS && (
+                      <div className="flex items-center gap-2 text-ocean-600 dark:text-ocean-400">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        GPS-Daten werden extrahiert...
+                      </div>
+                    )}
+                    {isGeocoding && (
+                      <div className="flex items-center gap-2 text-ocean-600 dark:text-ocean-400">
+                        <Globe className="h-5 w-5 animate-pulse" />
+                        Standort wird ermittelt...
+                      </div>
+                    )}
+                  </div>
+                  {gpsStatus && (
+                    <div className="text-sm text-ocean-700 dark:text-ocean-300 font-medium">
+                      {gpsStatus}
+                    </div>
+                  )}
+                  <Progress
+                    value={isExtractingGPS ? 33 : isGeocoding ? 66 : 100}
+                    className="h-2"
+                  />
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>GPS-Extraktion</span>
+                    <span>Geocoding</span>
+                    <span>Upload</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Button
             onClick={handleSubmit}
             className="w-full"
-            disabled={files.length === 0 || isUploading}
+            disabled={files.length === 0 || isUploading || isExtractingGPS || isGeocoding}
           >
-            {isUploading ? (
+            {isExtractingGPS ? (
               <>
-                {uploadProgress.stage === 'upload' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {uploadProgress.stage === 'publish' && <UploadCloud className="h-4 w-4 mr-2" />}
-                {uploadProgress.stage === 'success' && <CheckCircle className="h-4 w-4 mr-2" />}
-                {uploadProgress.stage === 'error' && <span className="mr-2">⚠️</span>}
-                {!uploadProgress.stage && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {uploadProgress.stage === 'upload' && 'Upload zu Blossom...'}
-                {uploadProgress.stage === 'publish' && 'Post zu Nostr...'}
-                {uploadProgress.stage === 'success' && '✅ Erfolgreich!'}
-                {uploadProgress.stage === 'error' && 'Fehler aufgetreten'}
-                {!uploadProgress.stage && 'Wird verarbeitet...'}
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                GPS extrahieren...
+              </>
+            ) : isGeocoding ? (
+              <>
+                <Globe className="mr-2 h-4 w-4" />
+                Standort ermitteln...
+              </>
+            ) : isUploading ? (
+              <>
+                <UploadCloud className="mr-2 h-4 w-4" />
+                Wird hochgeladen...
               </>
             ) : (
               <>
-                <UploadCloud className="h-4 w-4 mr-2" />
-                Bilder veroeffentlichen
+                <UploadCloud className="mr-2 h-4 w-4" />
+                Medien hochladen und veroeffentlichen
               </>
             )}
           </Button>
