@@ -556,12 +556,39 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         </CardContent>
       </Card>
 
-      {/* Media Preview */}
-      {files.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
-          </CardHeader>
+       {/* Media Preview */}
+       {files.length > 0 && (
+         <Card>
+           <CardHeader>
+             <div className="flex items-center justify-between">
+               <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
+               <Button
+                 variant="outline"
+                 size="sm"
+                 onClick={extractGPSAndGeocode}
+                 disabled={isExtractingGPS || isGeocoding || files.filter(f => f.type === 'image').length === 0}
+                 className="gap-2"
+                 title={`Extrahiert GPS-Koordinaten aus den ${files.filter(f => f.type === 'image').length} Bildern und ermittelt den Standort`}
+               >
+                 {isExtractingGPS ? (
+                   <>
+                     <Loader2 className="h-4 w-4 animate-spin" />
+                     GPS extrahieren...
+                   </>
+                 ) : isGeocoding ? (
+                   <>
+                     <Globe className="h-4 w-4 animate-pulse" />
+                     Standort ermitteln...
+                   </>
+                 ) : (
+                   <>
+                     <MapPin className="h-4 w-4" />
+                     GPS aus {files.filter(f => f.type === 'image').length} {files.filter(f => f.type === 'image').length === 1 ? 'Bild' : 'Bildern'}
+                   </>
+                 )}
+               </Button>
+             </div>
+           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {files.map(file => (
