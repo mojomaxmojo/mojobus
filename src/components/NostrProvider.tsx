@@ -34,14 +34,23 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   // Track seen event IDs for deduplication
   const seenEvents = useRef<Map<string, NostrEvent>>(new Map());
 
-  // Initialize refs when config changes
+  // Initialize NPool for Nostr queries
+  const pool = useRef<NPool | null>(null);
+
+  // Initialize refs and pool when config changes
   useEffect(() => {
+    // Create NPool instance
+    pool.current = new NPool([
+      ...readRelayUrls.current.map((url) => new NRelay1(url)),
+      ...writeRelayUrls.current.map((url) => new NRelay1(url)),
+    ]);
+
     // Verwende autor-spezifische Konfiguration, falls verfügbar
     // Sonst verwende globale Konfiguration
     const useAuthorConfig = authorRelays.isAuthorConfig;
 
     // READ configuration (queries)
-    // IMMER öffentliche Relays für Queries verwenden (niemals nur private author-relays!)
+    // IMMER öffentliche Relays für Queries verwenden (nicht nur private author-relays!)
     // Damit werden ALLE Artikel/Notes angezeigt, egal ob eingeloggt oder nicht
     readRelayUrls.current = config.read?.relayUrls || [];
     readMaxRelays.current = config.read?.maxRelays || 3;
@@ -63,6 +72,64 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
 
     queryClient.resetQueries();
   }, [config, authorRelays]);
+
+  // Deduplication filter for queries
+  const deduplicateEvents = (events: NostrEvent[]): NostrEvent[] => {
+    if (!enableDeduplication.current) {
+      return events;
+    }
+
+    const uniqueEvents: NostrEvent[] = [];
+    const seenIds = new Set<string>();
+
+    for (const event of events) {
+      if (!seenIds.has(event.id)) {
+        seenIds.add(event.id);
+        uniqueEvents.push(event);
+      }
+    }
+
+    return uniqueEvents;
+  };
+
+  // Custom query function with deduplication and timeout
+  const createQueryFunction = () => {
+    return {
+      query: async (filters: any[], signal?: AbortSignal) => {
+        const abortSignal = AbortSignal.any([
+          signal!,
+          AbortSignal.timeout(readQueryTimeout.current) // READ timeout (FAST preset)
+        ]);
+
+        try {
+          const events = await pool.current!.query(filters, { signal: abortSignal });
+
+          // Deduplicate events
+          return deduplicateEvents(events);
+        } catch (error: any) {
+          if (error.name === 'AbortError') {
+          } else {
+            console.error('[NostrProvider] Query error:', error);
+          }
+          throw error;
+        }
+      },
+      // eventRouter(_event: NostrEvent) => {
+      //   WRITE: Use writeRelayUrls for publishing (ULTRA RELIABLE preset)
+      //   const urlsToUse = writeRelayUrls.current && writeRelayUrls.current.length > 0
+      //     ? writeRelayUrls.current
+      //     : ["wss://nos.lol"];
+
+      //   const allRelays = new Set<string>([
+      //     activeRelay.current,
+      //     ...urlsToUse
+      //   ]);
+      //   const publishRelays = Array.from(allRelays).slice(0, writeMaxRelays.current);
+
+      //   return publishRelays;
+      // },
+    };
+  };
 
   return (
     <NostrContext.Provider value={{
