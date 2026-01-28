@@ -2,7 +2,12 @@
  * EXIF und Geolocation Utilities für GPS-Extraktion aus Bildern
  */
 
-import EXIF from 'exif-js';
+// @ts-ignore - exif-js hat kein vollständiges TypeScript Definitions-File
+declare const EXIF: any;
+
+// Importiere exif-js als default export
+import EXIFLib from 'exif-js';
+const EXIF = EXIFLib;
 
 /**
  * GPS-Koordinaten aus EXIF-Daten konvertieren
