@@ -100,7 +100,6 @@
     "dijkstrajs": "^1.0.3",
     "embla-carousel-react": "^8.3.0",
     "estree-util-is-identifier-name": "^3.0.0",
-    "exif-js": "^2.3.0",
     "extend": "^3.0.2",
     "hast-util-from-parse5": "^8.0.3",
     "hast-util-sanitize": "^5.0.2",
