@@ -24,30 +24,36 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     return null;
   }
 
-    try {
-      // Prüfe ob bereits registriert
-      if (registration) {
-        return registration;
-      }
+  try {
+    // Prüfe ob bereits registriert
+    if (registration) {
+      console.log('ℹ️ Service Worker bereits registriert');
+      return registration;
+    }
 
     // Registriere Service Worker
     registration = await navigator.serviceWorker.register(SW_URL, {
       scope: '/',
     });
 
+    console.log('✅ Service Worker registriert:', registration);
+
     // Warte auf Service Worker Activation
     if (registration.waiting) {
+      console.log('ℹ️ Service Worker wartet auf Activation');
       sendMessageToSW({ type: 'SKIP_WAITING' });
     }
 
     // Überwache Service Worker Updates
     registration.addEventListener('updatefound', () => {
+      console.log('ℹ️ Service Worker Update gefunden');
       const newWorker = registration!.installing;
 
       if (newWorker) {
         newWorker.addEventListener('statechange', () => {
+          console.log('ℹ️ Service Worker Status:', newWorker.state);
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // Neuer Service Worker verfügbar
+            console.log('✨ Neuer Service Worker verfügbar - Bitte Seite neu laden');
           }
         });
       }
@@ -75,6 +81,7 @@ export async function unregisterServiceWorker(): Promise<void> {
 
   if (registration) {
     await registration.unregister();
+    console.log('✅ Service Worker unregistriert');
     registration = null;
   }
 }
@@ -105,6 +112,7 @@ export function sendMessageToSW(message: any): Promise<any> {
 export async function clearCaches(): Promise<void> {
   try {
     await sendMessageToSW({ type: 'CLEAR_CACHE' });
+    console.log('✅ Alle Caches geleert');
   } catch (error) {
     console.error('❌ Caches leeren fehlgeschlagen:', error);
   }
@@ -158,10 +166,12 @@ export function addOnlineStatusListener(
   onOffline?: () => void
 ): () => void {
   const handleOnline = () => {
+    console.log('🌐 Gerät ist jetzt online');
     if (onOnline) onOnline();
   };
 
   const handleOffline = () => {
+    console.log('📡 Gerät ist jetzt offline');
     if (onOffline) onOffline();
   };
 
@@ -185,6 +195,7 @@ export async function updateCacheName(): Promise<void> {
     const response = await sendMessageToSW({ type: 'GET_CACHE_VERSION' });
     if (response?.name) {
       currentCacheName = response.name;
+      console.log('✅ Cache-Name aktualisiert:', currentCacheName);
     }
   } catch (error) {
     console.warn('⚠️ Cache-Name konnte nicht aktualisiert werden:', error);
@@ -231,6 +242,7 @@ export async function addToCache(url: string): Promise<void> {
     if (response.ok) {
       const cache = await caches.open(currentCacheName);
       await cache.put(url, response);
+      console.log('✅ URL zum Cache hinzugefügt:', url);
     }
   } catch (error) {
     console.error('❌ URL zum Cache hinzufügen fehlgeschlagen:', error);

@@ -78,7 +78,15 @@ export function Notes() {
 
   // Fetch more notes when scroll trigger is visible
   useEffect(() => {
+    console.log('👀 Notes Infinite Scroll Trigger:', {
+      inView,
+      hasNextPage,
+      isFetchingNextPage,
+      shouldFetch: inView && hasNextPage && !isFetchingNextPage
+    });
+
     if (inView && hasNextPage && !isFetchingNextPage) {
+      console.log('📥 Fetching next notes page...');
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);

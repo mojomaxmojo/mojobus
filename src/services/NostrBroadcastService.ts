@@ -33,6 +33,7 @@ export class NostrBroadcastService {
         window.webkit.messageHandlers['nostr-broadcast'].postMessage(
           JSON.stringify(message)
         );
+        console.log(`Broadcasted content update for ${dTag}`);
       } catch (error) {
         console.error('Failed to broadcast content update:', error);
       }
@@ -74,6 +75,7 @@ export class NostrBroadcastService {
         window.webkit.messageHandlers['nostr-broadcast'].postMessage(
           JSON.stringify(message)
         );
+        console.log(`Broadcasted edit session start for ${contentId}`);
       } catch (error) {
         console.error('Failed to broadcast edit session start:', error);
       }
@@ -102,6 +104,7 @@ export class NostrBroadcastService {
         window.webkit.messageHandlers['nostr-broadcast'].postMessage(
           JSON.stringify(message)
         );
+        console.log(`Broadcasted edit session end for ${contentId}`);
       } catch (error) {
         console.error('Failed to broadcast edit session end:', error);
       }
@@ -130,6 +133,7 @@ export class NostrBroadcastService {
         window.webkit.messageHandlers['nostr-broadcast'].postMessage(
           JSON.stringify(message)
         );
+        console.log(`Broadcasted content created for ${contentId}`);
       } catch (error) {
         console.error('Failed to broadcast content created:', error);
       }

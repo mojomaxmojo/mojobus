@@ -34,23 +34,14 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   // Track seen event IDs for deduplication
   const seenEvents = useRef<Map<string, NostrEvent>>(new Map());
 
-  // Initialize NPool for Nostr queries
-  const pool = useRef<NPool | null>(null);
-
-  // Initialize refs and pool when config changes
+  // Initialize refs when config changes
   useEffect(() => {
-    // Create NPool instance
-    pool.current = new NPool([
-      ...readRelayUrls.current.map((url) => new NRelay1(url)),
-      ...writeRelayUrls.current.map((url) => new NRelay1(url)),
-    ]);
-
     // Verwende autor-spezifische Konfiguration, falls verfügbar
     // Sonst verwende globale Konfiguration
     const useAuthorConfig = authorRelays.isAuthorConfig;
 
     // READ configuration (queries)
-    // IMMER öffentliche Relays für Queries verwenden (nicht nur private author-relays!)
+    // IMMER öffentliche Relays für Queries verwenden (niemals nur private author-relays!)
     // Damit werden ALLE Artikel/Notes angezeigt, egal ob eingeloggt oder nicht
     readRelayUrls.current = config.read?.relayUrls || [];
     readMaxRelays.current = config.read?.maxRelays || 3;
@@ -71,7 +62,73 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
     enableDeduplication.current = config.enableDeduplication || false;
 
     queryClient.resetQueries();
-  }, [config, authorRelays]);
+
+    console.log('[NostrProvider] Config updated:', {
+      author: authorRelays.authorId,
+      isAuthorConfig: useAuthorConfig,
+      read: {
+        relayUrls: readRelayUrls.current,
+        maxRelays: readMaxRelays.current,
+        queryTimeout: readQueryTimeout.current,
+      },
+      write: {
+        relayUrls: writeRelayUrls.current,
+        maxRelays: writeMaxRelays.current,
+        activeRelay: activeRelay.current,
+      },
+      shared: {
+        enableDeduplication: enableDeduplication.current,
+      },
+    });
+  }, [config.read, config.write, config.enableDeduplication, authorRelays, queryClient]);
+
+  // Create NPool instance only once
+  const pool = useRef<NPool | undefined>(undefined);
+
+  // Initialize NPool only once
+  if (!pool.current) {
+    pool.current = new NPool({
+      open(url: string) {
+        return new NRelay1(url);
+      },
+      reqRouter(filters) {
+        // READ: Use readRelayUrls for queries (FAST preset)
+        const urlsToUse = readRelayUrls.current && readRelayUrls.current.length > 0
+          ? readRelayUrls.current
+          : ["wss://nos.lol"];
+
+        const selectedRelays = urlsToUse.slice(0, readMaxRelays.current);
+        const relayMap = new Map<string, typeof filters>();
+
+        selectedRelays.forEach(relayUrl => {
+          relayMap.set(relayUrl, filters);
+        });
+
+        console.log('[NostrProvider] Querying relays (READ - FAST):', selectedRelays);
+        return relayMap;
+      },
+      eventRouter(_event: NostrEvent) {
+        // WRITE: Use writeRelayUrls for publishing (ULTRA RELIABLE preset)
+        const urlsToUse = writeRelayUrls.current && writeRelayUrls.current.length > 0
+          ? writeRelayUrls.current
+          : ["wss://nos.lol"];
+
+        const allRelays = new Set<string>([
+          activeRelay.current,
+          ...urlsToUse
+        ]);
+        const publishRelays = Array.from(allRelays).slice(0, writeMaxRelays.current);
+
+        console.log('[NostrProvider] Publishing to relays (WRITE - ULTRA RELIABLE):', publishRelays);
+        return publishRelays;
+      },
+    });
+
+    console.log('[NostrProvider] NPool initialized with', {
+      readRelays: readRelayUrls.current.length,
+      writeRelays: writeRelayUrls.current.length,
+    });
+  }
 
   // Deduplication filter for queries
   const deduplicateEvents = (events: NostrEvent[]): NostrEvent[] => {
@@ -86,7 +143,14 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
       if (!seenIds.has(event.id)) {
         seenIds.add(event.id);
         uniqueEvents.push(event);
+      } else {
+        console.log('[NostrProvider] Duplicate event filtered:', event.id);
       }
+    }
+
+    const duplicates = events.length - uniqueEvents.length;
+    if (duplicates > 0) {
+      console.log(`[NostrProvider] Filtered ${duplicates} duplicate events`);
     }
 
     return uniqueEvents;
@@ -101,6 +165,8 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
           AbortSignal.timeout(readQueryTimeout.current) // READ timeout (FAST preset)
         ]);
 
+        console.log('[NostrProvider] Executing query with timeout:', readQueryTimeout.current);
+
         try {
           const events = await pool.current!.query(filters, { signal: abortSignal });
 
@@ -108,26 +174,13 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
           return deduplicateEvents(events);
         } catch (error: any) {
           if (error.name === 'AbortError') {
+            console.log('[NostrProvider] Query timeout:', readQueryTimeout.current);
           } else {
             console.error('[NostrProvider] Query error:', error);
           }
           throw error;
         }
       },
-      // eventRouter(_event: NostrEvent) => {
-      //   WRITE: Use writeRelayUrls for publishing (ULTRA RELIABLE preset)
-      //   const urlsToUse = writeRelayUrls.current && writeRelayUrls.current.length > 0
-      //     ? writeRelayUrls.current
-      //     : ["wss://nos.lol"];
-
-      //   const allRelays = new Set<string>([
-      //     activeRelay.current,
-      //     ...urlsToUse
-      //   ]);
-      //   const publishRelays = Array.from(allRelays).slice(0, writeMaxRelays.current);
-
-      //   return publishRelays;
-      // },
     };
   };
 

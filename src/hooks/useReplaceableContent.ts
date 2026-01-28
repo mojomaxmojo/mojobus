@@ -133,6 +133,9 @@ export function useReplaceableContent({ dTag, limit = 50 }: UseReplaceableConten
 
       return event;
     },
+    onSuccess: () => {
+      console.log(`Content successfully saved for d-tag: ${dTag}`);
+    },
     onError: (error) => {
       toast({
         title: 'Fehler beim Speichern',

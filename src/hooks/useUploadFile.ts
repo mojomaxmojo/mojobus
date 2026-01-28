@@ -25,14 +25,31 @@ export function useUploadFile() {
       const shouldOptimize = enableOptimization !== 'false' && shouldOptimizeImage(file);
 
       if (shouldOptimize) {
+        console.log('🖼️ Image optimization enabled, processing file...');
+        console.log('Original file:', {
+          name: file.name,
+          size: `${(file.size / 1024).toFixed(2)} KB`,
+          type: file.type,
+        });
+
         try {
           // Optimiere das Bild mit browser-image-compression
           fileToUpload = await imageCompression(file, imageOptimizationConfig);
+
+          console.log('✅ Image optimization completed:', {
+            name: fileToUpload.name,
+            originalSize: `${(file.size / 1024).toFixed(2)} KB`,
+            optimizedSize: `${(fileToUpload.size / 1024).toFixed(2)} KB`,
+            compressionRatio: `${((1 - fileToUpload.size / file.size) * 100).toFixed(1)}%`,
+            format: fileToUpload.type,
+          });
         } catch (optimizationError) {
           console.warn('⚠️ Image optimization failed, uploading original file:', optimizationError);
           // Bei Fehler das Original hochladen
           fileToUpload = file;
         }
+      } else {
+        console.log('📤 Skipping image optimization (disabled or not applicable)');
       }
 
       // Hole autor-spezifische Blossom-Server-Konfiguration
@@ -46,6 +63,18 @@ export function useUploadFile() {
       // Backup-Server (immer primal.net)
       const backupServer = blossomConfig?.backupServer || BACKUP_BLOSSOM_SERVER;
 
+      console.log('Starting upload with BlossomUploader...');
+      console.log('File details:', {
+        name: fileToUpload.name,
+        size: fileToUpload.size,
+        type: fileToUpload.type,
+        lastModified: fileToUpload.lastModified,
+        isOptimized: fileToUpload !== file,
+      });
+      console.log('Primary blossom servers:', primaryServers);
+      console.log('Backup blossom server:', backupServer);
+      console.log('Using blossom servers:', blossomConfig ? `Author-specific (${blossomConfig.authorId})` : 'Default');
+
       // Uploade auf primäre Server
       const primaryUploader = new BlossomUploader({
         servers: primaryServers,
@@ -53,7 +82,9 @@ export function useUploadFile() {
       });
 
       try {
+        console.log('Uploading to primary servers...');
         const primaryTags = await primaryUploader.upload(fileToUpload);
+        console.log('Primary upload completed, tags:', primaryTags);
 
         // Extrahiere die URL vom primären Upload
         const primaryUrl = primaryTags.find(tag => Array.isArray(tag) && tag[0] === 'url')?.[1];
@@ -63,6 +94,8 @@ export function useUploadFile() {
         }
 
         // Uploade auf Backup-Server (parallel)
+        console.log('Uploading to backup server:', backupServer);
+
         try {
           const backupUploader = new BlossomUploader({
             servers: [backupServer],
@@ -70,6 +103,7 @@ export function useUploadFile() {
           });
 
           const backupTags = await backupUploader.upload(fileToUpload);
+          console.log('Backup upload completed, tags:', backupTags);
 
           // Kombiniere Tags: Primäre Tags + Backup URL
           const combinedTags = [
@@ -77,6 +111,7 @@ export function useUploadFile() {
             ['backup_url', backupServer], // Markiere Backup-Server
           ];
 
+          console.log('Combined tags:', combinedTags);
           return combinedTags;
         } catch (backupError) {
           console.warn('Backup upload failed, but primary upload succeeded:', backupError);

@@ -27,6 +27,7 @@ export class ContentManagerService {
     });
 
     await this.nostr.publish(event);
+    console.log(`Created replaceable content with d-tag: ${dTag}`);
 
     return event;
   }

@@ -46,5 +46,8 @@ export function useNostrDelete(): UseMutationResult<NostrEvent, Error, DeleteEve
     onError: (error) => {
       console.error("Failed to delete event:", error);
     },
+    onSuccess: (data) => {
+      console.log("Delete event published successfully:", data);
+    },
   });
 }

@@ -77,6 +77,9 @@ export function RelaySelector() {
     }
 
     try {
+      console.log("Applying relay preset:", preset);
+      console.log("New relay configuration:", presetConfig);
+
       // Apply preset to both READ and WRITE configuration
       const readRelayUrls = presetConfig.relayUrls || [];
       const readMaxRelays = presetConfig.maxRelays || 1;

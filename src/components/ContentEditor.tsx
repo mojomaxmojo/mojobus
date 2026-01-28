@@ -28,10 +28,11 @@ export function ContentEditor({ dTag, initialContent = '', onSave, mode = 'creat
   useEffect(() => {
     if (mode === 'edit' && content !== currentContent) {
       const timeoutId = setTimeout(async () => {
-         try {
-           await updateContent(content);
-           setLastSaveTime(Date.now());
-         } catch (error) {
+        try {
+          await updateContent(content);
+          setLastSaveTime(Date.now());
+          console.log(`Auto-saved at ${new Date().toLocaleTimeString()}`);
+        } catch (error) {
           console.error('Auto-save failed:', error);
         }
       }, 2000); // 2 Sekunden Verzögerung

@@ -37,6 +37,7 @@ function isAlreadyOptimized(imageUrl: string): boolean {
         url.hostname.includes('imgproxy.mojobus.co') ||
         url.hostname.includes('cloudflareimages.cloudflare.com') ||
         url.hostname.includes('24242.io')) { // Blossom Server ausnehmen
+      console.log('[imageUtils] URL already optimized or from Blossom:', imageUrl.substring(0, 80) + '...');
       return true;
     }
 

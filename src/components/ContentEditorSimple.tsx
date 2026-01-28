@@ -41,13 +41,15 @@ export function ContentEditorSimple({ dTag, initialContent = '', mode = 'create'
         onSave(content);
       }
 
-       toast({
-         title: 'Inhalt gespeichert',
-         description: mode === 'create' ? 'Neuer Inhalt wurde erfolgreich erstellt.' : 'Inhalt wurde erfolgreich aktualisiert.',
-         duration: 3000,
-         variant: 'default'
-       });
-     } catch (error) {
+      toast({
+        title: 'Inhalt gespeichert',
+        description: mode === 'create' ? 'Neuer Inhalt wurde erfolgreich erstellt.' : 'Inhalt wurde erfolgreich aktualisiert.',
+        duration: 3000,
+        variant: 'default'
+      });
+
+      console.log(`Content saved: ${mode === 'create' ? 'create' : 'update'}`, content);
+    } catch (error) {
       console.error('Save failed:', error);
       toast({
         title: 'Fehler beim Speichern',
