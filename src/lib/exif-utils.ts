@@ -1,80 +1,11 @@
 /**
  * EXIF und Geolocation Utilities für GPS-Extraktion aus Bildern
- * Ultimativer robuster Parser für alle GPS-Formate
+ * Korrigierte EXIF-Parsing mit genauerem Offset-Management
  */
-
-/**
- * Prüfen, ob Wert als Text-Koordinate (Google Pixel Format)
- * Beispiel: "37º 4' 47.04" N
- */
-function isTextCoordinate(value: any): boolean {
-  if (typeof value === 'string') {
-    return value.includes('º') || value.includes("'") || value.includes('"');
-  }
-  return false;
-}
-
-/**
- * Text-Koordinaten im Google Pixel Format parsen
- * Beispiel: "37º 4' 47.04" N
- */
-function parseTextCoordinate(text: string): number[] | null {
-  try {
-    console.log('Parsen Text-Koordinate:', text);
-
-    // Versuch 1: Muster mit Grad-Symbol º
-    let match = text.match(/(\d+\.?\d*)\s*º\s*(\d+)\s*['′]\s*(\d+\.?\d*)\s*"([NSEW])/i);
-    if (match) {
-      const [, degrees, minutes, seconds, ref] = match;
-      const [wholeSeconds, fractionalSeconds] = seconds.split('.');
-      const secs = parseFloat(`${wholeSeconds}.${fractionalSeconds}`);
-
-      console.log('Geparst mit º Muster:', { degrees, minutes, seconds: seconds.toFixed(4), ref });
-
-      let dd = parseFloat(degrees) + parseFloat(minutes) / 60 + secs / 3600;
-      if (ref.toUpperCase() === 'S' || ref.toUpperCase() === 'W') {
-        dd = dd * -1;
-      }
-
-      console.log('DD Ergebnis:', dd);
-
-      // Als Rational-Array zurückgeben (numer/denominator)
-      const denominator = 1000000; // Hohe Genauigkeit
-      const numerator = Math.round(dd * denominator);
-      return [[numerator, denominator], [60, 1], [3600, 1]];
-    }
-
-    // Versuch 2: Alternative Muster
-    match = text.match(/(\d+)\s*deg\s+(\d+)\s*['′]\s*(\d+(?:\.\d+)?)\s*"([NSEW])/i);
-    if (match) {
-      const [, degrees, minutes, seconds, ref] = match;
-      const secs = parseFloat(seconds);
-
-      console.log('Geparst mit deg Muster:', { degrees, minutes, seconds, ref });
-
-      let dd = parseFloat(degrees) + parseFloat(minutes) / 60 + secs / 3600;
-      if (ref.toUpperCase() === 'S' || ref.toUpperCase() === 'W') {
-        dd = dd * -1;
-      }
-
-      console.log('DD Ergebnis:', dd);
-
-      const denominator = 1000000;
-      const numerator = Math.round(dd * denominator);
-      return [[numerator, denominator], [60, 1], [3600, 1]];
-    }
-
-    console.log('Kein gültiges Text-Format gefunden');
-    return null;
-  } catch (error) {
-    console.error('Fehler beim Parsen der Text-Koordinate:', error);
-    return null;
-  }
-}
 
 /**
  * EXIF-Daten aus ArrayBuffer lesen
- * Sehr robuster Parser mit umfangreicher Fehlerbehandlung
+ * Robuster Parser mit korrigiertem Offset-Management
  */
 function readEXIFData(arrayBuffer: ArrayBuffer): any {
   try {
@@ -115,7 +46,7 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
         offset += 2;
 
         // Sicherheitsprüfung
-        if (offset + 4 > length) {
+        if (offset + 8 > length) {
           console.log('EXIF-Header würde Lesen überschreiten');
           offset += markerSize - 4;
           continue;
@@ -128,10 +59,11 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
         }
 
         exifFound = true;
-        offset += 4;
+        offset += 4; // "Exif" überspringen
 
-        console.log('EXIF-Marker gefunden bei offset:', (offset - 4).toString(16));
+        console.log('✅ EXIF-Marker gefunden bei offset:', (offset - 4).toString(16));
         console.log('EXIF-Marker Größe:', markerSize);
+        console.log('TIFF-Header beginnt bei offset:', offset.toString(16));
 
         // TIFF-Header lesen
         if (offset + 2 > length) {
@@ -141,15 +73,18 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
         }
 
         const byteOrder = dataView.getUint16(offset, false);
+        console.log('Raw byteOrder Wert:', byteOrder.toString(16), 'an offset:', offset.toString(16));
+        
         const isBigEndian = byteOrder === 0x4D4D; // "MM" = Motorola (Big Endian)
 
         if (byteOrder !== 0x4D4D && byteOrder !== 0x4949) {
-          console.log('Ungültiges TIFF-Byte-Order:', byteOrder.toString(16));
+          console.log('❌ Ungültiges TIFF-Byte-Order:', byteOrder.toString(16));
+          console.log('Erwartete: 0x4D4D (MM) oder 0x4949 (II)');
           offset += markerSize - 4;
           continue;
         }
 
-        console.log('TIFF Byte-Order:', byteOrder === 0x4D4D ? 'Big Endian (MM)' : 'Little Endian (II)');
+        console.log('✅ TIFF-Byte-Order OK:', isBigEndian ? 'Big Endian (MM)' : 'Little Endian (II)');
 
         // 42 Check
         if (offset + 4 > length) {
@@ -159,23 +94,23 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
         }
 
         const tiffMagic = dataView.getUint16(offset + 2, isBigEndian);
+        console.log('Raw tiffMagic Wert:', tiffMagic.toString(16), 'an offset:', (offset + 2).toString(16));
+
         if (tiffMagic !== 0x002A) {
-          console.log('Ungültiges TIFF-Magic:', tiffMagic.toString(16));
+          console.log('❌ Ungültiges TIFF-Magic:', tiffMagic.toString(16));
+          console.log('Erwartete: 0x002A (42)');
           offset += markerSize - 4;
           continue;
         }
 
+        console.log('✅ TIFF-Magic OK: 0x002A (42)');
+
         const firstIFDOffset = dataView.getUint32(offset + 4, isBigEndian);
         const tiffStart = offset;
 
-        console.log('TIFF Header erfolgreich gelesen:', {
-          byteOrder: byteOrder.toString(16),
-          isBigEndian,
-          magic: tiffMagic.toString(16),
-          firstIFDOffset: firstIFDOffset.toString(16)
-        });
+        console.log('Erste IFD Offset:', firstIFDOffset.toString(16));
 
-        offset += 4; // Erste 6 Bytes überspringen
+        offset += 6; // TIFF-Header (6 Bytes) überspringen
 
         // Erste IFD lesen
         if (firstIFDOffset !== 0) {
@@ -183,13 +118,12 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 
           if (ifdOffset + 2 > length) {
             console.log('IFD Offset außerhalb der Datei');
-            offset += markerSize - 4;
+            offset += markerSize - 10; // Wir haben bereits 10 Bytes übersprungen
             continue;
           }
 
           const numEntries = dataView.getUint16(ifdOffset, isBigEndian);
-
-          console.log('Erste IFD Offset:', ifdOffset.toString(16), 'Einträge:', numEntries);
+          console.log('Erste IFD Einträge:', numEntries);
 
           // Nach GPS-IFD Pointer suchen
           let gpsIFDOffset = 0;
@@ -217,12 +151,11 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
 
             if (gpsIFDOffsetActual + 2 > length) {
               console.log('GPS IFD Offset außerhalb der Datei');
-              offset += markerSize - 4;
+              offset += markerSize - 10;
               continue;
             }
 
             const gpsNumEntries = dataView.getUint16(gpsIFDOffsetActual, isBigEndian);
-
             console.log('=== GPS IFD Parsing ===');
             console.log('GPS IFD Offset:', gpsIFDOffsetActual.toString(16), 'Einträge:', gpsNumEntries);
 
@@ -458,6 +391,75 @@ function readEXIFData(arrayBuffer: ArrayBuffer): any {
     return exif;
   } catch (error) {
     console.error('❌ Fehler beim Lesen der EXIF-Daten:', error);
+    return null;
+  }
+}
+
+/**
+ * Prüfen, ob Wert als Text-Koordinate (Google Pixel Format)
+ * Beispiel: "37º 4' 47.04" N
+ */
+function isTextCoordinate(value: any): boolean {
+  if (typeof value === 'string') {
+    return value.includes('º') || value.includes("'") || value.includes('"');
+  }
+  return false;
+}
+
+/**
+ * Text-Koordinaten im Google Pixel Format parsen
+ * Beispiel: "37º 4' 47.04" N
+ */
+function parseTextCoordinate(text: string): number[] | null {
+  try {
+    console.log('Parsen Text-Koordinate:', text);
+
+    // Versuch 1: Muster mit Grad-Symbol º
+    let match = text.match(/(\d+\.?\d*)\s*º\s*(\d+)\s*['′]\s*(\d+\.?\d*)\s*"([NSEW])/i);
+    if (match) {
+      const [, degrees, minutes, seconds, ref] = match;
+      const [wholeSeconds, fractionalSeconds] = seconds.split('.');
+      const secs = parseFloat(`${wholeSeconds}.${fractionalSeconds}`);
+
+      console.log('Geparst mit º Muster:', { degrees, minutes, seconds: seconds.toFixed(4), ref });
+
+      let dd = parseFloat(degrees) + parseFloat(minutes) / 60 + secs / 3600;
+      if (ref.toUpperCase() === 'S' || ref.toUpperCase() === 'W') {
+        dd = dd * -1;
+      }
+
+      console.log('DD Ergebnis:', dd);
+
+      // Als Rational-Array zurückgeben (numer/denominator)
+      const denominator = 1000000; // Hohe Genauigkeit
+      const numerator = Math.round(dd * denominator);
+      return [[numerator, denominator], [60, 1], [3600, 1]];
+    }
+
+    // Versuch 2: Alternative Muster
+    match = text.match(/(\d+)\s*deg\s+(\d+)\s*['′]\s*(\d+(?:\.\d+)?)\s*"([NSEW])/i);
+    if (match) {
+      const [, degrees, minutes, seconds, ref] = match;
+      const secs = parseFloat(seconds);
+
+      console.log('Geparst mit deg Muster:', { degrees, minutes, seconds, ref });
+
+      let dd = parseFloat(degrees) + parseFloat(minutes) / 60 + secs / 3600;
+      if (ref.toUpperCase() === 'S' || ref.toUpperCase() === 'W') {
+        dd = dd * -1;
+      }
+
+      console.log('DD Ergebnis:', dd);
+
+      const denominator = 1000000;
+      const numerator = Math.round(dd * denominator);
+      return [[numerator, denominator], [60, 1], [3600, 1]];
+    }
+
+    console.log('Kein gültiges Text-Format gefunden');
+    return null;
+  } catch (error) {
+    console.error('Fehler beim Parsen der Text-Koordinate:', error);
     return null;
   }
 }
