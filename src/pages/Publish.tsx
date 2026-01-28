@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Globe, Navigation } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,6 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
-import { extractGPSFromImage, reverseGeocode, createNostrGPSTags, formatCoordinates, type Coordinates, type LocationData } from '@/lib/geocoding';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -54,19 +53,17 @@ const subCategories = {
   natur: ['tiere', 'blumen', 'strand', 'berge', 'wald', 'meer']
 };
 
- interface MediaFile {
-   id: string;
-   file: File;
-   url?: string;
-   name: string;
-   type: string;
-   size: number;
-   preview?: string;
-   uploaded?: boolean;
-   tags?: string[];
-   gpsCoordinates?: Coordinates;
-   locationData?: LocationData;
- }
+interface MediaFile {
+  id: string;
+  file: File;
+  url?: string;
+  name: string;
+  type: string;
+  size: number;
+  preview?: string;
+  uploaded?: boolean;
+  tags?: string[];
+}
 
 interface UploadProgress {
   current: number;
@@ -90,9 +87,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
-  const [isExtractingGPS, setIsExtractingGPS] = useState(false);
-  const [isGeocoding, setIsGeocoding] = useState(false);
-  const [gpsStatus, setGpsStatus] = useState<string>('');
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
@@ -193,110 +187,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
     }));
 
-    // GPS-Daten werden NICHT mehr automatisch extrahiert
-    // Wird erst beim Klick auf "Medien hochladen" Button ausgelöst
-
     setFiles(prev => [...prev, ...newFiles]);
-  };
-
-  /**
-   * GPS-Daten aus Bildern extrahieren und Geocoding durchführen
-   * Wird beim Klick auf "Medien hochladen" Button aufgerufen
-   */
-  const extractGPSAndGeocode = async (): Promise<void> => {
-    const imageFiles = files.filter(f => f.type === 'image');
-    if (imageFiles.length === 0) {
-      console.log('[GPS] Keine Bilder vorhanden, GPS-Extraktion übersprungen');
-      return;
-    }
-
-    setIsExtractingGPS(true);
-    setGpsStatus('📡 GPS-Daten werden aus Bildern extrahiert...');
-
-    try {
-      // GPS aus allen Bildern extrahieren
-      for (let i = 0; i < imageFiles.length; i++) {
-        const mediaFile = imageFiles[i];
-        setGpsStatus(`📡 GPS extrahieren aus Bild ${i + 1}/${imageFiles.length}...`);
-
-        try {
-          const coordinates = await extractGPSFromImage(mediaFile.file);
-          if (coordinates) {
-            console.log('[GPS] GPS-Daten gefunden für:', mediaFile.name, coordinates);
-            mediaFile.gpsCoordinates = coordinates;
-
-            setGpsStatus(`📡 GPS gefunden für "${mediaFile.name}"`);
-          }
-        } catch (error) {
-          console.error('[GPS] Fehler beim Extrahieren aus', mediaFile.name, error);
-        }
-      }
-
-      // Prüfen ob GPS-Daten gefunden wurden
-      const filesWithGPS = files.filter(f => f.gpsCoordinates);
-      if (filesWithGPS.length === 0) {
-        setGpsStatus('⚠️ Keine GPS-Daten in den Bildern gefunden');
-        setIsExtractingGPS(false);
-        setTimeout(() => setGpsStatus(''), 3000);
-        return;
-      }
-
-      // Geocoding für alle gefundenen GPS-Koordinaten
-      setIsExtractingGPS(false);
-      setIsGeocoding(true);
-      setGpsStatus(`🗺️ Geocoding für ${filesWithGPS.length} Standorte...`);
-
-      for (let i = 0; i < filesWithGPS.length; i++) {
-        const mediaFile = filesWithGPS[i];
-        if (mediaFile.gpsCoordinates) {
-          setGpsStatus(`🗺️ Geocoding Standort ${i + 1}/${filesWithGPS.length}...`);
-
-          const locationData = await reverseGeocode(mediaFile.gpsCoordinates);
-          if (locationData) {
-            mediaFile.locationData = locationData;
-            console.log('[GPS] Geocoding Ergebnis für:', mediaFile.name, locationData);
-
-              // Auto-fill Location-Feld IMMER ausfüllen, wenn GPS gefunden wurde
-              // Egal ob Feld vorher leer war oder nicht (funktioniert auch nach manuellem Löschen)
-              if (i === 0) {
-                setLocation(locationData.formatted || '');
-                console.log('[GPS] 📍 Standort-Feld ausgefüllt:', locationData.formatted);
-
-                // Auch Log ins UI schreiben
-                setGpsStatus(`✅ GPS gefunden: ${locationData.formatted}`);
-              }
-
-            // Auto-select Land (wenn vorhanden)
-            if (locationData.address?.country_code && !selectedCountry && i === 0) {
-              const countryMap: Record<string, string> = {
-                'PT': 'portugal',
-                'ES': 'spanien',
-                'FR': 'frankreich',
-                'BE': 'belgien',
-                'DE': 'deutschland',
-                'LU': 'luxemburg',
-              };
-              if (countryMap[locationData.address.country_code]) {
-                setSelectedCountry(countryMap[locationData.address.country_code]);
-                console.log('[GPS] Land ausgewählt:', countryMap[locationData.address.country_code]);
-              }
-            }
-          }
-        }
-      }
-
-      // Erfolgsmeldung
-      setGpsStatus(`✅ GPS & Standort für ${filesWithGPS.length} Bilder ermittelt`);
-      setTimeout(() => setGpsStatus(''), 5000);
-
-    } catch (error) {
-      console.error('[GPS] Fehler bei GPS-Extraktion:', error);
-      setGpsStatus('❌ Fehler beim Laden der GPS-Daten');
-      setTimeout(() => setGpsStatus(''), 3000);
-    } finally {
-      setIsExtractingGPS(false);
-      setIsGeocoding(false);
-    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -309,7 +200,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     setFiles(prev => prev.filter(f => f.id !== id));
   };
 
-   const handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (files.length === 0) {
       toast({
         title: 'Fehler',
@@ -318,9 +209,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       });
       return;
     }
-
-    // STAGE 0: GPS-Daten aus Bildern extrahieren
-    await extractGPSAndGeocode();
 
     setIsUploading(true);
     setUploadProgress({ current: 0, total: files.length, stage: 'upload', status: '📤 Upload zu Blossom wird gestartet...' });
@@ -409,26 +297,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         !countryList.includes(tag.replace('#', '').toLowerCase())
       );
 
-       // Collect all tags from different sources
-       const allTags = [
-         ...selectedSubTags,
-         ...detailedTags,
-         ...customTagsWithoutCountry,
-         ...(selectedCountry ? getCountryTag(selectedCountry) : []), // Country-Tags nur hinzufügen, wenn gewählt
-       ];
-
-       // Extract GPS tags from files
-       const gpsTags: string[][] = [];
-       files.forEach(file => {
-         if (file.locationData) {
-           const locationGPSTags = createNostrGPSTags(file.locationData);
-           gpsTags.push(...locationGPSTags);
-           console.log('[GPS] Tags für Datei:', file.name, locationGPSTags);
-         }
-       });
-
-       // Add GPS tags to allTags
-       allTags.push(...gpsTags);
+      // Collect all tags from different sources
+      const allTags = [
+        ...selectedSubTags,
+        ...detailedTags,
+        ...customTagsWithoutCountry,
+        ...(selectedCountry ? getCountryTag(selectedCountry) : []) // Country-Tags nur hinzufügen, wenn gewählt
+      ];
 
       // Always add #mojobus as mandatory tag for /veroeffentlichen
       const mojobusTag = 'mojobus';
@@ -560,39 +435,12 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         </CardContent>
       </Card>
 
-       {/* Media Preview */}
-       {files.length > 0 && (
-         <Card>
-           <CardHeader>
-             <div className="flex items-center justify-between">
-               <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
-               <Button
-                 variant="outline"
-                 size="sm"
-                 onClick={extractGPSAndGeocode}
-                 disabled={isExtractingGPS || isGeocoding || files.filter(f => f.type === 'image').length === 0}
-                 className="gap-2"
-                 title={`Extrahiert GPS-Koordinaten aus den ${files.filter(f => f.type === 'image').length} Bildern und ermittelt den Standort`}
-               >
-                 {isExtractingGPS ? (
-                   <>
-                     <Loader2 className="h-4 w-4 animate-spin" />
-                     GPS extrahieren...
-                   </>
-                 ) : isGeocoding ? (
-                   <>
-                     <Globe className="h-4 w-4 animate-pulse" />
-                     Standort ermitteln...
-                   </>
-                 ) : (
-                   <>
-                     <MapPin className="h-4 w-4" />
-                     GPS aus {files.filter(f => f.type === 'image').length} {files.filter(f => f.type === 'image').length === 1 ? 'Bild' : 'Bildern'}
-                   </>
-                 )}
-               </Button>
-             </div>
-           </CardHeader>
+      {/* Media Preview */}
+      {files.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {files.map(file => (
@@ -608,31 +456,20 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                       {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
                       {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
                       {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
-                     </div>
-                   )}
-                   <div className="text-sm flex-1">
-                     <p className="font-medium truncate">{file.name}</p>
-                     <p className="text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                     {file.gpsCoordinates && (
-                       <Badge variant="secondary" className="mt-1 text-xs flex items-center gap-1">
-                         <MapPin className="h-3 w-3" />
-                         GPS: {formatCoordinates(file.gpsCoordinates)}
-                       </Badge>
-                     )}
-                     {file.locationData && file.locationData.address?.display_name && (
-                       <p className="text-xs text-gray-500 mt-1 truncate" title={file.locationData.address.display_name}>
-                         {file.locationData.address.display_name}
-                       </p>
-                     )}
-                   </div>
-                   <Button
-                     variant="destructive"
-                     size="sm"
-                     onClick={() => removeFile(file.id)}
-                   >
-                     Löschen
-                   </Button>
-                 </div>
+                    </div>
+                  )}
+                  <div className="text-sm">
+                    <p className="font-medium truncate">{file.name}</p>
+                    <p className="text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeFile(file.id)}
+                  >
+                    Löschen
+                  </Button>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -1056,68 +893,28 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             </Card>
           )}
 
-          {/* GPS/Geocoding Status */}
-          {(isExtractingGPS || isGeocoding || gpsStatus) && (
-            <Card className="border-2 border-ocean-200 dark:border-ocean-800 bg-ocean-50 dark:bg-ocean-950">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    {isExtractingGPS && (
-                      <div className="flex items-center gap-2 text-ocean-600 dark:text-ocean-400">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        GPS-Daten werden extrahiert...
-                      </div>
-                    )}
-                    {isGeocoding && (
-                      <div className="flex items-center gap-2 text-ocean-600 dark:text-ocean-400">
-                        <Globe className="h-5 w-5 animate-pulse" />
-                        Standort wird ermittelt...
-                      </div>
-                    )}
-                  </div>
-                  {gpsStatus && (
-                    <div className="text-sm text-ocean-700 dark:text-ocean-300 font-medium">
-                      {gpsStatus}
-                    </div>
-                  )}
-                  <Progress
-                    value={isExtractingGPS ? 33 : isGeocoding ? 66 : 100}
-                    className="h-2"
-                  />
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>GPS-Extraktion</span>
-                    <span>Geocoding</span>
-                    <span>Upload</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           <Button
             onClick={handleSubmit}
             className="w-full"
-            disabled={files.length === 0 || isUploading || isExtractingGPS || isGeocoding}
+            disabled={files.length === 0 || isUploading}
           >
-            {isExtractingGPS ? (
+            {isUploading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                GPS extrahieren...
-              </>
-            ) : isGeocoding ? (
-              <>
-                <Globe className="mr-2 h-4 w-4" />
-                Standort ermitteln...
-              </>
-            ) : isUploading ? (
-              <>
-                <UploadCloud className="mr-2 h-4 w-4" />
-                Wird hochgeladen...
+                {uploadProgress.stage === 'upload' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {uploadProgress.stage === 'publish' && <UploadCloud className="h-4 w-4 mr-2" />}
+                {uploadProgress.stage === 'success' && <CheckCircle className="h-4 w-4 mr-2" />}
+                {uploadProgress.stage === 'error' && <span className="mr-2">⚠️</span>}
+                {!uploadProgress.stage && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {uploadProgress.stage === 'upload' && 'Upload zu Blossom...'}
+                {uploadProgress.stage === 'publish' && 'Post zu Nostr...'}
+                {uploadProgress.stage === 'success' && '✅ Erfolgreich!'}
+                {uploadProgress.stage === 'error' && 'Fehler aufgetreten'}
+                {!uploadProgress.stage && 'Wird verarbeitet...'}
               </>
             ) : (
               <>
-                <UploadCloud className="mr-2 h-4 w-4" />
-                Medien hochladen und veroeffentlichen
+                <UploadCloud className="h-4 w-4 mr-2" />
+                Bilder veroeffentlichen
               </>
             )}
           </Button>
