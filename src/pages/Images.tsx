@@ -7,7 +7,7 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { Button } from '@/components/ui/button';
 import { SocialBar } from '@/components/SocialBar';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
-import { ExternalLink, Calendar, User, ArrowRight, Eye, Camera, Trash2 } from 'lucide-react';
+import { Calendar, User, Eye, Camera, Trash2 } from 'lucide-react';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { useAuthor } from '@/hooks/useAuthor';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
@@ -415,7 +415,6 @@ function Images() {
 
 function ImageCardComponent({
   event,
-  images,
   navigate
 }: {
   event: ImageEvent;
@@ -498,48 +497,25 @@ function ImageCardComponent({
               })}
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {metadata?.picture ? (
-                  <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                    <img
-                      src={getGalleryThumbnailUrl(metadata.picture)}
-                      alt={metadata.name || 'Autor'}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                    <User className="h-4 w-4 text-gray-500" />
-                  </div>
-                )}
-                <span className="text-sm text-gray-600 dark:text-gray-400 flex-1 truncate">
-                  {metadata?.name || 'MojoBus Team'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                {/* Quick view hint */}
-                <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
-                  <span>Klick</span>
-                  <ArrowRight className="h-3 w-3" />
+           <CardContent className="pt-0">
+            <div className="flex items-center gap-3">
+              {metadata?.picture ? (
+                <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <img
+                    src={getGalleryThumbnailUrl(metadata.picture)}
+                    alt={metadata.name || 'Autor'}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
                 </div>
-                {images.map((img, index) => (
-                  <Button
-                    key={index}
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(img, '_blank');
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                ))}
-              </div>
+              ) : (
+                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                  <User className="h-4 w-4 text-gray-500" />
+                </div>
+              )}
+              <span className="text-sm text-gray-600 dark:text-gray-400 flex-1 truncate">
+                {metadata?.name || 'MojoBus Team'}
+              </span>
             </div>
           </CardContent>
         </div>
