@@ -1,5 +1,5 @@
 import { useComments } from '@/hooks/useComments';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -42,18 +42,7 @@ export function CommentsSection({
 
   return (
     <Card className={cn("rounded-none sm:rounded-lg mx-0 sm:mx-0", className)}>
-      <CardHeader className="px-2 pt-6 pb-4 sm:p-6">
-        <CardTitle className="flex items-center space-x-2">
-          <MessageSquare className="h-5 w-5" />
-          <span>{title}</span>
-          {!isLoading && (
-            <span className="text-sm font-normal text-muted-foreground">
-              ({comments.length})
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-2 pb-6 pt-4 sm:p-6 sm:pt-0 space-y-6">
+      <CardContent className="px-2 py-6 sm:p-6 space-y-6">
         {/* Comment Form */}
         <CommentForm root={root} />
 
