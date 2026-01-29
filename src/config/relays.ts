@@ -158,7 +158,7 @@ export const RELAY_PRESETS = {
       'wss://relays.mojobus.co',
     ],
     maxRelays: 2,
-    queryTimeout: 3000,
+    queryTimeout: 5000, // Erhöht auf 5s für bessere Zuverlässigkeit bei 2 Relays
   },
 
   // Fast Preset - Maximale Performance mit einem schnellen Relay
@@ -278,13 +278,13 @@ export const getSearchRelays = (): RelayConfig[] => {
  * Kann durch localStorage überschrieben werden
  *
  * KONFIGURATION:
- * - READ (Abrufen/Queries): FAST Preset - maximale Performance beim Lesen
- * - WRITE (Veröffentlichen): ULTRA RELIABLE Preset - maximale Redundanz beim Posten
+ * - READ (Abrufen/Queries): MOJOBUS Preset - private Relays mit 5s Timeout
+ * - WRITE (Veröffentlichen): MOJOBUS Preset - private Relays mit Redundanz
  *
  * ÄNDERUNGEN HIER:
  * - readRelayUrls: Liste der Relays für Queries (Lesen)
  * - readMaxRelays: Max. Anzahl Relays für Queries
- * - readQueryTimeout: Timeout in ms für Queries
+ * - readQueryTimeout: Timeout in ms für Queries (5000ms = 5s für Zuverlässigkeit)
  * - writeRelayUrls: Liste der Relays für Publishing (Schreiben)
  * - writeMaxRelays: Max. Anzahl Relays für Publishing
  * - activeRelay: Relay für das aktive Publishing (aus writeRelayUrls)
@@ -294,17 +294,17 @@ export const DEFAULT_APP_CONFIG = {
   // READ KONFIGURATION (Abrufen/Queries) - MOJOBUS Preset
   // ============================================================================
   read: {
-    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co + Backups
-    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // Alle 3 Relays verwenden
-    queryTimeout: RELAY_PRESETS.mojobus.queryTimeout, // 3000ms - Standard Timeout
+    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co + relays.mojobus.co
+    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // Beide Relays verwenden (2)
+    queryTimeout: RELAY_PRESETS.mojobus.queryTimeout, // 5000ms - Erhöht für Zuverlässigkeit
   },
 
   // ============================================================================
   // WRITE KONFIGURATION (Veröffentlichen) - MOJOBUS Preset
   // ============================================================================
   write: {
-    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co + Backups
-    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // Alle 3 Relays verwenden
+    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co + relays.mojobus.co
+    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // Beide Relays verwenden (2)
     activeRelay: RELAY_PRESETS.mojobus.relayUrls[0], // relay.mojobus.co als aktiver Relay
   },
 

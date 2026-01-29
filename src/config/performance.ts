@@ -77,10 +77,12 @@ export const CACHE_CONFIG = {
 // ============================================================================
 
 export const RELAY_PERFORMANCE_CONFIG = {
-  // Query Timeout in Millisekunden
-  // Empfehlung: 2000-3000ms für gute Balance
+  // Query Timeout in Millisekunden (Basis-Wert)
+  // WICHTIG: Hooks verwenden queryTimeout * 2.5 für faktischen Timeout
+  // Faktischer Timeout = 2000ms * 2.5 = 5000ms (5 Sekunden)
+  // Empfehlung: 2000ms für gute Balance
   // Kürzere Werte = schnellere Fehlerbehandlung, aber mehr Timeouts
-  // Längere Werte = mehr成功率, aber längere Ladezeiten
+  // Längere Werte = mehr Erfolgswahrscheinlichkeit, aber längere Ladezeiten
   queryTimeout: 2000,
 
   // Aktiviere Event-Deduplizierung
@@ -89,7 +91,7 @@ export const RELAY_PERFORMANCE_CONFIG = {
 
   // Max. Anzahl an Relays für Queries (aus relayUrls)
   // Empfehlung: 1 für maximale Performance, 2-3 für Zuverlässigkeit
-  maxRelaysForQueries: 1,
+  maxRelaysForQueries: 2, // Erhöht auf 2 für MojoBus Relays
 
   // Batched Queries: Alle nötigen Events in einem Request
   // Reduziert Anzahl an Requests signifikant
@@ -515,6 +517,7 @@ export const MONITORING_CONFIG = {
  */
 export const PERFORMANCE_PRESETS = {
   // Maximum Performance - Schnellste Ladezeiten
+  // Faktischer Timeout: 1500ms * 2.5 = 3750ms
   maximum: {
     name: 'Maximum Performance',
     description: 'Schnellste Ladezeiten, aber weniger Funktionen',
@@ -523,13 +526,14 @@ export const PERFORMANCE_PRESETS = {
     ...IMAGE_CONFIG,
     ...BUNDLE_CONFIG,
     itemsPerPage: 20,
-    queryTimeout: 1500,
+    queryTimeout: 1500, // Faktisch 3750ms mit 2.5x Multiplikator
     maxRelaysForQueries: 1,
     lazyLoading: { ...IMAGE_CONFIG.lazyLoading, enabled: true },
     memoization: { ...RENDER_CONFIG.memoization, enabled: true },
   },
 
   // Balanced - Ausgewogene Performance & UX
+  // Faktischer Timeout: 2000ms * 2.5 = 5000ms
   balanced: {
     name: 'Balanced',
     description: 'Ausgewogene Konfiguration für gute Performance und UX',
@@ -538,13 +542,14 @@ export const PERFORMANCE_PRESETS = {
     ...IMAGE_CONFIG,
     ...BUNDLE_CONFIG,
     itemsPerPage: 25,
-    queryTimeout: 2000,
-    maxRelaysForQueries: 1,
+    queryTimeout: 2000, // Faktisch 5000ms mit 2.5x Multiplikator
+    maxRelaysForQueries: 2, // Erhöht auf 2 für MojoBus Relays
     lazyLoading: { ...IMAGE_CONFIG.lazyLoading, enabled: true },
     memoization: { ...RENDER_CONFIG.memoization, enabled: true },
   },
 
   // Reliable - Maximale Zuverlässigkeit
+  // Faktischer Timeout: 3200ms * 2.5 = 8000ms
   reliable: {
     name: 'Reliable',
     description: 'Maximale Zuverlässigkeit mit mehreren Relays',
@@ -553,13 +558,14 @@ export const PERFORMANCE_PRESETS = {
     ...IMAGE_CONFIG,
     ...BUNDLE_CONFIG,
     itemsPerPage: 30,
-    queryTimeout: 4000,
+    queryTimeout: 3200, // Faktisch 8000ms mit 2.5x Multiplikator
     maxRelaysForQueries: 3,
     lazyLoading: { ...IMAGE_CONFIG.lazyLoading, enabled: true },
     memoization: { ...RENDER_CONFIG.memoization, enabled: true },
   },
 
   // Debug - Entwickler-Modus
+  // Faktischer Timeout: 5000ms * 2.5 = 12500ms
   debug: {
     name: 'Debug',
     description: 'Entwickler-Modus mit Logging',
@@ -567,7 +573,7 @@ export const PERFORMANCE_PRESETS = {
     ...CACHE_CONFIG,
     ...IMAGE_CONFIG,
     ...BUNDLE_CONFIG,
-    queryTimeout: 5000,
+    queryTimeout: 5000, // Faktisch 12500ms mit 2.5x Multiplikator
     maxRelaysForQueries: 1,
     lazyLoading: { ...IMAGE_CONFIG.lazyLoading, enabled: false },
     memoization: { ...RENDER_CONFIG.memoization, enabled: false },
@@ -582,20 +588,24 @@ export const PERFORMANCE_PRESETS = {
  * Default Performance-Konfiguration
  * Wird für manuelle Anpassungen verwendet
  *
+ * WICHTIG: queryTimeout wird in Hooks mit 2.5 multipliziert!
+ * Faktischer Timeout = queryTimeout * 2.5
+ * Beispiel: 2000ms * 2.5 = 5000ms (5 Sekunden)
+ *
  * HÄUFIGE ANPASSUNGEN:
  *
  * Für schnellere Ladezeiten:
  * - itemsPerPage: 20 (weniger JS)
- * - queryTimeout: 1500 (schnellere Fehlerbehandlung)
+ * - queryTimeout: 1600 (faktisch 4000ms - schnellere Fehlerbehandlung)
  * - maxRelaysForQueries: 1 (nur ein Relay)
  *
  * Für bessere UX mit mehr Artikel:
  * - itemsPerPage: 30 oder 40 (mehr Artikel pro Seite)
- * - queryTimeout: 3000 (weniger Timeouts)
+ * - queryTimeout: 2000 (faktisch 5000ms - weniger Timeouts)
  *
  * Für bessere Zuverlässigkeit:
  * - maxRelaysForQueries: 2 oder 3 (mehr Relays)
- * - queryTimeout: 4000 oder 5000 (längerer Timeout)
+ * - queryTimeout: 2400 (faktisch 6000ms - längerer Timeout)
  *
  * Für bessere Bilder:
  * - thumbnails.list.quality: 90 (bessere Qualität)
