@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { RelaySelector } from '@/components/RelaySelector';
 import { Button } from '@/components/ui/button';
+import { SocialBar } from '@/components/SocialBar';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { ExternalLink, Calendar, User, ArrowRight, Eye, Camera, Trash2 } from 'lucide-react';
 import { NOSTR_CONFIG } from '@/config/nostr';
@@ -539,6 +540,7 @@ function ImageCardComponent({
               ))}
             </div>
           </div>
+          <SocialBar event={event} compact={true} />
         </CardContent>
       </Card>
 
