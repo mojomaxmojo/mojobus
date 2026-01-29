@@ -78,29 +78,14 @@ export function ImageDetail() {
   const author = useAuthor(events?.pubkey);
   const metadata = author.data?.metadata;
 
-  // Extract images from content
-  const extractImagesForDetail = (content: string): string[] => {
-    if (!content) return [];
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/blossom\.primal\.net\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
-    const matches = content.match(urlRegex) || [];
-    const imageUrls = matches.filter(url => {
-      const lower = url.toLowerCase();
-      return lower.includes('.jpg') ||
-             lower.includes('.jpeg') ||
-             lower.includes('.png') ||
-             lower.includes('.gif') ||
-             lower.includes('.webp') ||
-             lower.includes('imgur.com') ||
-             lower.includes('blossom');
-    });
-    return imageUrls;
-  };
-
-  // Extract images from content for images page
   const extractImages = (content: string): string[] => {
     if (!content) return [];
+
+    // Match image URLs with extensions OR from known image hosting services
     const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/blossom\.primal\.net\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
     const matches = content.match(urlRegex) || [];
+
+    // Filter out URLs that are not actually image files
     const imageUrls = matches.filter(url => {
       const lower = url.toLowerCase();
       return lower.includes('.jpg') ||
@@ -111,6 +96,7 @@ export function ImageDetail() {
              lower.includes('imgur.com') ||
              lower.includes('blossom');
     });
+
     return imageUrls;
   };
 
@@ -122,41 +108,8 @@ export function ImageDetail() {
   };
 
   // Only compute these if events is loaded
-  const images = events ? extractImagesForDetail(events.content) : [];
+  const images = events ? extractImages(events.content) : [];
   const tags = events ? extractTags(events) : [];
-
-  function ImageContentWithHeadings({ event, className }: { event: any; className?: string }) {
-    const text = event.content;
-    const lines = text.split('\n');
-    const parts: React.ReactNode[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmedLine = line.trim();
-
-      // Prüfe ob es eine H1-Überschrift ist (# mit Leerzeichen danach)
-      // Beispiel: "# Die Ruhe nach und vor dem Sturm" = Überschrift (H1)
-      // Beispiel: "#Test" = Hashtag (wird als Text angezeigt)
-      if (trimmedLine.match(/^#\s+/)) {
-        // H1-Überschrift: # gefolgt von mindestens einem Leerzeichen
-        const headingText = trimmedLine.replace(/^#+\s+/, '').trim();
-        parts.push(
-          <h1 key={`heading-${i}`} className="text-2xl font-bold mt-6 mb-4">
-            {headingText}
-          </h1>
-        );
-      } else {
-        // Andere Zeilen als Text rendern (inklusive Hashtags ohne Leerzeichen nach #)
-        parts.push(
-          <p key={`line-${i}`} className="mb-4">
-            {line}
-          </p>
-        );
-      }
-    }
-
-    return <div className={className}>{parts}</div>;
-  }
 
   // Determine if this should be treated as an image event
   // Only check if we're not loading and have an event
@@ -422,10 +375,18 @@ export function ImageDetail() {
 
             {/* Content and Description */}
             <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-ocean-600" />
+                  Beschreibung
+                </CardTitle>
+              </CardHeader>
                <CardContent>
-                  <ImageContentWithHeadings event={events} className="prose prose-gray dark:prose-invert max-w-none text-base pt-6" />
+                 <div className="prose prose-gray dark:prose-invert max-w-none">
+                   <NoteContent event={events} className="text-base" />
+                 </div>
                </CardContent>
-            </Card>
+             </Card>
 
              <SocialBar event={events} />
 
