@@ -21,8 +21,8 @@ export function Footer() {
               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">#offgridlife</span>
               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">#beachlife</span>
               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">#vanlife</span>
+              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">#rvlife</span>
               <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">#oceanview</span>
-              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">#btc</span>
             </div>
           </div>
 
@@ -50,8 +50,7 @@ export function Footer() {
             <h3 className="font-semibold">Kontakt</h3>
             <div className="text-sm text-muted-foreground space-y-2">
               <p>⚡ Lightning: wiseboot30@zeusnuts.com</p>
-              <p>🔑 NIP-05: mojomojo@iris.to</p>
-              <p>🌐 Web: mojobus.org</p>
+              <p>🔑 NIP-05: mojo@mojobus.co</p>
             </div>
           </div>
         </div>
