@@ -463,86 +463,88 @@ function ImageCardComponent({
 
   return (
     <div className="relative w-full">
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow group w-full">
-         {images.length > 0 && (
-           <div onClick={handleImageClick} className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px] cursor-pointer">
-              <img
-                src={getGalleryThumbnailUrl(images[0])}
-                srcSet={generateSrcset(images[0], 'gallery')}
-                sizes={generateSizes('card')}
-                alt="Reisebild"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow group w-full rounded-b-none border-b-0">
+        <div onClick={handleImageClick} className="cursor-pointer">
+           {images.length > 0 && (
+              <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
+                <img
+                  src={getGalleryThumbnailUrl(images[0])}
+                  srcSet={generateSrcset(images[0], 'gallery')}
+                  sizes={generateSizes('card')}
+                  alt="Reisebild"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
 
-             {/* Hover overlay with eye icon */}
-             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-pointer-events-none">
-               <div className="bg-white/90 rounded-full p-4">
-                 <Eye className="h-8 w-8 text-gray-800" />
+               {/* Hover overlay with eye icon */}
+               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                 <div className="bg-white/90 rounded-full p-4">
+                   <Eye className="h-8 w-8 text-gray-800" />
+                 </div>
                </div>
-             </div>
-         </div>
-       )}
-        <CardHeader className="pb-3">
-          <CardTitle onClick={handleImageClick} className="text-xl md:text-2xl line-clamp-2 group-hover:text-ocean-600 transition-colors cursor-pointer">
-            {event.content.slice(0, 150).replace(/https?:\/\/[^\s]+/g, '').trim() || 'Bild ohne Titel'}
-          </CardTitle>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Calendar className="h-4 w-4" />
-            {new Date(event.created_at * 1000).toLocaleDateString('de-DE', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {metadata?.picture ? (
-                <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                  <img
-                    src={getGalleryThumbnailUrl(metadata.picture)}
-                    alt={metadata.name || 'Autor'}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-              ) : (
-                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                  <User className="h-4 w-4 text-gray-500" />
-                </div>
-              )}
-              <span className="text-sm text-gray-600 dark:text-gray-400 flex-1 truncate">
-                {metadata?.name || 'MojoBus Team'}
-              </span>
+           </div>
+         )}
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl md:text-2xl line-clamp-2 group-hover:text-ocean-600 transition-colors">
+              {event.content.slice(0, 150).replace(/https?:\/\/[^\s]+/g, '').trim() || 'Bild ohne Titel'}
+            </CardTitle>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Calendar className="h-4 w-4" />
+              {new Date(event.created_at * 1000).toLocaleDateString('de-DE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
             </div>
-            <div className="flex items-center gap-1">
-              {/* Quick view hint */}
-              <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
-                <span>Klick</span>
-                <ArrowRight className="h-3 w-3" />
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {metadata?.picture ? (
+                  <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                    <img
+                      src={getGalleryThumbnailUrl(metadata.picture)}
+                      alt={metadata.name || 'Autor'}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                    <User className="h-4 w-4 text-gray-500" />
+                  </div>
+                )}
+                <span className="text-sm text-gray-600 dark:text-gray-400 flex-1 truncate">
+                  {metadata?.name || 'MojoBus Team'}
+                </span>
               </div>
-              {images.map((img, index) => (
-                <Button
-                  key={index}
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open(img, '_blank');
-                  }}
-                  className="h-8 w-8 p-0"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              ))}
+              <div className="flex items-center gap-1">
+                {/* Quick view hint */}
+                <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
+                  <span>Klick</span>
+                  <ArrowRight className="h-3 w-3" />
+                </div>
+                {images.map((img, index) => (
+                  <Button
+                    key={index}
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(img, '_blank');
+                    }}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
-          <SocialBar event={event} compact={true} />
-        </CardContent>
+          </CardContent>
+        </div>
       </Card>
+      <SocialBar event={event} compact={true} className="rounded-b-lg border-x border-b bg-card" />
 
       {/* Delete Button - nur für den Autor sichtbar */}
       {isAuthor && (
