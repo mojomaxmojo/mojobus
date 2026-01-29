@@ -422,16 +422,10 @@ export function ImageDetail() {
 
             {/* Content and Description */}
             <Card>
-               <CardHeader>
-                 <CardTitle className="flex items-center gap-2">
-                   <MessageSquare className="h-5 w-5 text-ocean-600" />
-                   Beschreibung
-                 </CardTitle>
-               </CardHeader>
-                <CardContent>
-                  <ImageContentWithHeadings event={events} className="prose prose-gray dark:prose-invert max-w-none text-base" />
-                </CardContent>
-              </Card>
+               <CardContent>
+                  <ImageContentWithHeadings event={events} className="prose prose-gray dark:prose-invert max-w-none text-base pt-6" />
+               </CardContent>
+            </Card>
 
              <SocialBar event={events} />
 
