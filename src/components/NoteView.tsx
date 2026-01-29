@@ -15,6 +15,8 @@ import { extractNoteTags, extractNoteImages } from '@/hooks/useNotes';
 import { Calendar, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import NotFound from '@/pages/NotFound';
+import type { NostrEvent } from '@nostrify/nostrify';
+import { useMemo } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +36,18 @@ import { nip19 } from 'nostr-tools';
 
 interface NoteViewProps {
   eventId: string;
+}
+
+// Helper function to remove image URLs from content
+function removeImageUrlsFromContent(content: string, imageUrls: string[]): string {
+  let cleanedContent = content;
+  imageUrls.forEach(url => {
+    // Remove the URL from content (with optional surrounding whitespace)
+    cleanedContent = cleanedContent.replace(new RegExp(`\\s*${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g'), ' ');
+  });
+  // Clean up multiple spaces and newlines
+  cleanedContent = cleanedContent.replace(/\s+/g, ' ').trim();
+  return cleanedContent;
 }
 
 // Parse position string to detect GPS coordinates
@@ -105,13 +119,27 @@ export function NoteView({ eventId }: NoteViewProps) {
   const position = locationTag?.[1] || '';
   const { lat, lng, isGPS } = position ? parsePosition(position) : { lat: null, lng: null, isGPS: false };
 
+  // Extract image URLs and create cleaned note content
+  const imageUrls = useMemo(() => {
+    return note ? extractNoteImages(note) : [];
+  }, [note]);
+
+  // Create a modified note event with image URLs removed from content
+  const cleanedNote = useMemo(() => {
+    if (!note || imageUrls.length === 0) return note;
+    return {
+      ...note,
+      content: removeImageUrlsFromContent(note.content, imageUrls),
+    } as NostrEvent;
+  }, [note, imageUrls]);
+
   // Dynamic SEO Meta Tags
   useHead(() => {
     if (!note) return {};
 
     const authorName = author.data?.metadata?.name || 'Mojo';
     const title = `Note von ${authorName}`;
-    const description = `${note.content.substring(0, 160)}${note.content.length > 160 ? '...' : ''}`;
+    const description = `${cleanedNote?.content.substring(0, 160) || ''}${cleanedNote?.content && cleanedNote.content.length > 160 ? '...' : ''}`;
     const tags = extractNoteTags(note);
     const keywords = ['perpetual traveler', 'vanlife', 'offgrid', 'note', 'blog', ...tags];
 
@@ -286,12 +314,12 @@ export function NoteView({ eventId }: NoteViewProps) {
               </div>
 
               <div className="whitespace-pre-wrap break-words mb-4">
-                <NoteContent event={note} />
+                <NoteContent event={cleanedNote} />
               </div>
 
-              {extractNoteImages(note).length > 0 && (
+              {imageUrls.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 mt-4">
-                  {extractNoteImages(note).map((url, idx) => (
+                  {imageUrls.map((url, idx) => (
                     <img
                       key={idx}
                       src={url}
