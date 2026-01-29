@@ -63,8 +63,8 @@ export function Home() {
               <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#offgridlife</span>
               <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#beachlife</span>
               <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#vanlife</span>
+              <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#rvlife</span>
               <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#oceanview</span>
-              <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#btc</span>
             </div>
             <div className="pt-6">
               <Button asChild size="lg" className="gap-2">
