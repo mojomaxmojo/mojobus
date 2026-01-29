@@ -431,18 +431,13 @@ export function ImageDetail() {
 
              {/* Comments Section */}
 
-            {/* Comments Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-ocean-600" />
-                  Kommentare
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CommentsSection root={events} />
-              </CardContent>
-            </Card>
+             {/* Comments Section */}
+             <Card>
+               <CardContent className="pt-6">
+                 <h2 className="text-xl font-bold mb-4">Kommentare</h2>
+                 <CommentsSection root={events} />
+               </CardContent>
+             </Card>
           </div>
 
           {/* Sidebar */}
