@@ -15,14 +15,14 @@ export const AUTHORS: Author[] = [
     name: 'Mojo',
     npub: 'npub1f4vym2mu3q9fsz08muz8d469hl568l5358qx90qlaspyuz67ru0sfxvupf',
     pubkey: '4d584dab7c880a9809e7df0476d745bfe9a3fe91a1c062bc1fec024e0b5e1f1f',
-    nip05: 'mojo@mojobus.org',
+    nip05: 'mojo@mojobus.co',
   },
   {
     id: 'susanne',
     name: 'Susanne',
     npub: 'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc9c5407f828002qdls5wz',
     pubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
-    nip05: 'susanne@mojobus.org',
+    nip05: 'susanne@mojobus.co',
   },
 ] as const;
 
@@ -158,7 +158,7 @@ export const RELAY_PRESETS = {
       'wss://relays.mojobus.co',
     ],
     maxRelays: 2,
-    queryTimeout: 2000,
+    queryTimeout: 3000,
   },
 
   // Fast Preset - Maximale Performance mit einem schnellen Relay
@@ -171,7 +171,7 @@ export const RELAY_PRESETS = {
        'wss://relay.primal.net',
       ],
     maxRelays: 3,
-    queryTimeout: 3000,
+    queryTimeout: 4000,
   },
 
   // Balanced Preset - Ausgewogene Mischung für Besucher
@@ -185,7 +185,7 @@ export const RELAY_PRESETS = {
       'wss://nos.lol',
     ],
     maxRelays: 4,
-    queryTimeout: 4000,
+    queryTimeout: 5000,
   },
 
   // ============================================================================
