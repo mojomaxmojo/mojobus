@@ -140,25 +140,6 @@ export function ImageDetail() {
     return <div className={className}>{parts}</div>;
   }
 
-    // Match image URLs with extensions OR from known image hosting services
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/blossom\.primal\.net\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
-    const matches = content.match(urlRegex) || [];
-
-    // Filter out URLs that are not actually image files
-    const imageUrls = matches.filter(url => {
-      const lower = url.toLowerCase();
-      return lower.includes('.jpg') ||
-             lower.includes('.jpeg') ||
-             lower.includes('.png') ||
-             lower.includes('.gif') ||
-             lower.includes('.webp') ||
-             lower.includes('imgur.com') ||
-             lower.includes('blossom');
-    });
-
-    return imageUrls;
-  };
-
   const extractTags = (event: ImageEvent): string[] => {
     if (!event?.tags) return [];
     return event.tags
