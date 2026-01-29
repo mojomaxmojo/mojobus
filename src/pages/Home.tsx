@@ -48,6 +48,13 @@ export function Home() {
     ]
   });
 
+  // PERFORMANCE-OPTIMIERUNG: Home-Spezifische Limits
+  // Wir zeigen nur 6 Elemente auf der Home-Seite, laden aber:
+  // VORHER: 230 Events (50 Artikel + 60 Plätze + 20 Notes + 100 Bilder) ❌
+  // NACHHER: ~60 Events (15 Artikel + 15 Plätze + 15 Notes + 15 Bilder) ✅
+  // Das spart ~74% Bandbreite und Ladezeit!
+  // Die dedizierten Seiten (/artikel, /plaetze) nutzen ihre eigenen Limits.
+
   // Refresh-Funktion: Invalidiere und hole alle Daten neu
   const handleRefresh = async () => {
     try {
@@ -85,10 +92,12 @@ export function Home() {
 
   const { data: articles, isLoading: articlesLoading } = useLongformArticles({
     kinds: [30023],
-    limit: 50,
+    limit: 15, // Optimiert für Home-Seite (nur 6 Elemente werden angezeigt)
   });
 
-  const { data: places, isLoading: placesLoading } = usePlaces();
+  const { data: places, isLoading: placesLoading } = usePlaces({
+    limit: 15, // Optimiert für Home-Seite (nur 6 Elemente werden angezeigt)
+  });
 
   const { data: noteEvents = [] } = useQuery({
     queryKey: ['home-notes', NOSTR_CONFIG.authorPubkeys],
@@ -98,7 +107,7 @@ export function Home() {
           kinds: [NOSTR_CONFIG.kinds.note],
           authors: NOSTR_CONFIG.authorPubkeys,
           '#t': ['note', 'notiz'],
-          limit: 20,
+          limit: 15, // Optimiert für Home-Seite (nur 6 Elemente werden angezeigt)
         }
       ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) });
       return events;
@@ -114,14 +123,15 @@ export function Home() {
           kinds: [1, 30023], // Text notes und longform articles
           authors: NOSTR_CONFIG.authorPubkeys,
           '#t': ['medien', 'media', 'bilder', 'images'],
-          limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
+          limit: 15, // Optimiert für Home-Seite (nur 6 Elemente werden angezeigt)
         }
       ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) }); // Aus Performance-Konfiguration
 
       console.log('[Home Page] Image Events Query:', {
         total: events.length,
-        limit: DEFAULT_PERFORMANCE_CONFIG.relay.maxEventsPerBatch,
+        limit: 15,
         timeout: DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout,
+        optimization: 'Home-Spezifisches Limit (vorher 100 Events)',
       });
 
       return events.filter((event) => {

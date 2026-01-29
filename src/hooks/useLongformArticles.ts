@@ -279,11 +279,11 @@ export function useInfiniteLongformArticles(options?: {
 /**
  * Hook zum Laden von Plätzen (nur Events mit type=place oder #t place)
  */
-export function usePlaces() {
+export function usePlaces(options?: { limit?: number }) {
   const { nostr } = useNostr();
 
   return useQuery({
-    queryKey: ['places', NOSTR_CONFIG.authorPubkeys],
+    queryKey: ['places', NOSTR_CONFIG.authorPubkeys, options?.limit],
     queryFn: async (c) => {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout * 2.5)]);
 
@@ -292,7 +292,7 @@ export function usePlaces() {
           {
             kinds: [NOSTR_CONFIG.kinds.longform],
             authors: NOSTR_CONFIG.authorPubkeys,
-            limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage * 4,
+            limit: options?.limit || DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage * 4,
           },
         ],
         { signal }
