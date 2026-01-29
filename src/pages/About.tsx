@@ -146,22 +146,7 @@ export function About() {
                   <Key className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-muted-foreground">NIP-05</div>
-                    <div className="font-mono text-sm truncate">mojomojo@iris.to</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-background">
-                  <Globe className="h-5 w-5 text-primary flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs text-muted-foreground">Website</div>
-                    <a
-                      href="http://mojobus.org"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline truncate block"
-                    >
-                      mojobus.org
-                    </a>
+                    <div className="font-mono text-sm truncate">mojo@mojobus.co</div>
                   </div>
                 </div>
 
