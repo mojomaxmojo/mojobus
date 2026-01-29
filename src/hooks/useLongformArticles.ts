@@ -216,12 +216,17 @@ export function useLongformArticles(options?: {
 
 /**
  * Hook zum Laden von Longform Artikeln mit Infinite Scroll für bessere Performance
- * Lädt Artikel in Batches (20-30 pro Seite) bei Bedarf
+ * Lädt Artikel in Batches (30 pro Seite) bei Bedarf
+ *
+ * PERFORMANCE OPTIMIERUNG:
+ * - Limit: 30 Events pro Query (statt 15) um mehr Artikel zu erhalten
+ * - Timeout: 7500ms (3s * 2.5) für bessere Zuverlässigkeit
+ * - Logging: Konsolenausgaben zur Fehlersuche
  */
 export function useInfiniteLongformArticles(options?: {
   kinds?: number[];
   '#t'?: string[];
-  authors?: string[];
+  authors?: number[];
 }) {
   const { nostr } = useNostr();
 
@@ -233,7 +238,7 @@ export function useInfiniteLongformArticles(options?: {
       const filter: any = {
         kinds: options?.kinds || [NOSTR_CONFIG.kinds.longform],
         authors: options?.authors || NOSTR_CONFIG.authorPubkeys,
-        limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage,
+        limit: DEFAULT_PERFORMANCE_CONFIG.infiniteScroll.itemsPerPage * 2, // 30 Events statt 15
       };
 
       // Timestamp-basierte Pagination
@@ -246,7 +251,16 @@ export function useInfiniteLongformArticles(options?: {
         filter['#t'] = options['#t'];
       }
 
+      // Logging: Query starten
+      if (pageParam) {
+        console.log('🔄 Articles Infinite Scroll: Fetching next page', { until: pageParam });
+      } else {
+        console.log('📄 Articles Infinite Scroll: Fetching first page');
+      }
+
       const events = await nostr.query([filter], { signal: abortSignal });
+
+      console.log('📦 Articles Infinite Scroll: Received', events.length, 'events from relay (limit was', filter.limit + ')');
 
       // Validiere und filtere Artikel (Plätze ausschließen)
       const validArticles = events.filter(event => {
@@ -255,17 +269,34 @@ export function useInfiniteLongformArticles(options?: {
         return isValid && !isPlace;
       });
 
+      const filteredCount = events.length - validArticles.length;
+      console.log(`✅ Articles Infinite Scroll: ${validArticles.length} valid articles, ${filteredCount} filtered out`);
+
+      if (events.length > 0 && validArticles.length === 0) {
+        console.warn('⚠️ Articles Infinite Scroll: All events were filtered out (no valid articles)');
+      }
+
       // Sortiere nach Datum (neueste zuerst)
       return validArticles.sort((a, b) => b.created_at - a.created_at);
     },
     getNextPageParam: (lastPage, allPages) => {
       // Wenn keine Artikel mehr zurückgegeben wurden, sind wir fertig
       if (lastPage.length === 0) {
+        console.log('🚫 Articles Infinite Scroll: No more articles (empty page)');
         return undefined;
       }
 
       // Berechne nächsten Timestamp (1 Sekunde vor dem letzten Event)
       const lastCreated = lastPage[lastPage.length - 1].created_at;
+      const totalPages = allPages.length;
+      const totalArticles = allPages.flat().length;
+
+      console.log('➡️ Articles Infinite Scroll: Next page', {
+        page: totalPages + 1,
+        until: lastCreated - 1,
+        totalArticlesSoFar: totalArticles
+      });
+
       return lastCreated - 1;
     },
     initialPageParam: undefined,
