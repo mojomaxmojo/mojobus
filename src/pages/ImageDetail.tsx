@@ -324,8 +324,13 @@ export function ImageDetail() {
                   />
 
                   {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                    <ZoomIn className="h-8 w-8 text-white" />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-4 flex flex-col items-center gap-2">
+                      <ZoomIn className="h-8 w-8 text-gray-800 dark:text-white" />
+                      <div className="text-gray-800 dark:text-white font-medium">
+                        Klick für Vollbild
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -355,8 +360,11 @@ export function ImageDetail() {
                         />
 
                         {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                          <ZoomIn className="h-6 w-6 text-white" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <ZoomIn className="h-6 w-6 text-white" />
+                            <span className="text-xs text-white">Vollbild</span>
+                          </div>
                         </div>
                       </div>
                     ))}
