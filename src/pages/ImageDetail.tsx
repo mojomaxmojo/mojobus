@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { useAuthor } from '@/hooks/useAuthor';
 import { PostActions } from '@/components/PostActions';
+import { CommentsSection } from '@/components/comments/CommentsSection';
+import { NoteContent } from '@/components/NoteContent';
 import { SocialBar } from '@/components/SocialBar';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
@@ -429,7 +431,19 @@ export function ImageDetail() {
 
              {/* Comments Section */}
 
-           </div>
+            {/* Comments Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-ocean-600" />
+                  Kommentare
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CommentsSection root={events} />
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
