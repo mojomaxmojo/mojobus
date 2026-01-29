@@ -174,11 +174,11 @@ export function About() {
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
                   <Hash className="h-3 w-3" />
-                  oceanview
+                  rvlife
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
                   <Hash className="h-3 w-3" />
-                  btc
+                  oceanview
                 </Badge>
               </div>
             </CardContent>
