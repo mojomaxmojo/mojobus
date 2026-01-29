@@ -44,7 +44,7 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
     // IMMER öffentliche Relays für Queries verwenden (niemals nur private author-relays!)
     // Damit werden ALLE Artikel/Notes angezeigt, egal ob eingeloggt oder nicht
     readRelayUrls.current = config.read?.relayUrls || [];
-    readMaxRelays.current = config.read?.maxRelays || 3;
+    readMaxRelays.current = config.read?.maxRelays || 2; // MojoBus hat 2 Relays
     readQueryTimeout.current = config.read?.queryTimeout || 3000;
 
     // WRITE configuration (publishing)
