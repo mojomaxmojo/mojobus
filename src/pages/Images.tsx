@@ -463,29 +463,29 @@ function ImageCardComponent({
 
   return (
     <div className="relative w-full">
-      <Card onClick={handleImageClick} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group w-full">
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow group w-full">
          {images.length > 0 && (
-           <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
-             <img
-               src={getGalleryThumbnailUrl(images[0])}
-               srcSet={generateSrcset(images[0], 'gallery')}
-               sizes={generateSizes('card')}
-               alt="Reisebild"
-               className="w-full h-full object-cover"
-               loading="lazy"
-               decoding="async"
-             />
+           <div onClick={handleImageClick} className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px] cursor-pointer">
+              <img
+                src={getGalleryThumbnailUrl(images[0])}
+                srcSet={generateSrcset(images[0], 'gallery')}
+                sizes={generateSizes('card')}
+                alt="Reisebild"
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
 
-            {/* Hover overlay with eye icon */}
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <div className="bg-white/90 rounded-full p-4">
-                <Eye className="h-8 w-8 text-gray-800" />
-              </div>
-            </div>
-          </div>
-        )}
+             {/* Hover overlay with eye icon */}
+             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-pointer-events-none">
+               <div className="bg-white/90 rounded-full p-4">
+                 <Eye className="h-8 w-8 text-gray-800" />
+               </div>
+             </div>
+         </div>
+       )}
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl md:text-2xl line-clamp-2 group-hover:text-ocean-600 transition-colors">
+          <CardTitle onClick={handleImageClick} className="text-xl md:text-2xl line-clamp-2 group-hover:text-ocean-600 transition-colors cursor-pointer">
             {event.content.slice(0, 150).replace(/https?:\/\/[^\s]+/g, '').trim() || 'Bild ohne Titel'}
           </CardTitle>
           <div className="flex items-center gap-2 text-sm text-gray-500">
