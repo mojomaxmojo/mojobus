@@ -81,64 +81,24 @@ export function ImageDetail() {
   const extractImages = (content: string): string[] => {
     if (!content) return [];
 
-  const extractHashtagsAsHeadings = (content: string): { headings: string[]; cleanedContent: string } => {
-    if (!content) return { headings: [], cleanedContent: '' };
+    // Match image URLs with extensions OR from known image hosting services
+    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/blossom\.primal\.net\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
+    const matches = content.match(urlRegex) || [];
 
-    const lines = content.split('\n');
-    const headings: string[] = [];
-    const cleanedLines: string[] = [];
+    // Filter out URLs that are not actually image files
+    const imageUrls = matches.filter(url => {
+      const lower = url.toLowerCase();
+      return lower.includes('.jpg') ||
+             lower.includes('.jpeg') ||
+             lower.includes('.png') ||
+             lower.includes('.gif') ||
+             lower.includes('.webp') ||
+             lower.includes('imgur.com') ||
+             lower.includes('blossom');
+    });
 
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-
-      // Prüfe ob die Zeile eine Markdown-Überschrift ist (# mit Leerzeichen)
-      if (trimmedLine.match(/^#\s/)) {
-        // H1-Überschrift (z.B. "# Die Ruhe nach und vor dem Sturm")
-        headings.push(trimmedLine);
-        cleanedLines.push(line);
-      } else {
-        cleanedLines.push(line);
-      }
-    }
-
-    return {
-      headings,
-      cleanedContent: cleanedLines.join('\n')
-    };
+    return imageUrls;
   };
-
-  function ImageContentWithHeadings({ event, className }: { event: any; className?: string }) {
-    const text = event.content;
-    const lines = text.split('\n');
-    const parts: React.ReactNode[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmedLine = line.trim();
-
-      // Prüfe ob es eine H1-Überschrift ist (# mit Leerzeichen danach)
-      // Beispiel: "# Die Ruhe nach und vor dem Sturm" = Überschrift
-      // Beispiel: "#Test" = Hashtag
-      if (trimmedLine.match(/^#\s/)) {
-        // Als H1-Überschrift rendern
-        const headingText = trimmedLine.slice(1).trim();
-        parts.push(
-          <h1 key={`heading-${i}`} className="text-2xl font-bold mt-6 mb-4">
-            {headingText}
-          </h1>
-        );
-      } else {
-        // Andere Zeilen als Text rendern
-        parts.push(
-          <p key={`line-${i}`} className="mb-4">
-            {line}
-          </p>
-        );
-      }
-    }
-
-    return <div className={className}>{parts}</div>;
-  }
 
   const extractTags = (event: ImageEvent): string[] => {
     if (!event?.tags) return [];
@@ -413,12 +373,12 @@ export function ImageDetail() {
                   Beschreibung
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                  <div className="prose prose-gray dark:prose-invert max-w-none">
-                    <ImageContentWithHeadings event={events} className="text-base" />
-                  </div>
-                </CardContent>
-              </Card>
+               <CardContent>
+                 <div className="prose prose-gray dark:prose-invert max-w-none">
+                   <NoteContent event={events} className="text-base" />
+                 </div>
+               </CardContent>
+             </Card>
 
              <SocialBar event={events} />
 
