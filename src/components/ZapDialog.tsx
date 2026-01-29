@@ -258,7 +258,7 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
 
   useEffect(() => {
     if (target) {
-      setComment('Zapped with MKStack!');
+      setComment('Zapped!');
     }
   }, [target]);
 
@@ -450,11 +450,11 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
             <DrawerTitle className="text-lg break-words pt-2">
               {invoice ? 'Lightning Payment' : 'Send a Zap'}
             </DrawerTitle>
-            <DrawerDescription className="text-sm break-words text-center">
+             <DrawerDescription className="text-sm break-words text-center">
               {invoice ? (
                 'Pay with Bitcoin Lightning Network'
               ) : (
-                'Zaps are small Bitcoin payments that support the creator of this item. If you enjoyed this, consider sending a zap!'
+                'Zaps sind kleine Bitcoin-Zahlungen, mit denen du den Ersteller dieses Artikels unterstützen kannst. Wenn dir dieser Artikel gefallen hat, sende doch einen Zap!'
               )}
             </DrawerDescription>
           </DrawerHeader>
@@ -483,7 +483,7 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
               'Pay with Bitcoin Lightning Network'
             ) : (
               <>
-                Zaps are small Bitcoin payments that support the creator of this item. If you enjoyed this, consider sending a zap!
+                Zaps sind kleine Bitcoin-Zahlungen, mit denen du den Ersteller dieses Artikels unterstützen kannst. Wenn dir dieser Artikel gefallen hat, sende doch einen Zap!
               </>
             )}
           </DialogDescription>
