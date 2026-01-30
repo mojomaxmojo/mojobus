@@ -103,7 +103,7 @@
 
 /* Enhanced prose styling for markdown content */
 .prose h1 {
-  font-family: 'Playfair Display Variable', 'Playfair Display', serif;
+  font-family: 'Playfair Display', serif;
   font-size: 2.5rem;
   font-weight: 700;
   line-height: 1.2;
@@ -112,7 +112,7 @@
 }
 
 .prose h2 {
-  font-family: 'Playfair Display Variable', 'Playfair Display', serif;
+  font-family: 'Playfair Display', serif;
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.3;
@@ -121,7 +121,7 @@
 }
 
 .prose h3 {
-  font-family: 'Playfair Display Variable', 'Playfair Display', serif;
+  font-family: 'Playfair Display', serif;
   font-size: 1.5rem;
   font-weight: 600;
   line-height: 1.4;
