@@ -46,11 +46,20 @@ export function useLoggedInAccounts() {
   // Other users are all logins except the current one
   const otherUsers = (authors || []).slice(1) as Account[];
 
+  // Safe logout handler that uses logins[0].id directly
+  const logout = () => {
+    const currentLogin = logins[0];
+    if (currentLogin) {
+      removeLogin(currentLogin.id);
+    }
+  };
+
   return {
     authors,
     currentUser,
     otherUsers,
     setLogin,
     removeLogin,
+    logout,
   };
 }
