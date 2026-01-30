@@ -23,9 +23,14 @@ export function ZapButton({
   const { data: author } = useAuthor(target?.pubkey || '');
   const { webln, activeNWC } = useWallet();
 
-  // Only fetch data if not provided externally
+  // Don't show zap button if target is missing
+  if (!target) {
+    return null;
+  }
+
+  // Only fetch data if not provided externally and target exists
   const { totalSats: fetchedTotalSats, isLoading } = useZaps(
-    externalZapData ? [] : target ?? [], // Empty array prevents fetching if external data provided
+    externalZapData ? [] : target,
     webln,
     activeNWC
   );
@@ -34,9 +39,9 @@ export function ZapButton({
   const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
   const showLoading = externalZapData?.isLoading || isLoading;
 
-  // Don't show zap button if target is missing, is the author, or author has no lightning address
+  // Don't show zap button if user is the author or author has no lightning address
   // (but show it for non-logged-in users)
-  if (!target || (user && user.pubkey === target.pubkey) || (!author?.metadata?.lud16 && !author?.metadata?.lud06)) {
+  if ((user && user.pubkey === target.pubkey) || (!author?.metadata?.lud16 && !author?.metadata?.lud06)) {
     return null;
   }
 

@@ -34,6 +34,11 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   const { repost } = useRepostActions();
   const { webln, activeNWC } = useWallet();
 
+  // Don't render if event is missing
+  if (!event) {
+    return null;
+  }
+
   // Fetch social counts
   const { data: counts, isLoading } = useSocialCounts(event);
 
@@ -41,7 +46,7 @@ export function SocialBar({ event, compact = false, className }: SocialBarProps)
   const { data: commentsData } = useComments(event);
   const commentCount = commentsData?.allComments?.length || 0;
 
-  // Fetch zaps for count
+  // Fetch zaps for count - only if event exists
   const { zapCount } = useZaps(event, webln, activeNWC);
 
   // Local state for like and repost interactions (optimistic UI)

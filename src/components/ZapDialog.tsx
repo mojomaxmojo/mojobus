@@ -240,10 +240,10 @@ ZapContent.displayName = 'ZapContent';
 export function ZapDialog({ target, children, className }: ZapDialogProps) {
   const [open, setOpen] = useState(false);
   const { user } = useCurrentUser();
-  const { data: author } = useAuthor(target.pubkey);
+  const { data: author } = useAuthor(target?.pubkey || '');
   const { toast } = useToast();
   const { webln, activeNWC, hasWebLN, detectWebLN } = useWallet();
-  const { zap, isZapping, invoice, setInvoice } = useZaps(target, webln, activeNWC, () => setOpen(false));
+  const { zap, isZapping, invoice, setInvoice } = useZaps(target || null, webln, activeNWC, () => setOpen(false));
   const [amount, setAmount] = useState<number | string>(100);
   const [comment, setComment] = useState<string>('');
   const [copied, setCopied] = useState(false);
@@ -251,8 +251,8 @@ export function ZapDialog({ target, children, className }: ZapDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
 
-  // Don't show zap dialog if author has no lightning address
-  if (!author?.metadata?.lud06 && !author?.metadata?.lud16) {
+  // Don't show zap dialog if target is missing or author has no lightning address
+  if (!target || (!author?.metadata?.lud06 && !author?.metadata?.lud16)) {
     return null;
   }
 
