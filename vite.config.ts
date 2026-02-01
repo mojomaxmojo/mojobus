@@ -55,6 +55,7 @@ export default defineConfig(() => ({
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
         // Intelligentes Code Splitting für bessere Performance
+        // OHNE zirkuläre Abhängigkeiten
         manualChunks(id) {
           // React Kernbibliotheken (stable)
           if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
@@ -133,9 +134,39 @@ export default defineConfig(() => ({
             return 'polyfills';
           }
 
-          // Alles andere in node_modules
-          if (id.includes('node_modules/')) {
-            return 'vendor';
+          // SONSTIGE - aber zirkulärfrei durch strikte Reihenfolge
+          // Nur node_modules, die noch nicht erfasst wurden
+          // Wir erstellen eine generische "other-vendor" für alles andere
+          // aber NICHT "vendor" um zirkuläre Abhängigkeiten zu vermeiden
+          if (id.includes('node_modules/') &&
+              !id.includes('node_modules/react/') &&
+              !id.includes('node_modules/react-dom/') &&
+              !id.includes('node_modules/@tanstack/react-query/') &&
+              !id.includes('node_modules/lucide-react/') &&
+              !id.includes('node_modules/@radix-ui/') &&
+              !id.includes('node_modules/@nostrify/') &&
+              !id.includes('node_modules/@tiptap/') &&
+              !id.includes('node_modules/prosemirror/') &&
+              !id.includes('node_modules/react-markdown/') &&
+              !id.includes('node_modules/micromark/') &&
+              !id.includes('node_modules/remark-') &&
+              !id.includes('node_modules/mdast-') &&
+              !id.includes('node_modules/hast-') &&
+              !id.includes('node_modules/react-day-picker/') &&
+              !id.includes('node_modules/embla-carousel-react/') &&
+              !id.includes('node_modules/qrcode/') &&
+              !id.includes('node_modules/react-router/') &&
+              !id.includes('node_modules/class-variance-authority/') &&
+              !id.includes('node_modules/clsx/') &&
+              !id.includes('node_modules/tailwind-merge/') &&
+              !id.includes('node_modules/@ungap/structured-clone/') &&
+              !id.includes('node_modules/base64-js/') &&
+              !id.includes('node_modules/events/') &&
+              !id.includes('node_modules/stream-browserify/') &&
+              !id.includes('node_modules/util/') &&
+              !id.includes('node_modules/process/') &&
+              !id.includes('node_modules/buffer/')) {
+            return 'other-vendor';
           }
 
           // App-spezifischer Code bleibt im Hauptbundle
