@@ -71,9 +71,9 @@ export function Header() {
   return (
     <>
       <OfflineBanner />
-      <header className="sticky top-0 z-40 w-full border-b border-primary/20 bg-background/95 backdrop-blur shadow-lg overflow-visible">
+      <header className="sticky top-0 z-50 w-full border-b border-primary/20 glass-effect shadow-lg">
       <div className="container mx-auto px-4">
-        <div className="flex h-14 items-center overflow-visible">
+        <div className="flex h-14 items-center">
           <Link to="/" className="inline-flex items-center hover:scale-105 transition-transform duration-300">
             <img
               src="/mojobuslogo.png"
@@ -387,7 +387,7 @@ export function Header() {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
           onClick={handleMobileMenuClick}
         >
           <div
@@ -406,66 +406,116 @@ export function Header() {
               </Button>
             </div>
 
-            <div className="p-6 space-y-6 overflow-visible">
+            <div className="p-6 space-y-3">
               {/* Mobile Home */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-muted-foreground">Hauptnavigation</h4>
-                <div className="space-y-1">
-                  <Link
-                    to="/"
-                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    onClick={handleMobileMenuClick}
-                  >
-                    <Home className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-900 dark:text-gray-100">Home</span>
-                  </Link>
-                  <Link
-                    to="/artikel"
-                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    onClick={handleMobileMenuClick}
-                  >
-                    <FileText className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-900 dark:text-gray-100">Alle Artikel</span>
-                  </Link>
-                  <Link
-                    to="/plaetze"
-                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    onClick={handleMobileMenuClick}
-                  >
-                    <MapPin className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-900 dark:text-gray-100">Alle Plätze</span>
-                  </Link>
-                  <Link
-                    to="/bilder"
-                    className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
-                    onClick={handleMobileMenuClick}
-                  >
-                    <Camera className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-900 dark:text-gray-100">Alle Bilder</span>
-                  </Link>
-                  <Link
-                    to="/notes"
-                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    onClick={handleMobileMenuClick}
-                  >
-                    <StickyNote className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-900 dark:text-gray-100">Alle Notes</span>
-                  </Link>
-                  <Link
-                    to="/about"
-                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    onClick={handleMobileMenuClick}
-                  >
-                    <Info className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-900 dark:text-gray-100">About</span>
-                  </Link>
+              <Link
+                to="/"
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                onClick={handleMobileMenuClick}
+              >
+                <Home className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-900 dark:text-gray-100">Home</span>
+              </Link>
+
+              {/* Mobile Artikel */}
+              <div className="space-y-1">
+                <Link
+                  to="/artikel"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <FileText className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Alle Artikel</span>
+                </Link>
+                <Link
+                  to="/artikel/leon"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <Dog className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Leon Story</span>
+                </Link>
+              </div>
+
+              {/* Mobile Plätze */}
+              <div className="space-y-1">
+                <Link
+                  to="/plaetze"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <MapPin className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Alle Plätze</span>
+                </Link>
+              </div>
+
+              {/* Mobile Bilder */}
+              <div className="space-y-1">
+                <Link
+                  to="/bilder"
+                  className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                  onClick={handleMobileMenuClick}
+                >
+                  <Camera className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Alle Bilder</span>
+                </Link>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+                  Nach Länder
+                </div>
+                <div className="space-y-2">
+                  {Object.values(MAIN_MENU.countries).map((country) => (
+                    <Link
+                      key={country.code}
+                      to={`/bilder/${country.code}`}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                      onClick={handleMobileMenuClick}
+                    >
+                      <span className="text-lg">{country.flag}</span>
+                      <span className="text-gray-900 dark:text-gray-100">{country.name}</span>
+                    </Link>
+                  ))}
+                </div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+                  Natur
+                </div>
+                <div className="space-y-2">
+                  {Object.values(MAIN_MENU.nature).map((category) => (
+                    <Link
+                      key={category.id}
+                      to={`/bilder/natur/${category.id}`}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                      onClick={handleMobileMenuClick}
+                    >
+                      <span>{category.emoji}</span>
+                      <span className="text-gray-900 dark:text-gray-100">{category.name}</span>
+                    </Link>
+                  ))}
                 </div>
               </div>
 
+              {/* Mobile Notes */}
+              <Link
+                to="/notes"
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                onClick={handleMobileMenuClick}
+              >
+                <StickyNote className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-900 dark:text-gray-100">Alle Notes</span>
+              </Link>
+
+              {/* Mobile About */}
+              <Link
+                to="/about"
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                onClick={handleMobileMenuClick}
+              >
+                <Info className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-900 dark:text-gray-100">About</span>
+              </Link>
+
               {/* Mobile User Actions */}
               {user ? (
-                <div className="border-t dark:border-gray-700 pt-6 space-y-2">
-                  <h4 className="text-sm font-semibold text-muted-foreground">Konto</h4>
+                <div className="border-t dark:border-gray-700 pt-4 mt-4 space-y-2">
                   <Link
                     to="/veroeffentlichen"
                     className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
@@ -502,7 +552,7 @@ export function Header() {
                   </button>
                 </div>
               ) : (
-                <div className="border-t dark:border-gray-700 pt-6">
+                <div className="border-t dark:border-gray-700 pt-4 mt-4">
                   <LoginArea />
                 </div>
               )}
