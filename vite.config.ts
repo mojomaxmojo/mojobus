@@ -54,9 +54,34 @@ export default defineConfig(() => ({
         inlineDynamicImports: false,
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
-        // Deaktiviere manuelle Chunks um zirkuläre Abhängigkeiten zu vermeiden
-        // Vite/Rollup kümmert sich automatisch um das Chapping
-        manualChunks: undefined,
+        // Intelligentes Code Splitting für bessere Performance
+        // Nur für große Bibliotheken, die sicher getrennt werden können
+        manualChunks(id) {
+          // Tiptap Editor (nur bei Bedarf laden) - WICHTIG: Keine zirkulären Abhängigkeiten!
+          if (id.includes('node_modules/@tiptap/') || id.includes('node_modules/prosemirror/')) {
+            return 'tiptap-vendor';
+          }
+
+          // QR Code (nur bei Bedarf)
+          if (id.includes('node_modules/qrcode/')) {
+            return 'qrcode-vendor';
+          }
+
+          // Node polyfills (unabhängig)
+          if (id.includes('node_modules/@ungap/structured-clone/') ||
+              id.includes('node_modules/base64-js/') ||
+              id.includes('node_modules/events/') ||
+              id.includes('node_modules/stream-browserify/') ||
+              id.includes('node_modules/util/') ||
+              id.includes('node_modules/process/') ||
+              id.includes('node_modules/buffer/')) {
+            return 'polyfills';
+          }
+
+          // Alles andere: Keine manuellen Chunks, Rollup kümmert sich darum
+          // Das verhindert zirkuläre Abhängigkeiten
+          return undefined;
+        },
       },
       onwarn(warning, warn) {
         // Suppress external import warnings from node_modules
