@@ -254,15 +254,6 @@ export function Home() {
                 Aktualisieren
               </Button>
             </div>
-
-            {/* Scroll Indicator */}
-            <div>
-              <div className="flex justify-center">
-                <div className="w-8 h-12 border-2 border-primary/50 rounded-full flex justify-center pt-2">
-                  <div className="w-1.5 h-3 bg-primary rounded-full" />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
