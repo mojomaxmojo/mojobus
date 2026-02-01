@@ -9,7 +9,7 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { useAuthor } from '@/hooks/useAuthor';
-import { PostActions } from '@/components/PostActions';
+
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { NoteContent } from '@/components/NoteContent';
 import { SocialBar } from '@/components/SocialBar';
@@ -457,26 +457,9 @@ export function ImageDetail() {
                </Card>
              )}
 
-            {/* Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Share2 className="h-5 w-5 text-ocean-600" />
-                  Aktionen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <PostActions
-                  event={events}
-                  onDelete={() => {
-                    setTimeout(() => navigate('/bilder'), 1000);
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+           </div>
+         </div>
+       </div>
 
       {/* Fullscreen Image Viewer */}
       {isImageFullscreen && (
