@@ -303,9 +303,9 @@ export function ImageDetail() {
           Zurück zu Bilder
         </Button>
 
-        <div className="grid grid-cols-1 grid-cols-1 gap-8">
-          {/* Main Content */}
-          <div className="space-y-6">
+        <div className="max-w-4xl mx-auto">
+           {/* Main Content */}
+           <div className="space-y-6">
             {/* Image Display with Author Info */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
@@ -430,38 +430,32 @@ export function ImageDetail() {
                </CardContent>
              </Card>
 
-             {/* Comments Section */}
+              {/* Tags */}
+              {tags.length > 0 && (
+                <Card>
+                  <CardContent className="py-4">
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map(tag => (
+                        <Badge key={tag} variant="secondary" className="gap-1">
+                          #{tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-             {/* Comments Section */}
-             <Card>
-               <CardContent>
-                 <CommentsSection root={events} />
-               </CardContent>
-             </Card>
+              {/* Comments Section */}
+              <Card>
+                <CardContent>
+                  <CommentsSection root={events} />
+                </CardContent>
+              </Card>
+            </div>
           </div>
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Tags */}
-             {tags.length > 0 && (
-               <Card>
-                 <CardContent className="py-4">
-                   <div className="flex flex-wrap gap-2">
-                     {tags.map(tag => (
-                       <Badge key={tag} variant="secondary" className="gap-1">
-                         #{tag}
-                       </Badge>
-                     ))}
-                   </div>
-                 </CardContent>
-               </Card>
-             )}
-
-           </div>
-         </div>
-       </div>
-
-      {/* Fullscreen Image Viewer */}
+       {/* Fullscreen Image Viewer */}
       {isImageFullscreen && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
           {/* Close button */}
