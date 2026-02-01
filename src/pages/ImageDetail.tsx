@@ -13,6 +13,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { NoteContent } from '@/components/NoteContent';
 import { SocialBar } from '@/components/SocialBar';
+import { ZapButton } from '@/components/ZapButton';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
 import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getArticleHeaderUrl } from '@/lib/imageUtils';
@@ -331,22 +332,39 @@ export function ImageDetail() {
                       {metadata?.nip05 || 'Kein NIP-05'}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="flex-shrink-0"
-                    onClick={() => {
-                      if (navigator.share) {
-                        navigator.share?.({
-                          title: 'Bild von MojoBus',
-                          text: events.content,
-                          url: window.location.href
-                        });
-                      }
-                    }}
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <ZapButton
+                      target={events}
+                      className="text-xs"
+                      showCount={false}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-shrink-0 text-xs h-8 px-3"
+                      onClick={() => {
+                        // Tip Autor - same as Zap
+                      }}
+                    >
+                      <span className="text-orange-500 font-medium">Tip Autor</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="flex-shrink-0"
+                      onClick={() => {
+                        if (navigator.share) {
+                          navigator.share?.({
+                            title: 'Bild von MojoBus',
+                            text: events.content,
+                            url: window.location.href
+                          });
+                        }
+                      }}
+                    >
+                      <Share2 className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Image */}

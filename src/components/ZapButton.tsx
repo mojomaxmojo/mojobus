@@ -60,8 +60,8 @@ export function ZapButton({
         className={`flex items-center gap-1 group ${className}`}
         onClick={handleZapClick}
       >
-        <Zap className="h-4 w-4 group-hover:fill-yellow-500 group-hover:text-yellow-500 transition-all group-hover:scale-125" />
-        <span className="text-xs group-hover:text-yellow-500 transition-colors">
+        <Zap className="h-4 w-4 text-orange-500 group-hover:fill-orange-500 transition-all group-hover:scale-125" />
+        <span className="text-xs group-hover:text-orange-500 transition-colors">
           {showLoading ? (
             '...'
           ) : showCount && totalSats > 0 ? (
