@@ -410,10 +410,7 @@ export function ImageDetail() {
           <div className="space-y-6">
             {/* Author Info */}
             <Card>
-              <CardHeader>
-                <CardTitle>Autor</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="py-4">
                 <div className="flex items-center gap-3">
                   {metadata?.picture ? (
                     <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
