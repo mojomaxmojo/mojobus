@@ -54,9 +54,93 @@ export default defineConfig(() => ({
         inlineDynamicImports: false,
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
-        // Deaktiviere manuelle Chunks um zirkuläre Abhängigkeiten zu vermeiden
-        // Vite/Rollup kümmert sich automatisch um das Chapping
-        manualChunks: undefined,
+        // Intelligentes Code Splitting für bessere Performance
+        manualChunks(id) {
+          // React Kernbibliotheken (stable)
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-vendor';
+          }
+
+          // React Query (stable)
+          if (id.includes('node_modules/@tanstack/react-query/')) {
+            return 'query-vendor';
+          }
+
+          // Icons (stable)
+          if (id.includes('node_modules/lucide-react/')) {
+            return 'icons-vendor';
+          }
+
+          // Radix UI (semi-stable)
+          if (id.includes('node_modules/@radix-ui/')) {
+            return 'radix-vendor';
+          }
+
+          // Nostr Bibliotheken (feature-specific)
+          if (id.includes('node_modules/@nostrify/')) {
+            return 'nostr-vendor';
+          }
+
+          // Tiptap Editor (nur bei Bedarf laden)
+          if (id.includes('node_modules/@tiptap/') || id.includes('node_modules/prosemirror/')) {
+            return 'tiptap-vendor';
+          }
+
+          // Markdown (nur bei Bedarf)
+          if (id.includes('node_modules/react-markdown/') ||
+              id.includes('node_modules/micromark/') ||
+              id.includes('node_modules/remark-') ||
+              id.includes('node_modules/mdast-') ||
+              id.includes('node_modules/hast-')) {
+            return 'markdown-vendor';
+          }
+
+          // Date Picker (nur bei Bedarf)
+          if (id.includes('node_modules/react-day-picker/')) {
+            return 'datepicker-vendor';
+          }
+
+          // Carousel (nur bei Bedarf)
+          if (id.includes('node_modules/embla-carousel-react/')) {
+            return 'carousel-vendor';
+          }
+
+          // QR Code (nur bei Bedarf)
+          if (id.includes('node_modules/qrcode/')) {
+            return 'qrcode-vendor';
+          }
+
+          // Router (feature-specific)
+          if (id.includes('node_modules/react-router/')) {
+            return 'router-vendor';
+          }
+
+          // Utils (semi-stable)
+          if (id.includes('node_modules/class-variance-authority/') ||
+              id.includes('node_modules/clsx/') ||
+              id.includes('node_modules/tailwind-merge/')) {
+            return 'css-utils-vendor';
+          }
+
+          // Node polyfills
+          if (id.includes('node_modules/@ungap/structured-clone/') ||
+              id.includes('node_modules/base64-js/') ||
+              id.includes('node_modules/events/') ||
+              id.includes('node_modules/stream-browserify/') ||
+              id.includes('node_modules/util/') ||
+              id.includes('node_modules/process/') ||
+              id.includes('node_modules/buffer/')) {
+            return 'polyfills';
+          }
+
+          // Alles andere in node_modules
+          if (id.includes('node_modules/')) {
+            return 'vendor';
+          }
+
+          // App-spezifischer Code bleibt im Hauptbundle
+          return undefined;
+        },
       },
       onwarn(warning, warn) {
         // Suppress external import warnings from node_modules

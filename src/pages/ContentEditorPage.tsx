@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ContentEditor } from '@/components/ContentEditor';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy loaded ContentEditor für Performance-Optimierung
+const ContentEditor = lazy(() => import('@/components/ContentEditor'));
+
 import { useReplaceableContent } from '@/hooks/useReplaceableContent';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableRow, TableHeader } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -120,18 +124,20 @@ export function ContentEditorPage() {
             </div>
 
             {activeDTag && (
-              <ContentEditor
-                dTag={activeDTag}
-                mode="create"
-                onSave={(content) => {
-                  toast({
-                    title: 'Inhalt erstellt',
-                    description: `Replaceable Inhalt mit d-tag "${activeDTag}" wurde erfolgreich erstellt.`,
-                    duration: 3000,
-                  variant: 'default'
-                  });
-                }}
-              />
+              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <ContentEditor
+                  dTag={activeDTag}
+                  mode="create"
+                  onSave={(content) => {
+                    toast({
+                      title: 'Inhalt erstellt',
+                      description: `Replaceable Inhalt mit d-tag "${activeDTag}" wurde erfolgreich erstellt.`,
+                      duration: 3000,
+                      variant: 'default'
+                    });
+                  }}
+                />
+              </Suspense>
             )}
           </TabsContent>
 

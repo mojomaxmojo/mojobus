@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { FileText, MessageSquare, Map, Upload, Image as ImageIcon, Camera } from 'lucide-react';
-import { ContentEditor } from '@/components/ContentEditor';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy loaded ContentEditor für Performance-Optimierung
+const ContentEditor = lazy(() => import('@/components/ContentEditor'));
+
 import { useReplaceableContent } from '@/hooks/useReplaceableContent';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useConflictDetector } from '@/hooks/useConflictDetector';
@@ -129,14 +135,16 @@ export function PublishReplaceable() {
               </div>
 
               {/* Replaceable Content Editor */}
-              <ContentEditor
-                dTag={getDTag('mojobus-content')}
-                mode={editEventId ? 'edit' : 'create'}
-                onSave={(content) => {
-                  // Handle save with conflict resolution if needed
-                  console.log('Content saved with replaceable system:', content);
-                }}
-              />
+              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <ContentEditor
+                  dTag={getDTag('mojobus-content')}
+                  mode={editEventId ? 'edit' : 'create'}
+                  onSave={(content) => {
+                    // Handle save with conflict resolution if needed
+                    console.log('Content saved with replaceable system:', content);
+                  }}
+                />
+              </Suspense>
             </div>
 
             {/* Editor Status */}

@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ContentEditor } from '@/components/ContentEditor';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy loaded ContentEditor für Performance-Optimierung
+const ContentEditor = lazy(() => import('@/components/ContentEditor'));
+
 import { useReplaceableContent } from '@/hooks/useReplaceableContent';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useConflictDetector } from '@/hooks/useConflictDetector';
@@ -199,18 +203,20 @@ export function ContentManagementPage() {
                   </AlertDescription>
                 </Alert>
 
-                <ContentEditor
-                  dTag={activeDTag || generateDTag()}
-                  mode={showCreate ? 'create' : 'edit'}
-                  onSave={(content) => {
-                    toast({
-                      title: 'Inhalt gespeichert',
-                      description: `Replaceable Inhalt wurde erfolgreich ${showCreate ? 'erstellt' : 'aktualisiert'}.`,
-                      duration: 3000,
-                      variant: 'default'
-                    });
-                  }}
-                />
+                <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                  <ContentEditor
+                    dTag={activeDTag || generateDTag()}
+                    mode={showCreate ? 'create' : 'edit'}
+                    onSave={(content) => {
+                      toast({
+                        title: 'Content gespeichert',
+                        description: 'Der Inhalt wurde erfolgreich gespeichert.'
+                      });
+                      setActiveTab('history');
+                      setShowCreate(false);
+                    }}
+                  />
+                </Suspense>
               </div>
             )}
 
