@@ -64,18 +64,8 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground space-y-3">
+        <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
           <p>© {currentYear} MojoBus. Veröffentlicht auf Nostr – dezentral und zensurresistent.</p>
-          <p>
-            <a
-              href="https://soapbox.pub/mkstack"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors font-medium"
-            >
-              Vibed with MKStack
-            </a>
-          </p>
         </div>
       </div>
     </footer>
