@@ -71,10 +71,10 @@ export function Header() {
   return (
     <>
       <OfflineBanner />
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b border-primary/20 glass-effect shadow-lg">
       <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center">
-          <Link to="/" className="inline-flex items-center">
+        <div className="flex h-20 items-center">
+          <Link to="/" className="inline-flex items-center hover:scale-105 transition-transform duration-300">
             <img
               src="/mojobuslogo.png"
               alt="MojoBus Logo"
@@ -85,11 +85,11 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1 flex-1 justify-end">
+          <nav className="hidden md:flex items-center gap-2 flex-1 justify-end">
             {/* Home */}
             <Link
               to="/"
-              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-primary/10 hover:shadow-md"
             >
               <Home className="h-4 w-4" />
               Home
@@ -98,13 +98,13 @@ export function Header() {
             {/* Artikel mit Sub-Menü */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5">
+                <button className="flex items-center gap-2 text-foreground hover:text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-primary/10 hover:shadow-md">
                   <FileText className="h-4 w-4" />
                   Artikel
-                  <ChevronDown className="h-3 w-3" />
+                  <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:rotate-180" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuContent align="start" className="w-56 shadow-xl border-primary/20">
                 <DropdownMenuItem asChild>
                   <Link to="/artikel" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
@@ -186,13 +186,13 @@ export function Header() {
             {/* Plätze */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-semibold transition-all hover:bg-primary/5">
+                <button className="flex items-center gap-2 text-foreground hover:text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-primary/10 hover:shadow-md">
                   <MapPin className="h-4 w-4" />
                   Plätze
-                  <ChevronDown className="h-3 w-3" />
+                  <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:rotate-180" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuContent align="start" className="w-48 shadow-xl border-primary/20">
                 <DropdownMenuItem asChild>
                   <Link to="/plaetze" className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
@@ -261,13 +261,13 @@ export function Header() {
             {/* Bilder */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-foreground hover:text-[#ec1a58] px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-[#ec1a58]/5">
+                <button className="flex items-center gap-2 text-foreground hover:text-accent px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-accent/10 hover:shadow-md">
                   <Camera className="h-4 w-4" />
                   Bilder
-                  <ChevronDown className="h-3 w-3" />
+                  <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:rotate-180" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuContent align="start" className="w-56 shadow-xl border-accent/20">
                 <DropdownMenuItem asChild>
                   <Link to="/bilder" className="flex items-center gap-2">
                     <Images className="h-4 w-4" />
@@ -314,7 +314,7 @@ export function Header() {
             {/* Notes */}
             <Link
               to="/notes"
-              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-primary/10 hover:shadow-md"
             >
               <StickyNote className="h-4 w-4" />
               Notes
@@ -323,7 +323,7 @@ export function Header() {
             {/* About */}
             <Link
               to="/about"
-              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-primary/10 hover:shadow-md"
             >
               <Info className="h-4 w-4" />
               About
@@ -331,17 +331,17 @@ export function Header() {
           </nav>
 
           {/* User Actions - Desktop */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-4">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="default" className="hover:bg-primary/10 transition-all duration-300 rounded-xl">
                     <User className="h-4 w-4 mr-2" />
                     Account
-                    <ChevronDown className="h-3 w-3 ml-2" />
+                    <ChevronDown className="h-3 w-3 ml-2 transition-transform duration-200" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="shadow-xl border-primary/20">
                   <DropdownMenuItem asChild>
                     <Link to="/veroeffentlichen" className="flex items-center gap-2">
                       <PenSquare className="h-4 w-4" />
@@ -387,25 +387,26 @@ export function Header() {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/50"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
           onClick={handleMobileMenuClick}
         >
           <div
-            className="bg-white dark:bg-gray-900 w-80 max-w-[90%] h-full overflow-y-auto"
+            className="glass-effect w-80 max-w-[90%] h-full overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Menü</h3>
+            <div className="flex items-center justify-between p-6 border-b border-primary/20">
+              <h3 className="text-xl font-bold text-foreground">Menü</h3>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setMobileMenuOpen(false)}
+                className="hover:bg-primary/10 rounded-xl"
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
 
-            <div className="p-4 space-y-2">
+            <div className="p-6 space-y-3">
               {/* Mobile Home */}
               <Link
                 to="/"
