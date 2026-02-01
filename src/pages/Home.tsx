@@ -211,7 +211,7 @@ export function Home() {
 
   return (
     <div className="min-h-screen">
-      <section className="relative min-h-[55vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[45vh] flex items-center justify-center overflow-hidden">
         {/* Background Image with Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
@@ -241,11 +241,6 @@ export function Home() {
                 Unser Leben am Meer
               </h2>
             </div>
-
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Soul Leon (Lionhunter), unser RV und das Meer.
-              Wir leben als Perpetual Traveler, meist direkt am Strand, autark mit Solarstrom und minimalistisch unterwegs.
-            </p>
 
             <div className="pt-8 flex flex-wrap justify-center gap-4">
               <Button asChild size="lg" className="gap-2 shadow-lg hover:shadow-xl transition-all">
