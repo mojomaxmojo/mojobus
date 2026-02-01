@@ -73,7 +73,7 @@ export function Header() {
       <OfflineBanner />
       <header className="sticky top-0 z-50 w-full border-b border-primary/20 glass-effect shadow-lg">
       <div className="container mx-auto px-4">
-        <div className="flex h-20 items-center">
+        <div className="flex h-14 items-center">
           <Link to="/" className="inline-flex items-center hover:scale-105 transition-transform duration-300">
             <img
               src="/mojobuslogo.png"
