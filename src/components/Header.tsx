@@ -85,7 +85,7 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-2 flex-1 justify-end">
+          <nav className="hidden md:flex items-center gap-1 flex-1 justify-end">
             {/* Home */}
             <Link
               to="/"
