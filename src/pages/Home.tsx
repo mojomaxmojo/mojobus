@@ -227,9 +227,6 @@ export function Home() {
               <h2 className="text-3xl md:text-5xl font-serif text-muted-foreground leading-relaxed">
                 Unser Leben am Meer
               </h2>
-              <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Geschichten, Tipps und Einblicke in unser Leben zwischen Sand und Horizont
-              </p>
             </div>
 
             <div className="pt-6 flex flex-wrap justify-center gap-5">
@@ -263,9 +260,6 @@ export function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16 fade-in-up">
-              <p className="text-2xl md:text-3xl font-serif text-muted-foreground leading-relaxed">
-                Geschichten, Tipps und Einblicke in unser Leben zwischen Sand und Horizont
-              </p>
             </div>
 
             {isLoading ? (
