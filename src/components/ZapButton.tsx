@@ -11,13 +11,15 @@ interface ZapButtonProps {
   className?: string;
   showCount?: boolean;
   zapData?: { count: number; totalSats: number; isLoading?: boolean };
+  label?: string;
 }
 
 export function ZapButton({
   target,
   className = "text-xs ml-1",
   showCount = true,
-  zapData: externalZapData
+  zapData: externalZapData,
+  label = "Zap"
 }: ZapButtonProps) {
   const { user } = useCurrentUser();
   const { data: author } = useAuthor(target?.pubkey || '');
@@ -67,7 +69,7 @@ export function ZapButton({
           ) : showCount && totalSats > 0 ? (
             `${totalSats.toLocaleString()}`
           ) : (
-            'Zap'
+            label
           )}
         </span>
       </div>

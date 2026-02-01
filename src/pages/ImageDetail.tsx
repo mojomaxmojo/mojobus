@@ -337,17 +337,8 @@ export function ImageDetail() {
                       target={events}
                       className="text-xs"
                       showCount={false}
+                      label="Tip Autor"
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-shrink-0 text-xs h-8 px-3"
-                      onClick={() => {
-                        // Tip Autor - same as Zap
-                      }}
-                    >
-                      <span className="text-orange-500 font-medium">Tip Autor</span>
-                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
