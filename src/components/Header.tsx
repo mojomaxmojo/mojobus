@@ -71,9 +71,9 @@ export function Header() {
   return (
     <>
       <OfflineBanner />
-      <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white dark:bg-gray-900/95">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
-        <div className="flex h-14 items-center">
+        <div className="flex h-16 items-center">
           <Link to="/" className="inline-flex items-center">
             <img
               src="/mojobuslogo.png"
@@ -85,11 +85,11 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-3 flex-1 justify-end">
+          <nav className="hidden md:flex items-center gap-4 flex-1 justify-end">
             {/* Home */}
             <Link
               to="/"
-              className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
             >
               <Home className="h-4 w-4" />
               Home
@@ -98,7 +98,7 @@ export function Header() {
             {/* Artikel mit Sub-Menü */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors">
+                <button className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5">
                   <FileText className="h-4 w-4" />
                   Artikel
                   <ChevronDown className="h-3 w-3" />
@@ -186,7 +186,7 @@ export function Header() {
             {/* Plätze */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-ocean-600 dark:text-ocean-300 hover:text-ocean-700 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-semibold transition-colors">
+                <button className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-semibold transition-all hover:bg-primary/5">
                   <MapPin className="h-4 w-4" />
                   Plätze
                   <ChevronDown className="h-3 w-3" />
@@ -261,7 +261,7 @@ export function Header() {
             {/* Bilder */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors">
+                <button className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5">
                   <Camera className="h-4 w-4" />
                   Bilder
                   <ChevronDown className="h-3 w-3" />
@@ -314,7 +314,7 @@ export function Header() {
             {/* Notes */}
             <Link
               to="/notes"
-              className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
             >
               <StickyNote className="h-4 w-4" />
               Notes
@@ -323,7 +323,7 @@ export function Header() {
             {/* About */}
             <Link
               to="/about"
-              className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-ocean-600 dark:hover:text-ocean-400 px-2 py-1.5 rounded-md text-sm font-medium transition-colors"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
             >
               <Info className="h-4 w-4" />
               About
