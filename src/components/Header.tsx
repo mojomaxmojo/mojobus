@@ -391,7 +391,7 @@ export function Header() {
           onClick={handleMobileMenuClick}
         >
           <div
-            className="bg-background w-80 max-w-[90%] h-full overflow-y-auto shadow-2xl"
+            className="glass-effect w-80 max-w-[90%] h-full overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-6 border-b border-primary/20">
