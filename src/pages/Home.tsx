@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { Waves, Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
+import { Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -211,7 +211,7 @@ export function Home() {
 
   return (
     <div className="min-h-screen">
-      <section className="relative min-h-[45vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[40vh] flex items-center justify-center overflow-hidden">
         {/* Background Image with Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
@@ -223,16 +223,6 @@ export function Home() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="flex justify-center mb-6">
-              <img
-                src="/icon-96x96.png"
-                alt="MojoBus Logo"
-                width="60"
-                height="60"
-                className="h-15 w-15 object-contain"
-              />
-            </div>
-
             <div className="space-y-4">
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground leading-tight">
                 Perpetual Traveler
