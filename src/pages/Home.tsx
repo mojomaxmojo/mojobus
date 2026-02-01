@@ -224,10 +224,13 @@ export function Home() {
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-                <Waves className="h-20 w-20 text-primary relative wave-animation" />
-              </div>
+              <img
+                src="/icon-96x96.png"
+                alt="MojoBus Logo"
+                width="50"
+                height="50"
+                className="h-12 w-12 object-contain"
+              />
             </div>
 
             <div className="space-y-4">
