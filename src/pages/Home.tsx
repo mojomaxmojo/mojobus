@@ -247,7 +247,7 @@ export function Home() {
               <Button
                 asChild
                 size="lg"
-                className="gap-3 shadow-xl hover:shadow-2xl transition-all duration-300 text-base px-8 py-6 rounded-xl"
+                className="gap-3 shadow-lg text-base px-8 py-6 rounded-xl"
               >
                 <Link to="/artikel">
                   <Compass className="h-6 w-6" />
@@ -336,7 +336,7 @@ export function Home() {
               <Card className="group border-2 border-primary/20 hover:border-primary transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl bg-gradient-to-br from-background to-primary/5 fade-in-up">
                 <CardHeader className="space-y-6 pt-8">
                   <div className="flex justify-center">
-                    <div className="relative pulse-ring">
+                    <div className="relative">
                       <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl group-hover:bg-primary/25 transition-all duration-500 scale-110" />
                       <Sun className="h-20 w-20 text-primary relative z-10 group-hover:scale-110 transition-transform duration-500" />
                     </div>
@@ -353,7 +353,7 @@ export function Home() {
               <Card className="group border-2 border-primary/20 hover:border-primary transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl bg-gradient-to-br from-background to-primary/5 fade-in-up delay-100">
                 <CardHeader className="space-y-6 pt-8">
                   <div className="flex justify-center">
-                    <div className="relative pulse-ring">
+                    <div className="relative">
                       <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl group-hover:bg-primary/25 transition-all duration-500 scale-110" />
                       <Compass className="h-20 w-20 text-primary relative z-10 group-hover:scale-110 transition-transform duration-500" />
                     </div>
@@ -370,7 +370,7 @@ export function Home() {
               <Card className="group border-2 border-primary/20 hover:border-primary transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl bg-gradient-to-br from-background to-primary/5 fade-in-up delay-200">
                 <CardHeader className="space-y-6 pt-8">
                   <div className="flex justify-center">
-                    <div className="relative pulse-ring">
+                    <div className="relative">
                       <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl group-hover:bg-primary/25 transition-all duration-500 scale-110" />
                       <Anchor className="h-20 w-20 text-primary relative z-10 group-hover:scale-110 transition-transform duration-500" />
                     </div>
