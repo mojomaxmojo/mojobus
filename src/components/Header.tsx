@@ -391,7 +391,7 @@ export function Header() {
           onClick={handleMobileMenuClick}
         >
           <div
-            className="bg-background w-80 max-w-[90%] h-full overflow-y-auto shadow-2xl"
+            className="bg-background w-80 max-w-[90%] h-full overflow-y-auto shadow-2xl overflow-visible"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-6 border-b border-primary/20">
@@ -417,7 +417,7 @@ export function Header() {
                 <span className="text-gray-900 dark:text-gray-100">Home</span>
               </Link>
 
-              {/* Mobile Artikel */}
+               {/* Mobile Artikel */}
               <div className="space-y-1">
                 <Link
                   to="/artikel"
@@ -435,6 +435,24 @@ export function Header() {
                   <Dog className="h-5 w-5 text-gray-600" />
                   <span className="text-gray-900 dark:text-gray-100">Leon Story</span>
                 </Link>
+              </div>
+
+              {/* Mobile Länder für Artikel */}
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+                  Artikel nach Ländern
+                </div>
+                {Object.values(MAIN_MENU.countries).slice(0, 4).map((country) => (
+                  <Link
+                    key={country.code}
+                    to={`/artikel/${country.code}`}
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                    onClick={handleMobileMenuClick}
+                  >
+                    <span className="text-lg">{country.flag}</span>
+                    <span className="text-gray-900 dark:text-gray-100">{country.name}</span>
+                  </Link>
+                ))}
               </div>
 
               {/* Mobile Plätze */}
