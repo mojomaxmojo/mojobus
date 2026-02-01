@@ -59,7 +59,7 @@ export function ZapButton({
   return (
     <ZapDialog target={target}>
       <div
-        className={`flex items-center gap-1 group border border-orange-500 rounded px-2 py-1 ${className}`}
+        className={`flex items-center gap-1 group border border-orange-500 rounded px-2 py-1 hover:bg-orange-500/5 cursor-pointer ${className}`}
         onClick={handleZapClick}
       >
         <Zap className="h-4 w-4 text-orange-500 group-hover:fill-orange-500 transition-all group-hover:scale-125" />
