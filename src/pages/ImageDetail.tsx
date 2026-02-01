@@ -430,24 +430,20 @@ export function ImageDetail() {
                </CardContent>
              </Card>
 
-              {/* Tags */}
-              {tags.length > 0 && (
-                <Card>
-                  <CardContent className="py-4">
-                    <div className="flex flex-wrap gap-2">
-                      {tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="gap-1">
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Comments Section */}
+              {/* Tags and Comments */}
               <Card>
                 <CardContent>
+                  {tags.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map(tag => (
+                          <Badge key={tag} variant="secondary" className="gap-1">
+                            #{tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <CommentsSection root={events} />
                 </CardContent>
               </Card>
