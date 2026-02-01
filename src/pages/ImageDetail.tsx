@@ -9,10 +9,11 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { useAuthor } from '@/hooks/useAuthor';
-import { PostActions } from '@/components/PostActions';
+
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { NoteContent } from '@/components/NoteContent';
 import { SocialBar } from '@/components/SocialBar';
+import { ZapButton } from '@/components/ZapButton';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
 import { generateSrcset, generateSizes, getGalleryThumbnailUrl, getArticleHeaderUrl } from '@/lib/imageUtils';
@@ -303,12 +304,61 @@ export function ImageDetail() {
           Zurück zu Bilder
         </Button>
 
-        <div className="grid grid-cols-1 grid-cols-1 gap-8">
-          {/* Main Content */}
-          <div className="space-y-6">
-            {/* Image Display */}
+        <div className="max-w-4xl mx-auto">
+           {/* Main Content */}
+           <div className="space-y-6">
+            {/* Image Display with Author Info */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
+                {/* Author Info */}
+                <div className="flex items-center gap-3 p-4 border-b">
+                  {metadata?.picture ? (
+                    <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                      <img
+                        src={getGalleryThumbnailUrl(metadata.picture)}
+                        alt={metadata.name || 'Autor'}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <User className="h-4 w-4 text-gray-500" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {metadata?.nip05 || 'Kein NIP-05'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ZapButton
+                      target={events}
+                      className="text-xs"
+                      showCount={false}
+                      label="Tip Autor"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="flex-shrink-0"
+                      onClick={() => {
+                        if (navigator.share) {
+                          navigator.share?.({
+                            title: 'Bild von MojoBus',
+                            text: events.content,
+                            url: window.location.href
+                          });
+                        }
+                      }}
+                    >
+                      <Share2 className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Image */}
                 <div
                   className="relative group cursor-pointer"
                   onClick={() => openFullscreen(0)}
@@ -373,185 +423,38 @@ export function ImageDetail() {
               </Card>
             )}
 
-            {/* Content and Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-ocean-600" />
-                  Beschreibung
-                </CardTitle>
-              </CardHeader>
-               <CardContent>
-                 <div className="prose prose-gray dark:prose-invert max-w-none">
-                   <NoteContent event={events} className="text-base" />
-                 </div>
-               </CardContent>
-             </Card>
-
-             <SocialBar event={events} />
-
-             {/* Comments Section */}
-
-            {/* Comments Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-ocean-600" />
-                  Kommentare
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CommentsSection root={events} />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Author Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-red-500" />
-                  Autor
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  {metadata?.picture ? (
-                    <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                      <img
-                        src={getGalleryThumbnailUrl(metadata.picture)}
-                        alt={metadata.name || 'Autor'}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-500" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {metadata?.nip05 || 'Kein NIP-05'}
-                    </p>
-                  </div>
-                </div>
-
-                {metadata?.about && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {metadata.about}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Image Metadata */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-ocean-600" />
-                  Bild-Informationen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{new Date(events.created_at * 1000).toLocaleDateString('de-DE', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}</span>
-                </div>
-
-                <div className="text-sm">
-                  <span className="font-medium">Anzahl Bilder:</span> {images.length}
-                </div>
-
-                {images.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="font-medium text-sm">Download-Optionen:</div>
-                    {images.map((img, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(img, '_blank')}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Bild {index + 1}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Tags */}
-            {tags.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Share2 className="h-5 w-5 text-ocean-600" />
-                    Tags
-                  </CardTitle>
-                </CardHeader>
+             {/* Content and Description */}
+             <Card>
                 <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="gap-1">
-                        #{tag}
-                      </Badge>
-                    ))}
+                  <div className="prose prose-gray dark:prose-invert max-w-none mb-4">
+                    <NoteContent event={events} className="text-base" />
                   </div>
+                  <SocialBar event={events} />
                 </CardContent>
               </Card>
-            )}
 
-            {/* Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Share2 className="h-5 w-5 text-ocean-600" />
-                  Aktionen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (navigator.share) {
-                      navigator.share?.({
-                        title: 'Bild von MojoBus',
-                        text: events.content,
-                        url: window.location.href
-                      });
-                    }
-                  }}
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Teilen
-                </Button>
-
-                <PostActions
-                  event={events}
-                  onDelete={() => {
-                    setTimeout(() => navigate('/bilder'), 1000);
-                  }}
-                />
-              </CardContent>
-            </Card>
+              {/* Tags and Comments */}
+              <Card>
+                <CardContent className="pt-0">
+                  {tags.length > 0 && (
+                    <div className="mb-6 pt-6">
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map(tag => (
+                          <Badge key={tag} variant="secondary" className="gap-1">
+                            #{tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <CommentsSection root={events} />
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Fullscreen Image Viewer */}
+       {/* Fullscreen Image Viewer */}
       {isImageFullscreen && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
           {/* Close button */}
