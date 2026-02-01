@@ -212,7 +212,7 @@ export function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section with Modern Design */}
-      <section className="relative min-h-[auto] py-4 flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[auto] py-12 flex items-center justify-center overflow-hidden">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
