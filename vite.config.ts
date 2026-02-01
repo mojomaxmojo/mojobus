@@ -55,55 +55,11 @@ export default defineConfig(() => ({
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
         // Intelligentes Code Splitting für bessere Performance
-        // OHNE zirkuläre Abhängigkeiten
+        // Nur für große Bibliotheken, die sicher getrennt werden können
         manualChunks(id) {
-          // React Kernbibliotheken (stable)
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-            return 'react-vendor';
-          }
-
-          // React Query (stable)
-          if (id.includes('node_modules/@tanstack/react-query/')) {
-            return 'query-vendor';
-          }
-
-          // Icons (stable)
-          if (id.includes('node_modules/lucide-react/')) {
-            return 'icons-vendor';
-          }
-
-          // Radix UI (semi-stable)
-          if (id.includes('node_modules/@radix-ui/')) {
-            return 'radix-vendor';
-          }
-
-          // Nostr Bibliotheken (feature-specific)
-          if (id.includes('node_modules/@nostrify/')) {
-            return 'nostr-vendor';
-          }
-
-          // Tiptap Editor (nur bei Bedarf laden)
+          // Tiptap Editor (nur bei Bedarf laden) - WICHTIG: Keine zirkulären Abhängigkeiten!
           if (id.includes('node_modules/@tiptap/') || id.includes('node_modules/prosemirror/')) {
             return 'tiptap-vendor';
-          }
-
-          // Markdown (nur bei Bedarf)
-          if (id.includes('node_modules/react-markdown/') ||
-              id.includes('node_modules/micromark/') ||
-              id.includes('node_modules/remark-') ||
-              id.includes('node_modules/mdast-') ||
-              id.includes('node_modules/hast-')) {
-            return 'markdown-vendor';
-          }
-
-          // Date Picker (nur bei Bedarf)
-          if (id.includes('node_modules/react-day-picker/')) {
-            return 'datepicker-vendor';
-          }
-
-          // Carousel (nur bei Bedarf)
-          if (id.includes('node_modules/embla-carousel-react/')) {
-            return 'carousel-vendor';
           }
 
           // QR Code (nur bei Bedarf)
@@ -111,19 +67,7 @@ export default defineConfig(() => ({
             return 'qrcode-vendor';
           }
 
-          // Router (feature-specific)
-          if (id.includes('node_modules/react-router/')) {
-            return 'router-vendor';
-          }
-
-          // Utils (semi-stable)
-          if (id.includes('node_modules/class-variance-authority/') ||
-              id.includes('node_modules/clsx/') ||
-              id.includes('node_modules/tailwind-merge/')) {
-            return 'css-utils-vendor';
-          }
-
-          // Node polyfills
+          // Node polyfills (unabhängig)
           if (id.includes('node_modules/@ungap/structured-clone/') ||
               id.includes('node_modules/base64-js/') ||
               id.includes('node_modules/events/') ||
@@ -134,42 +78,8 @@ export default defineConfig(() => ({
             return 'polyfills';
           }
 
-          // SONSTIGE - aber zirkulärfrei durch strikte Reihenfolge
-          // Nur node_modules, die noch nicht erfasst wurden
-          // Wir erstellen eine generische "other-vendor" für alles andere
-          // aber NICHT "vendor" um zirkuläre Abhängigkeiten zu vermeiden
-          if (id.includes('node_modules/') &&
-              !id.includes('node_modules/react/') &&
-              !id.includes('node_modules/react-dom/') &&
-              !id.includes('node_modules/@tanstack/react-query/') &&
-              !id.includes('node_modules/lucide-react/') &&
-              !id.includes('node_modules/@radix-ui/') &&
-              !id.includes('node_modules/@nostrify/') &&
-              !id.includes('node_modules/@tiptap/') &&
-              !id.includes('node_modules/prosemirror/') &&
-              !id.includes('node_modules/react-markdown/') &&
-              !id.includes('node_modules/micromark/') &&
-              !id.includes('node_modules/remark-') &&
-              !id.includes('node_modules/mdast-') &&
-              !id.includes('node_modules/hast-') &&
-              !id.includes('node_modules/react-day-picker/') &&
-              !id.includes('node_modules/embla-carousel-react/') &&
-              !id.includes('node_modules/qrcode/') &&
-              !id.includes('node_modules/react-router/') &&
-              !id.includes('node_modules/class-variance-authority/') &&
-              !id.includes('node_modules/clsx/') &&
-              !id.includes('node_modules/tailwind-merge/') &&
-              !id.includes('node_modules/@ungap/structured-clone/') &&
-              !id.includes('node_modules/base64-js/') &&
-              !id.includes('node_modules/events/') &&
-              !id.includes('node_modules/stream-browserify/') &&
-              !id.includes('node_modules/util/') &&
-              !id.includes('node_modules/process/') &&
-              !id.includes('node_modules/buffer/')) {
-            return 'other-vendor';
-          }
-
-          // App-spezifischer Code bleibt im Hauptbundle
+          // Alles andere: Keine manuellen Chunks, Rollup kümmert sich darum
+          // Das verhindert zirkuläre Abhängigkeiten
           return undefined;
         },
       },
