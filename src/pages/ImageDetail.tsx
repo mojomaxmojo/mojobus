@@ -427,25 +427,19 @@ export function ImageDetail() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Tags */}
-            {tags.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Share2 className="h-5 w-5 text-ocean-600" />
-                    Tags
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="gap-1">
-                        #{tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+             {tags.length > 0 && (
+               <Card>
+                 <CardContent className="py-4">
+                   <div className="flex flex-wrap gap-2">
+                     {tags.map(tag => (
+                       <Badge key={tag} variant="secondary" className="gap-1">
+                         #{tag}
+                       </Badge>
+                     ))}
+                   </div>
+                 </CardContent>
+               </Card>
+             )}
 
             {/* Actions */}
             <Card>
