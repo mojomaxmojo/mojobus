@@ -331,6 +331,22 @@ export function ImageDetail() {
                       {metadata?.nip05 || 'Kein NIP-05'}
                     </p>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="flex-shrink-0"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share?.({
+                          title: 'Bild von MojoBus',
+                          text: events.content,
+                          url: window.location.href
+                        });
+                      }
+                    }}
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </Button>
                 </div>
 
                 {/* Image */}
@@ -450,23 +466,6 @@ export function ImageDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (navigator.share) {
-                      navigator.share?.({
-                        title: 'Bild von MojoBus',
-                        text: events.content,
-                        url: window.location.href
-                      });
-                    }
-                  }}
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Teilen
-                </Button>
-
                 <PostActions
                   event={events}
                   onDelete={() => {
