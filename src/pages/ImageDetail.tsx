@@ -418,9 +418,6 @@ export function ImageDetail() {
 
              {/* Comments Section */}
              <Card>
-               <CardHeader>
-                 <CardTitle>Kommentare</CardTitle>
-               </CardHeader>
                <CardContent>
                  <CommentsSection root={events} />
                </CardContent>
