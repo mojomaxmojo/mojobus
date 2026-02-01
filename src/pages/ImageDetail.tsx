@@ -407,13 +407,12 @@ export function ImageDetail() {
                 </CardTitle>
               </CardHeader>
                <CardContent>
-                 <div className="prose prose-gray dark:prose-invert max-w-none">
+                 <div className="prose prose-gray dark:prose-invert max-w-none mb-4">
                    <NoteContent event={events} className="text-base" />
                  </div>
+                 <SocialBar event={events} />
                </CardContent>
              </Card>
-
-             <SocialBar event={events} />
 
              {/* Comments Section */}
 
