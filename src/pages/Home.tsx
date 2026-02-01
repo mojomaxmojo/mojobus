@@ -232,7 +232,7 @@ export function Home() {
               </h2>
             </div>
 
-            <div className="pt-8 flex flex-wrap justify-center gap-4">
+            <div className="pt-4 flex flex-wrap justify-center gap-4">
               <Button asChild size="lg" className="gap-2 shadow-lg hover:shadow-xl transition-all">
                 <Link to="/artikel">
                   <Compass className="h-5 w-5" />
