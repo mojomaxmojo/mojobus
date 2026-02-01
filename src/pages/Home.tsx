@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { Waves, Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
+import { Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -211,33 +211,35 @@ export function Home() {
 
   return (
     <div className="min-h-screen">
-      <section className="relative bg-gradient-to-b from-primary/10 via-background to-background pt-[60px] pb-2 md:pb-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center space-y-6">
-            <div className="flex justify-center mb-6">
-              <Waves className="h-16 w-16 text-primary wave-animation" />
+      {/* Hero Section with Modern Design */}
+      <section className="relative min-h-[auto] py-12 flex items-center justify-center overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="max-w-5xl mx-auto text-center space-y-10">
+            <div className="space-y-6">
+              <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-tight">
+                <span className="gradient-text">Perpetual Traveler</span>
+              </h1>
+              <h2 className="text-3xl md:text-5xl font-serif text-muted-foreground leading-relaxed">
+                Unser Leben am Meer
+              </h2>
+              <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                Geschichten, Tipps und Einblicke in unser Leben zwischen Sand und Horizont
+              </p>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-              Perpetual Traveler
-            </h1>
-            <h2 className="text-2xl md:text-3xl text-muted-foreground">
-              Unser Leben am Meer
-            </h2>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Soul Leon (Lionhunter), unser RV und das Meer.
-              Wir leben als Perpetual Traveler, meist direkt am Strand, autark mit Solarstrom und minimalistisch unterwegs.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2 pt-4">
-              <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#offgridlife</span>
-              <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#beachlife</span>
-              <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#vanlife</span>
-              <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#rvlife</span>
-              <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">#oceanview</span>
-            </div>
-            <div className="pt-6 flex flex-wrap justify-center gap-3">
-              <Button asChild size="lg" className="gap-2">
+
+            <div className="pt-6 flex flex-wrap justify-center gap-5">
+              <Button
+                asChild
+                size="lg"
+                className="gap-3 shadow-lg text-base px-8 py-6 rounded-xl"
+              >
                 <Link to="/artikel">
-                  <Compass className="h-5 w-5" />
+                  <Compass className="h-6 w-6" />
                   Entdecke unsere Geschichten
                 </Link>
               </Button>
@@ -245,10 +247,10 @@ export function Home() {
                 size="lg"
                 variant="outline"
                 onClick={handleRefresh}
-                className="gap-2"
+                className="gap-3 hover:bg-primary/10 hover:border-primary transition-all duration-300 text-base px-8 py-6 rounded-xl"
                 title="Inhalte aktualisieren"
               >
-                <RefreshCw className="h-5 w-5" />
+                <RefreshCw className="h-6 w-6" />
                 Aktualisieren
               </Button>
             </div>
@@ -256,31 +258,34 @@ export function Home() {
         </div>
       </section>
 
-      <section className="bg-muted/30 pt-[42px] pb-16 md:pt-[42px] md:pb-24">
+      {/* Content Section with Modern Design */}
+      <section className="py-24 md:py-32">
         <div className="container mx-auto px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <p className="text-xl md:text-2xl font-semibold text-muted-foreground">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16 fade-in-up">
+              <p className="text-2xl md:text-3xl font-serif text-muted-foreground leading-relaxed">
                 Geschichten, Tipps und Einblicke in unser Leben zwischen Sand und Horizont
               </p>
             </div>
 
             {isLoading ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 px-8 text-center">
+              <Card className="border-dashed border-2 border-primary/30">
+                <CardContent className="py-20 px-8 text-center">
                   <LoadingSpinner size="lg" text="Lade Inhalte vom Relay..." />
                 </CardContent>
               </Card>
             ) : recentItems.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {recentItems.map((item) => (
-                  <ContentCard key={item.event.id} item={item} />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {recentItems.map((item, index) => (
+                  <div key={item.event.id} className="fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
+                    <ContentCard item={item} />
+                  </div>
                 ))}
               </div>
             ) : (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">
+              <Card className="border-dashed border-2 border-primary/30">
+                <CardContent className="py-20 text-center">
+                  <p className="text-muted-foreground text-lg">
                     Noch keine Inhalte veröffentlicht. Schau bald wieder vorbei! 🌊
                   </p>
                 </CardContent>
@@ -288,8 +293,13 @@ export function Home() {
             )}
 
             {!isLoading && recentItems.length > 0 && (
-              <div className="text-center mt-8">
-                <Button asChild variant="outline" size="lg">
+              <div className="text-center mt-16 fade-in-up">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="hover:bg-primary hover:text-primary-foreground transition-all duration-300 px-10 py-7 rounded-xl shadow-md hover:shadow-xl"
+                >
                   <Link to="/artikel">Alle Inhalte anzeigen</Link>
                 </Button>
               </div>
@@ -298,68 +308,92 @@ export function Home() {
         </div>
       </section>
 
-      <section className="py-16 md:py-24">
+      {/* Feature Cards Section with Modern Design */}
+      <section className="py-24 md:py-32 bg-gradient-to-b from-background via-primary/5 to-background">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardHeader>
-                <div className="flex justify-center mb-4">
-                  <Sun className="h-12 w-12 text-primary" />
-                </div>
-                <CardTitle className="text-center">Freiheit</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-muted-foreground">
-                  Das Rauschen der Wellen ist unser Wecker, Sonnenuntergänge sind unser Alltag.
-                </p>
-              </CardContent>
-            </Card>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <Card className="group border-2 border-primary/20 hover:border-primary transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl bg-gradient-to-br from-background to-primary/5 fade-in-up">
+                <CardHeader className="space-y-6 pt-8">
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl group-hover:bg-primary/25 transition-all duration-500 scale-110" />
+                      <Sun className="h-20 w-20 text-primary relative z-10 group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                  </div>
+                  <CardTitle className="text-center text-2xl font-bold group-hover:text-primary transition-colors">Freiheit</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-8">
+                  <p className="text-center text-muted-foreground text-lg leading-relaxed">
+                    Das Rauschen der Wellen ist unser Wecker, Sonnenuntergänge sind unser Alltag.
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardHeader>
-                <div className="flex justify-center mb-4">
-                  <Compass className="h-12 w-12 text-primary" />
-                </div>
-                <CardTitle className="text-center">Abenteuer</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-muted-foreground">
-                  Jeder Tag bringt neue Orte, neue Begegnungen und das Gefühl, wirklich frei zu sein.
-                </p>
-              </CardContent>
-            </Card>
+              <Card className="group border-2 border-primary/20 hover:border-primary transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl bg-gradient-to-br from-background to-primary/5 fade-in-up delay-100">
+                <CardHeader className="space-y-6 pt-8">
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl group-hover:bg-primary/25 transition-all duration-500 scale-110" />
+                      <Compass className="h-20 w-20 text-primary relative z-10 group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                  </div>
+                  <CardTitle className="text-center text-2xl font-bold group-hover:text-primary transition-colors">Abenteuer</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-8">
+                  <p className="text-center text-muted-foreground text-lg leading-relaxed">
+                    Jeder Tag bringt neue Orte, neue Begegnungen und das Gefühl, wirklich frei zu sein.
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card className="border-2 hover:border-primary transition-colors">
-              <CardHeader>
-                <div className="flex justify-center mb-4">
-                  <Anchor className="h-12 w-12 text-primary" />
-                </div>
-                <CardTitle className="text-center">Einfachheit</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-muted-foreground">
-                  Minimalistisch unterwegs mit Solarstrom – autark und unabhängig.
-                </p>
-              </CardContent>
-            </Card>
+              <Card className="group border-2 border-primary/20 hover:border-primary transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl bg-gradient-to-br from-background to-primary/5 fade-in-up delay-200">
+                <CardHeader className="space-y-6 pt-8">
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl group-hover:bg-primary/25 transition-all duration-500 scale-110" />
+                      <Anchor className="h-20 w-20 text-primary relative z-10 group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                  </div>
+                  <CardTitle className="text-center text-2xl font-bold group-hover:text-primary transition-colors">Einfachheit</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-8">
+                  <p className="text-center text-muted-foreground text-lg leading-relaxed">
+                    Minimalistisch unterwegs mit Solarstrom – autark und unabhängig.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold">
-              Vielleicht ruft es auch dich
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Nach Abenteuer, Einfachheit und Freiheit. 🌊🚐✨
-            </p>
-            <p className="text-muted-foreground">
-              Auf Nostr teilen wir unsere Reise – dezentral, zensurresistent und direkt.
-            </p>
+      {/* Call to Action Section */}
+      <section className="py-24 md:py-32 relative overflow-hidden">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-background" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl" />
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center space-y-10 fade-in-up">
+            <div className="space-y-6">
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
+                <span className="gradient-text">Vielleicht ruft es auch dich</span>
+              </h2>
+              <p className="text-2xl md:text-3xl text-muted-foreground font-serif leading-relaxed">
+                Nach Abenteuer, Einfachheit und Freiheit. 🌊🚐✨
+              </p>
+              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto">
+                Auf Nostr teilen wir unsere Reise – dezentral, zensurresistent und direkt.
+              </p>
+            </div>
             <div className="pt-4">
-              <Button asChild size="lg" variant="outline">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="hover:bg-primary hover:text-primary-foreground transition-all duration-300 shadow-lg hover:shadow-2xl px-10 py-7 rounded-xl text-lg"
+              >
                 <Link to="/about">Mehr über uns erfahren</Link>
               </Button>
             </div>
@@ -411,50 +445,57 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
   const placeholderColor = thumbnailUrl ? getImagePlaceholder(thumbnailUrl) : undefined;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+    <Card className="group overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col border-2 border-primary/20 hover:border-primary/60 rounded-2xl">
       <Link to={link} className="flex flex-col h-full">
         {thumbnailUrl ? (
-          <div
-            className="aspect-video overflow-hidden bg-muted"
-            style={{
-              backgroundColor: placeholderColor,
-            }}
-          >
+          <div className="relative aspect-[4/3] overflow-hidden bg-muted">
             <img
               src={thumbnailUrl}
               srcSet={srcset}
               sizes={sizes}
               alt={title}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
               loading="lazy"
               decoding="async"
             />
+            {/* Overlay gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            {/* Type badge */}
+            <div className="absolute top-4 left-4">
+              <span className="px-3 py-1.5 bg-primary/90 text-white text-xs font-semibold rounded-full backdrop-blur-sm shadow-lg">
+                {item.type === 'place' ? '📍 Ort' : item.type === 'image' ? '📷 Bild' : '📝 Artikel'}
+              </span>
+            </div>
           </div>
         ) : (
           <ImagePlaceholder variant={item.type === 'place' ? 'place' : item.type === 'image' ? 'image' : 'article'} />
         )}
-        <CardHeader>
-          <div className="flex items-start gap-2">
+        <CardHeader className="space-y-4 pt-6">
+          <div className="flex items-start gap-3">
             {item.type === 'place' && (
-              <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+              <MapPin className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
             )}
             <div className="flex-1">
-              <CardTitle className="line-clamp-2">{title}</CardTitle>
+              <CardTitle className="line-clamp-2 text-xl font-semibold group-hover:text-primary transition-colors duration-300">{title}</CardTitle>
               {summary && (
-                <CardDescription className="line-clamp-3">{summary}</CardDescription>
+                <CardDescription className="line-clamp-3 mt-2 text-sm leading-relaxed">{summary}</CardDescription>
               )}
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex-1">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{authorName}</span>
-            <span>•</span>
-            <time>{new Date(item.date * 1000).toLocaleDateString('de-DE')}</time>
+        <CardContent className="flex-1 pb-6">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{authorName}</span>
+              <span className="text-muted-foreground/50">•</span>
+              <time>{new Date(item.date * 1000).toLocaleDateString('de-DE')}</time>
+            </div>
           </div>
         </CardContent>
       </Link>
-      <SocialBar event={item.event} compact />
+      <div className="px-6 pb-6 pt-0">
+        <SocialBar event={item.event} compact />
+      </div>
     </Card>
   );
 });
