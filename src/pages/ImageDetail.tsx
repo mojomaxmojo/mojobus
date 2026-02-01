@@ -306,6 +306,34 @@ export function ImageDetail() {
         <div className="grid grid-cols-1 grid-cols-1 gap-8">
           {/* Main Content */}
           <div className="space-y-6">
+            {/* Author Info */}
+            <Card>
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  {metadata?.picture ? (
+                    <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                      <img
+                        src={getGalleryThumbnailUrl(metadata.picture)}
+                        alt={metadata.name || 'Autor'}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <User className="h-4 w-4 text-gray-500" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {metadata?.nip05 || 'Kein NIP-05'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Image Display */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
@@ -408,34 +436,6 @@ export function ImageDetail() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Author Info */}
-            <Card>
-              <CardContent className="py-4">
-                <div className="flex items-center gap-3">
-                  {metadata?.picture ? (
-                    <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                      <img
-                        src={getGalleryThumbnailUrl(metadata.picture)}
-                        alt={metadata.name || 'Autor'}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-500" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{metadata?.name || 'Anonymous'}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {metadata?.nip05 || 'Kein NIP-05'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Tags */}
             {tags.length > 0 && (
               <Card>
