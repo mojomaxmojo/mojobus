@@ -71,7 +71,7 @@ export function Header() {
   return (
     <>
       <OfflineBanner />
-      <header className="sticky top-0 z-50 w-full border-b border-primary/20 glass-effect shadow-lg">
+      <header className="sticky top-0 z-40 w-full border-b border-primary/20 glass-effect shadow-lg">
       <div className="container mx-auto px-4">
         <div className="flex h-14 items-center">
           <Link to="/" className="inline-flex items-center hover:scale-105 transition-transform duration-300">
