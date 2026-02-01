@@ -89,7 +89,7 @@ export function Header() {
             {/* Home */}
             <Link
               to="/"
-              className="flex items-center gap-2 text-foreground hover:text-[#ec1a58] px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-[#ec1a58]/5"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
             >
               <Home className="h-4 w-4" />
               Home
@@ -98,7 +98,7 @@ export function Header() {
             {/* Artikel mit Sub-Menü */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-foreground hover:text-[#ec1a58] px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-[#ec1a58]/5">
+                <button className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5">
                   <FileText className="h-4 w-4" />
                   Artikel
                   <ChevronDown className="h-3 w-3" />
@@ -186,7 +186,7 @@ export function Header() {
             {/* Plätze */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-foreground hover:text-[#ec1a58] px-3 py-2 rounded-md text-sm font-semibold transition-all hover:bg-[#ec1a58]/5">
+                <button className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-semibold transition-all hover:bg-primary/5">
                   <MapPin className="h-4 w-4" />
                   Plätze
                   <ChevronDown className="h-3 w-3" />
@@ -314,7 +314,7 @@ export function Header() {
             {/* Notes */}
             <Link
               to="/notes"
-              className="flex items-center gap-2 text-foreground hover:text-[#ec1a58] px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-[#ec1a58]/5"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
             >
               <StickyNote className="h-4 w-4" />
               Notes
@@ -323,7 +323,7 @@ export function Header() {
             {/* About */}
             <Link
               to="/about"
-              className="flex items-center gap-2 text-foreground hover:text-[#ec1a58] px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-[#ec1a58]/5"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-all hover:bg-primary/5"
             >
               <Info className="h-4 w-4" />
               About
@@ -409,7 +409,7 @@ export function Header() {
               {/* Mobile Home */}
               <Link
                 to="/"
-                className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                 onClick={handleMobileMenuClick}
               >
                 <Home className="h-5 w-5 text-gray-600" />
@@ -420,7 +420,7 @@ export function Header() {
               <div className="space-y-1">
                 <Link
                   to="/artikel"
-                  className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                   onClick={handleMobileMenuClick}
                 >
                   <FileText className="h-5 w-5 text-gray-600" />
@@ -428,7 +428,7 @@ export function Header() {
                 </Link>
                 <Link
                   to="/artikel/leon"
-                  className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                   onClick={handleMobileMenuClick}
                 >
                   <Dog className="h-5 w-5 text-gray-600" />
@@ -440,7 +440,7 @@ export function Header() {
               <div className="space-y-1">
                 <Link
                   to="/plaetze"
-                  className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                   onClick={handleMobileMenuClick}
                 >
                   <MapPin className="h-5 w-5 text-gray-600" />
@@ -466,7 +466,7 @@ export function Header() {
                     <Link
                       key={country.code}
                       to={`/bilder/${country.code}`}
-                      className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                       onClick={handleMobileMenuClick}
                     >
                       <span className="text-lg">{country.flag}</span>
@@ -482,7 +482,7 @@ export function Header() {
                     <Link
                       key={category.id}
                       to={`/bilder/natur/${category.id}`}
-                      className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                       onClick={handleMobileMenuClick}
                     >
                       <span>{category.emoji}</span>
@@ -495,7 +495,7 @@ export function Header() {
               {/* Mobile Notes */}
               <Link
                 to="/notes"
-                className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                 onClick={handleMobileMenuClick}
               >
                 <StickyNote className="h-5 w-5 text-gray-600" />
@@ -505,7 +505,7 @@ export function Header() {
               {/* Mobile About */}
               <Link
                 to="/about"
-                className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                 onClick={handleMobileMenuClick}
               >
                 <Info className="h-5 w-5 text-gray-600" />
@@ -517,7 +517,7 @@ export function Header() {
                 <div className="border-t dark:border-gray-700 pt-4 mt-4 space-y-2">
                   <Link
                     to="/veroeffentlichen"
-                    className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                     onClick={handleMobileMenuClick}
                   >
                     <PenSquare className="h-5 w-5 text-gray-600" />
@@ -525,7 +525,7 @@ export function Header() {
                   </Link>
                   <Link
                     to="/profile"
-                    className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                     onClick={handleMobileMenuClick}
                   >
                     <User className="h-5 w-5 text-gray-600" />
@@ -533,7 +533,7 @@ export function Header() {
                   </Link>
                   <Link
                     to="/settings"
-                    className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                     onClick={handleMobileMenuClick}
                   >
                     <Settings className="h-5 w-5 text-gray-600" />
@@ -544,7 +544,7 @@ export function Header() {
                       logout();
                       handleMobileMenuClick();
                     }}
-                    className="flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg w-full text-left transition-colors"
+                    className="flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg w-full text-left"
                   >
                     <LogOut className="h-5 w-5 text-red-600" />
                     <span className="text-red-600">Ausloggen</span>

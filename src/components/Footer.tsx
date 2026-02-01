@@ -33,16 +33,16 @@ export function Footer() {
           <div className="space-y-6">
             <h3 className="font-semibold text-base">Navigation</h3>
             <nav className="flex flex-col space-y-3">
-              <Link to="/" className="text-sm text-muted-foreground hover:text-[#ec1a58] transition-colors">
+              <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Home
               </Link>
-              <Link to="/artikel" className="text-sm text-muted-foreground hover:text-[#ec1a58] transition-colors">
+              <Link to="/artikel" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Artikel
               </Link>
-              <Link to="/notes" className="text-sm text-muted-foreground hover:text-[#ec1a58] transition-colors">
+              <Link to="/notes" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Notes
               </Link>
-              <Link to="/about" className="text-sm text-muted-foreground hover:text-[#ec1a58] transition-colors">
+              <Link to="/about" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 About
               </Link>
             </nav>

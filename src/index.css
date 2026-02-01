@@ -178,16 +178,6 @@
   .wave-animation {
     animation: wave 3s ease-in-out infinite;
   }
-
-  /* Custom dropdown menu hover color */
-  [data-radix-collection-item]:hover {
-    background-color: rgb(236, 26, 88, 0.1) !important;
-    color: rgb(236, 26, 88) !important;
-  }
-
-  [data-radix-collection-item]:hover svg {
-    color: rgb(236, 26, 88) !important;
-  }
 }
 
 /* Custom utilities for blog */
