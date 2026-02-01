@@ -411,12 +411,9 @@ export function ImageDetail() {
             {/* Author Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5 text-red-500" />
-                  Autor
-                </CardTitle>
+                <CardTitle>Autor</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <div className="flex items-center gap-3">
                   {metadata?.picture ? (
                     <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
@@ -439,12 +436,6 @@ export function ImageDetail() {
                     </p>
                   </div>
                 </div>
-
-                {metadata?.about && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {metadata.about}
-                  </p>
-                )}
               </CardContent>
             </Card>
 
