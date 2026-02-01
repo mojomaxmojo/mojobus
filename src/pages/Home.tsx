@@ -247,7 +247,7 @@ export function Home() {
               <Button
                 asChild
                 size="lg"
-                className="gap-3 shadow-xl hover:shadow-2xl transition-all duration-300 text-base px-8 py-6 rounded-xl glow-animation"
+                className="gap-3 shadow-xl hover:shadow-2xl transition-all duration-300 text-base px-8 py-6 rounded-xl"
               >
                 <Link to="/artikel">
                   <Compass className="h-6 w-6" />
