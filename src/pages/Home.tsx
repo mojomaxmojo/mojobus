@@ -217,21 +217,10 @@ export function Home() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background gradient-animation" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
 
-        {/* Decorative Floating Elements */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/15 rounded-full blur-3xl float-animation" />
-        <div className="absolute top-40 right-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl float-animation delay-200" />
-        <div className="absolute bottom-20 left-1/4 w-80 h-80 bg-primary/10 rounded-full blur-3xl float-animation delay-300" />
-        <div className="absolute bottom-40 right-1/3 w-64 h-64 bg-accent/15 rounded-full blur-3xl float-animation delay-400" />
-
-        {/* Geometric Decorations */}
-        <div className="absolute top-1/4 right-1/4 w-20 h-20 border-2 border-primary/20 rounded-lg rotate-12 float-animation" />
-        <div className="absolute bottom-1/3 left-1/5 w-16 h-16 border-2 border-accent/20 rounded-full float-animation delay-100" />
-        <div className="absolute top-1/3 left-1/4 w-12 h-12 bg-primary/10 rounded-lg -rotate-6 float-animation delay-200" />
-
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-5xl mx-auto text-center space-y-10">
-            <div className="space-y-6 fade-in-up">
+            <div className="space-y-6">
               <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-tight">
                 <span className="gradient-text">Perpetual Traveler</span>
               </h1>
@@ -243,7 +232,7 @@ export function Home() {
               </p>
             </div>
 
-            <div className="pt-6 flex flex-wrap justify-center gap-5 fade-in-up delay-200">
+            <div className="pt-6 flex flex-wrap justify-center gap-5">
               <Button
                 asChild
                 size="lg"
@@ -267,8 +256,8 @@ export function Home() {
             </div>
 
             {/* Scroll Indicator */}
-            <div className="fade-in-up delay-300">
-              <div className="flex justify-center animate-bounce">
+            <div>
+              <div className="flex justify-center">
                 <div className="w-8 h-12 border-2 border-primary/50 rounded-full flex justify-center pt-2">
                   <div className="w-1.5 h-3 bg-primary rounded-full animate-pulse" />
                 </div>
