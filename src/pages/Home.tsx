@@ -213,8 +213,8 @@ export function Home() {
     <div className="min-h-screen">
       {/* Hero Section with Modern Design */}
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
-        {/* Animated Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background gradient-animation" />
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
 
         {/* Content */}
@@ -247,7 +247,7 @@ export function Home() {
                 size="lg"
                 variant="outline"
                 onClick={handleRefresh}
-                className="gap-3 hover:bg-primary/10 hover:border-primary transition-all duration-300 text-base px-8 py-6 rounded-xl ripple-effect"
+                className="gap-3 hover:bg-primary/10 hover:border-primary transition-all duration-300 text-base px-8 py-6 rounded-xl"
                 title="Inhalte aktualisieren"
               >
                 <RefreshCw className="h-6 w-6" />
@@ -259,7 +259,7 @@ export function Home() {
             <div>
               <div className="flex justify-center">
                 <div className="w-8 h-12 border-2 border-primary/50 rounded-full flex justify-center pt-2">
-                  <div className="w-1.5 h-3 bg-primary rounded-full animate-pulse" />
+                  <div className="w-1.5 h-3 bg-primary rounded-full" />
                 </div>
               </div>
             </div>
