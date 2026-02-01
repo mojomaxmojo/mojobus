@@ -448,50 +448,6 @@ export function ImageDetail() {
               </CardContent>
             </Card>
 
-            {/* Image Metadata */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-ocean-600" />
-                  Bild-Informationen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{new Date(events.created_at * 1000).toLocaleDateString('de-DE', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}</span>
-                </div>
-
-                <div className="text-sm">
-                  <span className="font-medium">Anzahl Bilder:</span> {images.length}
-                </div>
-
-                {images.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="font-medium text-sm">Download-Optionen:</div>
-                    {images.map((img, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(img, '_blank')}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Bild {index + 1}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Tags */}
             {tags.length > 0 && (
               <Card>
