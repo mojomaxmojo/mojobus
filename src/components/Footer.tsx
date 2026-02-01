@@ -20,13 +20,6 @@ export function Footer() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               Perpetual Traveler – Unser Leben am Meer. Freiheit, Abenteuer und Einfachheit zwischen Sand und Horizont.
             </p>
-            <div className="flex gap-2 flex-wrap">
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">#offgridlife</span>
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">#beachlife</span>
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">#vanlife</span>
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">#rvlife</span>
-              <span className="text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full border border-primary/20">#oceanview</span>
-            </div>
           </div>
 
           {/* Navigation */}

@@ -211,7 +211,7 @@ export function Home() {
 
   return (
     <div className="min-h-screen">
-      <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[55vh] flex items-center justify-center overflow-hidden">
         {/* Background Image with Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
@@ -243,14 +243,6 @@ export function Home() {
               Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Soul Leon (Lionhunter), unser RV und das Meer.
               Wir leben als Perpetual Traveler, meist direkt am Strand, autark mit Solarstrom und minimalistisch unterwegs.
             </p>
-
-            <div className="flex flex-wrap justify-center gap-2 pt-2">
-              <span className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium border border-primary/20">#offgridlife</span>
-              <span className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium border border-primary/20">#beachlife</span>
-              <span className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium border border-primary/20">#vanlife</span>
-              <span className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium border border-primary/20">#rvlife</span>
-              <span className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium border border-primary/20">#oceanview</span>
-            </div>
 
             <div className="pt-8 flex flex-wrap justify-center gap-4">
               <Button asChild size="lg" className="gap-2 shadow-lg hover:shadow-xl transition-all">
