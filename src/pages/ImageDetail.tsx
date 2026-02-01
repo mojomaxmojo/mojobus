@@ -306,10 +306,11 @@ export function ImageDetail() {
         <div className="grid grid-cols-1 grid-cols-1 gap-8">
           {/* Main Content */}
           <div className="space-y-6">
-            {/* Author Info */}
-            <Card>
-              <CardContent className="py-4">
-                <div className="flex items-center gap-3">
+            {/* Image Display with Author Info */}
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                {/* Author Info */}
+                <div className="flex items-center gap-3 p-4 border-b">
                   {metadata?.picture ? (
                     <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                       <img
@@ -331,12 +332,8 @@ export function ImageDetail() {
                     </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Image Display */}
-            <Card className="overflow-hidden">
-              <CardContent className="p-0">
+                {/* Image */}
                 <div
                   className="relative group cursor-pointer"
                   onClick={() => openFullscreen(0)}
