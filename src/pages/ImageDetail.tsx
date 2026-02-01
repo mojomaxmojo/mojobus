@@ -432,9 +432,9 @@ export function ImageDetail() {
 
               {/* Tags and Comments */}
               <Card>
-                <CardContent>
+                <CardContent className="pt-0">
                   {tags.length > 0 && (
-                    <div className="mb-6">
+                    <div className="mb-6 pt-6">
                       <div className="flex flex-wrap gap-2">
                         {tags.map(tag => (
                           <Badge key={tag} variant="secondary" className="gap-1">
