@@ -227,9 +227,9 @@ export function Home() {
               <img
                 src="/icon-96x96.png"
                 alt="MojoBus Logo"
-                width="50"
-                height="50"
-                className="h-12 w-12 object-contain"
+                width="60"
+                height="60"
+                className="h-15 w-15 object-contain"
               />
             </div>
 
