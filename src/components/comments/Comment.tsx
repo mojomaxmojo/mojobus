@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { NostrEvent } from '@nostrify/nostrify';
 import { nip19 } from 'nostr-tools';
 import { useAuthor } from '@/hooks/useAuthor';
 import { useComments } from '@/hooks/useComments';
 import { CommentForm } from './CommentForm';
-import { NoteContent } from '@/components/NoteContent';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,6 +13,9 @@ import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu
 import { MessageSquare, ChevronDown, ChevronRight, MoreHorizontal } from '@/lib/icons';
 import { formatDistanceToNow } from 'date-fns';
 import { genUserName } from '@/lib/genUserName';
+
+// Lazy loaded NoteContent für Performance-Optimierung
+const NoteContent = lazy(() => import('@/components/NoteContent'));
 
 interface CommentProps {
   root: NostrEvent | URL;
@@ -68,7 +70,9 @@ export function Comment({ root, comment, depth = 0, maxDepth = 3, limit }: Comme
 
             {/* Comment Content */}
             <div className="text-sm">
-              <NoteContent event={comment} className="text-sm" />
+              <Suspense fallback={<div className="h-4 w-full animate-pulse bg-muted" />}>
+                <NoteContent event={comment} className="text-sm" />
+              </Suspense>
             </div>
 
             {/* Comment Actions */}

@@ -393,34 +393,27 @@ export function Header() {
         onClick={handleMobileMenuClick}
       >
         <div
-          className="fixed left-0 top-0 h-full w-80 max-w-[90%] bg-background shadow-2xl overflow-y-auto border-r border-border"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          onClick={handleMobileMenuClick}
         >
-          <div className="flex items-center justify-between p-6 border-b border-primary/20">
-            <h3 className="text-xl font-bold text-foreground">Menü</h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMobileMenuOpen(false)}
-              className="hover:bg-primary/10 rounded-xl"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+          <div
+            className="glass-effect w-80 max-w-[90%] h-full overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-primary/20">
+              <h3 className="text-xl font-bold text-foreground">Menü</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+                className="hover:bg-primary/10 rounded-xl"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
 
-          <div className="p-6 space-y-3">
-            {/* Mobile Home */}
-            <Link
-              to="/"
-              className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-              onClick={handleMobileMenuClick}
-            >
-              <Home className="h-5 w-5 text-gray-600" />
-              <span className="text-gray-900 dark:text-gray-100">Home</span>
-            </Link>
-
-            {/* Mobile Artikel */}
-            <div className="space-y-1">
+            <div className="p-6 space-y-3">
+              {/* Mobile Home */}
               <Link
                 to="/artikel"
                 className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
@@ -429,6 +422,84 @@ export function Header() {
                 <FileText className="h-5 w-5 text-gray-600" />
                 <span className="text-gray-900 dark:text-gray-100">Alle Artikel</span>
               </Link>
+
+              {/* Mobile Artikel */}
+              <div className="space-y-1">
+                <Link
+                  to="/artikel"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <FileText className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Alle Artikel</span>
+                </Link>
+                <Link
+                  to="/artikel/leon"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <Dog className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Leon Story</span>
+                </Link>
+              </div>
+
+              {/* Mobile Plätze */}
+              <div className="space-y-1">
+                <Link
+                  to="/plaetze"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <MapPin className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Alle Plätze</span>
+                </Link>
+              </div>
+
+              {/* Mobile Bilder */}
+              <div className="space-y-1">
+                <Link
+                  to="/bilder"
+                  className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                  onClick={handleMobileMenuClick}
+                >
+                  <Camera className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Alle Bilder</span>
+                </Link>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+                  Nach Länder
+                </div>
+                <div className="space-y-2">
+                  {Object.values(MAIN_MENU.countries).map((country) => (
+                    <Link
+                      key={country.code}
+                      to={`/bilder/${country.code}`}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                      onClick={handleMobileMenuClick}
+                    >
+                      <span className="text-lg">{country.flag}</span>
+                      <span className="text-gray-900 dark:text-gray-100">{country.name}</span>
+                    </Link>
+                  ))}
+                </div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+                  Natur
+                </div>
+                <div className="space-y-2">
+                  {Object.values(MAIN_MENU.nature).map((category) => (
+                    <Link
+                      key={category.id}
+                      to={`/bilder/natur/${category.id}`}
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                      onClick={handleMobileMenuClick}
+                    >
+                      <span>{category.emoji}</span>
+                      <span className="text-gray-900 dark:text-gray-100">{category.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile Notes */}
               <Link
                 to="/artikel/leon"
                 className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"

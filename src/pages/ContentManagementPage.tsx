@@ -209,11 +209,11 @@ export function ContentManagementPage() {
                     mode={showCreate ? 'create' : 'edit'}
                     onSave={(content) => {
                       toast({
-                        title: 'Inhalt gespeichert',
-                        description: `Replaceable Inhalt wurde erfolgreich ${showCreate ? 'erstellt' : 'aktualisiert'}.`,
-                        duration: 3000,
-                        variant: 'default'
+                        title: 'Content gespeichert',
+                        description: 'Der Inhalt wurde erfolgreich gespeichert.'
                       });
+                      setActiveTab('history');
+                      setShowCreate(false);
                     }}
                   />
                 </Suspense>

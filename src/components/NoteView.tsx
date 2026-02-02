@@ -9,7 +9,11 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { CommentsSection } from '@/components/comments/CommentsSection';
 import { RelaySelector } from '@/components/RelaySelector';
-import { NoteContent } from '@/components/NoteContent';
+import { lazy, Suspense } from 'react';
+
+// Lazy loaded NoteContent für Performance-Optimierung
+const NoteContent = lazy(() => import('@/components/NoteContent'));
+
 import { SocialBar } from '@/components/SocialBar';
 import { extractNoteTags, extractNoteImages } from '@/hooks/useNotes';
 import { Calendar, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
@@ -286,7 +290,9 @@ export function NoteView({ eventId }: NoteViewProps) {
               </div>
 
               <div className="whitespace-pre-wrap break-words mb-4">
-                <NoteContent event={note} />
+                <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+                  <NoteContent event={note} />
+                </Suspense>
               </div>
 
               {extractNoteImages(note).length > 0 && (
