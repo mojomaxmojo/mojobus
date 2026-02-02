@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
@@ -11,7 +11,10 @@ import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSqua
 import { useAuthor } from '@/hooks/useAuthor';
 
 import { CommentsSection } from '@/components/comments/CommentsSection';
-import { NoteContent } from '@/components/NoteContent';
+
+// Lazy loaded NoteContent für Performance-Optimierung
+const NoteContent = lazy(() => import('@/components/NoteContent'));
+
 import { SocialBar } from '@/components/SocialBar';
 import { ZapButton } from '@/components/ZapButton';
 import { NOSTR_CONFIG } from '@/config/nostr';
@@ -423,15 +426,17 @@ export function ImageDetail() {
               </Card>
             )}
 
-             {/* Content and Description */}
-             <Card>
-                <CardContent>
-                  <div className="prose prose-gray dark:prose-invert max-w-none mb-4">
-                    <NoteContent event={events} className="text-base" />
-                  </div>
-                  <SocialBar event={events} />
-                </CardContent>
-              </Card>
+              {/* Content and Description */}
+              <Card>
+                 <CardContent>
+                   <div className="prose prose-gray dark:prose-invert max-w-none mb-4">
+                     <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+                       <NoteContent event={events} className="text-base" />
+                     </Suspense>
+                   </div>
+                   <SocialBar event={events} />
+                 </CardContent>
+               </Card>
 
               {/* Tags and Comments */}
               <Card>
