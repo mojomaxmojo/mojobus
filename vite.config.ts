@@ -55,37 +55,11 @@ export default defineConfig(() => ({
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
         // Intelligentes Code Splitting für bessere Performance
-        // Aggressives Chopping von Dependencies, nicht nur Components
+        // Nur für große Bibliotheken, die sicher getrennt werden können
         manualChunks(id) {
-          // Tiptap Editor (nur bei Bedarf laden)
+          // Tiptap Editor (nur bei Bedarf laden) - WICHTIG: Keine zirkulären Abhängigkeiten!
           if (id.includes('node_modules/@tiptap/') || id.includes('node_modules/prosemirror/')) {
             return 'tiptap-vendor';
-          }
-
-          // Markdown Libraries (nur bei Bedarf für NoteContent)
-          if (id.includes('node_modules/react-markdown/') ||
-              id.includes('node_modules/micromark/') ||
-              id.includes('node_modules/micromark-extension-') ||
-              id.includes('node_modules/remark-') ||
-              id.includes('node_modules/remark-') ||
-              id.includes('node_modules/mdast-') ||
-              id.includes('node_modules/hast-') ||
-              id.includes('node_modules/estree-util-') ||
-              id.includes('node_modules/parse5/') ||
-              id.includes('node_modules/unist-') ||
-              id.includes('node_modules/devlop/') ||
-              id.includes('node_modules/ccount/') ||
-              id.includes('node_modules/character-entities/') ||
-              id.includes('node_modules/decode-named-') ||
-              id.includes('node_modules/trim-lines/') ||
-              id.includes('node_modules/trough/') ||
-              id.includes('node_modules/property-information/') ||
-              id.includes('node_modules/space-separated-') ||
-              id.includes('node_modules/comma-separated-') ||
-              id.includes('node_modules/longest-streak/') ||
-              id.includes('node_modules/markdown-table-space/') ||
-              id.includes('node_modules/vfile-')) {
-            return 'markdown-vendor';
           }
 
           // QR Code (nur bei Bedarf)
@@ -105,6 +79,7 @@ export default defineConfig(() => ({
           }
 
           // Alles andere: Keine manuellen Chunks, Rollup kümmert sich darum
+          // Das verhindert zirkuläre Abhängigkeiten
           return undefined;
         },
       },
