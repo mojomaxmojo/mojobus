@@ -1,4 +1,5 @@
-import { Link, useParams, lazy, Suspense } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
