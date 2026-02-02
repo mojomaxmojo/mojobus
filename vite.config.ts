@@ -55,9 +55,63 @@ export default defineConfig(() => ({
         // Ensure proper interop between CJS and ESM modules
         interop: 'auto',
         // Intelligentes Code Splitting für bessere Performance
-        // Nur für große Bibliotheken, die sicher getrennt werden können
+        // Route-basierte Chunks für schnelleres First Load
         manualChunks(id) {
-          // Tiptap Editor (nur bei Bedarf laden) - WICHTIG: Keine zirkulären Abhängigkeiten!
+          // === PAGE-BASED CHUNKS (Initial Load Optimierung) ===
+          // Home-Seite
+          if (id.includes('/pages/Home')) {
+            return 'home-page';
+          }
+          // Articles-Seite
+          if (id.includes('/pages/Articles')) {
+            return 'articles-page';
+          }
+          // Notes-Seite
+          if (id.includes('/pages/Notes')) {
+            return 'notes-page';
+          }
+          // Images-Seite
+          if (id.includes('/pages/Images')) {
+            return 'images-page';
+          }
+          // ImageDetail-Seite
+          if (id.includes('/pages/ImageDetail')) {
+            return 'image-detail-page';
+          }
+          // Profile-Seite
+          if (id.includes('/pages/Profile')) {
+            return 'profile-page';
+          }
+          // Settings-Seite
+          if (id.includes('/pages/Settings')) {
+            return 'settings-page';
+          }
+          // About-Seite
+          if (id.includes('/pages/About')) {
+            return 'about-page';
+          }
+          // Publish-Seiten
+          if (id.includes('/pages/Publish') ||
+              id.includes('/pages/PublishReplaceable') ||
+              id.includes('/pages/ContentEditorPage') ||
+              id.includes('/pages/ContentManagementPage')) {
+            return 'publish-pages';
+          }
+          // NIP19Page
+          if (id.includes('/pages/NIP19Page')) {
+            return 'nip19-page';
+          }
+          // ServiceWorkerSettings
+          if (id.includes('/pages/ServiceWorkerSettings')) {
+            return 'service-worker-page';
+          }
+          // NotFound
+          if (id.includes('/pages/NotFound')) {
+            return 'not-found-page';
+          }
+
+          // === VENDOR CHUNKS (Nur bei Bedarf) ===
+          // Tiptap Editor (nur bei Bedarf laden)
           if (id.includes('node_modules/@tiptap/') || id.includes('node_modules/prosemirror/')) {
             return 'tiptap-vendor';
           }
@@ -78,8 +132,23 @@ export default defineConfig(() => ({
             return 'polyfills';
           }
 
+          // === COMMON VENDORS (Im Hauptbundle, aber optimiert) ===
+          // Radix UI Components
+          if (id.includes('node_modules/@radix-ui/')) {
+            return 'radix-vendor';
+          }
+
+          // React Query
+          if (id.includes('node_modules/@tanstack/react-query/')) {
+            return 'react-query-vendor';
+          }
+
+          // React Router
+          if (id.includes('node_modules/react-router/')) {
+            return 'router-vendor';
+          }
+
           // Alles andere: Keine manuellen Chunks, Rollup kümmert sich darum
-          // Das verhindert zirkuläre Abhängigkeiten
           return undefined;
         },
       },

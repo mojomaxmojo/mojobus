@@ -100,6 +100,10 @@ export function SimpleNoteContent({ event, className }: NoteContentProps) {
   );
 }
 
+// Default export für lazy loading
+export default NoteContent;
+
+
 // Helper component to display user mentions
 function NostrMention({ pubkey }: { pubkey: string }) {
   const author = useAuthor(pubkey);

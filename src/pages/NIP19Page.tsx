@@ -9,7 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
-import { NoteContent } from '@/components/NoteContent';
+import { lazy, Suspense } from 'react';
+
+// Lazy loaded NoteContent für Performance-Optimierung
+const NoteContent = lazy(() => import('@/components/NoteContent'));
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
@@ -263,7 +267,9 @@ const EventView = ({ eventId, authorPubkey }: { eventId: string; authorPubkey?: 
                 <div className="space-y-2">
                   <h3 className="font-semibold">Content</h3>
                   <div className="whitespace-pre-wrap break-words text-sm bg-muted p-4 rounded">
-                    <NoteContent event={event} />
+                    <Suspense fallback={<Skeleton className="h-12 w-full" />}>
+                      <NoteContent event={event} />
+                    </Suspense>
                   </div>
                 </div>
               )}
