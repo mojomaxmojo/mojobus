@@ -41,7 +41,7 @@ export function ZapButton({
   const totalSats = externalZapData?.totalSats ?? fetchedTotalSats;
   const showLoading = externalZapData?.isLoading || isLoading;
 
-  // Don't show zap button if user is the author or author has no lightning address
+  // Don't show zap button if user is author or author has no lightning address
   // (but show it for non-logged-in users)
   if ((user && user.pubkey === target.pubkey) || (!author?.metadata?.lud16 && !author?.metadata?.lud06)) {
     return null;
