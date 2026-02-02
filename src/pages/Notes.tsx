@@ -13,6 +13,9 @@ import { RelaySelector } from '@/components/RelaySelector';
 // Lazy loaded NoteContent für Performance-Optimierung (reduziert initial load um ~36 KB gzip)
 const NoteContent = lazy(() => import('@/components/NoteContent'));
 
+// Lazy loaded SocialBar für Performance-Optimierung
+const SocialBar = lazy(() => import('@/components/SocialBar'));
+
 import { useNotes, extractNoteTags, extractNoteImages } from '@/hooks/useNotes';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
@@ -27,7 +30,6 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrDelete } from '@/hooks/useNostrDelete';
 import { useToast } from '@/hooks/useToast';
 import { generateSrcset, generateSizes } from '@/lib/imageUtils';
-import { SocialBar } from '@/components/SocialBar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -401,7 +403,9 @@ const NoteCard = memo(function NoteCard({ note }: { note: NostrEvent }) {
         </CardContent>
       </Card>
       </Link>
-      <SocialBar event={note} compact />
+      <Suspense fallback={<div />}>
+        <SocialBar event={note} compact />
+      </Suspense>
 
       {/* Delete Button - nur für den Autor sichtbar */}
       {isAuthor && (

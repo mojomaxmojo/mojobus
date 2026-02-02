@@ -12,10 +12,10 @@ import { useAuthor } from '@/hooks/useAuthor';
 
 import { CommentsSection } from '@/components/comments/CommentsSection';
 
-// Lazy loaded NoteContent für Performance-Optimierung
+// Lazy loaded Components für Performance-Optimierung
 const NoteContent = lazy(() => import('@/components/NoteContent'));
+const SocialBar = lazy(() => import('@/components/SocialBar'));
 
-import { SocialBar } from '@/components/SocialBar';
 import { ZapButton } from '@/components/ZapButton';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { nip19 } from 'nostr-tools';
@@ -430,12 +430,14 @@ export function ImageDetail() {
               <Card>
                  <CardContent>
                    <div className="prose prose-gray dark:prose-invert max-w-none mb-4">
-                     <Suspense fallback={<Skeleton className="h-20 w-full" />}>
-                       <NoteContent event={events} className="text-base" />
-                     </Suspense>
-                   </div>
-                   <SocialBar event={events} />
-                 </CardContent>
+                      <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+                        <NoteContent event={events} className="text-base" />
+                      </Suspense>
+                    </div>
+                    <Suspense fallback={<div />}>
+                      <SocialBar event={events} />
+                    </Suspense>
+                  </CardContent>
                </Card>
 
               {/* Tags and Comments */}

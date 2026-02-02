@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, lazy, Suspense } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,8 +18,10 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
-import { SocialBar } from '@/components/SocialBar';
 import { useToast } from '@/hooks/useToast';
+
+// Lazy loaded SocialBar für Performance-Optimierung
+const SocialBar = lazy(() => import('@/components/SocialBar'));
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';
@@ -491,10 +493,12 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
               <time>{new Date(item.date * 1000).toLocaleDateString('de-DE')}</time>
             </div>
           </div>
-        </CardContent>
+          </CardContent>
       </Link>
       <div className="px-6 pb-6 pt-0">
-        <SocialBar event={item.event} compact />
+        <Suspense fallback={<div />}>
+          <SocialBar event={item.event} compact />
+        </Suspense>
       </div>
     </Card>
   );

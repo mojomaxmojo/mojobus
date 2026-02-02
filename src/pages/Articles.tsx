@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, lazy, Suspense } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -21,10 +21,12 @@ import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { useInView } from 'react-intersection-observer';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { MAIN_MENU } from '@/config/menu';
-import { SocialBar } from '@/components/SocialBar';
 // @ts-nocheck
 // @ts-ignore
 import { useHead } from '@unhead/react';
+
+// Lazy loaded SocialBar für Performance-Optimierung
+const SocialBar = lazy(() => import('@/components/SocialBar'));
 
 function Articles() {
   const { country } = useParams();
@@ -463,9 +465,11 @@ const ArticleCard = memo(function ArticleCard({
               </div>
             </div>
           </div>
-        </CardContent>
+          </CardContent>
       </Link>
-      <SocialBar event={article} compact />
+      <Suspense fallback={<div />}>
+        <SocialBar event={article} compact />
+      </Suspense>
     </Card>
   );
 });
