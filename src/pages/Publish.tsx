@@ -1,11 +1,11 @@
 // Media Publish Form with intelligent GPS extraction for all content types
-// Version 6 - Multi-type publishing with smart GPS extraction
+// Version 7 - Fixed searchParams issue
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, ImageIcon, Camera, MapPin, Loader2, CheckCircle } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -17,22 +17,7 @@ import { ImageOptimizationToggle } from '@/components/ImageOptimizationToggle';
 import { extractCoordinatesWithSmartFallback } from '@/lib/gpsExtraction';
 import { CountrySelector, getCountryTag } from '@/components/CountrySelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { CONTENT_CATEGORIES, createRequiredTags, getOptionalTags } from '@/config/contentCategories';
-import { ARTICLE_CATEGORIES, DIY_CATEGORIES } from '@/config';
-import MAIN_MENU from '@/config/menu';
-import { RV_LIFE_CONFIG } from '@/config/rvlife';
-import { nip19 } from 'nostr-tools';
-import { WysiwygEditor } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
-
-// Media Types Configuration
-const mediaTypes = [
-  { type: 'image', label: 'Bilder', icon: ImageIcon, extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'], accept: 'image/*' },
-  { type: 'video', label: 'Videos', icon: Video, extensions: ['mp4', 'mov', 'webm'], accept: 'video/*' },
-  { type: 'audio', label: 'Audio', icon: Music, extensions: ['mp3', 'wav', 'm4a'], accept: 'audio/*' },
-  { type: 'document', label: 'Dokumente', icon: File, extensions: ['pdf', 'kml', 'gpx'], accept: '.pdf,.kml,.gpx' }
-];
 
 // Content Categories
 const mainCategories = [
@@ -73,7 +58,6 @@ interface MediaFile {
   type: string;
   size: number;
   preview?: string;
-  uploaded?: boolean;
 }
 
 interface UploadProgress {
@@ -100,12 +84,17 @@ export function Publish() {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
+  const [editId, setEditId] = useState('');
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
-  const searchParams = useSearchParams();
-  const editId = searchParams.get('edit');
+
+  // Parse URL search params for edit mode
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setEditId(params.get('edit') || '');
+  }, []);
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -114,9 +103,7 @@ export function Publish() {
       id: Math.random().toString(36).substr(2, 9),
       file,
       name: file.name,
-      type: file.type.startsWith('image/') ? 'image' :
-            file.type.startsWith('video/') ? 'video' :
-            file.type.startsWith('audio/') ? 'audio' : 'document',
+      type: file.type.startsWith('image/') ? 'image' : 'document',
       size: file.size,
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
     }));
@@ -143,13 +130,12 @@ export function Publish() {
   };
 
   const handleSubmit = async () => {
-    const validationError = validateForm(activeTab);
-    if (validationError) {
-      toast({
-        title: 'Fehler',
-        description: validationError,
-        variant: 'destructive'
-      });
+    if (activeTab === 'media' && files.length === 0) {
+      toast({ title: 'Fehler', description: 'Bitte wähle mindestens eine Datei aus.', variant: 'destructive' });
+      return;
+    }
+    if (!title) {
+      toast({ title: 'Fehler', description: 'Bitte gib einen Titel ein.', variant: 'destructive' });
       return;
     }
 
@@ -157,7 +143,6 @@ export function Publish() {
     setUploadProgress({ current: 0, total: files.length, stage: 'upload', status: 'Upload zu Blossom wird gestartet...' });
 
     try {
-      // Upload files
       const uploadedUrls: string[] = [];
 
       for (let i = 0; i < files.length; i++) {
@@ -202,6 +187,13 @@ export function Publish() {
         }
       }
 
+      setUploadProgress({
+        current: files.length,
+        total: files.length,
+        stage: 'publish',
+        status: 'Nostr Event wird erstellt...'
+      });
+
       // Build content based on type
       let kind = 1;
       let additionalTags: string[][] = [];
@@ -217,7 +209,6 @@ export function Publish() {
         if (location) additionalTags.push(['location', location]);
         if (date) additionalTags.push(['published_at', date]);
 
-        // INTELLIGENTE GPS-EXTRAKTION FÜR BILDER
         const gpsCoordinates = await extractCoordinatesWithSmartFallback(files, location, selectedCountry);
         if (gpsCoordinates) {
           additionalTags.push(['lat', gpsCoordinates.latitude.toString()]);
@@ -245,15 +236,13 @@ export function Publish() {
         if (mainCategory) additionalTags.push(['t', mainCategory]);
         if (location) additionalTags.push(['location', location]);
 
-        // INTELLIGENTE GPS-EXTRAKTION FÜR ARTIKEL: Aus Titelbild
         const gpsCoordinates = await extractCoordinatesWithSmartFallback(files, location, selectedCountry);
         if (gpsCoordinates) {
           additionalTags.push(['lat', gpsCoordinates.latitude.toString()]);
           additionalTags.push(['lon', gpsCoordinates.longitude.toString()]);
         }
 
-        const content = await WysiwygEditor.htmlToMarkdown(content);
-
+        const content = content || '';
         const tags = [
           ['title', title],
           ['summary', description.substring(0, 200)],
@@ -279,7 +268,6 @@ export function Publish() {
         if (mainCategory) additionalTags.push(['t', mainCategory]);
         if (location) additionalTags.push(['location', location]);
 
-        // INTELLIGENTE GPS-EXTRAKTION FÜR PLÄTZE: Aus Titelbild
         const gpsCoordinates = await extractCoordinatesWithSmartFallback(files, location, selectedCountry);
         if (gpsCoordinates) {
           additionalTags.push(['lat', gpsCoordinates.latitude.toString()]);
@@ -293,6 +281,7 @@ export function Publish() {
           ['image', uploadedUrls[0] || ''],
           ...subTags.map(tag => ['t', tag]),
           ...customTags.split(' ').filter(Boolean).map(tag => ['t', tag]),
+          ...(selectedCountry ? getCountryTag(selectedCountry) : []),
           ...additionalTags
         ];
 
@@ -307,7 +296,6 @@ export function Publish() {
         if (mainCategory) additionalTags.push(['t', mainCategory]);
         if (location) additionalTags.push(['location', location]);
 
-        // INTELLIGENTE GPS-EXTRAKTION FÜR NOTES: Aus erstem Bild
         const gpsCoordinates = await extractCoordinatesWithSmartFallback(files, location, selectedCountry);
         if (gpsCoordinates) {
           additionalTags.push(['lat', gpsCoordinates.latitude.toString()]);
@@ -345,12 +333,12 @@ export function Publish() {
         current: 0,
         total: 0,
         stage: 'error',
-        status: `Fehler: ${error.message}`
+        status: `Fehler: ${error.message || 'Unbekannter Fehler'}`
       });
 
       toast({
         title: 'Fehler',
-        description: `Upload fehlgeschlagen: ${error.message}`,
+        description: `Upload fehlgeschlagen: ${error.message || 'Unbekannter Fehler'}`,
         variant: 'destructive'
       });
     } finally {
@@ -359,25 +347,6 @@ export function Publish() {
         setUploadProgress({ current: 0, total: 0, stage: '', status: '' });
       }, 5000);
     }
-  };
-
-  const validateForm = (tab: string): string | null => {
-    if (tab === 'media' && files.length === 0) {
-      return 'Bitte wähle mindestens eine Datei aus.';
-    }
-    if (tab === 'article' && files.length === 0) {
-      return 'Bitte wähle mindestens ein Titelbild aus.';
-    }
-    if (tab === 'place' && files.length === 0) {
-      return 'Bitte wähle mindestens ein Bild aus.';
-    }
-    if (tab === 'note' && files.length === 0) {
-      return 'Bitte wähle mindestens ein Bild aus.';
-    }
-    if (!title) {
-      return 'Bitte gib einen Titel ein.';
-    }
-    return null;
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -418,100 +387,51 @@ export function Publish() {
                 <CardDescription>Teile deine Fotos und Videos mit der Community</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Upload Area */}
-                <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'
-                  }`}
+                <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'}`}
                   onDrop={handleDrop}
                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                 >
-                  <input
-                    type="file"
-                    multiple
-                    accept={mediaTypes.map(m => m.accept).join(',')}
-                    onChange={(e) => handleFileSelect(e.target.files)}
-                    className="hidden"
-                    id="media-upload"
-                  />
-                  <Button asChild>
-                    <label htmlFor="media-upload" className="cursor-pointer">
-                      <Camera className="h-5 w-5 mr-2" />
-                      Dateien auswählen
-                    </label>
-                  </Button>
+                  <input type="file" multiple accept="image/*,video/*" onChange={(e) => handleFileSelect(e.target.files)} className="hidden" id="media-upload" />
+                  <Button asChild><label htmlFor="media-upload" className="cursor-pointer"><Camera className="h-5 w-5 mr-2" />Dateien auswählen</label></Button>
                 </div>
 
-                {/* File Preview */}
                 {files.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {files.map(file => (
                       <div key={file.id} className="relative">
-                        {file.preview ? (
-                          <img src={file.preview} alt={file.name} className="w-full h-40 object-cover rounded" />
-                        ) : (
-                          <div className="w-full h-40 bg-gray-100 rounded flex items-center justify-center">
-                            <Video className="h-8 w-8 text-gray-400" />
-                          </div>
-                        )}
-                        <div className="absolute top-2 right-2">
-                          <Button variant="destructive" size="sm" className="h-6 w-6 p-0" onClick={() => removeFile(file.id)}>×</Button>
-                        </div>
+                        {file.preview ? <img src={file.preview} alt={file.name} className="w-full h-40 object-cover rounded" /> : <div className="w-full h-40 bg-gray-100 rounded flex items-center justify-center"><Upload className="h-8 w-8 text-gray-400" /></div>}
+                        <div className="absolute top-2 right-2"><Button variant="destructive" size="sm" className="h-6 w-6 p-0" onClick={() => removeFile(file.id)}>×</Button></div>
                         <p className="text-sm truncate">{file.name}</p>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Title, Description, Date */}
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="media-title">Titel</Label>
-                    <Input
-                      id="media-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Titel der Bilder..."
-                    />
+                    <Input id="media-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titel der Bilder..." />
                   </div>
 
                   <div>
                     <Label htmlFor="media-description">Beschreibung</Label>
-                    <Textarea
-                      id="media-description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Beschreibung der Bilder..."
-                      rows={3}
-                    />
+                    <Textarea id="media-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Beschreibung der Bilder..." rows={3} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="media-date">Datum</Label>
-                      <Input
-                        id="media-date"
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                      />
+                      <Input id="media-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                     </div>
 
                     <div>
                       <Label>Kategorie</Label>
                       <Select value={mainCategory} onValueChange={setMainCategory}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Kategorie wählen" />
-                        </SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Kategorie wählen" /></SelectTrigger>
                         <SelectContent>
                           {mainCategories.map(cat => (
-                            <SelectItem key={cat.value} value={cat.value}>
-                              <span className="flex items-center gap-2">
-                                <span>{cat.icon}</span>
-                                {cat.label}
-                              </span>
-                            </SelectItem>
+                            <SelectItem key={cat.value} value={cat.value}><span className="flex items-center gap-2"><span>{cat.icon}</span>{cat.label}</span></SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -520,34 +440,18 @@ export function Publish() {
 
                   <div>
                     <Label htmlFor="media-location">Standort</Label>
-                    <Input
-                      id="media-location"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="Land, Stadt (z.B. Portugal, Praia dos Tomates)"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      💡 GPS wird aus Bildern ermittelt. Fallback zur Standort-Parsierung.
-                    </p>
+                    <Input id="media-location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Land, Stadt (z.B. Portugal, Praia dos Tomates)" />
+                    <p className="text-xs text-gray-500 mt-1">💡 GPS wird aus Bildern ermittelt. Fallback zur Standort-Parsierung.</p>
                   </div>
 
                   <div>
                     <Label>Land</Label>
-                    <CountrySelector
-                      selectedCountry={selectedCountry}
-                      onCountryChange={setSelectedCountry}
-                      placeholder="Land auswählen (für Fallback)"
-                    />
+                    <CountrySelector selectedCountry={selectedCountry} onCountryChange={setSelectedCountry} placeholder="Land auswählen (für Fallback)" />
                   </div>
 
                   <div>
                     <Label htmlFor="media-tags">Tags (durch Leerzeichen getrennt)</Label>
-                    <Input
-                      id="media-tags"
-                      value={customTags}
-                      onChange={(e) => setCustomTags(e.target.value)}
-                      placeholder="#tags durch leerzeichen getrennt"
-                    />
+                    <Input id="media-tags" value={customTags} onChange={(e) => setCustomTags(e.target.value)} placeholder="#tags durch leerzeichen getrennt" />
                   </div>
                 </div>
 
@@ -562,117 +466,64 @@ export function Publish() {
                 <CardDescription>Schreibe ausführliche Artikel über deine Erlebnisse</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Title Image Upload */}
                 <div>
-                  <Label htmlFor="article-image">Titelbild</Label>
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center ${
-                      isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'
-                    }`}
+                  <Label>Titelbild</Label>
+                  <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'}`}
                     onDrop={handleDrop}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                   >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileSelect(e.target.files)}
-                      className="hidden"
-                      id="article-image"
-                    />
-                    <Button asChild>
-                      <label htmlFor="article-image" className="cursor-pointer">
-                        <ImageIcon className="h-5 w-5 mr-2" />
-                        Titelbild auswählen
-                      </label>
-                    </Button>
+                    <input type="file" accept="image/*" onChange={(e) => handleFileSelect(e.target.files)} className="hidden" id="article-image" />
+                    <Button asChild><label htmlFor="article-image" className="cursor-pointer"><ImageIcon className="h-5 w-5 mr-2" />Titelbild auswählen</label></Button>
                   </div>
                 </div>
 
-                {/* File Preview */}
                 {files.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {files.map(file => (
                       <div key={file.id} className="relative">
                         <img src={file.preview || ''} alt={file.name} className="w-full h-40 object-cover rounded" />
-                        <div className="absolute top-2 right-2">
-                          <Button variant="destructive" size="sm" className="h-6 w-6 p-0" onClick={() => removeFile(file.id)}>×</Button>
-                        </div>
+                        <div className="absolute top-2 right-2"><Button variant="destructive" size="sm" className="h-6 w-6 p-0" onClick={() => removeFile(file.id)}>×</Button></div>
                         <p className="text-sm truncate">{file.name}</p>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Title, Description */}
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="article-title">Titel</Label>
-                    <Input
-                      id="article-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Titel des Artikels..."
-                    />
+                    <Input id="article-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titel des Artikels..." />
                   </div>
 
                   <div>
-                    <Label htmlFor="article-description">Beschreibung</Label>
-                    <WysiwygEditor
-                      content={content}
-                      onChange={setContent}
-                      placeholder="Schreibe deinen Artikel..."
-                      className="min-h-[300px]"
-                    />
+                    <Label>Inhalt</Label>
+                    <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Schreibe deinen Artikel..." className="min-h-[300px]" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Kategorie</Label>
-                      <Select value={mainCategory} onValueChange={setMainCategory}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Kategorie wählen" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {mainCategories.map(cat => (
-                            <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div>
+                    <Label>Kategorie</Label>
+                    <Select value={mainCategory} onValueChange={setMainCategory}>
+                      <SelectTrigger><SelectValue placeholder="Kategorie wählen" /></SelectTrigger>
+                      <SelectContent>{mainCategories.map(cat => (<SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>))}</SelectContent>
+                    </Select>
+                  </div>
 
-                    <div>
-                      <Label htmlFor="article-tags">Tags</Label>
-                      <Input
-                        id="article-tags"
-                        value={customTags}
-                        onChange={(e) => setCustomTags(e.target.value)}
-                        placeholder="#tags durch leerzeichen getrennt"
-                      />
-                    </div>
+                  <div>
+                    <Label htmlFor="article-tags">Tags</Label>
+                    <Input id="article-tags" value={customTags} onChange={(e) => setCustomTags(e.target.value)} placeholder="#tags durch leerzeichen getrennt" />
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="article-location">Standort</Label>
-                      <Input
-                        id="article-location"
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="Land, Stadt (z.B. Portugal, Praia dos Tomates)"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        💡 GPS wird aus Titelbild ermittelt. Fallback zur Standort-Parsierung.
-                      </p>
+                      <Input id="article-location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Land, Stadt (z.B. Portugal, Praia dos Tomates)" />
+                      <p className="text-xs text-gray-500 mt-1">💡 GPS wird aus Titelbild ermittelt. Fallback zur Standort-Parsierung.</p>
                     </div>
 
                     <div>
                       <Label>Land</Label>
-                      <CountrySelector
-                        selectedCountry={selectedCountry}
-                        onCountryChange={setSelectedCountry}
-                        placeholder="Land auswählen (für Fallback)"
-                      />
+                      <CountrySelector selectedCountry={selectedCountry} onCountryChange={setSelectedCountry} placeholder="Land auswählen (für Fallback)" />
                     </div>
                   </div>
                 </div>
@@ -686,89 +537,47 @@ export function Publish() {
                 <CardDescription>Teile deine Lieblingsplätze mit der Community</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Image Upload */}
                 <div>
-                  <Label htmlFor="place-image">Bilder</Label>
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center ${
-                      isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'
-                    }`}
+                  <Label>Bilder</Label>
+                  <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'}`}
                     onDrop={handleDrop}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                   >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={(e) => handleFileSelect(e.target.files)}
-                      className="hidden"
-                      id="place-image"
-                    />
-                    <Button asChild>
-                      <label htmlFor="place-image" className="cursor-pointer">
-                        <ImageIcon className="h-5 w-5 mr-2" />
-                        Bilder auswählen
-                      </label>
-                    </Button>
+                    <input type="file" accept="image/*" multiple onChange={(e) => handleFileSelect(e.target.files)} className="hidden" id="place-image" />
+                    <Button asChild><label htmlFor="place-image" className="cursor-pointer"><ImageIcon className="h-5 w-5 mr-2" />Bilder auswählen</label></Button>
                   </div>
                 </div>
 
-                {/* File Preview */}
                 {files.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {files.map(file => (
                       <div key={file.id} className="relative">
                         <img src={file.preview || ''} alt={file.name} className="w-full h-40 object-cover rounded" />
-                        <div className="absolute top-2 right-2">
-                          <Button variant="destructive" size="sm" className="h-6 w-6 p-0" onClick={() => removeFile(file.id)}>×</Button>
-                        </div>
+                        <div className="absolute top-2 right-2"><Button variant="destructive" size="sm" className="h-6 w-6 p-0" onClick={() => removeFile(file.id)}>×</Button></div>
                         <p className="text-sm truncate">{file.name}</p>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Place Details */}
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="place-title">Name</Label>
-                    <Input
-                      id="place-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Name des Platzes..."
-                    />
+                    <Input id="place-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Name des Platzes..." />
                   </div>
 
                   <div>
                     <Label htmlFor="place-description">Beschreibung</Label>
-                    <Textarea
-                      id="place-description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Beschreibung des Platzes..."
-                      rows={3}
-                    />
+                    <Textarea id="place-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Beschreibung des Platzes..." rows={3} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Art</Label>
                       <Select value={mainCategory} onValueChange={setMainCategory}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Art wählen" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {placeTypes.map(type => (
-                            <SelectItem key={type.value} value={type.value}>
-                              <span className="flex items-center gap-2">
-                                <span>{type.icon}</span>
-                                {type.label}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+                        <SelectTrigger><SelectValue placeholder="Art wählen" /></SelectTrigger>
+                        <SelectContent>{placeTypes.map(type => (<SelectItem key={type.value} value={type.value}><span className="flex items-center gap-2"><span>{type.icon}</span>{type.label}</span></SelectItem>))}</SelectContent>
                       </Select>
                     </div>
 
@@ -776,48 +585,25 @@ export function Publish() {
                       <Label>Bewertung</Label>
                       <div className="flex gap-1">
                         {ratings.map(r => (
-                          <button
-                            key={r}
-                            onClick={() => setRating(r)}
-                            className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                              rating === r ? 'border-primary bg-primary text-white' : 'border-gray-300 hover:border-gray-400'
-                            }`}
-                          >
-                            {r}
-                          </button>
+                          <button key={r} onClick={() => setRating(r)} className={`w-10 h-10 rounded-lg border-2 transition-all ${rating === r ? 'border-primary bg-primary text-white' : 'border-gray-300 hover:border-gray-400'}`}>{r}</button>
                         ))}
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="place-location">Standort</Label>
-                    <Input
-                      id="place-location"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="Land, Stadt (z.B. Portugal, Faro)"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      💡 GPS wird aus Bildern ermittelt. Fallback zur Standort-Parsierung.
-                    </p>
-                  </div>
-
-                  <div>
                     <Label>Ausstattung</Label>
                     <div className="flex flex-wrap gap-2">
                       {['strom', 'wasser', 'wc', 'dusche', 'wlan', 'shop', 'familien', 'paare', 'single', 'wohnmobil', 'zelt'].map(amenity => (
-                        <Badge
-                          key={amenity}
-                          variant={amenities.includes(amenity) ? 'default' : 'outline'}
-                          className="cursor-pointer"
-                          onClick={() => handleAmenityToggle(amenity)}
-                        >
-                          {amenities.includes(amenity) && <span className="mr-1">✓</span>}
-                          {amenity}
-                        </Badge>
+                        <Badge key={amenity} variant={amenities.includes(amenity) ? 'default' : 'outline'} className="cursor-pointer" onClick={() => handleAmenityToggle(amenity)}>{amenities.includes(amenity) && <span className="mr-1">✓</span>}{amenity}</Badge>
                       ))}
                     </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="place-location">Standort</Label>
+                    <Input id="place-location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Land, Stadt (z.B. Portugal, Faro)" />
+                    <p className="text-xs text-gray-500 mt-1">💡 GPS wird aus Bildern ermittelt. Fallback zur Standort-Parsierung.</p>
                   </div>
                 </div>
               </CardContent>
@@ -830,95 +616,60 @@ export function Publish() {
                 <CardDescription>Teile kurze Notizen und Gedanken</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Image Upload */}
                 <div>
-                  <Label htmlFor="note-image">Bild</Label>
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center ${
-                      isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'
-                    }`}
+                  <Label>Bild</Label>
+                  <div className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'}`}
                     onDrop={handleDrop}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                   >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileSelect(e.target.files)}
-                      className="hidden"
-                      id="note-image"
-                    />
-                    <Button asChild>
-                      <label htmlFor="note-image" className="cursor-pointer">
-                        <ImageIcon className="h-5 w-5 mr-2" />
-                        Bild auswählen
-                      </label>
-                    </Button>
+                    <input type="file" accept="image/*" onChange={(e) => handleFileSelect(e.target.files)} className="hidden" id="note-image" />
+                    <Button asChild><label htmlFor="note-image" className="cursor-pointer"><ImageIcon className="h-5 w-5 mr-2" />Bild auswählen</label></Button>
                   </div>
                 </div>
 
-                {/* File Preview */}
                 {files.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {files.map(file => (
                       <div key={file.id} className="relative">
                         <img src={file.preview || ''} alt={file.name} className="w-full h-40 object-cover rounded" />
-                        <div className="absolute top-2 right-2">
-                          <Button variant="destructive" size="sm" className="h-6 w-6 p-0" onClick={() => removeFile(file.id)}>×</Button>
-                        </div>
+                        <div className="absolute top-2 right-2"><Button variant="destructive" size="sm" className="h-6 w-6 p-0" onClick={() => removeFile(file.id)}>×</Button></div>
                         <p className="text-sm truncate">{file.name}</p>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Note Details */}
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="note-title">Titel</Label>
-                    <Input
-                      id="note-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Titel der Note..."
-                    />
+                    <Input id="note-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titel der Note..." />
                   </div>
 
                   <div>
-                    <Label htmlFor="note-content">Inhalt</Label>
-                    <WysiwygEditor
-                      content={content}
-                      onChange={setContent}
-                      placeholder="Schreibe deine Note..."
-                      className="min-h-[200px]"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="note-location">Standort</Label>
-                    <Input
-                      id="note-location"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="Land, Stadt (z.B. Portugal, Porto)"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      💡 GPS wird aus erstem Bild ermittelt. Fallback zur Standort-Parsierung.
-                    </p>
+                    <Label>Inhalt</Label>
+                    <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Schreibe deine Note..." className="min-h-[200px]" />
                   </div>
 
                   <div>
                     <Label>Kategorie</Label>
                     <Select value={mainCategory} onValueChange={setMainCategory}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Kategorie wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mainCategories.map(cat => (
-                          <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                        ))}
-                      </SelectContent>
+                      <SelectTrigger><SelectValue placeholder="Kategorie wählen" /></SelectTrigger>
+                      <SelectContent>{mainCategories.map(cat => (<SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>))}</SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="note-location">Standort</Label>
+                      <Input id="note-location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Land, Stadt (z.B. Portugal, Porto)" />
+                      <p className="text-xs text-gray-500 mt-1">💡 GPS wird aus erstem Bild ermittelt. Fallback zur Standort-Parsierung.</p>
+                    </div>
+
+                    <div>
+                      <Label>Land</Label>
+                      <CountrySelector selectedCountry={selectedCountry} onCountryChange={setSelectedCountry} placeholder="Land auswählen (für Fallback)" />
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -926,25 +677,15 @@ export function Publish() {
           </Tabs>
         </Card>
 
-        {/* Publish Button */}
         <Card>
           <CardContent className="pt-6">
-            <Button
-              onClick={handleSubmit}
-              disabled={isUploading}
-              className="w-full"
-              size="lg"
-            >
+            <Button onClick={handleSubmit} disabled={isUploading} className="w-full" size="lg">
               {isUploading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              {(activeTab === 'media' && files.length === 0) ? 'Dateien auswählen' :
-               (activeTab === 'article' && files.length === 0) ? 'Titelbild auswählen' :
-               (activeTab === 'place' && files.length === 0) ? 'Bilder auswählen' :
-               (activeTab === 'note' && files.length === 0) ? 'Bild auswählen' : 'Veröffentlichen'}
+              {(activeTab === 'media' && files.length === 0) ? 'Dateien auswählen zum Veröffentlichen' : 'Veröffentlichen'}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Upload Progress */}
         {isUploading && (
           <Card>
             <CardContent className="pt-6">
@@ -953,21 +694,16 @@ export function Publish() {
                   <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                   <p className="text-sm text-muted-foreground mt-2">{uploadProgress.status}</p>
                 </div>
-                <Progress
-                  value={uploadProgress.current}
-                  max={uploadProgress.total}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                <Progress value={uploadProgress.current} max={uploadProgress.total} className="w-full" />
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{uploadProgress.current} / {uploadProgress.total}</span>
-                  <span>{((uploadProgress.current / uploadProgress.total) * 100).toFixed(0)}%</span>
+                  <span>{uploadProgress.total > 0 ? ((uploadProgress.current / uploadProgress.total) * 100).toFixed(0) : '0'}%</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Instructions */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Anleitung</CardTitle>
@@ -979,7 +715,7 @@ export function Publish() {
                 <div>
                   <p className="font-medium">GPS-Extraktion</p>
                   <p className="text-muted-foreground">
-                    <strong>Bilder:</strong> GPS aus Bild-EXIF (höchste Priorität)<br/>
+                    <strong>Medien:</strong> GPS aus Bild-EXIF (höchste Priorität)<br/>
                     <strong>Artikel:</strong> GPS aus Titelbild<br/>
                     <strong>Plätze:</strong> GPS aus Bildern<br/>
                     <strong>Notes:</strong> GPS aus erstem Bild
