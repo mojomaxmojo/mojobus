@@ -1,12 +1,13 @@
 // Ort speichern Button Fix - Korrigiert name.trim() zu title.trim()
 // Version 3 - Force Cache Invalidation
+// Version 4 - GPS aus erstem Bild automatisch extrahieren
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, MapPinOff } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -27,6 +28,7 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
+import exifr from 'exifr';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -63,6 +65,7 @@ interface MediaFile {
   preview?: string;
   uploaded?: boolean;
   tags?: string[];
+  hasGPS?: boolean;
 }
 
 interface UploadProgress {
@@ -87,10 +90,72 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
+  const [gpsCoordinates, setGpsCoordinates] = useState<{ lat: number; lon: number } | null>(null);
+  const [gpsSource, setGpsSource] = useState<'auto' | 'manual' | null>(null);
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
+
+  // GPS-Extraktion aus erstem Bild
+  const extractGPSFromImage = async (file: File): Promise<{ lat: number; lon: number } | null> => {
+    if (!file.type.startsWith('image/')) return null;
+
+    try {
+      const exifData = await exifr.parse(file);
+
+      if (!exifData) return null;
+
+      // Verschiedene EXIF-Felder für GPS-Koordinaten
+      let lat: number | undefined;
+      let lon: number | undefined;
+
+      // Versuch 1: Direkte GPS-Koordinaten
+      if (typeof exifData.latitude === 'number' && typeof exifData.longitude === 'number') {
+        lat = exifData.latitude;
+        lon = exifData.longitude;
+      }
+      // Versuch 2: GPS-Objekt
+      else if (exifData.gps?.Latitude && exifData.gps?.Longitude) {
+        lat = parseFloat(exifData.gps.Latitude);
+        lon = parseFloat(exifData.gps.Longitude);
+      }
+
+      if (lat !== undefined && lon !== undefined) {
+        console.log('[GPS] Extrahiert aus Bild:', { lat, lon, file: file.name });
+        return { lat, lon };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[GPS] Fehler beim Extrahieren:', error);
+      return null;
+    }
+  };
+
+  // Extrahiere GPS aus erstem Bild beim Hinzufügen von Dateien
+  useEffect(() => {
+    const extractGPS = async () => {
+      const firstImage = files.find(f => f.type === 'image');
+      if (firstImage && !gpsSource) {
+        const gps = await extractGPSFromImage(firstImage.file);
+        if (gps) {
+          setGpsCoordinates(gps);
+          setGpsSource('auto');
+          toast({
+            title: '📍 GPS-Extrahiert',
+            description: `Koordinaten aus Bild "${firstImage.name}" automatisch extrahiert.`,
+          });
+        }
+      } else if (!firstImage && gpsSource === 'auto') {
+        // Reset wenn erstes Bild gelöscht wurde
+        setGpsCoordinates(null);
+        setGpsSource(null);
+      }
+    };
+
+    extractGPS();
+  }, [files]);
 
   // Handler functions
   const handleMainCategoryChange = (value: string) => {
@@ -150,6 +215,18 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         }
       }
       setLocation(editEvent.tags?.find((tag: any) => tag[0] === 'location')?.[1] || '');
+
+      // Extract GPS coordinates if present
+      const latTag = editEvent.tags?.find((tag: any) => tag[0] === 'lat')?.[1];
+      const lonTag = editEvent.tags?.find((tag: any) => tag[0] === 'lon')?.[1];
+      if (latTag && lonTag) {
+        setGpsCoordinates({
+          lat: parseFloat(latTag),
+          lon: parseFloat(lonTag),
+        });
+        setGpsSource('manual'); // From edit = manual
+      }
+
       const dateTag = editEvent.tags?.find((tag: any) => tag[0] === 'published_at')?.[1];
       if (dateTag) {
         // Wenn Unix-Timestamp, in Datum umwandeln
@@ -173,21 +250,45 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     }
   }, [editEvent]);
 
-  const handleFileSelect = (selectedFiles: FileList | null) => {
+  const handleFileSelect = async (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
 
-    const newFiles: MediaFile[] = Array.from(selectedFiles).map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      name: file.name,
-      type: file.type.startsWith('image/') ? 'image' :
-            file.type.startsWith('video/') ? 'video' :
-            file.type.startsWith('audio/') ? 'audio' : 'document',
-      size: file.size,
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-    }));
+    const newFiles: MediaFile[] = await Promise.all(
+      Array.from(selectedFiles).map(async (file) => {
+        const isImage = file.type.startsWith('image/');
+        const gps = isImage ? await extractGPSFromImage(file) : null;
+
+        return {
+          id: Math.random().toString(36).substr(2, 9),
+          file,
+          name: file.name,
+          type: isImage ? 'image' :
+                  file.type.startsWith('video/') ? 'video' :
+                  file.type.startsWith('audio/') ? 'audio' : 'document',
+          size: file.size,
+          preview: isImage ? URL.createObjectURL(file) : undefined,
+          hasGPS: gps !== null,
+        };
+      })
+    );
 
     setFiles(prev => [...prev, ...newFiles]);
+
+    // Automatisch GPS aus erstem Bild setzen, wenn noch keine GPS-Quelle existiert
+    if (!gpsSource) {
+      const firstImageWithGPS = newFiles.find(f => f.hasGPS);
+      if (firstImageWithGPS) {
+        const gps = await extractGPSFromImage(firstImageWithGPS.file);
+        if (gps) {
+          setGpsCoordinates(gps);
+          setGpsSource('auto');
+          toast({
+            title: '📍 GPS-Extrahiert',
+            description: `Koordinaten aus Bild "${firstImageWithGPS.name}" automatisch extrahiert.`,
+          });
+        }
+      }
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -197,7 +298,21 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   };
 
   const removeFile = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
+    setFiles(prev => {
+      const newFiles = prev.filter(f => f.id !== id);
+
+      // Reset GPS wenn erstes Bild mit GPS gelöscht wurde
+      const removedFile = prev.find(f => f.id === id);
+      if (removedFile?.hasGPS && gpsSource === 'auto') {
+        const remainingImageWithGPS = newFiles.find(f => f.hasGPS);
+        if (!remainingImageWithGPS) {
+          setGpsCoordinates(null);
+          setGpsSource(null);
+        }
+      }
+
+      return newFiles;
+    });
   };
 
   const handleSubmit = async () => {
@@ -321,6 +436,17 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       if (location) additionalTags.push(['location', location]);
       if (date) additionalTags.push(['published_at', date]);
 
+      // Add GPS tags if available
+      if (gpsCoordinates) {
+        additionalTags.push(['lat', gpsCoordinates.lat.toFixed(6)]);
+        additionalTags.push(['lon', gpsCoordinates.lon.toFixed(6)]);
+        console.log('[GPS] Tags hinzugefügt:', {
+          lat: gpsCoordinates.lat,
+          lon: gpsCoordinates.lon,
+          source: gpsSource,
+        });
+      }
+
       // Final tag array - includes #mojobus
       const tags = [
         ...tagsWithMojobus.map(tag => ['t', tag]),
@@ -370,6 +496,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       setLocation('');
       setSelectedCountry('');
       setDate(''); // Wird im useEffect neu auf aktuelles Datum gesetzt
+      setGpsCoordinates(null);
+      setGpsSource(null);
 
       // Redirect to bilder page after successful publish
       setTimeout(() => {
@@ -451,24 +579,32 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                       alt={file.name}
                       className="w-full h-32 object-cover rounded"
                     />
-                  ) : (
-                    <div className="w-full h-32 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
-                      {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
-                      {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
-                      {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
-                    </div>
-                  )}
-                  <div className="text-sm">
-                    <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeFile(file.id)}
-                  >
-                    Löschen
-                  </Button>
+                   ) : (
+                     <div className="w-full h-32 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
+                       {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
+                       {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
+                       {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
+                     </div>
+                   )}
+                   <div className="text-sm">
+                     <div className="flex items-center gap-2">
+                       <p className="font-medium truncate">{file.name}</p>
+                       {file.hasGPS && (
+                         <Badge variant="secondary" className="text-xs bg-primary/10 text-primary hover:bg-primary/20">
+                           <MapPin className="h-3 w-3 mr-1" />
+                           GPS
+                         </Badge>
+                       )}
+                     </div>
+                     <p className="text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                   </div>
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     onClick={() => removeFile(file.id)}
+                   >
+                     Löschen
+                   </Button>
                 </div>
               ))}
             </div>
@@ -524,6 +660,24 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
               onChange={(e) => setLocation(e.target.value)}
               placeholder="📍 Wo wurden die Bilder aufgenommen?"
             />
+
+            {/* GPS Status */}
+            {gpsCoordinates && (
+              <div className="flex items-center gap-2 text-sm bg-primary/10 border border-primary/20 rounded-lg p-3">
+                <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium text-primary">
+                    GPS-Extrahiert
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {gpsSource === 'auto' ? 'Automatisch aus Bild extrahiert' : 'Manuell eingegeben'}
+                  </p>
+                  <p className="text-xs font-mono text-muted-foreground mt-1">
+                    {gpsCoordinates.lat.toFixed(6)}, {gpsCoordinates.lon.toFixed(6)}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Country Selection */}
