@@ -58,7 +58,7 @@ export function MapPage() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Extract locations from events with coordinate offset
+  // Extract locations from events - USE REAL GPS COORDINATES
   const locations = useMemo(() => {
     if (!events) return [];
 
@@ -107,24 +107,19 @@ export function MapPage() {
       let lat: number | undefined;
       let lng: number | undefined;
 
-      // Use GPS coordinates if available
+      // Use REAL GPS coordinates if available
       if (latTag && lonTag) {
         lat = parseFloat(latTag);
         lng = parseFloat(lonTag);
       } else if (country) {
-        // Fallback to country coordinates with random offset
+        // Fallback to country coordinates (only if no GPS)
         const countryKey = Object.keys(COUNTRY_COORDINATES).find(
           (key) => key === country.toLowerCase() || key.includes(country.toLowerCase())
         );
         if (countryKey) {
-          const baseCoords = COUNTRY_COORDINATES[countryKey];
-          
-          // Add small random offset (up to 0.5 degrees in each direction)
-          const latOffset = (Math.random() - 0.5) * 1.0;
-          const lngOffset = (Math.random() - 0.5) * 1.0;
-          
-          lat = baseCoords[0] + latOffset;
-          lng = baseCoords[1] + lngOffset;
+          const coords = COUNTRY_COORDINATES[countryKey];
+          lat = coords[0];
+          lng = coords[1];
         }
       }
 
@@ -180,6 +175,17 @@ export function MapPage() {
         // Wait a bit for DOM to be ready
         await new Promise(resolve => setTimeout(resolve, 50));
 
+        // Dynamic import of Leaflet - lazy loaded to avoid impacting initial bundle size
+        const L = await import('leaflet');
+
+        // Fix default icon issue with Vite
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        });
+
         // Create map centered on Europe
         const map = L.map(mapRef.current).setView([50.0, 10.0], 4);
 
@@ -189,7 +195,7 @@ export function MapPage() {
           maxZoom: 18,
         }).addTo(map);
 
-        // Add markers for each location with random offsets
+        // Add markers for each location with REAL GPS coordinates
         locations.forEach((loc) => {
           const marker = L.marker([loc.lat, loc.lng]).addTo(map);
 

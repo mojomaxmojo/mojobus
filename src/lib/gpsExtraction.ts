@@ -10,7 +10,7 @@ const COUNTRY_COORDINATES: Record<string, [number, number]> = {
   frankreich: [48.8566, 2.3522],     // Paris
   belgien: [50.8503, 4.3517],        // Brussels
   luxemburg: [49.8153, 6.1296],      // Luxembourg City
-  deutschland: [52.5200, 13.4050],   // Berlin
+  deutschland: [52.5200, 13.4050],   // Berlin,
 };
 
 // City coordinates for Portugal
@@ -74,7 +74,7 @@ const SPAIN_CITIES: Record<string, [number, number]> = {
   'badajoz': [38.8795, -6.9459],
   'murcia': [37.9922, -1.1307],
   'cartagena': [37.5920, -0.9974],
-  'valldolid': [41.6551, -4.7285],
+  'valladolid': [41.6551, -4.7285],
   'leon': [42.5987, -5.5671],
   'oviedo': [43.3617, -5.8550],
   'santiago': [42.8785, -8.5448],
@@ -101,13 +101,9 @@ const FRANCE_CITIES: Record<string, [number, number]> = {
   'lille': [50.6292, 3.0573],
   'rennes': [48.1135, -1.6773],
   'brest': [48.3904, -4.4861],
-  'rennes': [48.1135, -1.6773],
   'montpellier': [43.6102, 3.8767],
   'nimes': [43.8367, 4.3605],
   'avignon': [43.9493, 4.8055],
-  'toulouse': [43.6043, 1.4437],
-  'lille': [50.6292, 3.0573],
-  'dijon': [47.3222, 5.0415],
   'grenoble': [45.1885, 5.7245],
   'annecy': [45.8992, 6.1288],
   'le havre': [49.4944, 0.1079],
@@ -122,7 +118,6 @@ const FRANCE_CITIES: Record<string, [number, number]> = {
   'reims': [49.2613, 4.0284],
   'metz': [49.1193, 6.1757],
   'nancy': [48.6930, 6.1834],
-  'strasbourg': [48.5734, 7.7521],
   'colmar': [48.0734, 7.2975],
   'mulhouse': [47.7509, 7.3359],
   'besancon': [47.2323, 6.0328],
@@ -139,7 +134,7 @@ const GERMANY_CITIES: Record<string, [number, number]> = {
   'hamburg': [53.5511, 9.9937],
   'munich': [48.1351, 11.5820],
   'cologne': [50.9375, 6.9603],
-  'kÃ¶ln': [50.9375, 6.9603],
+  'köln': [50.9375, 6.9603],
   'frankfurt': [50.1109, 8.6821],
   'stuttgart': [48.7758, 9.1829],
   'dresden': [51.0509, 13.7373],
@@ -147,17 +142,17 @@ const GERMANY_CITIES: Record<string, [number, number]> = {
   'hannover': [52.3705, 9.7332],
   'bremen': [53.0758, 8.8084],
   'duesseldorf': [51.2217, 6.7762],
-  'dusseldorf': [51.2217, 6.7762],
+  'düsseldorf': [51.2217, 6.7762],
   'nuernberg': [49.4521, 11.0775],
   'bonn': [50.7374, 7.0998],
   'aachen': [50.7753, 6.0839],
   'kiel': [54.3223, 10.1358],
-  'luebeck': [53.8689, 10.6872],
+  'lübeck': [53.8689, 10.6872],
   'rostock': [54.0924, 12.0991],
   'schwerin': [52.5170, 13.3889],
   'potsdam': [52.3919, 13.0655],
   'brandenburg': [52.4088, 12.5445],
-  'ruegen': [54.4124, 13.6322],
+  'rügen': [54.4124, 13.6322],
   'stralsund': [54.3108, 13.5432],
   'wismar': [53.9156, 11.4600],
   'bremen': [53.0758, 8.8084],
@@ -169,12 +164,12 @@ const GERMANY_CITIES: Record<string, [number, number]> = {
 // City coordinates for Belgium
 const BELGIUM_CITIES: Record<string, [number, number]> = {
   'brussels': [50.8503, 4.3517],
-  'brussel': [50.8503, 4.3517],
+  'brüssel': [50.8503, 4.3517],
   'brugge': [51.2093, 3.2247],
   'bruges': [51.2093, 3.2247],
   'antwerpen': [51.2210, 4.3997],
   'gent': [51.0538, 3.7267],
-  'liege': [50.6327, 5.5797],
+  'liège': [50.6327, 5.5797],
   'charleroi': [50.4133, 4.4337],
   'brussels': [50.8503, 4.3517],
   'ostend': [51.2157, 2.9258],
@@ -219,41 +214,41 @@ export function parseLocationToGPS(locationString: string, country?: string): GP
     .trim();
 
   const parts = normalized.split(',').map(p => p.trim());
-  
-  // Try to find city name in the location string
+
+  // Try to find city name in location string
   for (const part of parts) {
     const cleanPart = part.replace(/\s+/g, ''); // Remove spaces for matching
-    
+
     // Portugal cities
     if (PORTUGAL_CITIES[cleanPart] || PORTUGAL_CITIES[cleanPart.replace(/[ãáâàã]/g, 'a')]) {
       const coords = PORTUGAL_CITIES[cleanPart] || PORTUGAL_CITIES[cleanPart.replace(/[ãáâàã]/g, 'a')];
       return { latitude: coords[0], longitude: coords[1] };
     }
-    
+
     // Spain cities
     if (SPAIN_CITIES[cleanPart] || SPAIN_CITIES[cleanPart.replace(/ñ/g, 'n')]) {
       const coords = SPAIN_CITIES[cleanPart] || SPAIN_CITIES[cleanPart.replace(/ñ/g, 'n')];
       return { latitude: coords[0], longitude: coords[1] };
     }
-    
+
     // France cities
     if (FRANCE_CITIES[cleanPart]) {
       const coords = FRANCE_CITIES[cleanPart];
       return { latitude: coords[0], longitude: coords[1] };
     }
-    
+
     // Germany cities
     if (GERMANY_CITIES[cleanPart]) {
       const coords = GERMANY_CITIES[cleanPart];
       return { latitude: coords[0], longitude: coords[1] };
     }
-    
+
     // Belgium cities
     if (BELGIUM_CITIES[cleanPart]) {
       const coords = BELGIUM_CITIES[cleanPart];
       return { latitude: coords[0], longitude: coords[1] };
     }
-    
+
     // Luxembourg cities
     if (LUXEMBOURG_CITIES[cleanPart]) {
       const coords = LUXEMBOURG_CITIES[cleanPart];
