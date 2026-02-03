@@ -156,6 +156,29 @@ export function MapPage() {
 
     const initializeMap = async () => {
       try {
+        // Wait for container to have proper size using ResizeObserver
+        const waitForSize = new Promise<void>((resolve) => {
+          const resizeObserver = new ResizeObserver((entries) => {
+            const entry = entries[0];
+            if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+              resizeObserver.disconnect();
+              resolve();
+            }
+          });
+
+          if (mapRef.current) {
+            resizeObserver.observe(mapRef.current);
+          }
+
+          // Fallback timeout
+          setTimeout(() => {
+            resizeObserver.disconnect();
+            resolve();
+          }, 500);
+        });
+
+        await waitForSize();
+
         // Dynamic import of Leaflet - lazy loaded to avoid impacting initial bundle size
         const L = await import('leaflet');
 
@@ -241,6 +264,12 @@ export function MapPage() {
           marker.bindPopup(popupContent);
         });
 
+        // Force a redraw after initialization
+        requestAnimationFrame(() => {
+          map.invalidateSize();
+          console.log('Map size invalidated after init');
+        });
+
         mapInitializedRef.current = true;
         console.log('Map initialized with', locations.length, 'markers');
 
@@ -323,7 +352,16 @@ export function MapPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div ref={mapRef} className="h-[600px] w-full" />
+          <div
+            ref={mapRef}
+            className="h-[600px] w-full"
+            style={{
+              minHeight: '600px',
+              width: '100%',
+              position: 'relative',
+              zIndex: 0,
+            }}
+          />
         </CardContent>
       </Card>
 
