@@ -38,7 +38,6 @@ export default defineConfig(() => ({
       '@nostrify/react',
       '@nostrify/nostrify',
       'dijkstrajs',
-      'leaflet',
     ],
     force: true,
   },
@@ -110,10 +109,6 @@ export default defineConfig(() => ({
           if (id.includes('/pages/NotFound')) {
             return 'not-found-page';
           }
-          // MapPage (lazy loaded - nur für /map Seite)
-          if (id.includes('/pages/MapPage')) {
-            return 'map-page';
-          }
 
           // === VENDOR CHUNKS (Nur bei Bedarf) ===
           // Tiptap Editor (nur bei Bedarf laden)
@@ -135,16 +130,6 @@ export default defineConfig(() => ({
               id.includes('node_modules/process/') ||
               id.includes('node_modules/buffer/')) {
             return 'polyfills';
-          }
-
-          // Leaflet (lazy loaded - nur für /map Seite)
-          if (id.includes('node_modules/leaflet/')) {
-            return 'leaflet-vendor';
-          }
-
-          // Leaflet CSS - muss im gleichen Chunk wie Leaflet sein
-          if (id.includes('leaflet.css') || id.includes('/leaflet/dist/')) {
-            return 'leaflet-vendor';
           }
 
           // === COMMON VENDORS (Im Hauptbundle, aber optimiert) ===
