@@ -1222,8 +1222,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [imageGpsData, setImageGpsData] = useState<Map<number, GpsData>>(new Map());
-  const [imageGpsStatuses, setImageGpsStatuses] = useState<Map<number, GpsStatus>>(new Map());
+  const [imageGpsData, setImageGpsData] = useState<Record<number, GpsData>>({});
+  const [imageGpsStatuses, setImageGpsStatuses] = useState<Record<number, GpsStatus>>({});
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1291,22 +1291,22 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         const [urlTag] = await uploadFile(file);
         uploadedUrls.push(urlTag[1]); // URL is in second position
 
-        // Extract GPS from each image
-        try {
-          const gpsData = await extractGpsFromImage(file);
-          const index = startIndex + i;
-          if (gpsData) {
-            setImageGpsData(prev => new Map(prev).set(index, gpsData));
-            setImageGpsStatuses(prev => new Map(prev).set(index, 'detected'));
-            console.log(`[Note GPS] Extracted from ${file.name} (image ${index}):`, gpsData);
-          } else {
-            setImageGpsStatuses(prev => new Map(prev).set(index, 'not_found'));
-          }
-        } catch (error) {
-          const index = startIndex + i;
-          console.error(`[Note GPS] Failed to extract from ${file.name}:`, error);
-          setImageGpsStatuses(prev => new Map(prev).set(index, 'error'));
+      // Extract GPS from each image
+      try {
+        const gpsData = await extractGpsFromImage(file);
+        const index = startIndex + i;
+        if (gpsData) {
+          setImageGpsData(prev => ({ ...prev, [index]: gpsData }));
+          setImageGpsStatuses(prev => ({ ...prev, [index]: 'detected' }));
+          console.log(`[Note GPS] Extracted from ${file.name} (image ${index}):`, gpsData);
+        } else {
+          setImageGpsStatuses(prev => ({ ...prev, [index]: 'not_found' }));
         }
+      } catch (error) {
+        const index = startIndex + i;
+        console.error(`[Note GPS] Failed to extract from ${file.name}:`, error);
+        setImageGpsStatuses(prev => ({ ...prev, [index]: 'error' }));
+      }
       }
 
       setImageUrls(prev => [...prev, ...uploadedUrls]);
@@ -1328,14 +1328,12 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     setImageUrls(prev => prev.filter((_, i) => i !== index));
     // Also remove GPS data for this image
     setImageGpsData(prev => {
-      const newMap = new Map(prev);
-      newMap.delete(index);
-      return newMap;
+      const { [index]: _, ...rest } = prev;
+      return rest;
     });
     setImageGpsStatuses(prev => {
-      const newMap = new Map(prev);
-      newMap.delete(index);
-      return newMap;
+      const { [index]: _, ...rest } = prev;
+      return rest;
     });
   };
 
@@ -1375,8 +1373,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       additionalTags.push(['image', url]);
 
       // Add GPS tags if available for this image
-      const gpsData = imageGpsData.get(index);
-      const gpsStatus = imageGpsStatuses.get(index);
+      const gpsData = imageGpsData[index];
+      const gpsStatus = imageGpsStatuses[index];
       if (gpsData && gpsStatus) {
         additionalTags.push(['gps_lat', gpsData.latitude.toString()], ['gps_lon', gpsData.longitude.toString()]);
         if (gpsData.altitude) {
@@ -1418,8 +1416,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     setSelectedCountry('');
     setImageFiles([]);
     setImageUrls([]);
-    setImageGpsData(new Map());
-    setImageGpsStatuses(new Map());
+    setImageGpsData({});
+    setImageGpsStatuses({});
 
     // Redirect to notes page after successful publish
     setTimeout(() => {
@@ -1530,8 +1528,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                 <Button
                   onClick={() => {
                     setImageUrls([]);
-                    setImageGpsData(new Map());
-                    setImageGpsStatuses(new Map());
+                    setImageGpsData({});
+                    setImageGpsStatuses({});
                   }}
                   variant="outline"
                   size="sm"
@@ -1541,8 +1539,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {imageUrls.map((url, index) => {
-                  const gpsData = imageGpsData.get(index);
-                  const gpsStatus = imageGpsStatuses.get(index);
+                  const gpsData = imageGpsData[index];
+                  const gpsStatus = imageGpsStatuses[index];
                   return (
                     <div key={index} className="relative group border rounded-lg overflow-hidden">
                       <img
