@@ -27,6 +27,7 @@ import {
   Calendar,
   Lightbulb,
   Sun,
+  Map,
 } from '@/lib/icons';
 import {
   DropdownMenu,
@@ -311,6 +312,15 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Map */}
+            <Link
+              to="/map"
+              className="flex items-center gap-2 text-accent hover:text-accent/80 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-accent/10 hover:shadow-md"
+            >
+              <Map className="h-4 w-4" />
+              Map
+            </Link>
+
             {/* Notes */}
             <Link
               to="/notes"
@@ -565,6 +575,16 @@ export function Header() {
                 ))}
               </div>
             </div>
+
+            {/* Mobile Notes */}
+            <Link
+              to="/map"
+              className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+              onClick={handleMobileMenuClick}
+            >
+              <Map className="h-5 w-5 text-gray-600" />
+              <span className="text-gray-900 dark:text-gray-100">Map</span>
+            </Link>
 
             {/* Mobile Notes */}
             <Link

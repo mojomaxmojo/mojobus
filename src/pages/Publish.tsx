@@ -17,6 +17,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { ImageOptimizationToggle } from '@/components/ImageOptimizationToggle';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
+import { extractCoordinatesWithFallback } from '@/lib/gpsExtraction';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { CONTENT_CATEGORIES, createRequiredTags, getOptionalTags, getTabConfig } from '@/config/contentCategories';
@@ -286,6 +287,15 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         status: '📝 Nostr Event wird erstellt...'
       });
 
+      // Extract GPS coordinates from first image or fallback to country
+      let gpsCoordinates = null;
+      try {
+        gpsCoordinates = await extractCoordinatesWithFallback(files, selectedCountry);
+      } catch (error) {
+        console.error('GPS extraction failed:', error);
+        // Continue without GPS if extraction fails
+      }
+
       // Create content with file URLs
       const content = `${title ? `# ${title}\n\n` : ''}${description ? `${description}\n\n` : ''}${uploadedUrls.join('\n\n')}`;
 
@@ -317,9 +327,15 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
       if (mainCategory) additionalTags.push(['t', mainCategory]);
 
-      // Add location and date tags
+      // Add location, GPS, and date tags
       if (location) additionalTags.push(['location', location]);
       if (date) additionalTags.push(['published_at', date]);
+
+      // Add GPS coordinates if available
+      if (gpsCoordinates) {
+        additionalTags.push(['lat', gpsCoordinates.latitude.toString()]);
+        additionalTags.push(['lon', gpsCoordinates.longitude.toString()]);
+      }
 
       // Final tag array - includes #mojobus
       const tags = [
