@@ -42,11 +42,12 @@ export function MapPage() {
     queryFn: async () => {
       const signal = AbortSignal.any([AbortSignal.timeout(5000)]);
 
-      // Query Articles (kind 30023) and Places (kind 30025)
+      // Query all media events from /veroeffentlichen (kind 1) and Articles/Places (kind 30023, 30025)
       const results = await nostr.query([
-        { kinds: [30023, 30025], limit: 200 },
+        { kinds: [1, 30023, 30025], limit: 300 },
       ], { signal });
 
+      console.log('Map events loaded:', results?.length, 'events');
       return results;
     },
     refetchOnWindowFocus: false,
@@ -59,13 +60,42 @@ export function MapPage() {
 
     const locs: Location[] = [];
 
+    // Country list for matching
+    const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
+
     events.forEach((event) => {
       const tags = event.tags;
-      const title = tags.find((t: string[]) => t[0] === 'title')?.[1] || 'Ohne Titel';
+
+      // Extract title - for kind 1, title is in content (first line with #)
+      // for kind 30023/30025, title is in title tag
+      let title = tags.find((t: string[]) => t[0] === 'title')?.[1];
+      if (!title && event.kind === 1) {
+        const contentLines = event.content.trim().split('\n');
+        const titleMatch = contentLines[0]?.match(/^#\s+(.+)$/);
+        if (titleMatch) {
+          title = titleMatch[1].trim();
+        } else {
+          title = contentLines[0]?.substring(0, 50) || 'Ohne Titel';
+        }
+      }
+
       const location = tags.find((t: string[]) => t[0] === 'location')?.[1];
-      const country = tags.find((t: string[]) => t[0] === 'country')?.[1];
-      const imageTag = tags.find((t: string[]) => t[0] === 'image')?.[1];
+
+      // Find image - from image tag or content URLs
+      let imageUrl = tags.find((t: string[]) => t[0] === 'image')?.[1];
+      if (!imageUrl && event.kind === 1) {
+        // Extract first URL from content
+        const urlMatch = event.content.match(/https?:\/\/[^\s\n]+/);
+        if (urlMatch) {
+          imageUrl = urlMatch[0];
+        }
+      }
+
       const summary = tags.find((t: string[]) => t[0] === 'summary')?.[1];
+
+      // Find country from 't' tags (used in Publish.tsx)
+      const countryTag = tags.find((t: string[]) => t[0] === 't' && countryList.includes(t[1]?.toLowerCase()));
+      const country = countryTag?.[1];
 
       // Extract GPS coordinates from lat/lon tags
       const latTag = tags.find((t: string[]) => t[0] === 'lat')?.[1];
@@ -94,16 +124,26 @@ export function MapPage() {
         locs.push({
           lat,
           lng,
-          title,
+          title: title || 'Ohne Titel',
           location,
-          country,
-          imageUrl: imageTag,
+          country: country ? country.charAt(0).toUpperCase() + country.slice(1) : undefined,
+          imageUrl,
           description: summary,
           event,
+        });
+      } else if (country) {
+        // Debug: Log events with country but no coordinates
+        console.log('Event with country but no coordinates:', {
+          title,
+          country,
+          latTag,
+          lonTag,
+          hasLatLon: !!(latTag && lonTag),
         });
       }
     });
 
+    console.log('Extracted locations:', locs.length, 'from', events.length, 'events');
     return locs;
   }, [events]);
 
@@ -113,6 +153,21 @@ export function MapPage() {
 
     const initializeMap = async () => {
       try {
+        // Ensure Leaflet CSS is loaded
+        if (!document.querySelector('link[href*="leaflet.css"]')) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          link.crossOrigin = 'anonymous';
+          document.head.appendChild(link);
+
+          // Wait for CSS to load
+          await new Promise((resolve) => {
+            link.onload = resolve;
+            setTimeout(resolve, 500); // Fallback timeout
+          });
+        }
+
         // Dynamic import of Leaflet - lazy loaded to avoid impacting initial bundle size
         const L = await import('leaflet');
 
@@ -123,6 +178,9 @@ export function MapPage() {
           iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
         });
+
+        // Wait for the next tick to ensure DOM is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Create map centered on Europe
         const map = L.map(mapRef.current).setView([50.0, 10.0], 4);
@@ -199,6 +257,7 @@ export function MapPage() {
         });
 
         mapInitializedRef.current = true;
+        console.log('Map initialized with', locations.length, 'markers');
 
         // Cleanup
         return () => {
@@ -279,7 +338,11 @@ export function MapPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div ref={mapRef} className="h-[600px] w-full" />
+          <div
+            ref={mapRef}
+            className="h-[600px] w-full"
+            style={{ minHeight: '600px', background: '#e5e7eb' }}
+          />
         </CardContent>
       </Card>
 
