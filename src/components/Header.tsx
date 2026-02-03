@@ -1,7 +1,3 @@
-// 🎯 Header mit Lazy Loading der WorldMap Page
-// Optimized für Performance - Leaflet wird nur geladen, wenn /karte besucht wird
-
-import { useState, useEffect, lazy, Suspense } from 'react';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -31,7 +27,6 @@ import {
   Calendar,
   Lightbulb,
   Sun,
-  Globe2,
 } from '@/lib/icons';
 import {
   DropdownMenu,
@@ -316,15 +311,6 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Weltkarte */}
-            <Link
-              to="/karte"
-              className="flex items-center gap-2 text-foreground hover:text-accent px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-accent/10 hover:shadow-md"
-            >
-              <Globe2 className="h-4 w-4" />
-              Weltkarte
-            </Link>
-
             {/* Notes */}
             <Link
               to="/notes"
@@ -473,7 +459,7 @@ export function Header() {
               <div className="space-y-1">
                 <Link
                   to="/bilder"
-                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
                   onClick={handleMobileMenuClick}
                 >
                   <Camera className="h-5 w-5 text-gray-600" />
@@ -513,86 +499,140 @@ export function Header() {
                 </div>
               </div>
 
-              {/* Mobile Weltkarte */}
-              <Link
-                to="/karte"
-                className="flex items-center gap-3 p-3 hover:bg-pink-100 rounded-lg transition-colors"
-                onClick={handleMobileMenuClick}
-              >
-                <Globe2 className="h-5 w-5 text-gray-600" />
-                <span className="text-gray-900 dark:text-gray-100">Weltkarte</span>
-              </Link>
-
               {/* Mobile Notes */}
               <Link
-                to="/notes"
+                to="/artikel/leon"
                 className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                 onClick={handleMobileMenuClick}
               >
-                <StickyNote className="h-5 w-5 text-gray-600" />
-                <span className="text-gray-900 dark:text-gray-100">Notes</span>
+                <Dog className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-900 dark:text-gray-100">Leon Story</span>
               </Link>
+            </div>
 
-              {/* Mobile About */}
+            {/* Mobile Plätze */}
+            <div className="space-y-1">
               <Link
-                to="/about"
+                to="/plaetze"
                 className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
                 onClick={handleMobileMenuClick}
               >
-                <Info className="h-5 w-5 text-gray-600" />
-                <span className="text-gray-900 dark:text-gray-100">About</span>
+                <MapPin className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-900 dark:text-gray-100">Alle Plätze</span>
               </Link>
+            </div>
 
-              {/* Mobile User Actions */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                {user ? (
-                  <div className="space-y-1">
-                    <Link
-                      to="/veroeffentlichen"
-                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                      onClick={handleMobileMenuClick}
-                    >
-                      <PenSquare className="h-5 w-5 text-gray-600" />
-                      <span className="text-gray-900 dark:text-gray-100">Beitrag erstellen</span>
-                    </Link>
-                    <Link
-                      to="/profile"
-                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                      onClick={handleMobileMenuClick}
-                    >
-                      <User className="h-5 w-5 text-gray-600" />
-                      <span className="text-gray-900 dark:text-gray-100">Profil</span>
-                    </Link>
-                    <Link
-                      to="/settings"
-                      className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                      onClick={handleMobileMenuClick}
-                    >
-                      <Settings className="h-5 w-5 text-gray-600" />
-                      <span className="text-gray-900 dark:text-gray-100">Einstellungen</span>
-                    </Link>
-                    <button
-                      onClick={() => {
-                        logout();
-                        handleMobileMenuClick();
-                      }}
-                      className="flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg w-full text-left"
-                    >
-                      <LogOut className="h-5 w-5 text-red-600" />
-                      <span className="text-red-600">Ausloggen</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="border-t dark:border-gray-700 pt-4 mt-4">
-                    <LoginArea />
-                  </div>
-                )}
+            {/* Mobile Bilder */}
+            <div className="space-y-1">
+              <Link
+                to="/bilder"
+                className="flex items-center gap-3 p-3 hover:bg-[#ec1a58]/5 rounded-lg transition-colors"
+                onClick={handleMobileMenuClick}
+              >
+                <Camera className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-900 dark:text-gray-100">Alle Bilder</span>
+              </Link>
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+                Nach Länder
+              </div>
+              <div className="space-y-2">
+                {Object.values(MAIN_MENU.countries).map((country) => (
+                  <Link
+                    key={country.code}
+                    to={`/bilder/${country.code}`}
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                    onClick={handleMobileMenuClick}
+                  >
+                    <span className="text-lg">{country.flag}</span>
+                    <span className="text-gray-900 dark:text-gray-100">{country.name}</span>
+                  </Link>
+                ))}
+              </div>
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+                Natur
+              </div>
+              <div className="space-y-2">
+                {Object.values(MAIN_MENU.nature).map((category) => (
+                  <Link
+                    key={category.id}
+                    to={`/bilder/natur/${category.id}`}
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                    onClick={handleMobileMenuClick}
+                  >
+                    <span>{category.emoji}</span>
+                    <span className="text-gray-900 dark:text-gray-100">{category.name}</span>
+                  </Link>
+                ))}
               </div>
             </div>
+
+            {/* Mobile Notes */}
+            <Link
+              to="/notes"
+              className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+              onClick={handleMobileMenuClick}
+            >
+              <StickyNote className="h-5 w-5 text-gray-600" />
+              <span className="text-gray-900 dark:text-gray-100">Alle Notes</span>
+            </Link>
+
+            {/* Mobile About */}
+            <Link
+              to="/about"
+              className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+              onClick={handleMobileMenuClick}
+            >
+              <Info className="h-5 w-5 text-gray-600" />
+              <span className="text-gray-900 dark:text-gray-100">About</span>
+            </Link>
+
+            {/* Mobile User Actions */}
+            {user ? (
+              <div className="border-t dark:border-gray-700 pt-4 mt-4 space-y-2">
+                <Link
+                  to="/veroeffentlichen"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <PenSquare className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Beitrag erstellen</span>
+                </Link>
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <User className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Profil</span>
+                </Link>
+                <Link
+                  to="/settings"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <Settings className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Einstellungen</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    logout();
+                    handleMobileMenuClick();
+                  }}
+                  className="flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg w-full text-left"
+                >
+                  <LogOut className="h-5 w-5 text-red-600" />
+                  <span className="text-red-600">Ausloggen</span>
+                </button>
+              </div>
+            ) : (
+              <div className="border-t dark:border-gray-700 pt-4 mt-4">
+                <LoginArea />
+              </div>
+            )}
           </div>
         </div>
       </div>
     )}
-  </>
-);
+    </>
+  );
 }

@@ -25,7 +25,6 @@ const Profile = lazy(() => import("./pages/Profile").then(m => ({ default: m.Pro
 const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.Settings })));
 const ServiceWorkerSettings = lazy(() => import("./pages/ServiceWorkerSettings").then(m => ({ default: m.ServiceWorkerSettings })));
 const NIP19Page = lazy(() => import("./pages/NIP19Page").then(m => ({ default: m.NIP19Page })));
-const WorldMap = lazy(() => import("./pages/WorldMap").then(m => ({ default: m.WorldMap })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.default })));
 
 function App() {
@@ -50,12 +49,11 @@ function App() {
               <Route path="/bilder" element={<Images />} />
               <Route path="/bilder/:country" element={<Images />} />
               <Route path="/bilder/natur/:category" element={<Images />} />
-               <Route path="/bild/:nip19" element={<ImageDetail />} />
-               <Route path="/notes" element={<Notes />} />
-               <Route path="/notes/:country" element={<Notes />} />
-               <Route path="/about" element={<About />} />
-               <Route path="/karte" element={<WorldMap />} />
-               <Route path="/profile" element={<Profile />} />
+              <Route path="/bild/:nip19" element={<ImageDetail />} />
+              <Route path="/notes" element={<Notes />} />
+              <Route path="/notes/:country" element={<Notes />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/service-worker" element={<ServiceWorkerSettings />} />
               <Route path="/veroeffentlichen" element={<Publish />} />
