@@ -156,28 +156,8 @@ export function MapPage() {
 
     const initializeMap = async () => {
       try {
-        // Wait for container to have proper size using ResizeObserver
-        const waitForSize = new Promise<void>((resolve) => {
-          const resizeObserver = new ResizeObserver((entries) => {
-            const entry = entries[0];
-            if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-              resizeObserver.disconnect();
-              resolve();
-            }
-          });
-
-          if (mapRef.current) {
-            resizeObserver.observe(mapRef.current);
-          }
-
-          // Fallback timeout
-          setTimeout(() => {
-            resizeObserver.disconnect();
-            resolve();
-          }, 500);
-        });
-
-        await waitForSize();
+        // Wait a bit for DOM to be ready
+        await new Promise(resolve => setTimeout(resolve, 50));
 
         // Dynamic import of Leaflet - lazy loaded to avoid impacting initial bundle size
         const L = await import('leaflet');
@@ -200,8 +180,20 @@ export function MapPage() {
         }).addTo(map);
 
         // Add markers for each location
-        locations.forEach((loc) => {
+        console.log('Adding markers to map...');
+        let markerCount = 0;
+
+        locations.forEach((loc, index) => {
+          console.log(`Marker ${index}:`, {
+            lat: loc.lat,
+            lng: loc.lng,
+            title: loc.title,
+            hasCountry: !!loc.country,
+            hasLocation: !!loc.location,
+          });
+
           const marker = L.marker([loc.lat, loc.lng]).addTo(map);
+          markerCount++;
 
           // Create popup content
           const popupContent = document.createElement('div');
@@ -264,11 +256,7 @@ export function MapPage() {
           marker.bindPopup(popupContent);
         });
 
-        // Force a redraw after initialization
-        requestAnimationFrame(() => {
-          map.invalidateSize();
-          console.log('Map size invalidated after init');
-        });
+        console.log('Total markers added:', markerCount);
 
         mapInitializedRef.current = true;
         console.log('Map initialized with', locations.length, 'markers');
@@ -283,7 +271,7 @@ export function MapPage() {
     };
 
     initializeMap();
-  }, [isMapReady, locations]);
+  }, [isMapReady, locations, navigate]);
 
   // Set map ready after component mounts
   useEffect(() => {
@@ -352,16 +340,7 @@ export function MapPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div
-            ref={mapRef}
-            className="h-[600px] w-full"
-            style={{
-              minHeight: '600px',
-              width: '100%',
-              position: 'relative',
-              zIndex: 0,
-            }}
-          />
+          <div ref={mapRef} className="h-[600px] w-full" style={{ minHeight: '600px' }} />
         </CardContent>
       </Card>
 
