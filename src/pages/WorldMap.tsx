@@ -80,14 +80,16 @@ export function WorldMap() {
   const { data: places, isLoading } = useQuery({
     queryKey: ['places-with-gps', NOSTR_CONFIG.authorPubkeys],
     queryFn: async ({ signal }) => {
-      // Query for place events (Kind 30025) or articles with location tags
+      // Query for place events (Kind 30025), articles (Kind 30023), or media notes (Kind 1)
       const events = await nostr.query([
         {
-          kinds: [30023, 30025], // Articles and Places
+          kinds: [1, 30023, 30025], // Notes with media, Articles, and Places
           authors: NOSTR_CONFIG.authorPubkeys,
           limit: 100,
         }
       ], { signal });
+
+      console.log('[Weltkarte] Events gefetcht:', events.length, 'Events');
 
       // Extract location data from events
       const placesWithCoords: Place[] = events
@@ -101,6 +103,8 @@ export function WorldMap() {
           const lat = event.tags.find(([name]) => name === 'lat')?.[1];
           const lon = event.tags.find(([name]) => name === 'lon')?.[1];
           const g = event.tags.find(([name]) => name === 'g')?.[1]; // Geohash
+
+          console.log('[Weltkarte] Event:', event.kind, 'hasGPS:', !!(lat && lon), 'hasCountry:', !!country, 'title:', metadata.title);
 
           // Parse coordinates if available
           let coords: { lat: number; lon: number } | undefined;
@@ -119,16 +123,23 @@ export function WorldMap() {
 
           if (!coords) return null;
 
-          // Create naddr for linking
-          const naddr = nip19.naddrEncode({
-            kind: event.kind,
-            pubkey: event.pubkey,
-            identifier: metadata.identifier || d,
-          });
+          // Create naddr for linking - different logic for kind 1
+          let naddr: string;
+          if (event.kind === 1) {
+            // For kind 1, use note1 encoding
+            naddr = nip19.noteEncode(event.id);
+          } else {
+            // For other kinds, use naddr encoding
+            naddr = nip19.naddrEncode({
+              kind: event.kind,
+              pubkey: event.pubkey,
+              identifier: metadata.identifier || d,
+            });
+          }
 
           return {
             id: event.id,
-            title: metadata.title || 'Ohne Titel',
+            title: metadata.title || (event.content?.substring(0, 50) || 'Ohne Titel'),
             summary: metadata.summary,
             image: metadata.image,
             location,
@@ -140,6 +151,8 @@ export function WorldMap() {
           };
         })
         .filter((place): place is Place => place !== null);
+
+      console.log('[Weltkarte] Orte mit GPS:', placesWithCoords.length, 'Orte');
 
       return placesWithCoords;
     },
