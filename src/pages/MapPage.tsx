@@ -10,6 +10,7 @@ import { MapPin, Loader2 } from '@/lib/icons';
 
 // Load Leaflet CSS directly - will be bundled by Vite in leaflet-vendor chunk
 import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
 // Country coordinates (fallback for events without GPS)
 const COUNTRY_COORDINATES: Record<string, [number, number]> = {
@@ -35,7 +36,7 @@ interface Location {
 export function MapPage() {
   const { nostr } = useNostr();
   const navigate = useNavigate();
-  const mapRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map>(null);
   const mapInitializedRef = useRef(false);
   const [isMapReady, setIsMapReady] = useState(false);
 
@@ -57,7 +58,7 @@ export function MapPage() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Extract locations from events
+  // Extract locations from events with coordinate offset
   const locations = useMemo(() => {
     if (!events) return [];
 
@@ -87,7 +88,6 @@ export function MapPage() {
       // Find image - from image tag or content URLs
       let imageUrl = tags.find((t: string[]) => t[0] === 'image')?.[1];
       if (!imageUrl && event.kind === 1) {
-        // Extract first URL from content
         const urlMatch = event.content.match(/https?:\/\/[^\s\n]+/);
         if (urlMatch) {
           imageUrl = urlMatch[0];
@@ -112,14 +112,19 @@ export function MapPage() {
         lat = parseFloat(latTag);
         lng = parseFloat(lonTag);
       } else if (country) {
-        // Fallback to country coordinates
+        // Fallback to country coordinates with random offset
         const countryKey = Object.keys(COUNTRY_COORDINATES).find(
           (key) => key === country.toLowerCase() || key.includes(country.toLowerCase())
         );
         if (countryKey) {
-          const coords = COUNTRY_COORDINATES[countryKey];
-          lat = coords[0];
-          lng = coords[1];
+          const baseCoords = COUNTRY_COORDINATES[countryKey];
+          
+          // Add small random offset (up to 0.5 degrees in each direction)
+          const latOffset = (Math.random() - 0.5) * 1.0;
+          const lngOffset = (Math.random() - 0.5) * 1.0;
+          
+          lat = baseCoords[0] + latOffset;
+          lng = baseCoords[1] + lngOffset;
         }
       }
 
@@ -150,6 +155,22 @@ export function MapPage() {
     return locs;
   }, [events]);
 
+  // Group locations by country
+  const countryGroups = useMemo(() => {
+    const groups: Record<string, { count: number; flag?: string }> = {};
+
+    locations.forEach((loc) => {
+      if (loc.country) {
+        const key = loc.country.toLowerCase();
+        groups[key] = {
+          count: (groups[key]?.count || 0) + 1,
+        };
+      }
+    });
+
+    return groups;
+  }, [locations]);
+
   // Initialize map with Leaflet (lazy loaded - only when /map is visited)
   useEffect(() => {
     if (!mapRef.current || mapInitializedRef.current || !isMapReady || locations.length === 0) return;
@@ -158,17 +179,6 @@ export function MapPage() {
       try {
         // Wait a bit for DOM to be ready
         await new Promise(resolve => setTimeout(resolve, 50));
-
-        // Dynamic import of Leaflet - lazy loaded to avoid impacting initial bundle size
-        const L = await import('leaflet');
-
-        // Fix default icon issue with Vite
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        });
 
         // Create map centered on Europe
         const map = L.map(mapRef.current).setView([50.0, 10.0], 4);
@@ -179,21 +189,9 @@ export function MapPage() {
           maxZoom: 18,
         }).addTo(map);
 
-        // Add markers for each location
-        console.log('Adding markers to map...');
-        let markerCount = 0;
-
-        locations.forEach((loc, index) => {
-          console.log(`Marker ${index}:`, {
-            lat: loc.lat,
-            lng: loc.lng,
-            title: loc.title,
-            hasCountry: !!loc.country,
-            hasLocation: !!loc.location,
-          });
-
+        // Add markers for each location with random offsets
+        locations.forEach((loc) => {
           const marker = L.marker([loc.lat, loc.lng]).addTo(map);
-          markerCount++;
 
           // Create popup content
           const popupContent = document.createElement('div');
@@ -256,9 +254,8 @@ export function MapPage() {
           marker.bindPopup(popupContent);
         });
 
-        console.log('Total markers added:', markerCount);
-
         mapInitializedRef.current = true;
+        mapRef.current = map;
         console.log('Map initialized with', locations.length, 'markers');
 
         // Cleanup
@@ -277,22 +274,6 @@ export function MapPage() {
   useEffect(() => {
     setIsMapReady(true);
   }, []);
-
-  // Group locations by country
-  const countryGroups = useMemo(() => {
-    const groups: Record<string, { count: number; flag?: string }> = {};
-
-    locations.forEach((loc) => {
-      if (loc.country) {
-        const key = loc.country.toLowerCase();
-        groups[key] = {
-          count: (groups[key]?.count || 0) + 1,
-        };
-      }
-    });
-
-    return groups;
-  }, [locations]);
 
   if (isLoading) {
     return (
@@ -340,7 +321,7 @@ export function MapPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div ref={mapRef} className="h-[600px] w-full" style={{ minHeight: '600px' }} />
+          <div ref={mapRef} id="map" className="h-[600px] w-full" style={{ minHeight: '600px' }} />
         </CardContent>
       </Card>
 
