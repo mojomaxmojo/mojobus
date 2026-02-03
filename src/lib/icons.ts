@@ -64,7 +64,7 @@ export { MessageSquare } from 'lucide-react';
 // OTHER ICONS
 // ============================================================================
 
-export { Download, Database, Palette, Server, Users, Moon, Copy, Zap, Gauge } from 'lucide-react';
+export { Download, Database, Palette, Server, Users, Moon, Copy, Zap, Gauge, Edit3 } from 'lucide-react';
 
 // ============================================================================
 // WALLET ICONS
