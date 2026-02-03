@@ -8,22 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, Loader2 } from '@/lib/icons';
 
-// Load Leaflet CSS dynamically to avoid impacting initial bundle size
-const loadLeafletCSS = () => {
-  return new Promise<void>((resolve) => {
-    if (document.querySelector('link[href*="leaflet.css"]')) {
-      resolve();
-      return;
-    }
-
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    link.crossOrigin = 'anonymous';
-    link.onload = () => resolve();
-    document.head.appendChild(link);
-  });
-};
+// Load Leaflet CSS directly - will be bundled by Vite in leaflet-vendor chunk
+import 'leaflet/dist/leaflet.css';
 
 // Country coordinates (fallback for events without GPS)
 const COUNTRY_COORDINATES: Record<string, [number, number]> = {
@@ -52,15 +38,6 @@ export function MapPage() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInitializedRef = useRef(false);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [cssLoaded, setCssLoaded] = useState(false);
-
-  // Load Leaflet CSS once when component mounts
-  useEffect(() => {
-    loadLeafletCSS().then(() => {
-      setCssLoaded(true);
-      console.log('Leaflet CSS loaded');
-    });
-  }, []);
 
   // Query all articles and places with location data
   const { data: events, isLoading } = useQuery({
@@ -175,7 +152,7 @@ export function MapPage() {
 
   // Initialize map with Leaflet (lazy loaded - only when /map is visited)
   useEffect(() => {
-    if (!mapRef.current || mapInitializedRef.current || !isMapReady || !cssLoaded || locations.length === 0) return;
+    if (!mapRef.current || mapInitializedRef.current || !isMapReady || locations.length === 0) return;
 
     const initializeMap = async () => {
       try {
@@ -264,11 +241,6 @@ export function MapPage() {
           marker.bindPopup(popupContent);
         });
 
-        // Invalidate size after a short delay to ensure tiles load correctly
-        setTimeout(() => {
-          map.invalidateSize();
-        }, 100);
-
         mapInitializedRef.current = true;
         console.log('Map initialized with', locations.length, 'markers');
 
@@ -282,7 +254,7 @@ export function MapPage() {
     };
 
     initializeMap();
-  }, [isMapReady, cssLoaded, locations, navigate]);
+  }, [isMapReady, locations]);
 
   // Set map ready after component mounts
   useEffect(() => {
@@ -351,11 +323,7 @@ export function MapPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div
-            ref={mapRef}
-            className="h-[600px] w-full"
-            style={{ minHeight: '600px', background: '#e5e7eb' }}
-          />
+          <div ref={mapRef} className="h-[600px] w-full" />
         </CardContent>
       </Card>
 
