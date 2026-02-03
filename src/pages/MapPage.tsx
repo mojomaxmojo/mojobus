@@ -8,6 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, Loader2 } from '@/lib/icons';
 
+// Load Leaflet CSS dynamically to avoid impacting initial bundle size
+const loadLeafletCSS = () => {
+  return new Promise<void>((resolve) => {
+    if (document.querySelector('link[href*="leaflet.css"]')) {
+      resolve();
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    link.crossOrigin = 'anonymous';
+    link.onload = () => resolve();
+    document.head.appendChild(link);
+  });
+};
+
 // Country coordinates (fallback for events without GPS)
 const COUNTRY_COORDINATES: Record<string, [number, number]> = {
   portugal: [39.3999, -8.2245],      // Lisbon
@@ -35,6 +52,15 @@ export function MapPage() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInitializedRef = useRef(false);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [cssLoaded, setCssLoaded] = useState(false);
+
+  // Load Leaflet CSS once when component mounts
+  useEffect(() => {
+    loadLeafletCSS().then(() => {
+      setCssLoaded(true);
+      console.log('Leaflet CSS loaded');
+    });
+  }, []);
 
   // Query all articles and places with location data
   const { data: events, isLoading } = useQuery({
@@ -149,25 +175,10 @@ export function MapPage() {
 
   // Initialize map with Leaflet (lazy loaded - only when /map is visited)
   useEffect(() => {
-    if (!mapRef.current || mapInitializedRef.current || !isMapReady || locations.length === 0) return;
+    if (!mapRef.current || mapInitializedRef.current || !isMapReady || !cssLoaded || locations.length === 0) return;
 
     const initializeMap = async () => {
       try {
-        // Ensure Leaflet CSS is loaded
-        if (!document.querySelector('link[href*="leaflet.css"]')) {
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          link.crossOrigin = 'anonymous';
-          document.head.appendChild(link);
-
-          // Wait for CSS to load
-          await new Promise((resolve) => {
-            link.onload = resolve;
-            setTimeout(resolve, 500); // Fallback timeout
-          });
-        }
-
         // Dynamic import of Leaflet - lazy loaded to avoid impacting initial bundle size
         const L = await import('leaflet');
 
@@ -178,9 +189,6 @@ export function MapPage() {
           iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
         });
-
-        // Wait for the next tick to ensure DOM is ready
-        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Create map centered on Europe
         const map = L.map(mapRef.current).setView([50.0, 10.0], 4);
@@ -256,6 +264,11 @@ export function MapPage() {
           marker.bindPopup(popupContent);
         });
 
+        // Invalidate size after a short delay to ensure tiles load correctly
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 100);
+
         mapInitializedRef.current = true;
         console.log('Map initialized with', locations.length, 'markers');
 
@@ -269,7 +282,7 @@ export function MapPage() {
     };
 
     initializeMap();
-  }, [isMapReady, locations, navigate]);
+  }, [isMapReady, cssLoaded, locations, navigate]);
 
   // Set map ready after component mounts
   useEffect(() => {

@@ -142,6 +142,11 @@ export default defineConfig(() => ({
             return 'leaflet-vendor';
           }
 
+          // Leaflet CSS - muss im gleichen Chunk wie Leaflet sein
+          if (id.includes('leaflet.css') || id.includes('/leaflet/dist/')) {
+            return 'leaflet-vendor';
+          }
+
           // === COMMON VENDORS (Im Hauptbundle, aber optimiert) ===
           // Radix UI Components
           if (id.includes('node_modules/@radix-ui/')) {
