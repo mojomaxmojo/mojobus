@@ -1222,6 +1222,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [imageGpsData, setImageGpsData] = useState<Map<number, GpsData>>(new Map());
+  const [imageGpsStatuses, setImageGpsStatuses] = useState<Map<number, GpsStatus>>(new Map());
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1282,10 +1284,31 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
     try {
       const uploadedUrls: string[] = [];
-      for (const file of imageFiles) {
+      const startIndex = imageUrls.length;
+
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
         const [urlTag] = await uploadFile(file);
         uploadedUrls.push(urlTag[1]); // URL is in second position
+
+        // Extract GPS from each image
+        try {
+          const gpsData = await extractGpsFromImage(file);
+          const index = startIndex + i;
+          if (gpsData) {
+            setImageGpsData(prev => new Map(prev).set(index, gpsData));
+            setImageGpsStatuses(prev => new Map(prev).set(index, 'detected'));
+            console.log(`[Note GPS] Extracted from ${file.name} (image ${index}):`, gpsData);
+          } else {
+            setImageGpsStatuses(prev => new Map(prev).set(index, 'not_found'));
+          }
+        } catch (error) {
+          const index = startIndex + i;
+          console.error(`[Note GPS] Failed to extract from ${file.name}:`, error);
+          setImageGpsStatuses(prev => new Map(prev).set(index, 'error'));
+        }
       }
+
       setImageUrls(prev => [...prev, ...uploadedUrls]);
       setImageFiles([]);
       toast({
@@ -1303,6 +1326,17 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
   const removeImageUrl = (index: number) => {
     setImageUrls(prev => prev.filter((_, i) => i !== index));
+    // Also remove GPS data for this image
+    setImageGpsData(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(index);
+      return newMap;
+    });
+    setImageGpsStatuses(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(index);
+      return newMap;
+    });
   };
 
   const handleSubmit = () => {
@@ -1337,8 +1371,20 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     }
 
     // Add image tags if images exist
-    imageUrls.forEach(url => {
+    imageUrls.forEach((url, index) => {
       additionalTags.push(['image', url]);
+
+      // Add GPS tags if available for this image
+      const gpsData = imageGpsData.get(index);
+      const gpsStatus = imageGpsStatuses.get(index);
+      if (gpsData && gpsStatus) {
+        additionalTags.push(['gps_lat', gpsData.latitude.toString()], ['gps_lon', gpsData.longitude.toString()]);
+        if (gpsData.altitude) {
+          additionalTags.push(['gps_alt', gpsData.altitude.toString()]);
+        }
+        additionalTags.push(['gps_precision', gpsData.precision]);
+        additionalTags.push(['gps_source', gpsStatus]);
+      }
     });
 
     const eventTags = [
@@ -1372,6 +1418,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     setSelectedCountry('');
     setImageFiles([]);
     setImageUrls([]);
+    setImageGpsData(new Map());
+    setImageGpsStatuses(new Map());
 
     // Redirect to notes page after successful publish
     setTimeout(() => {
@@ -1480,7 +1528,11 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
               <div className="flex items-center justify-between">
                 <Label className="text-sm">Hochgeladene Bilder ({imageUrls.length})</Label>
                 <Button
-                  onClick={() => setImageUrls([])}
+                  onClick={() => {
+                    setImageUrls([]);
+                    setImageGpsData(new Map());
+                    setImageGpsStatuses(new Map());
+                  }}
                   variant="outline"
                   size="sm"
                 >
@@ -1488,23 +1540,43 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                 </Button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {imageUrls.map((url, index) => (
-                  <div key={index} className="relative group border rounded-lg overflow-hidden">
-                    <img
-                      src={url}
-                      alt={`Uploaded ${index + 1}`}
-                      className="w-full h-20 object-cover"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeImageUrl(index)}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
+                {imageUrls.map((url, index) => {
+                  const gpsData = imageGpsData.get(index);
+                  const gpsStatus = imageGpsStatuses.get(index);
+                  return (
+                    <div key={index} className="relative group border rounded-lg overflow-hidden">
+                      <img
+                        src={url}
+                        alt={`Uploaded ${index + 1}`}
+                        className="w-full h-20 object-cover"
+                      />
+                      {gpsData && gpsStatus && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1">
+                          <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
+                            <MapPin className="h-2.5 w-2.5" />
+                            <span className="truncate font-medium">
+                              {formatCoordinates(gpsData.latitude, gpsData.longitude)}
+                            </span>
+                          </div>
+                          {gpsStatus === 'manual' && (
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
+                          )}
+                          {gpsStatus === 'detected' && (
+                            <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
+                          )}
+                        </div>
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeImageUrl(index)}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
