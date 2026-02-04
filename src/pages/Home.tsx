@@ -259,7 +259,7 @@ export function Home() {
       </section>
 
       {/* Content Section with Modern Design */}
-      <section className="pt-[100px] pb-12">
+      <section className="py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
 
