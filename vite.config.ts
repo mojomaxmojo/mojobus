@@ -45,11 +45,11 @@ export default defineConfig(() => ({
       '@nostrify/nostrify',
       'dijkstrajs',
       'leaflet',
-      'react-leaflet',
       'ngeohash',
     ],
     exclude: [
       '@react-leaflet/core',
+      'react-leaflet',
     ],
     force: true,
   },
