@@ -129,14 +129,14 @@ export default function MapPage() {
   return (
     <>
       {/* Page Header mit Gradient Background */}
-      <section className="relative py-12 overflow-hidden">
+      <section className="relative py-6 overflow-hidden">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
 
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
-          <div className="text-center space-y-4">
+          <div className="text-center space-y-2">
             <h1 className="text-4xl md:text-6xl font-bold">
               <span className="gradient-text">🗺️ Europa Map</span>
             </h1>
@@ -147,16 +147,47 @@ export default function MapPage() {
         </div>
       </section>
 
-      <div className="container mx-auto px-4 pb-8 space-y-6">
+      <div className="container mx-auto px-4 pb-8">
         {/* Map Card */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                <span className="text-sm text-muted-foreground">
-                  <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
-                </span>
+          <CardContent className="p-4 h-[60px]">
+            <div className="flex items-center justify-between h-full">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  <span className="text-sm text-muted-foreground">
+                    <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Filter:</span>
+                  <div className="flex items-center gap-1">
+                    <FilterButton
+                      emoji="📷"
+                      count={counts.media}
+                      isActive={activeFilter === 'media'}
+                      onClick={() => setActiveFilter(activeFilter === 'media' ? 'all' : 'media')}
+                    />
+                    <FilterButton
+                      emoji="📝"
+                      count={counts.note}
+                      isActive={activeFilter === 'note'}
+                      onClick={() => setActiveFilter(activeFilter === 'note' ? 'all' : 'note')}
+                    />
+                    <FilterButton
+                      emoji="📍"
+                      count={counts.place}
+                      isActive={activeFilter === 'place'}
+                      onClick={() => setActiveFilter(activeFilter === 'place' ? 'all' : 'place')}
+                    />
+                    <FilterButton
+                      emoji="📄"
+                      count={counts.article}
+                      isActive={activeFilter === 'article'}
+                      onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
+                    />
+                  </div>
+                </div>
               </div>
               <Button
                 variant="outline"
@@ -171,37 +202,6 @@ export default function MapPage() {
                 )}
                 Neu laden
               </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Filter:</span>
-              <div className="flex items-center gap-1">
-                <FilterButton
-                  emoji="📷"
-                  count={counts.media}
-                  isActive={activeFilter === 'media'}
-                  onClick={() => setActiveFilter(activeFilter === 'media' ? 'all' : 'media')}
-                />
-                <FilterButton
-                  emoji="📝"
-                  count={counts.note}
-                  isActive={activeFilter === 'note'}
-                  onClick={() => setActiveFilter(activeFilter === 'note' ? 'all' : 'note')}
-                />
-                <FilterButton
-                  emoji="📍"
-                  count={counts.place}
-                  isActive={activeFilter === 'place'}
-                  onClick={() => setActiveFilter(activeFilter === 'place' ? 'all' : 'place')}
-                />
-                <FilterButton
-                  emoji="📄"
-                  count={counts.article}
-                  isActive={activeFilter === 'article'}
-                  onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
-                />
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -246,8 +246,8 @@ export default function MapPage() {
             </MapContainer>
           </div>
          </CardContent>
-       </Card>
-     </div>
+      </Card>
+    </div>
     </>
   );
 }
