@@ -708,7 +708,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                     {/* GPS Info Display */}
                     {file.type === 'image' && (
                       <>
-                        {file.gps ? (
+                        {file.gps && file.gps.latitude && file.gps.longitude ? (
                           <div className="text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
                             <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
                               <MapPin className="h-3 w-3" />
@@ -1685,7 +1685,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                         alt={`Uploaded ${index + 1}`}
                         className="w-full h-20 object-cover"
                       />
-                      {gpsData && gpsStatus && (
+                      {gpsData && gpsStatus && gpsData.latitude && gpsData.longitude && (
                         <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1">
                            <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
                              <MapPin className="h-2.5 w-2.5" />
@@ -2397,7 +2397,7 @@ Beschreibe hier den Ort, was macht ihn besonders...
                   )}
                   
                   {/* GPS Info Display */}
-                  {imageGps ? (
+                  {imageGps && imageGps.latitude && imageGps.longitude ? (
                     <div className="mt-2 text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
                        <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
                          <MapPin className="h-3 w-3" />
