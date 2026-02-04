@@ -72,8 +72,12 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
 
     try {
       // Try to convert DMS (Degrees, Minutes, Seconds) format
-      latitude = convertDMSToDD(exifData.GPSLatitude);
-      longitude = convertDMSToDD(exifData.GPSLongitude);
+      // Pass ref separately as it's stored in GPSLatitudeRef/GPSLongitudeRef
+      const latRef = (exifData.GPSLatitudeRef as 'N' | 'S') || 'N';
+      const lonRef = (exifData.GPSLongitudeRef as 'E' | 'W') || 'E';
+
+      latitude = convertDMSToDD(exifData.GPSLatitude, latRef);
+      longitude = convertDMSToDD(exifData.GPSLongitude, lonRef);
     } catch (error) {
       // If DMS conversion fails, try using direct decimal values
       console.warn('[GPS Extraction] DMS conversion failed, trying direct values:', error);
@@ -83,10 +87,13 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
       longitude = parseFloat(exifData.GPSLongitude as string);
 
       // Apply hemisphere reference if available
-      if (exifData.GPSLatitudeRef === 'S') {
+      const latRef = exifData.GPSLatitudeRef as 'N' | 'S';
+      const lonRef = exifData.GPSLongitudeRef as 'E' | 'W';
+
+      if (latRef === 'S') {
         latitude = -Math.abs(latitude);
       }
-      if (exifData.GPSLongitudeRef === 'W') {
+      if (lonRef === 'W') {
         longitude = -Math.abs(longitude);
       }
     }
@@ -129,13 +136,17 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
 /**
  * Convert GPS DMS (Degrees, Minutes, Seconds) to Decimal Degrees (DD)
  *
- * @param dms - GPS coordinate in DMS format from EXIF
+ * @param dms - GPS coordinate in DMS format from EXIF [degrees, minutes, seconds]
+ * @param ref - Hemisphere reference ('N', 'S', 'E', 'W')
  * @returns Decimal degrees
  *
- * EXIF stores GPS as array: [degrees, minutes, seconds, ref]
- * where ref is 'N', 'S', 'E', or 'W'
+ * EXIF stores GPS as separate arrays and refs:
+ * - GPSLatitude: [degrees, minutes, seconds]
+ * - GPSLatitudeRef: 'N' or 'S'
+ * - GPSLongitude: [degrees, minutes, seconds]
+ * - GPSLongitudeRef: 'E' or 'W'
  */
-function convertDMSToDD(dms: any): number {
+function convertDMSToDD(dms: any, ref: 'N' | 'S' | 'E' | 'W'): number {
   if (!Array.isArray(dms)) {
     throw new Error('DMS is not an array');
   }
@@ -143,7 +154,6 @@ function convertDMSToDD(dms: any): number {
   const degrees = parseFloat(dms[0]);
   const minutes = parseFloat(dms[1] || 0);
   const seconds = parseFloat(dms[2] || 0);
-  const ref = dms[3] as 'N' | 'S' | 'E' | 'W';
 
   // Validate values
   if (isNaN(degrees)) {
