@@ -2275,18 +2275,25 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     ];
 
     if (location.trim()) tags.push(['location', location]);
+
+    // Handle GPS coordinates - priority: manual coordinates > image GPS
     if (coordinates.lat && coordinates.lng) {
+      // Manual coordinates entered
       tags.push(['lat', coordinates.lat]);
       tags.push(['lng', coordinates.lng]);
-    }
-    if (price.trim()) tags.push(['price', price.trim()]);
-    if (image) tags.push(['image', image]);
-    additionalImages.forEach((img, index) => {
-      tags.push(['image', img]);
-    });
 
-    // Add GPS tags from title image
-    if (imageGps) {
+      // Also add as GPS tags for map display
+      const lat = parseFloat(coordinates.lat);
+      const lng = parseFloat(coordinates.lng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        tags.push(['gps_lat', lat.toString()]);
+        tags.push(['gps_lon', lng.toString()]);
+        tags.push(['gps_source', 'manual']);
+        tags.push(['gps_precision', 'manual']);
+        console.log('[Place] Manual GPS saved:', { lat, lng });
+      }
+    } else if (imageGps) {
+      // Use GPS from title image
       tags.push(['gps_lat', imageGps.latitude.toString()]);
       tags.push(['gps_lon', imageGps.longitude.toString()]);
       if (imageGps.altitude) {
@@ -2294,7 +2301,14 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       }
       tags.push(['gps_precision', imageGps.precision]);
       tags.push(['gps_source', imageGpsStatus]);
+      console.log('[Place] Image GPS saved:', imageGps);
     }
+
+    if (price.trim()) tags.push(['price', price.trim()]);
+    if (image) tags.push(['image', image]);
+    additionalImages.forEach((img, index) => {
+      tags.push(['image', img]);
+    });
 
     // Add country tags (nur wenn selectedCountry gewählt wurde)
     if (selectedCountry) {
