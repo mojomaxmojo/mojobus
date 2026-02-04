@@ -127,68 +127,84 @@ export default function MapPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* Page Title */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
+    <>
+      {/* Page Header mit Gradient Background */}
+      <section className="relative py-12 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl md:text-6xl font-bold">
               🗺️ Europa Map
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Neu laden
-            </Button>
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              GPS-aktivierte Beiträge auf einer interaktiven Karte
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
-              <span>
-                <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
-              </span>
+        </div>
+      </section>
+
+      <div className="container mx-auto px-4 pb-8 space-y-6">
+        {/* Map Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                <span className="text-sm text-muted-foreground">
+                  <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                Neu laden
+              </Button>
             </div>
-            <span className="text-muted-foreground">•</span>
+          </CardHeader>
+          <CardContent>
             <div className="flex items-center gap-3">
-              <FilterButton
-                emoji="📷"
-                count={counts.media}
-                isActive={activeFilter === 'media'}
-                onClick={() => setActiveFilter(activeFilter === 'media' ? 'all' : 'media')}
-              />
-              <FilterButton
-                emoji="📝"
-                count={counts.note}
-                isActive={activeFilter === 'note'}
-                onClick={() => setActiveFilter(activeFilter === 'note' ? 'all' : 'note')}
-              />
-              <FilterButton
-                emoji="📍"
-                count={counts.place}
-                isActive={activeFilter === 'place'}
-                onClick={() => setActiveFilter(activeFilter === 'place' ? 'all' : 'place')}
-              />
-              <FilterButton
-                emoji="📄"
-                count={counts.article}
-                isActive={activeFilter === 'article'}
-                onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
-              />
+              <span className="text-sm text-muted-foreground">Filter:</span>
+              <div className="flex items-center gap-1">
+                <FilterButton
+                  emoji="📷"
+                  count={counts.media}
+                  isActive={activeFilter === 'media'}
+                  onClick={() => setActiveFilter(activeFilter === 'media' ? 'all' : 'media')}
+                />
+                <FilterButton
+                  emoji="📝"
+                  count={counts.note}
+                  isActive={activeFilter === 'note'}
+                  onClick={() => setActiveFilter(activeFilter === 'note' ? 'all' : 'note')}
+                />
+                <FilterButton
+                  emoji="📍"
+                  count={counts.place}
+                  isActive={activeFilter === 'place'}
+                  onClick={() => setActiveFilter(activeFilter === 'place' ? 'all' : 'place')}
+                />
+                <FilterButton
+                  emoji="📄"
+                  count={counts.article}
+                  isActive={activeFilter === 'article'}
+                  onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
+                />
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
       {/* Map */}
       <Card>

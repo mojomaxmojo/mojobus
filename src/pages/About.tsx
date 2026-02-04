@@ -28,20 +28,30 @@ export function About() {
   const validAuthors = getValidAuthors();
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto space-y-12">
-          {/* Header */}
+    <>
+      {/* Page Header mit Gradient Background */}
+      <section className="relative py-12 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-4">
             <div className="flex justify-center mb-6">
               <Waves className="h-16 w-16 text-primary wave-animation" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold">Über Uns</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <h1 className="text-4xl md:text-6xl font-bold">Über Uns</h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Perpetual Traveler – Leben zwischen Sand und Horizont
             </p>
           </div>
+        </div>
+      </section>
 
+      <div className="min-h-screen pb-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto space-y-12">
           {/* Story Section */}
           <Card className="border-2">
             <CardHeader>
@@ -186,6 +196,8 @@ export function About() {
         </div>
       </div>
     </div>
+    </div>
+  </>
   );
 }
 
