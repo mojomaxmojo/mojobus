@@ -27,7 +27,7 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
-import { extractGpsFromImage, formatCoordinates, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
+import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -109,12 +109,11 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         console.log('[Media GPS] GPS detected, reverse geocoding...');
         const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
         if (locationData) {
-          // Set location to city + neighbourhood/suburb
+          // Set location to city + neighbourhood/suburb (no postcode)
           const locationParts = [
             locationData.city,
             locationData.neighbourhood,
-            locationData.suburb,
-            locationData.postcode
+            locationData.suburb
           ].filter(Boolean);
           const loc = locationParts.join(', ');
           setLocation(loc);
@@ -714,7 +713,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                             <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
                               <MapPin className="h-3 w-3" />
                               <span className="truncate font-medium">
-                                {formatCoordinates(file.gps.latitude, file.gps.longitude)}
+                                {formatCoordinatesSimple(file.gps.latitude, file.gps.longitude)}
                               </span>
                             </div>
                             {file.gpsStatus === 'manual' && (
@@ -1371,12 +1370,11 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         console.log('[Note GPS] GPS detected, reverse geocoding...');
         const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
         if (locationData) {
-          // Set location to city + neighbourhood/suburb
+          // Set location to city + neighbourhood/suburb (no postcode)
           const locationParts = [
             locationData.city,
             locationData.neighbourhood,
-            locationData.suburb,
-            locationData.postcode
+            locationData.suburb
           ].filter(Boolean);
           const loc = locationParts.join(', ');
           setLocation(loc);
@@ -1614,12 +1612,12 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                       />
                       {gpsData && gpsStatus && (
                         <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1">
-                          <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
-                            <MapPin className="h-2.5 w-2.5" />
-                            <span className="truncate font-medium">
-                              {formatCoordinates(gpsData.latitude, gpsData.longitude)}
-                            </span>
-                          </div>
+                           <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
+                             <MapPin className="h-2.5 w-2.5" />
+                             <span className="truncate font-medium">
+                               {formatCoordinatesSimple(gpsData.latitude, gpsData.longitude)}
+                             </span>
+                           </div>
                           {gpsStatus === 'manual' && (
                             <span className="text-[10px] text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
                           )}
@@ -1913,12 +1911,11 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         console.log('[Place GPS] GPS detected, reverse geocoding...');
         const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
         if (locationData) {
-          // Set location to city + neighbourhood/suburb
+          // Set location to city + neighbourhood/suburb (no postcode)
           const locationParts = [
             locationData.city,
             locationData.neighbourhood,
-            locationData.suburb,
-            locationData.postcode
+            locationData.suburb
           ].filter(Boolean);
           const loc = locationParts.join(', ');
           setLocation(loc);
@@ -2306,12 +2303,12 @@ Beschreibe hier den Ort, was macht ihn besonders...
                   {/* GPS Info Display */}
                   {imageGps ? (
                     <div className="mt-2 text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
-                      <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
-                        <MapPin className="h-3 w-3" />
-                        <span className="truncate font-medium">
-                          {formatCoordinates(imageGps.latitude, imageGps.longitude)}
-                        </span>
-                      </div>
+                       <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
+                         <MapPin className="h-3 w-3" />
+                         <span className="truncate font-medium">
+                           {formatCoordinatesSimple(imageGps.latitude, imageGps.longitude)}
+                         </span>
+                       </div>
                       {imageGpsStatus === 'manual' && (
                         <span className="text-xs text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
                       )}
@@ -2726,12 +2723,11 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         console.log('[Article GPS] GPS detected, reverse geocoding...');
         const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
         if (locationData) {
-          // Set location to city + neighbourhood/suburb
+          // Set location to city + neighbourhood/suburb (no postcode)
           const locationParts = [
             locationData.city,
             locationData.neighbourhood,
-            locationData.suburb,
-            locationData.postcode
+            locationData.suburb
           ].filter(Boolean);
           const loc = locationParts.join(', ');
           setLocation(loc);
