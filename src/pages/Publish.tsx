@@ -1988,6 +1988,24 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       if (foundCountry) {
         setSelectedCountry(foundCountry);
       }
+
+      // Load GPS data from tags
+      const gpsLat = editEvent.tags?.find((tag: any) => tag[0] === 'gps_lat')?.[1];
+      const gpsLon = editEvent.tags?.find((tag: any) => tag[0] === 'gps_lon')?.[1];
+      const gpsAlt = editEvent.tags?.find((tag: any) => tag[0] === 'gps_alt')?.[1];
+      const gpsPrecision = editEvent.tags?.find((tag: any) => tag[0] === 'gps_precision')?.[1];
+      const gpsSource = editEvent.tags?.find((tag: any) => tag[0] === 'gps_source')?.[1] as GpsStatus;
+
+      if (gpsLat && gpsLon) {
+        setImageGps({
+          latitude: parseFloat(gpsLat),
+          longitude: parseFloat(gpsLon),
+          altitude: gpsAlt ? parseFloat(gpsAlt) : undefined,
+          precision: gpsPrecision || 'medium'
+        });
+        setImageGpsStatus(gpsSource || 'detected');
+        console.log('[Place Edit] GPS data loaded from tags:', { gpsLat, gpsLon, gpsAlt, gpsSource });
+      }
     }
   }, [editEvent]);
 
