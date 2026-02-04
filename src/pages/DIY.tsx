@@ -58,19 +58,41 @@ export function DIY() {
   const articleCount = filteredArticles.length;
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-8">
+    <>
+      {/* Page Header mit Gradient Background */}
+      <section className="relative py-12 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-4">
             <div className="flex justify-center mb-6">
               <Wrench className="h-16 w-16 text-orange-600" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold">
-              DIY Anleitungen
+            <h1 className="text-4xl md:text-6xl font-bold">
+              <span className="gradient-text">DIY Anleitungen</span>
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
               Vanlife Ausbau, Reparatur und Mods für unseren RV und das Leben am Meer.
             </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="min-h-screen pb-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
+              <span className="font-semibold">{filteredArticles.length}</span>
+              <span>Anleitungen</span>
+              {articleCount > filteredArticles.length && (
+                <span className="text-xs text-muted-foreground">
+                  (von {articleCount} insgesamt)
+                </span>
+              )}
+            </div>
             <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
               <span className="font-semibold">{filteredArticles.length}</span>
               <span>Anleitungen</span>
@@ -156,7 +178,7 @@ export function DIY() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

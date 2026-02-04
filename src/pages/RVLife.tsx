@@ -109,142 +109,151 @@ export function RVLife() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <Link to="/artikel" className="text-ocean-600 hover:text-ocean-700 dark:text-ocean-400 dark:hover:text-ocean-300 text-sm">
-          ← Zurück zu Artikel
-        </Link>
+    <>
+      {/* Page Header mit Gradient Background */}
+      <section className="relative py-12 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
 
-        <div className="flex items-center gap-3 mt-4">
-          <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-full">
-            <Truck className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {currentCategory ? currentCategory.name : 'RV Life'}
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="text-center space-y-4">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 bg-orange-100 dark:bg-orange-900 rounded-full">
+                <Truck className="h-12 w-12 text-orange-600 dark:text-orange-400" />
+              </div>
+            </div>
+            <h1 className="text-4xl md:text-6xl font-bold">
+              <span className="gradient-text">
+                {currentCategory ? currentCategory.name : '🚐 RV Life'}
+              </span>
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-xl text-muted-foreground">
               {currentCategory
                 ? currentCategory.description
                 : 'Leben im Wohnmobil - Küche & Essen, Ausstattung, Freeliving'
               }
             </p>
-            {isDemoMode && (
-              <div className="mt-2">
-                <Badge variant="outline" className="text-xs">
-                  🎭 Demo-Modus: Zeige alle Artikel
-                </Badge>
-              </div>
-            )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Kategorienübersicht (nur auf Hauptseite) */}
-      {!category && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Kategorien</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.values(RV_LIFE_CONFIG.categories).map((cat) => {
-              const Icon = getRVLifeIcon(cat.icon);
-              return (
-                <Link key={cat.id} to={cat.path}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${cat.color.bg} ${cat.color.light}`}>
-                          <Icon className="h-5 w-5" />
+      <div className="container mx-auto px-4 pb-8">
+        {/* Back Link */}
+        <div className="mb-4">
+          <Link to="/artikel" className="text-ocean-600 hover:text-ocean-700 dark:text-ocean-400 dark:hover:text-ocean-300 text-sm">
+            ← Zurück zu Artikel
+          </Link>
+        </div>
+
+        {/* Kategorienübersicht (nur auf Hauptseite) */}
+        {!category && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Kategorien</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.values(RV_LIFE_CONFIG.categories).map((cat) => {
+                const Icon = getRVLifeIcon(cat.icon);
+                return (
+                  <Link key={cat.id} to={cat.path}>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-full ${cat.color.bg} ${cat.color.light}`}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                              {cat.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {cat.description}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                            {cat.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {cat.description}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-          <Separator className="my-8" />
-        </div>
-      )}
-
-      {/* Suche */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="RV Life Artikel durchsuchen..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
-      {/* Artikel Liste */}
-      <div className="space-y-6">
-        {isLoading && (
-          <Card className="border-dashed">
-            <CardContent className="py-16 px-8 text-center">
-              <LoadingSpinner size="lg" text="Lade RV Life Artikel vom Relay..." />
-            </CardContent>
-          </Card>
-        )}
-
-        {error && (
-          <Card className="border-red-200 dark:border-red-800">
-            <CardContent className="p-6">
-              <p className="text-red-600 dark:text-red-400 text-center">
-                Fehler beim Laden der RV Life Artikel. Bitte versuche es später erneut.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {!isLoading && !error && filteredArticles.length === 0 && (
-          <Card className="border-dashed">
-            <CardContent className="py-12 px-8 text-center">
-              <Truck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {searchTerm ? 'Keine Suchergebnisse gefunden' :
-                 isDemoMode ? 'Noch keine RV Life Artikel vorhanden (Demo-Modus)' : 'Noch keine RV Life Artikel vorhanden'}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {searchTerm
-                  ? 'Versuche es mit einem anderen Suchbegriff.'
-                  : isDemoMode
-                    ? 'Zeige alle verfügbaren Artikel als Demo. RV Life Artikel werden mit den Tags #rv-life, #wohnmobil, #rvlife, #camper automatisch angezeigt.'
-                    : 'Hier erscheinen bald die ersten RV Life Artikel.'
-                }
-              </p>
-              {!searchTerm && (
-                <Link to="/veroeffentlichen">
-                  <Button>
-                    {isDemoMode ? 'RV Life Artikel erstellen' : 'Ersten RV Life Artikel erstellen'}
-                  </Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Articles Grid */}
-        {filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredArticles.map((article) => (
-              <RVLifeArticleCard key={article.id} article={article} />
-            ))}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+            <Separator className="my-8" />
           </div>
         )}
+
+        {/* Suche */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="RV Life Artikel durchsuchen..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {/* Artikel Liste */}
+        <div className="space-y-6">
+          {isLoading && (
+            <Card className="border-dashed">
+              <CardContent className="py-16 px-8 text-center">
+                <LoadingSpinner size="lg" text="Lade RV Life Artikel vom Relay..." />
+              </CardContent>
+            </Card>
+          )}
+
+          {error && (
+            <Card className="border-dashed">
+              <CardContent className="py-12 px-8 text-center">
+                <div className="max-w-sm mx-auto space-y-6">
+                  <div className="text-6xl mb-4">⚠️</div>
+                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Fehler beim Laden
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Die Verbindung zum Relay konnte nicht hergestellt werden oder ein Fehler ist aufgetreten.
+                  </p>
+                  <Link to="/artikel/rvlife">
+                    <Button>
+                      Erneut versuchen
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {isDemoMode && !isLoading && !error && (
+            <Card className="border-dashed border-orange-200 dark:border-orange-900">
+              <CardContent className="py-8 px-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="text-2xl">🎭</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                      Demo-Modus
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Zeige alle Artikel - keine RV Life Kategorien gefunden
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Articles Grid */}
+          {filteredArticles.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredArticles.map((article) => (
+                <RVLifeArticleCard key={article.id} article={article} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
