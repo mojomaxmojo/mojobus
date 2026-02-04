@@ -27,6 +27,7 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
+import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -63,6 +64,10 @@ interface MediaFile {
   preview?: string;
   uploaded?: boolean;
   tags?: string[];
+  /** GPS data extracted from image EXIF */
+  gps?: GpsData;
+  /** GPS extraction status */
+  gpsStatus?: GpsStatus;
 }
 
 interface UploadProgress {
@@ -91,6 +96,41 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
+
+  // GPS editing state
+  const [editingGpsFile, setEditingGpsFile] = useState<string | null>(null);
+  const [batchEditMode, setBatchEditMode] = useState(false);
+
+  // Auto-fill location from first GPS-detected image
+  useEffect(() => {
+     const autoFillLocation = async () => {
+      const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
+      if (firstGpsImage && !location) {
+        console.log('[Media GPS] GPS detected, reverse geocoding...');
+        const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
+        if (locationData) {
+          // Set location to city + neighbourhood/suburb (no postcode)
+          const locationParts = [
+            locationData.city,
+            locationData.neighbourhood,
+            locationData.suburb
+          ].filter(Boolean);
+          const loc = locationParts.join(', ');
+          setLocation(loc);
+          console.log('[Media GPS] Location found:', loc);
+
+          // Auto-fill country if detected
+          const country = mapCountryCode(locationData);
+          if (country && !selectedCountry) {
+            setSelectedCountry(country);
+            console.log('[Media GPS] Country auto-filled:', country);
+          }
+        }
+      }
+    };
+
+    autoFillLocation();
+  }, [files, location, selectedCountry]);
 
   // Handler functions
   const handleMainCategoryChange = (value: string) => {
@@ -173,19 +213,44 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     }
   }, [editEvent]);
 
-  const handleFileSelect = (selectedFiles: FileList | null) => {
+  const handleFileSelect = async (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
 
-    const newFiles: MediaFile[] = Array.from(selectedFiles).map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      name: file.name,
-      type: file.type.startsWith('image/') ? 'image' :
-            file.type.startsWith('video/') ? 'video' :
-            file.type.startsWith('audio/') ? 'audio' : 'document',
-      size: file.size,
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-    }));
+    const newFiles: MediaFile[] = [];
+
+    // Process each file asynchronously
+    for (const file of Array.from(selectedFiles)) {
+      const mediaType = file.type.startsWith('image/') ? 'image' :
+                         file.type.startsWith('video/') ? 'video' :
+                         file.type.startsWith('audio/') ? 'audio' : 'document';
+
+      const newFile: MediaFile = {
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        name: file.name,
+        type: mediaType,
+        size: file.size,
+        preview: mediaType === 'image' ? URL.createObjectURL(file) : undefined,
+        gpsStatus: 'not_found',
+      };
+
+      // Extract GPS from images only
+      if (mediaType === 'image') {
+        try {
+          const gpsData = await extractGpsFromImage(file);
+          if (gpsData) {
+            newFile.gps = gpsData;
+            newFile.gpsStatus = 'detected';
+            console.log(`[GPS] Extracted from ${file.name}:`, gpsData);
+          }
+        } catch (error) {
+          console.error(`[GPS] Failed to extract from ${file.name}:`, error);
+          newFile.gpsStatus = 'error';
+        }
+      }
+
+      newFiles.push(newFile);
+    }
 
     setFiles(prev => [...prev, ...newFiles]);
   };
@@ -198,6 +263,66 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
   const removeFile = (id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  // GPS editing functions
+  const openGpsEditor = (fileId: string) => {
+    setEditingGpsFile(fileId);
+  };
+
+  const closeGpsEditor = () => {
+    setEditingGpsFile(null);
+  };
+
+  const saveGps = (fileId: string, latitude: number, longitude: number, altitude?: number) => {
+    setFiles(prev => prev.map(file => {
+      if (file.id === fileId) {
+        return {
+          ...file,
+          gps: {
+            latitude,
+            longitude,
+            altitude,
+            precision: 'medium' as const,
+          },
+          gpsStatus: 'manual',
+        };
+      }
+      return file;
+    }));
+    closeGpsEditor();
+  };
+
+  const removeGps = (fileId: string) => {
+    setFiles(prev => prev.map(file => {
+      if (file.id === fileId) {
+        const updated = { ...file };
+        delete updated.gps;
+        updated.gpsStatus = 'not_found';
+        return updated;
+      }
+      return file;
+    }));
+  };
+
+  const toggleBatchEditMode = () => {
+    setBatchEditMode(prev => !prev);
+  };
+
+  const applyGpsToAll = (sourceFileId: string) => {
+    const sourceFile = files.find(f => f.id === sourceFileId);
+    if (!sourceFile || !sourceFile.gps) return;
+
+    setFiles(prev => prev.map(file => {
+      if (file.type === 'image' && file.id !== sourceFileId) {
+        return {
+          ...file,
+          gps: { ...sourceFile.gps },
+          gpsStatus: 'manual',
+        };
+      }
+      return file;
+    }));
   };
 
   const handleSubmit = async () => {
@@ -317,6 +442,18 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
       if (mainCategory) additionalTags.push(['t', mainCategory]);
 
+      // Add GPS tags from first image with GPS data
+      const firstGpsImage = files.find(f => f.type === 'image' && f.gps);
+      if (firstGpsImage && firstGpsImage.gps) {
+        additionalTags.push(['gps_lat', firstGpsImage.gps.latitude.toString()]);
+        additionalTags.push(['gps_lon', firstGpsImage.gps.longitude.toString()]);
+        if (firstGpsImage.gps.altitude) {
+          additionalTags.push(['gps_alt', firstGpsImage.gps.altitude.toString()]);
+        }
+        additionalTags.push(['gps_precision', firstGpsImage.gps.precision]);
+        additionalTags.push(['gps_source', firstGpsImage.gpsStatus]);
+      }
+
       // Add location and date tags
       if (location) additionalTags.push(['location', location]);
       if (date) additionalTags.push(['published_at', date]);
@@ -398,6 +535,97 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     }
   };
 
+  // GPS Editor Component (Inline)
+  function GpsEditor({
+    file,
+    onSave,
+    onCancel,
+    onRemove,
+    onApplyToAll,
+  }: {
+    file: MediaFile;
+    onSave: (fileId: string, lat: number, lon: number, alt?: number) => void;
+    onCancel: () => void;
+    onRemove: (fileId: string) => void;
+    onApplyToAll: (fileId: string) => void;
+  }) {
+    const [latitude, setLatitude] = useState(file.gps?.latitude || 0);
+    const [longitude, setLongitude] = useState(file.gps?.longitude || 0);
+    const [altitude, setAltitude] = useState(file.gps?.altitude || 0);
+
+    const handleSave = () => {
+      if (latitude === 0 && longitude === 0) {
+        alert('Bitte gib GPS-Koordinaten ein.');
+        return;
+      }
+      onSave(file.id, latitude, longitude, altitude || undefined);
+    };
+
+    return (
+      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="grid grid-cols-1 gap-2">
+          <div>
+            <Label className="text-xs">Breitengrad (Latitude)</Label>
+            <Input
+              type="number"
+              step="0.0001"
+              value={latitude || ''}
+              onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)}
+              placeholder="z.B. 37.7749"
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Längengrad (Longitude)</Label>
+            <Input
+              type="number"
+              step="0.0001"
+              value={longitude || ''}
+              onChange={(e) => setLongitude(parseFloat(e.target.value) || 0)}
+              placeholder="z.B. -122.4194"
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Höhe (Altitude) - Optional</Label>
+            <Input
+              type="number"
+              step="1"
+              value={altitude || ''}
+              onChange={(e) => setAltitude(parseFloat(e.target.value) || 0)}
+              placeholder="z.B. 120"
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="flex gap-1 pt-1">
+            <Button size="sm" className="flex-1 h-7" onClick={handleSave}>
+              💾 Speichern
+            </Button>
+            <Button size="sm" variant="outline" className="flex-1 h-7" onClick={onCancel}>
+              Abbrechen
+            </Button>
+            {file.gps && (
+              <Button size="sm" variant="destructive" className="h-7" onClick={() => onRemove(file.id)}>
+                🗑️
+              </Button>
+            )}
+            {file.gps && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7"
+                onClick={() => onApplyToAll(file.id)}
+                title="Auf alle Bilder anwenden"
+              >
+                📋
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Upload Area */}
@@ -435,11 +663,24 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         </CardContent>
       </Card>
 
-      {/* Media Preview */}
+       {/* Media Preview */}
       {files.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
+              {files.some(f => f.type === 'image') && (
+                <Button
+                  size="sm"
+                  variant={batchEditMode ? "default" : "outline"}
+                  onClick={toggleBatchEditMode}
+                  className="gap-1"
+                >
+                  {batchEditMode ? <CheckCircle className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+                  {batchEditMode ? "Batch-Edit aktiv" : "Batch-Edit"}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -458,20 +699,89 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                       {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
                     </div>
                   )}
-                  <div className="text-sm">
-                    <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <div className="p-2 space-y-1">
+                    <div className="text-sm">
+                      <p className="font-medium truncate">{file.name}</p>
+                      <p className="text-gray-500 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+
+                    {/* GPS Info Display */}
+                    {file.type === 'image' && (
+                      <>
+                        {file.gps ? (
+                          <div className="text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
+                            <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
+                              <MapPin className="h-3 w-3" />
+                              <span className="truncate font-medium">
+                                {formatCoordinatesSimple(file.gps.latitude, file.gps.longitude)}
+                              </span>
+                            </div>
+                            {file.gpsStatus === 'manual' && (
+                              <span className="text-xs text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
+                            )}
+                            {file.gpsStatus === 'detected' && (
+                              <span className="text-xs text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full text-xs h-7"
+                            onClick={() => openGpsEditor(file.id)}
+                          >
+                            <MapPin className="h-3 w-3 mr-1" />
+                            GPS hinzufügen
+                          </Button>
+                        )}
+                      </>
+                    )}
                   </div>
+
+                  {/* GPS Editor (Inline) */}
+                  {editingGpsFile === file.id && file.type === 'image' && (
+                    <GpsEditor
+                      file={file}
+                      onSave={saveGps}
+                      onCancel={closeGpsEditor}
+                      onRemove={removeGps}
+                      onApplyToAll={applyGpsToAll}
+                    />
+                  )}
+
                   <Button
                     variant="destructive"
                     size="sm"
+                    className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => removeFile(file.id)}
                   >
-                    Löschen
+                    ×
                   </Button>
                 </div>
               ))}
             </div>
+
+            {/* Batch GPS Edit Panel */}
+            {batchEditMode && files.some(f => f.type === 'image' && f.gps) && (
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Batch GPS bearbeiten</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {files.filter(f => f.type === 'image' && f.gps).map(file => (
+                    <div key={file.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
+                      <span className="text-sm truncate">{file.name}</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        onClick={() => applyGpsToAll(file.id)}
+                      >
+                        Auf alle anwenden
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -928,11 +1238,18 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 function NoteForm({ editEvent }: { editEvent?: any }) {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [isPublic, setIsPublic] = useState(true);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [imageGpsData, setImageGpsData] = useState<Record<number, GpsData>>({});
+  const [imageGpsStatuses, setImageGpsStatuses] = useState<Record<number, GpsStatus>>({});
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishProgress, setPublishProgress] = useState({ stage: '', status: '' });
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -970,12 +1287,33 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
 
 
-  const handleImageSelect = (files: FileList | null) => {
+  const handleImageSelect = async (files: FileList | null) => {
     if (!files) return;
 
     // Filter for image files only
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     setImageFiles(prev => [...prev, ...imageFiles]);
+
+    // Extract GPS from each image immediately upon selection
+    const startIndex = imageUrls.length;
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
+      const index = startIndex + i;
+
+      try {
+        const gpsData = await extractGpsFromImage(file);
+        if (gpsData) {
+          setImageGpsData(prev => ({ ...prev, [index]: gpsData }));
+          setImageGpsStatuses(prev => ({ ...prev, [index]: 'detected' }));
+          console.log(`[Note GPS] Extracted from ${file.name} (image ${index}):`, gpsData);
+        } else {
+          setImageGpsStatuses(prev => ({ ...prev, [index]: 'not_found' }));
+        }
+      } catch (error) {
+        console.error(`[Note GPS] Failed to extract from ${file.name}:`, error);
+        setImageGpsStatuses(prev => ({ ...prev, [index]: 'error' }));
+      }
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -991,19 +1329,33 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const uploadImages = async () => {
     if (imageFiles.length === 0) return;
 
+    setIsUploadingImages(true);
+    setUploadProgress({ current: 0, total: imageFiles.length, status: 'Upload läuft...' });
+
     try {
       const uploadedUrls: string[] = [];
-      for (const file of imageFiles) {
+
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
         const [urlTag] = await uploadFile(file);
         uploadedUrls.push(urlTag[1]); // URL is in second position
+
+        // Update progress
+        setUploadProgress({ current: i + 1, total: imageFiles.length, status: 'Upload läuft...' });
       }
+
       setImageUrls(prev => [...prev, ...uploadedUrls]);
       setImageFiles([]);
+      setIsUploadingImages(false);
+      setUploadProgress({ current: imageFiles.length, total: imageFiles.length, status: '' });
+
       toast({
         title: 'Erfolg!',
         description: `${uploadedUrls.length} Bild(er) erfolgreich hochgeladen.`,
       });
     } catch (error) {
+      setIsUploadingImages(false);
+      setUploadProgress({ current: 0, total: 0, status: 'Upload fehlgeschlagen' });
       toast({
         title: 'Fehler',
         description: 'Bild-Upload fehlgeschlagen. Bitte versuche es erneut.',
@@ -1014,7 +1366,50 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
   const removeImageUrl = (index: number) => {
     setImageUrls(prev => prev.filter((_, i) => i !== index));
+    // Also remove GPS data for this image
+    setImageGpsData(prev => {
+      const { [index]: _, ...rest } = prev;
+      return rest;
+    });
+    setImageGpsStatuses(prev => {
+      const { [index]: _, ...rest } = prev;
+      return rest;
+    });
   };
+
+  // Auto-fill location and country from GPS data (first image)
+  useEffect(() => {
+      const autoFillLocation = async () => {
+        // Use GPS from first image if available
+        const firstGpsData = Object.values(imageGpsData)[0];
+        const firstGpsStatus = Object.values(imageGpsStatuses)[0];
+
+        if (firstGpsData && firstGpsStatus && !firstGpsStatus.includes('manual')) {
+          console.log('[Note GPS] GPS detected, reverse geocoding...');
+          const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
+          if (locationData) {
+            // Set location to city + neighbourhood/suburb (no postcode)
+            const locationParts = [
+              locationData.city,
+              locationData.neighbourhood,
+              locationData.suburb
+            ].filter(Boolean);
+            const loc = locationParts.join(', ');
+            setLocation(loc);
+            console.log('[Note GPS] Location found:', loc);
+
+            // Auto-fill country if detected
+            const country = mapCountryCode(locationData);
+            if (country && !selectedCountry) {
+              setSelectedCountry(country);
+              console.log('[Note GPS] Country auto-filled:', country);
+            }
+          }
+        }
+      };
+
+      autoFillLocation();
+    }, [imageGpsData]);
 
   const handleSubmit = () => {
     if (!content.trim()) {
@@ -1025,6 +1420,19 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       });
       return;
     }
+
+    // Warn if there are unsaved images
+    if (imageFiles.length > 0) {
+      toast({
+        title: 'Achtung',
+        description: 'Bitte lade die ausgewählten Bilder zuerst hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsPublishing(true);
+    setPublishProgress({ stage: 'publish', status: 'Event wird zu Nostr gesendet...' });
 
     // Entferne Country-Tags aus tags, um Duplikate zu vermeiden
     const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
@@ -1041,6 +1449,11 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       ['t', 'notiz']        // Standard tag #notiz
     ];
 
+    // Add location tag if set
+    if (location.trim()) {
+      additionalTags.push(['location', location.trim()]);
+    }
+
     // Add country tags (nur wenn selectedCountry gewählt wurde)
     if (selectedCountry) {
       const countryTags = getCountryTag(selectedCountry);
@@ -1048,8 +1461,20 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     }
 
     // Add image tags if images exist
-    imageUrls.forEach(url => {
+    imageUrls.forEach((url, index) => {
       additionalTags.push(['image', url]);
+
+      // Add GPS tags if available for this image
+      const gpsData = imageGpsData[index];
+      const gpsStatus = imageGpsStatuses[index];
+      if (gpsData && gpsStatus) {
+        additionalTags.push(['gps_lat', gpsData.latitude.toString()], ['gps_lon', gpsData.longitude.toString()]);
+        if (gpsData.altitude) {
+          additionalTags.push(['gps_alt', gpsData.altitude.toString()]);
+        }
+        additionalTags.push(['gps_precision', gpsData.precision]);
+        additionalTags.push(['gps_source', gpsStatus]);
+      }
     });
 
     const eventTags = [
@@ -1070,24 +1495,43 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       kind: 1, // Note
       content: articleContent,
       tags: eventTags
+    }, {
+      onSuccess: () => {
+        setIsPublishing(false);
+        setPublishProgress({ stage: 'success', status: 'Erfolgreich veröffentlicht!' });
+
+        toast({
+          title: 'Erfolg!',
+          description: 'Note erfolgreich veroeffentlicht.'
+        });
+
+        // Reset form and redirect
+        setContent('');
+        setTags([]);
+        setLocation('');
+        setSelectedCountry('');
+        setImageFiles([]);
+        setImageUrls([]);
+        setImageGpsData({});
+        setImageGpsStatuses({});
+        setPublishProgress({ stage: '', status: '' });
+
+        // Redirect to notes page after successful publish
+        setTimeout(() => {
+          navigate('/notes');
+        }, 1000);
+      },
+      onError: (error) => {
+        setIsPublishing(false);
+        setPublishProgress({ stage: 'error', status: 'Veröffentlichung fehlgeschlagen' });
+
+        toast({
+          title: 'Fehler',
+          description: 'Veröffentlichung fehlgeschlagen. Bitte versuche es erneut.',
+          variant: 'destructive'
+        });
+      }
     });
-
-    toast({
-      title: 'Erfolg!',
-      description: 'Note erfolgreich veroeffentlicht.'
-    });
-
-    // Reset form and redirect
-    setContent('');
-    setTags([]);
-    setSelectedCountry('');
-    setImageFiles([]);
-    setImageUrls([]);
-
-    // Redirect to notes page after successful publish
-    setTimeout(() => {
-      navigate('/notes');
-    }, 1000);
   };
 
   return (
@@ -1157,12 +1601,40 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                 <Button
                   onClick={uploadImages}
                   size="sm"
-                  disabled={imageFiles.length === 0}
+                  disabled={imageFiles.length === 0 || isUploadingImages}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Hochladen
+                  {isUploadingImages ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Upload...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Hochladen
+                    </>
+                  )}
                 </Button>
               </div>
+
+              {/* Upload Progress */}
+              {isUploadingImages && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm text-ocean-600 dark:text-ocean-400">
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      {uploadProgress.status}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {uploadProgress.current} von {uploadProgress.total}
+                    </Badge>
+                  </div>
+                  <Progress
+                    value={(uploadProgress.current / uploadProgress.total) * 100}
+                    className="h-2"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {imageFiles.map((file, index) => (
                   <div key={index} className="relative group border rounded-lg overflow-hidden">
@@ -1191,7 +1663,11 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
               <div className="flex items-center justify-between">
                 <Label className="text-sm">Hochgeladene Bilder ({imageUrls.length})</Label>
                 <Button
-                  onClick={() => setImageUrls([])}
+                  onClick={() => {
+                    setImageUrls([]);
+                    setImageGpsData({});
+                    setImageGpsStatuses({});
+                  }}
                   variant="outline"
                   size="sm"
                 >
@@ -1199,25 +1675,70 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                 </Button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {imageUrls.map((url, index) => (
-                  <div key={index} className="relative group border rounded-lg overflow-hidden">
-                    <img
-                      src={url}
-                      alt={`Uploaded ${index + 1}`}
-                      className="w-full h-20 object-cover"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeImageUrl(index)}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
+                {imageUrls.map((url, index) => {
+                  const gpsData = imageGpsData[index];
+                  const gpsStatus = imageGpsStatuses[index];
+                  return (
+                    <div key={index} className="relative group border rounded-lg overflow-hidden">
+                      <img
+                        src={url}
+                        alt={`Uploaded ${index + 1}`}
+                        className="w-full h-20 object-cover"
+                      />
+                      {gpsData && gpsStatus && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1">
+                           <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
+                             <MapPin className="h-2.5 w-2.5" />
+                             <span className="truncate font-medium">
+                               {formatCoordinatesSimple(gpsData.latitude, gpsData.longitude)}
+                             </span>
+                           </div>
+                          {gpsStatus === 'manual' && (
+                            <span className="text-[10px] text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
+                          )}
+                          {gpsStatus === 'detected' && (
+                            <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
+                          )}
+                        </div>
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeImageUrl(index)}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Location (auto-filled from GPS) */}
+        <div className="space-y-2">
+          <Label htmlFor="note-location">Standort</Label>
+          <div className="flex gap-2">
+            <Input
+              id="note-location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Wo wurde diese Note erstellt? (z.B. Lagos, Portugal)"
+              className="flex-1"
+            />
+            {Object.values(imageGpsData).length > 0 && (
+              <Badge variant="secondary" className="flex items-center gap-1 h-10 px-3">
+                <MapPin className="h-3 w-3" />
+                <span className="text-xs">GPS aktiv</span>
+              </Badge>
+            )}
+          </div>
+          {location && Object.values(imageGpsData).length > 0 && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              📍 Standort automatisch aus GPS-Koordinaten ermittelt
+            </p>
           )}
         </div>
 
@@ -1304,11 +1825,32 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
             <Label htmlFor="note-public">Öffentlich sichtbar</Label>
           </div>
 
-          <Button onClick={handleSubmit} disabled={!content}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Note veroeffentlichen
+          <Button onClick={handleSubmit} disabled={!content || isPublishing || isUploadingImages}>
+            {isPublishing ? (
+              <>
+                {publishProgress.stage === 'publish' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {publishProgress.stage === 'success' && <CheckCircle className="h-4 w-4 mr-2" />}
+                {publishProgress.stage === 'error' && <span className="mr-2">⚠️</span>}
+                {publishProgress.stage === 'publish' && 'Note wird veröffentlicht...'}
+                {publishProgress.stage === 'success' && '✅ Erfolgreich!'}
+                {publishProgress.stage === 'error' && 'Fehler aufgetreten'}
+              </>
+            ) : (
+              <>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Note veroeffentlichen
+              </>
+            )}
           </Button>
         </div>
+
+        {/* Publishing Progress */}
+        {publishProgress.stage === 'publish' && (
+          <div className="flex items-center gap-3 text-sm text-ocean-600 dark:text-ocean-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <p>{publishProgress.status}</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -1326,6 +1868,10 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   const [bestFor, setBestFor] = useState<string[]>([]);
   const [price, setPrice] = useState('');
   const [image, setImage] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageGps, setImageGps] = useState<GpsData | null>(null);
+  const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
+  const [editingImageGps, setEditingImageGps] = useState(false);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const [additionalImagesUrlInput, setAdditionalImagesUrlInput] = useState('');
   const [manualTags, setManualTags] = useState<string[]>([]);
@@ -1454,6 +2000,39 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     { value: 'berg', label: 'Berg', icon: '⛰️' }
   ];
 
+   // Auto-fill location and country from GPS data
+  useEffect(() => {
+    const autoFillLocation = async () => {
+      if (imageGps && !imageGpsStatus.includes('manual')) {
+        console.log('[Place GPS] GPS detected, reverse geocoding...');
+        const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
+        if (locationData) {
+          // Set location to city + neighbourhood/suburb (no postcode)
+          const locationParts = [
+            locationData.city,
+            locationData.neighbourhood,
+            locationData.suburb
+          ].filter(Boolean);
+          const loc = locationParts.join(', ');
+          setLocation(loc);
+          console.log('[Place GPS] Location found:', loc);
+
+          // Also set coordinates
+          setCoordinates({ lat: imageGps.latitude.toString(), lng: imageGps.longitude.toString() });
+
+          // Auto-fill country if detected
+          const country = mapCountryCode(locationData);
+          if (country && !selectedCountry) {
+            setSelectedCountry(country);
+            console.log('[Place GPS] Country auto-filled:', country);
+          }
+        }
+      }
+    };
+
+    autoFillLocation();
+  }, [imageGps]);
+
   const facilityOptions = [
     'Strom', 'Wasser', 'WC', 'Dusche', 'WLAN',
     'Shop', 'Restaurant', 'Spielplatz', 'Hund erlaubt',
@@ -1483,10 +2062,28 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   };
 
   const handleImageFile = async (file: File) => {
+    setImageFile(file);
     setIsUploading(true);
     try {
       const [urlTag] = await uploadFile(file);
       setImage(urlTag[1]); // URL is in second position
+
+      // Extract GPS from title image
+      try {
+        const gpsData = await extractGpsFromImage(file);
+        if (gpsData) {
+          setImageGps(gpsData);
+          setImageGpsStatus('detected');
+          console.log(`[Place GPS] Extracted from ${file.name}:`, gpsData);
+        } else {
+          setImageGps(null);
+          setImageGpsStatus('not_found');
+        }
+      } catch (error) {
+        console.error(`[Place GPS] Failed to extract from ${file.name}:`, error);
+        setImageGpsStatus('error');
+      }
+
       toast({
         title: 'Upload erfolgreich!',
         description: 'Titelbild wurde hochgeladen.',
@@ -1642,6 +2239,17 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       tags.push(['image', img]);
     });
 
+    // Add GPS tags from title image
+    if (imageGps) {
+      tags.push(['gps_lat', imageGps.latitude.toString()]);
+      tags.push(['gps_lon', imageGps.longitude.toString()]);
+      if (imageGps.altitude) {
+        tags.push(['gps_alt', imageGps.altitude.toString()]);
+      }
+      tags.push(['gps_precision', imageGps.precision]);
+      tags.push(['gps_source', imageGpsStatus]);
+    }
+
     // Add country tags (nur wenn selectedCountry gewählt wurde)
     if (selectedCountry) {
       const countryTags = getCountryTag(selectedCountry);
@@ -1669,6 +2277,10 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     setFacilities([]);
     setBestFor([]);
     setPrice('');
+    setImageFile(null);
+    setImageGps(null);
+    setImageGpsStatus('not_found');
+    setEditingImageGps(false);
 
     // Redirect to plaetze page after successful publish
     setTimeout(() => {
@@ -1764,16 +2376,16 @@ Beschreibe hier den Ort, was macht ihn besonders...
         </div>
 
         {/* Title Image */}
-        <div className="space-y-2">
-          <Label>Titelbild</Label>
-          <div className="space-y-2">
+         <div className="space-y-2">
+          <Label htmlFor="article-image">Titelbild</Label>
+          <div className="flex gap-2">
             {image ? (
-              <div className="relative">
+              <div className="flex-1">
                 <div className="relative group border rounded-lg p-3">
                   <img
                     src={image}
                     alt="Titelbild"
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="w-full h-32 object-cover rounded-lg"
                   />
                   {isUploading && (
                     <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
@@ -1783,11 +2395,124 @@ Beschreibe hier den Ort, was macht ihn besonders...
                       </div>
                     </div>
                   )}
+                  
+                  {/* GPS Info Display */}
+                  {imageGps ? (
+                    <div className="mt-2 text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
+                       <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
+                         <MapPin className="h-3 w-3" />
+                         <span className="truncate font-medium">
+                           {formatCoordinatesSimple(imageGps.latitude, imageGps.longitude)}
+                         </span>
+                       </div>
+                      {imageGpsStatus === 'manual' && (
+                        <span className="text-xs text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
+                      )}
+                      {imageGpsStatus === 'detected' && (
+                        <span className="text-xs text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs h-7 mt-2"
+                      onClick={() => setEditingImageGps(true)}
+                    >
+                      <MapPin className="h-3 w-3 mr-1" />
+                      GPS hinzufügen
+                    </Button>
+                  )}
+
+                  {/* GPS Editor (Inline) */}
+                  {editingImageGps && (
+                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="grid grid-cols-1 gap-2">
+                        <div>
+                          <Label className="text-xs">Breitengrad (Latitude)</Label>
+                          <Input
+                            type="number"
+                            step="0.0001"
+                            value={imageGps?.latitude || ''}
+                            onChange={(e) => setImageGps(prev => ({ ...prev!, latitude: parseFloat(e.target.value) || 0 }))}
+                            placeholder="z.B. 37.7749"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Längengrad (Longitude)</Label>
+                          <Input
+                            type="number"
+                            step="0.0001"
+                            value={imageGps?.longitude || ''}
+                            onChange={(e) => setImageGps(prev => ({ ...prev!, longitude: parseFloat(e.target.value) || 0 }))}
+                            placeholder="z.B. -122.4194"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Höhe (Altitude) - Optional</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            value={imageGps?.altitude || ''}
+                            onChange={(e) => setImageGps(prev => ({ ...prev!, altitude: parseFloat(e.target.value) || undefined }))}
+                            placeholder="z.B. 120"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-1 pt-1">
+                          <Button
+                            size="sm"
+                            className="flex-1 h-7"
+                            onClick={() => {
+                              if (imageGps?.latitude && imageGps?.longitude) {
+                                setImageGpsStatus('manual');
+                                setEditingImageGps(false);
+                              }
+                            }}
+                          >
+                            💾 Speichern
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-7"
+                            onClick={() => {
+                              setEditingImageGps(false);
+                            }}
+                          >
+                            Abbrechen
+                          </Button>
+                          {imageGps && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7"
+                              onClick={() => {
+                                setImageGps(null);
+                                setImageGpsStatus('not_found');
+                                setEditingImageGps(false);
+                              }}
+                            >
+                              🗑️
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     variant="destructive"
                     size="sm"
                     className="absolute top-2 right-2"
-                    onClick={() => setImage('')}
+                    onClick={() => {
+                      setImage('');
+                      setImageFile(null);
+                      setImageGps(null);
+                      setImageGpsStatus('not_found');
+                    }}
                     disabled={isUploading}
                   >
                     Entfernen
@@ -1989,8 +2714,13 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageGps, setImageGps] = useState<GpsData | null>(null);
+  const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
+  const [editingImageGps, setEditingImageGps] = useState(false);
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [publishedAt, setPublishedAt] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -2046,6 +2776,71 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       setPublishedAt(new Date().toISOString().split('T')[0]);
     }
   }, [editEvent]);
+
+  // GPS Handler for Article Form (Title Image Only)
+  const handleArticleImageUpload = async (file: File) => {
+    setImageFile(file);
+    setIsUploading(true);
+    
+    try {
+      const [urlTag] = await uploadFile(file);
+      setImage(urlTag[1]);
+      
+      // Extract GPS from title image
+      try {
+        const gpsData = await extractGpsFromImage(file);
+        if (gpsData) {
+          setImageGps(gpsData);
+          setImageGpsStatus('detected');
+          console.log(`[Article GPS] Extracted from ${file.name}:`, gpsData);
+        } else {
+          setImageGps(null);
+          setImageGpsStatus('not_found');
+        }
+      } catch (error) {
+        console.error(`[Article GPS] Failed to extract from ${file.name}:`, error);
+        setImageGpsStatus('error');
+      }
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: 'Upload fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+   // Auto-fill location from GPS data
+  useEffect(() => {
+    const autoFillLocation = async () => {
+      if (imageGps && !imageGpsStatus.includes('manual')) {
+        console.log('[Article GPS] GPS detected, reverse geocoding...');
+        const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
+        if (locationData) {
+          // Set location to city + neighbourhood/suburb (no postcode)
+          const locationParts = [
+            locationData.city,
+            locationData.neighbourhood,
+            locationData.suburb
+          ].filter(Boolean);
+          const loc = locationParts.join(', ');
+          setLocation(loc);
+          console.log('[Article GPS] Location found:', loc);
+
+          // Auto-fill country if detected
+          const country = mapCountryCode(locationData);
+          if (country && !selectedCountry) {
+            setSelectedCountry(country);
+            console.log('[Article GPS] Country auto-filled:', country);
+          }
+        }
+      }
+    };
+
+    autoFillLocation();
+  }, [imageGps]);
 
   // Get available tags from config (excluding DIY & Leon tags which are shown separately)
   const availableTags = TAG_GROUPS
@@ -2204,6 +2999,11 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       ['published_at', Math.floor(new Date(publishedAt).getTime() / 1000).toString()] // Unix-Timestamp!
     ];
 
+    // Add location tag if set
+    if (location.trim()) {
+      additionalTags.push(['location', location.trim()]);
+    }
+
     // Add category and image tags if present
     if (category) additionalTags.push(['category', category]);
     if (image) additionalTags.push(['image', image]);
@@ -2212,6 +3012,17 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     if (selectedCountry) {
       const countryTags = getCountryTag(selectedCountry);
       countryTags.forEach(tag => additionalTags.push(['t', tag]));
+    }
+
+    // Add GPS tags from title image
+    if (imageGps) {
+      additionalTags.push(['gps_lat', imageGps.latitude.toString()]);
+      additionalTags.push(['gps_lon', imageGps.longitude.toString()]);
+      if (imageGps.altitude) {
+        additionalTags.push(['gps_alt', imageGps.altitude.toString()]);
+      }
+      additionalTags.push(['gps_precision', imageGps.precision]);
+      additionalTags.push(['gps_source', imageGpsStatus]);
     }
 
     const finalTags = [
@@ -2237,8 +3048,13 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     setImage('');
     setCategory('');
     setTags([]);
+    setLocation('');
     setSelectedCountry('');
     setPublishedAt(''); // Wird im useEffect neu auf aktuelles Datum gesetzt
+    setImageFile(null);
+    setImageGps(null);
+    setImageGpsStatus('not_found');
+    setEditingImageGps(false);
 
     // Redirect to artikel page after successful publish
     setTimeout(() => {
@@ -2322,6 +3138,31 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
           placeholder="Land auswaehlen"
         />
 
+        {/* Location (auto-filled from GPS) */}
+        <div className="space-y-2">
+          <Label htmlFor="article-location">Standort</Label>
+          <div className="flex gap-2">
+            <Input
+              id="article-location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Wo wurde dieser Artikel erstellt? (z.B. Lagos, Portugal)"
+              className="flex-1"
+            />
+            {imageGps && (
+              <Badge variant="secondary" className="flex items-center gap-1 h-10 px-3">
+                <MapPin className="h-3 w-3" />
+                <span className="text-xs">GPS aktiv</span>
+              </Badge>
+            )}
+          </div>
+          {location && imageGps && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              📍 Standort automatisch aus GPS-Koordinaten ermittelt
+            </p>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="article-image">Titelbild</Label>
           <div className="flex gap-2">
@@ -2353,18 +3194,18 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
                 </Button>
               </div>
             ) : (
-              <div className="flex-1">
-                <div className="relative">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImageUpload(file);
-                    }}
-                    className="flex-1 mb-2 disabled:opacity-50"
-                    disabled={isUploading}
-                  />
+                 <div className="flex-1">
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleArticleImageUpload(file);
+                      }}
+                      className="flex-1 mb-2 disabled:opacity-50"
+                      disabled={isUploading}
+                    />
                   {isUploading && (
                     <div className="absolute inset-0 bg-white/80 rounded-md flex items-center justify-center">
                       <div className="text-center">
