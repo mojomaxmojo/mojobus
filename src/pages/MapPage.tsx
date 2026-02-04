@@ -148,67 +148,63 @@ export default function MapPage() {
       </section>
 
       <div className="container mx-auto px-4 pb-8">
-        {/* Map Card */}
-        <Card>
-          <CardContent className="p-4 h-[60px]">
-            <div className="flex items-center justify-between h-full">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  <span className="text-sm text-muted-foreground">
-                    <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Filter:</span>
-                  <div className="flex items-center gap-1">
-                    <FilterButton
-                      emoji="📷"
-                      count={counts.media}
-                      isActive={activeFilter === 'media'}
-                      onClick={() => setActiveFilter(activeFilter === 'media' ? 'all' : 'media')}
-                    />
-                    <FilterButton
-                      emoji="📝"
-                      count={counts.note}
-                      isActive={activeFilter === 'note'}
-                      onClick={() => setActiveFilter(activeFilter === 'note' ? 'all' : 'note')}
-                    />
-                    <FilterButton
-                      emoji="📍"
-                      count={counts.place}
-                      isActive={activeFilter === 'place'}
-                      onClick={() => setActiveFilter(activeFilter === 'place' ? 'all' : 'place')}
-                    />
-                    <FilterButton
-                      emoji="📄"
-                      count={counts.article}
-                      isActive={activeFilter === 'article'}
-                      onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
-                    />
-                  </div>
+        {/* Map Card mit integrierter Filter-Bar */}
+        <Card className="overflow-hidden">
+          {/* Filter Bar - Teil der Map-Card */}
+          <div className="p-4 h-[60px] bg-muted/50 border-b flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                <span className="text-sm text-muted-foreground">
+                  <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Filter:</span>
+                <div className="flex items-center gap-1">
+                  <FilterButton
+                    emoji="📷"
+                    count={counts.media}
+                    isActive={activeFilter === 'media'}
+                    onClick={() => setActiveFilter(activeFilter === 'media' ? 'all' : 'media')}
+                  />
+                  <FilterButton
+                    emoji="📝"
+                    count={counts.note}
+                    isActive={activeFilter === 'note'}
+                    onClick={() => setActiveFilter(activeFilter === 'note' ? 'all' : 'note')}
+                  />
+                  <FilterButton
+                    emoji="📍"
+                    count={counts.place}
+                    isActive={activeFilter === 'place'}
+                    onClick={() => setActiveFilter(activeFilter === 'place' ? 'all' : 'place')}
+                  />
+                  <FilterButton
+                    emoji="📄"
+                    count={counts.article}
+                    isActive={activeFilter === 'article'}
+                    onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
+                  />
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                Neu laden
-              </Button>
             </div>
-          </CardContent>
-        </Card>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Neu laden
+            </Button>
+          </div>
 
-      {/* Map */}
-      <Card>
-        <CardContent className="p-0">
+          {/* Map */}
           <div style={{ height: '600px', width: '100%' }}>
             <MapContainer
               center={[EUROPA_CENTER.lat, EUROPA_CENTER.lng]}
@@ -245,8 +241,7 @@ export default function MapPage() {
               ))}
             </MapContainer>
           </div>
-         </CardContent>
-      </Card>
+        </Card>
     </div>
     </>
   );
