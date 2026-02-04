@@ -242,15 +242,84 @@ export function formatCoordinatesSimple(latitude: number, longitude: number): st
 }
 
 /**
- * Reverse geocode GPS coordinates to approximate location description
- * Note: This is a placeholder - real implementation would use a geocoding API
+ * Reverse geocode GPS coordinates to location information
+ * Uses OpenStreetMap Nominatim API (free, no API key required)
  *
  * @param latitude - Latitude in decimal degrees
  * @param longitude - Longitude in decimal degrees
- * @returns Location description (placeholder)
+ * @returns Promise with location data (city, country, full address)
+ *
+ * @example
+ * ```typescript
+ * const location = await reverseGeocode(37.7749, -122.4194);
+ * console.log(location.city); // "San Francisco"
+ * console.log(location.country); // "United States"
+ * ```
  */
-export function reverseGeocode(latitude: number, longitude: number): string {
-  // Placeholder - real implementation would call a geocoding API
-  // For now, just return formatted coordinates
-  return formatCoordinates(latitude, longitude);
+export interface LocationData {
+  city?: string;
+  country?: string;
+  countryCode?: string;
+  fullAddress?: string;
+  display_name?: string;
+}
+
+export async function reverseGeocode(latitude: number, longitude: number): Promise<LocationData | null> {
+  try {
+    // Rate limiting: Nominatim allows 1 request per second
+    // User-Agent header is required by Nominatim policy
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+      {
+        headers: {
+          'User-Agent': 'MojoBus/1.0 (nostr:npub1f4vym2mu3q9fsz08muz8d469hl568l5358qx90qlaspyuz67ru0sfxvupf)'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.warn('[Reverse Geocoding] API request failed:', response.status, response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+
+    // Extract relevant location information
+    const address = data.address || {};
+    const locationData: LocationData = {
+      city: address.city || address.town || address.village || address.municipality,
+      country: address.country,
+      countryCode: address.country_code?.toUpperCase(),
+      fullAddress: data.display_name,
+      display_name: data.display_name
+    };
+
+    console.log('[Reverse Geocoding] Location found:', locationData);
+    return locationData;
+  } catch (error) {
+    console.error('[Reverse Geocoding] Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Extract country code from location data and map to our internal country codes
+ *
+ * @param location - Location data from reverse geocoding
+ * @returns Internal country code (e.g., 'portugal', 'spanien') or null
+ */
+export function mapCountryCode(location: LocationData | null): string | null {
+  if (!location?.countryCode) return null;
+
+  // Map ISO country codes to internal country codes
+  const countryMapping: Record<string, string> = {
+    PT: 'portugal',
+    ES: 'spanien',
+    FR: 'frankreich',
+    BE: 'belgien',
+    DE: 'deutschland',
+    LU: 'luxemburg',
+  };
+
+  return countryMapping[location.countryCode.toUpperCase()] || null;
 }

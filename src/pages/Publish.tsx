@@ -27,7 +27,7 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
-import { extractGpsFromImage, formatCoordinates, type GpsData, type GpsStatus } from '@/lib/gpsExtraction';
+import { extractGpsFromImage, formatCoordinates, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -1217,6 +1217,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 function NoteForm({ editEvent }: { editEvent?: any }) {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [isPublic, setIsPublic] = useState(true);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -1337,6 +1338,35 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     });
   };
 
+  // Auto-fill location and country from GPS data (first image)
+  useEffect(() => {
+    const autoFillLocation = async () => {
+      // Use GPS from first image if available
+      const firstGpsData = Object.values(imageGpsData)[0];
+      const firstGpsStatus = Object.values(imageGpsStatuses)[0];
+
+      if (firstGpsData && firstGpsStatus && !firstGpsStatus.includes('manual')) {
+        console.log('[Note GPS] GPS detected, reverse geocoding...');
+        const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
+        if (locationData) {
+          // Set location to city or full address
+          const loc = locationData.city || locationData.fullAddress || '';
+          setLocation(loc);
+          console.log('[Note GPS] Location found:', loc);
+
+          // Auto-fill country if detected
+          const country = mapCountryCode(locationData);
+          if (country && !selectedCountry) {
+            setSelectedCountry(country);
+            console.log('[Note GPS] Country auto-filled:', country);
+          }
+        }
+      }
+    };
+
+    autoFillLocation();
+  }, [imageGpsData]);
+
   const handleSubmit = () => {
     if (!content.trim()) {
       toast({
@@ -1361,6 +1391,11 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       ['t', 'note'],        // Standard tag #note
       ['t', 'notiz']        // Standard tag #notiz
     ];
+
+    // Add location tag if set
+    if (location.trim()) {
+      additionalTags.push(['location', location.trim()]);
+    }
 
     // Add country tags (nur wenn selectedCountry gewählt wurde)
     if (selectedCountry) {
@@ -1413,6 +1448,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     // Reset form and redirect
     setContent('');
     setTags([]);
+    setLocation('');
     setSelectedCountry('');
     setImageFiles([]);
     setImageUrls([]);
@@ -1577,6 +1613,31 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                 })}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Location (auto-filled from GPS) */}
+        <div className="space-y-2">
+          <Label htmlFor="note-location">Standort</Label>
+          <div className="flex gap-2">
+            <Input
+              id="note-location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Wo wurde diese Note erstellt? (z.B. Lagos, Portugal)"
+              className="flex-1"
+            />
+            {Object.values(imageGpsData).length > 0 && (
+              <Badge variant="secondary" className="flex items-center gap-1 h-10 px-3">
+                <MapPin className="h-3 w-3" />
+                <span className="text-xs">GPS aktiv</span>
+              </Badge>
+            )}
+          </div>
+          {location && Object.values(imageGpsData).length > 0 && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              📍 Standort automatisch aus GPS-Koordinaten ermittelt
+            </p>
           )}
         </div>
 
@@ -1816,6 +1877,34 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     { value: 'strand', label: 'Strand', icon: '🏖️' },
     { value: 'berg', label: 'Berg', icon: '⛰️' }
   ];
+
+  // Auto-fill location and country from GPS data
+  useEffect(() => {
+    const autoFillLocation = async () => {
+      if (imageGps && !imageGpsStatus.includes('manual')) {
+        console.log('[Place GPS] GPS detected, reverse geocoding...');
+        const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
+        if (locationData) {
+          // Set location to city or full address
+          const loc = locationData.city || locationData.fullAddress || '';
+          setLocation(loc);
+          console.log('[Place GPS] Location found:', loc);
+
+          // Also set coordinates
+          setCoordinates({ lat: imageGps.latitude.toString(), lng: imageGps.longitude.toString() });
+
+          // Auto-fill country if detected
+          const country = mapCountryCode(locationData);
+          if (country && !selectedCountry) {
+            setSelectedCountry(country);
+            console.log('[Place GPS] Country auto-filled:', country);
+          }
+        }
+      }
+    };
+
+    autoFillLocation();
+  }, [imageGps]);
 
   const facilityOptions = [
     'Strom', 'Wasser', 'WC', 'Dusche', 'WLAN',
@@ -2504,6 +2593,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [editingImageGps, setEditingImageGps] = useState(false);
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [publishedAt, setPublishedAt] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -2597,11 +2687,27 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
   // Auto-fill location from GPS data
   useEffect(() => {
-    if (imageGps && !imageGpsStatus.includes('manual')) {
-      const coords = formatCoordinates(imageGps.latitude, imageGps.longitude);
-      // You can optionally set a location field if you want to use it
-      console.log('[Article GPS] GPS detected, location available:', coords);
-    }
+    const autoFillLocation = async () => {
+      if (imageGps && !imageGpsStatus.includes('manual')) {
+        console.log('[Article GPS] GPS detected, reverse geocoding...');
+        const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
+        if (locationData) {
+          // Set location to city or full address
+          const loc = locationData.city || locationData.fullAddress || '';
+          setLocation(loc);
+          console.log('[Article GPS] Location found:', loc);
+
+          // Auto-fill country if detected
+          const country = mapCountryCode(locationData);
+          if (country && !selectedCountry) {
+            setSelectedCountry(country);
+            console.log('[Article GPS] Country auto-filled:', country);
+          }
+        }
+      }
+    };
+
+    autoFillLocation();
   }, [imageGps]);
 
   // Get available tags from config (excluding DIY & Leon tags which are shown separately)
@@ -2761,6 +2867,11 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       ['published_at', Math.floor(new Date(publishedAt).getTime() / 1000).toString()] // Unix-Timestamp!
     ];
 
+    // Add location tag if set
+    if (location.trim()) {
+      additionalTags.push(['location', location.trim()]);
+    }
+
     // Add category and image tags if present
     if (category) additionalTags.push(['category', category]);
     if (image) additionalTags.push(['image', image]);
@@ -2805,6 +2916,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     setImage('');
     setCategory('');
     setTags([]);
+    setLocation('');
     setSelectedCountry('');
     setPublishedAt(''); // Wird im useEffect neu auf aktuelles Datum gesetzt
     setImageFile(null);
@@ -2893,6 +3005,31 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
           onCountryChange={setSelectedCountry}
           placeholder="Land auswaehlen"
         />
+
+        {/* Location (auto-filled from GPS) */}
+        <div className="space-y-2">
+          <Label htmlFor="article-location">Standort</Label>
+          <div className="flex gap-2">
+            <Input
+              id="article-location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Wo wurde dieser Artikel erstellt? (z.B. Lagos, Portugal)"
+              className="flex-1"
+            />
+            {imageGps && (
+              <Badge variant="secondary" className="flex items-center gap-1 h-10 px-3">
+                <MapPin className="h-3 w-3" />
+                <span className="text-xs">GPS aktiv</span>
+              </Badge>
+            )}
+          </div>
+          {location && imageGps && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              📍 Standort automatisch aus GPS-Koordinaten ermittelt
+            </p>
+          )}
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="article-image">Titelbild</Label>
