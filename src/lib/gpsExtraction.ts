@@ -267,19 +267,31 @@ export function formatCoordinatesSimple(latitude: number, longitude: number): st
  * ```
  */
 export interface LocationData {
+  /** City, town, or village name */
   city?: string;
+  /** Country name */
   country?: string;
+  /** ISO country code (e.g., 'PT', 'ES') */
   countryCode?: string;
+  /** Full formatted address */
   fullAddress?: string;
+  /** Display name from Nominatim */
   display_name?: string;
+  /** Suburb or district (for more precision) */
+  suburb?: string;
+  /** County or region */
+  county?: string;
+  /** Postal code */
+  postcode?: string;
 }
 
 export async function reverseGeocode(latitude: number, longitude: number): Promise<LocationData | null> {
   try {
     // Rate limiting: Nominatim allows 1 request per second
     // User-Agent header is required by Nominatim policy
+    // zoom=18 for maximum precision (street level)
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=de,en`,
       {
         headers: {
           'User-Agent': 'MojoBus/1.0 (nostr:npub1f4vym2mu3q9fsz08muz8d469hl568l5358qx90qlaspyuz67ru0sfxvupf)'
@@ -297,9 +309,18 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     // Extract relevant location information
     const address = data.address || {};
     const locationData: LocationData = {
-      city: address.city || address.town || address.village || address.municipality,
+      // Try to get the most specific locality name
+      city: address.city ||
+            address.town ||
+            address.village ||
+            address.suburb ||
+            address.hamlet ||
+            address.locality,
       country: address.country,
       countryCode: address.country_code?.toUpperCase(),
+      county: address.county,
+      suburb: address.suburb,
+      postcode: address.postcode,
       fullAddress: data.display_name,
       display_name: data.display_name
     };
