@@ -6,15 +6,15 @@
  */
 
 import { useMemo, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGpsContent, type MapMarker } from '@/hooks/useGpsContent';
 import { MapMarkerPopup } from '@/components/MapMarkerPopup';
 import { getMarkerIcon } from '@/lib/markerIcons';
-import { EUROPA_BOUNDS, EUROPA_CENTER, ZOOM_SETTINGS, TILE_LAYERS } from '@/lib/mapConfig';
-import { MapPin, RefreshCw, Loader2, Filter } from '@/lib/icons';
+import { EUROPA_BOUNDS, EUROPA_CENTER, ZOOM_SETTINGS } from '@/lib/mapConfig';
+import { MapPin, RefreshCw, Loader2 } from '@/lib/icons';
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -26,33 +26,6 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-
-/**
- * Component to fit map bounds to markers
- */
-function MapBoundsSetter({ markers }: { markers: MapMarker[] }) {
-  const map = useMap();
-
-  // Use useMemo to calculate bounds only when markers change
-  const bounds = useMemo(() => {
-    if (markers.length === 0) return null;
-
-    const points = markers.map(m => [m.lat, m.lon] as [number, number]);
-    return L.latLngBounds(points);
-  }, [markers]);
-
-  // Fit bounds when they change
-  useEffect(() => {
-    if (bounds && map) {
-      map.fitBounds(bounds, {
-        padding: [50, 50],
-        maxZoom: ZOOM_SETTINGS.max,
-      });
-    }
-  }, [bounds, map]);
-
-  return null;
-}
 
 /**
  * Main Map Page Component
@@ -193,7 +166,7 @@ export default function MapPage() {
       {/* Map */}
       <Card>
         <CardContent className="p-0">
-          <div style={{ height: '600px', width: '100%', position: 'relative' }}>
+          <div style={{ height: '600px', width: '100%' }}>
             <MapContainer
               center={[EUROPA_CENTER.lat, EUROPA_CENTER.lng]}
               zoom={ZOOM_SETTINGS.default}
@@ -210,9 +183,9 @@ export default function MapPage() {
             >
               {/* OpenStreetMap Tile Layer */}
               <TileLayer
-                attribution={TILE_LAYERS.osm.attribution}
-                url={TILE_LAYERS.osm.url}
-                maxZoom={TILE_LAYERS.osm.maxZoom}
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maxZoom={19}
               />
 
               {/* Map Markers */}
@@ -227,9 +200,6 @@ export default function MapPage() {
                   </Popup>
                 </Marker>
               ))}
-
-              {/* Fit bounds to show all markers */}
-              <MapBoundsSetter markers={europeMarkers} />
             </MapContainer>
           </div>
         </CardContent>

@@ -13,7 +13,7 @@ import { MARKER_SIZE, CONTENT_COLORS, type ContentType } from './mapConfig';
  * @param type - Content type (media, note, place, article)
  * @returns Leaflet Icon object
  */
-export function getMarkerIcon(type: ContentType): L.DivIcon {
+export function getMarkerIcon(type: ContentType): L.Icon {
   const color = CONTENT_COLORS[type];
 
   const svgString = `
@@ -34,15 +34,21 @@ export function getMarkerIcon(type: ContentType): L.DivIcon {
         <circle cx="16" cy="16" r="8" fill="white" />
       </g>
     </svg>
-  `;
+  `.replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').trim();
 
-  return L.divIcon({
-    html: svgString,
-    iconSize: [MARKER_SIZE.width, MARKER_SIZE.height],
-    iconAnchor: MARKER_SIZE.iconAnchor,
-    popupAnchor: MARKER_SIZE.popupAnchor,
-    className: 'custom-map-marker',
-  });
+  try {
+    const encodedSvg = btoa(svgString);
+    return new L.Icon({
+      iconUrl: `data:image/svg+xml;base64,${encodedSvg}`,
+      iconSize: [MARKER_SIZE.width, MARKER_SIZE.height],
+      iconAnchor: [MARKER_SIZE.width / 2, MARKER_SIZE.height],
+      popupAnchor: [0, -MARKER_SIZE.height],
+    });
+  } catch (error) {
+    console.error('Error creating custom icon:', error);
+    // Fallback to default marker
+    return new L.Icon.Default();
+  }
 }
 
 /**
@@ -52,7 +58,7 @@ export function getMarkerIcon(type: ContentType): L.DivIcon {
  * @param color - Base color
  * @returns Leaflet Icon object
  */
-export function getNumberedMarkerIcon(number: number, color: string): L.DivIcon {
+export function getNumberedMarkerIcon(number: number, color: string): L.Icon {
   const svgString = `
     <svg viewBox="0 0 40 60" xmlns="http://www.w3.org/2000/svg" width="${MARKER_SIZE.width}" height="${MARKER_SIZE.height}">
       <defs>
@@ -67,15 +73,20 @@ export function getNumberedMarkerIcon(number: number, color: string): L.DivIcon 
         </text>
       </g>
     </svg>
-  `;
+  `.replace(/\s+/g, ' ').replace(/[^\x20-\x7E]/g, '').trim();
 
-  return L.divIcon({
-    html: svgString,
-    iconSize: [MARKER_SIZE.width, MARKER_SIZE.height],
-    iconAnchor: MARKER_SIZE.iconAnchor,
-    popupAnchor: MARKER_SIZE.popupAnchor,
-    className: 'custom-numbered-marker',
-  });
+  try {
+    const encodedSvg = btoa(svgString);
+    return new L.Icon({
+      iconUrl: `data:image/svg+xml;base64,${encodedSvg}`,
+      iconSize: [MARKER_SIZE.width, MARKER_SIZE.height],
+      iconAnchor: [MARKER_SIZE.width / 2, MARKER_SIZE.height],
+      popupAnchor: [0, -MARKER_SIZE.height],
+    });
+  } catch (error) {
+    console.error('Error creating numbered marker icon:', error);
+    return new L.Icon.Default();
+  }
 }
 
 /**
