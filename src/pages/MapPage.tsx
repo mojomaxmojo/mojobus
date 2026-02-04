@@ -5,8 +5,8 @@
  * Lazy-loaded to not affect initial page load
  */
 
-import { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,14 +42,14 @@ function MapBoundsSetter({ markers }: { markers: MapMarker[] }) {
   }, [markers]);
 
   // Fit bounds when they change
-  L.useMapEvent('add', () => {
-    if (bounds) {
+  useEffect(() => {
+    if (bounds && map) {
       map.fitBounds(bounds, {
         padding: [50, 50],
         maxZoom: ZOOM_SETTINGS.max,
       });
     }
-  });
+  }, [bounds, map]);
 
   return null;
 }
@@ -193,7 +193,7 @@ export default function MapPage() {
       {/* Map */}
       <Card>
         <CardContent className="p-0">
-          <div className="h-[600px] w-full relative">
+          <div style={{ height: '600px', width: '100%', position: 'relative' }}>
             <MapContainer
               center={[EUROPA_CENTER.lat, EUROPA_CENTER.lng]}
               zoom={ZOOM_SETTINGS.default}
@@ -204,7 +204,7 @@ export default function MapPage() {
                 [EUROPA_BOUNDS.north, EUROPA_BOUNDS.east],
               ]}
               maxBoundsViscosity={1.0}
-              className="z-0"
+              style={{ height: '100%', width: '100%', zIndex: 0 }}
               zoomControl={true}
               scrollWheelZoom={true}
             >
@@ -222,7 +222,9 @@ export default function MapPage() {
                   position={[marker.lat, marker.lon]}
                   icon={getMarkerIcon(marker.type)}
                 >
-                  <MapMarkerPopup marker={marker} />
+                  <Popup>
+                    <MapMarkerPopup marker={marker} />
+                  </Popup>
                 </Marker>
               ))}
 

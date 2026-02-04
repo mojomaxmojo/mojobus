@@ -39,8 +39,8 @@ export function getMarkerIcon(type: ContentType): L.DivIcon {
   return L.divIcon({
     html: svgString,
     iconSize: [MARKER_SIZE.width, MARKER_SIZE.height],
-    iconAnchor: MARKER_SIZE.iconAnchor as [number, number],
-    popupAnchor: MARKER_SIZE.popupAnchor as [number, number],
+    iconAnchor: MARKER_SIZE.iconAnchor,
+    popupAnchor: MARKER_SIZE.popupAnchor,
     className: 'custom-map-marker',
   });
 }
@@ -72,8 +72,8 @@ export function getNumberedMarkerIcon(number: number, color: string): L.DivIcon 
   return L.divIcon({
     html: svgString,
     iconSize: [MARKER_SIZE.width, MARKER_SIZE.height],
-    iconAnchor: MARKER_SIZE.iconAnchor as [number, number],
-    popupAnchor: MARKER_SIZE.popupAnchor as [number, number],
+    iconAnchor: MARKER_SIZE.iconAnchor,
+    popupAnchor: MARKER_SIZE.popupAnchor,
     className: 'custom-numbered-marker',
   });
 }
