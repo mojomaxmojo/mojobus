@@ -17,6 +17,7 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/playfair-display": "^5.2.8",
+    "@types/leaflet": "^1.9.12",
     "@getalby/sdk": "^5.1.1",
     "@hookform/resolvers": "^3.9.0",
     "@jridgewell/source-map": "^0.3.6",
@@ -113,6 +114,9 @@
     "linkifyjs": "^4.3.2",
     "longest-streak": "^3.1.0",
     "lucide-react": "^0.462.0",
+    "leaflet": "^1.9.4",
+    "ngeohash": "^0.6.4",
+    "react-leaflet": "^4.2.1",
     "mdast-util-from-markdown": "^2.0.2",
     "mdast-util-gfm-autolink-literal": "^2.0.1",
     "mdast-util-gfm-footnote": "^2.1.0",

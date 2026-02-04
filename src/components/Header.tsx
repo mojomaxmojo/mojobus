@@ -183,6 +183,15 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* 🗺️ Map - Hauptmenü-Eintrag */}
+            <Link
+              to="/map"
+              className="flex items-center gap-2 text-foreground hover:text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-primary/10 hover:shadow-md"
+            >
+              <MapPin className="h-4 w-4" />
+              🗺️ Map
+            </Link>
+
             {/* Plätze */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -442,6 +451,16 @@ export function Header() {
                   <span className="text-gray-900 dark:text-gray-100">Leon Story</span>
                 </Link>
               </div>
+
+              {/* Mobile Map */}
+              <Link
+                to="/map"
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                onClick={handleMobileMenuClick}
+              >
+                <MapPin className="h-5 w-5 text-gray-600" />
+                <span className="text-gray-900 dark:text-gray-100">🗺️ Europa Map</span>
+              </Link>
 
               {/* Mobile Plätze */}
               <div className="space-y-1">
