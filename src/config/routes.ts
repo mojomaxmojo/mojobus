@@ -1,7 +1,7 @@
 import { Route } from '@/config/types';
 
 export const ROUTES: Route[] = [
-  { path: '/', component: 'Home', title: 'Home', description: 'MojoBus Perpetual Traveler Blog' },
+  { path: '/', component: 'Home', title: 'Home', description: 'MojoBus Perpetual Travelers Blog' },
   { path: '/artikel', component: 'Articles', title: 'Artikel', category: 'articles' },
   { path: '/artikel/:country', component: 'Articles', title: 'Artikel aus Land', category: 'articles' },
   { path: '/artikel/diy', component: 'DIY', title: 'DIY Anleitungen', category: 'diy' },

@@ -20,7 +20,7 @@ export function Footer() {
               <span className="font-bold text-2xl gradient-text">MojoBus</span>
             </div>
             <p className="text-base text-muted-foreground leading-relaxed">
-              Perpetual Traveler – Unser Leben am Meer. Freiheit, Abenteuer und Einfachheit zwischen Sand und Horizont.
+              Perpetual Travelers – Unser Leben am Meer. Freiheit, Abenteuer und Einfachheit zwischen Sand und Horizont.
             </p>
             <div className="flex gap-2 flex-wrap">
               <span className="text-xs bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20 font-medium hover:bg-primary/20 transition-colors cursor-default">#offgridlife</span>

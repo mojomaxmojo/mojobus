@@ -206,13 +206,13 @@ export function ArticleView({ naddr }: ArticleViewProps) {
 
     const metadata = extractArticleMetadata(article);
     const title = metadata.title || 'Artikel';
-    const description = metadata.summary || `Perpetual Traveler Artikel von ${author.data?.metadata?.name || 'Mojo'}`;
+    const description = metadata.summary || `Perpetual Travelers Artikel von ${author.data?.metadata?.name || 'Mojo'}`;
     const keywords = ['perpetual traveler', 'vanlife', 'offgrid', 'reisen', 'blog'];
     const tags = article.tags.filter(([name]) => name === 't').map(([, value]) => value);
     keywords.push(...tags);
 
     return {
-      title: `${title} - MojoBus Perpetual Traveler Blog`,
+      title: `${title} - MojoBus Perpetual Travelers Blog`,
       meta: [
         { name: 'description', content: description },
         { name: 'keywords', content: keywords.join(', ') },

@@ -120,7 +120,7 @@ export function NoteView({ eventId }: NoteViewProps) {
     const keywords = ['perpetual traveler', 'vanlife', 'offgrid', 'note', 'blog', ...tags];
 
     return {
-      title: `${title} - MojoBus Perpetual Traveler Blog`,
+      title: `${title} - MojoBus Perpetual Travelers Blog`,
       meta: [
         { name: 'description', content: description },
         { name: 'keywords', content: keywords.join(', ') },

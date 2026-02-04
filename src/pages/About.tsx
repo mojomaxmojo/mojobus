@@ -12,14 +12,14 @@ import { useHead } from '@unhead/react';
 export function About() {
   // SEO Meta Tags
   useHead({
-    title: 'Über Uns - MojoBus Perpetual Traveler Blog',
+    title: 'Über Uns - MojoBus Perpetual Travelers Blog',
     meta: [
-      { name: 'description', content: 'Lerne Mojo und unser Leben als Perpetual Traveler kennen. Vanlife, offgrid, Leben am Meer und unsere Abenteuer mit Lionhunter.' },
-      { property: 'og:title', content: 'Über Uns - MojoBus Perpetual Traveler Blog' },
-      { property: 'og:description', content: 'Lerne Mojo und unser Leben als Perpetual Traveler kennen. Vanlife, offgrid und unsere Abenteuer am Meer.' },
+      { name: 'description', content: 'Lerne Mojo und unser Leben als Perpetual Travelers kennen. Vanlife, offgrid, Leben am Meer und unsere Abenteuer mit Lionhunter.' },
+      { property: 'og:title', content: 'Über Uns - MojoBus Perpetual Travelers Blog' },
+      { property: 'og:description', content: 'Lerne Mojo und unser Leben als Perpetual Travelers kennen. Vanlife, offgrid und unsere Abenteuer am Meer.' },
       { property: 'og:url', content: 'https://mojobus.cc/about' },
-      { name: 'twitter:title', content: 'Über Uns - MojoBus Perpetual Traveler Blog' },
-      { name: 'twitter:description', content: 'Lerne Mojo und unser Leben als Perpetual Traveler kennen. 🌍🧭🌊' },
+      { name: 'twitter:title', content: 'Über Uns - MojoBus Perpetual Travelers Blog' },
+      { name: 'twitter:description', content: 'Lerne Mojo und unser Leben als Perpetual Travelers kennen. 🌍🧭🌊' },
     ],
     link: [
       { rel: 'canonical', href: 'https://mojobus.cc/about' }
@@ -43,7 +43,7 @@ export function About() {
             </div>
             <h1 className="text-4xl md:text-6xl font-bold"><span className="gradient-text">Über Uns</span></h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Perpetual Traveler – Leben zwischen Sand und Horizont
+              Perpetual Travelers – Leben zwischen Sand und Horizont
             </p>
           </div>
         </div>
@@ -60,7 +60,7 @@ export function About() {
             <CardContent className="prose prose-slate dark:prose-invert max-w-none space-y-4">
               <p className="text-muted-foreground leading-relaxed">
                 Kein fester Wohnsitz, kein Alltag im Hamsterrad – nur wir und Leon (Lionhunter),
-                unser RV und das Meer. Wir leben als Perpetual Traveler, meist direkt am Strand,
+                unser RV und das Meer. Wir leben als Perpetual Travelers, meist direkt am Strand,
                 autark mit Solarstrom und minimalistisch unterwegs.
               </p>
               <p className="text-muted-foreground leading-relaxed">

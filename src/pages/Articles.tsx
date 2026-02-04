@@ -132,7 +132,7 @@ function Articles() {
     title: pageTitle,
     meta: [
       { name: 'description', content: pageDescription },
-      { name: 'keywords', content: 'Vanlife, Camping, Perpetual Traveler, Nostr, Reiseberichte, Geschichten, Portugal, Spanien, Frankreich, Belgien, Luxemburg, Deutschland' },
+      { name: 'keywords', content: 'Vanlife, Camping, Perpetual Travelers, Nostr, Reiseberichte, Geschichten, Portugal, Spanien, Frankreich, Belgien, Luxemburg, Deutschland' },
       { property: 'og:title', content: pageTitle },
       { property: 'og:description', content: pageDescription },
       { property: 'og:url', content: `https://mojobus.org/artikel${country ? '/' + country : ''}` },
@@ -189,7 +189,7 @@ function Articles() {
             <p className="text-xl text-muted-foreground">
               {currentCountry
                 ? `Geschichten, Tipps und Einblicke aus unseren Reisen in ${currentCountry.name}`
-                : 'Geschichten, Tipps und Einblicke aus unserem Leben als Perpetual Traveler'
+                : 'Geschichten, Tipps und Einblicke aus unserem Leben als Perpetual Travelers'
               }
             </p>
           </div>

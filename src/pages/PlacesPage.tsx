@@ -65,7 +65,7 @@ const PlacesPage = () => {
   }, [events]);
 
   useHead({
-    title: 'Plätze - MojoBus Perpetual Traveler Blog',
+    title: 'Plätze - MojoBus Perpetual Travelers Blog',
     meta: [
       { name: 'description', content: 'Alle Plätze sortiert nach Erstellungsdatum.' },
       { name: 'keywords', content: 'orte' },

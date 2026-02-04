@@ -35,17 +35,17 @@ export function Home() {
 
   // SEO Meta Tags
   useHead({
-    title: 'MojoBus - Perpetual Traveler Blog',
+    title: 'MojoBus - Perpetual Travelers Blog',
     meta: [
-      { name: 'description', content: 'Perpetual Traveler Blog. Unser Leben am Meer, vanlife, offgrid und Reisen. Geschichten, Tipps und Einblicke vom Strand.' },
+      { name: 'description', content: 'Perpetual Travelers Blog. Unser Leben am Meer, vanlife, offgrid und Reisen. Geschichten, Tipps und Einblicke vom Strand.' },
       { name: 'keywords', content: 'Vanlife, Reisen, Portugal, Spanien, Frankreich, Offgrid, Solar, RV' },
-      { property: 'og:title', content: 'MojoBus - Perpetual Traveler Blog' },
-      { property: 'og:description', content: 'Perpetual Traveler Blog. Unser Leben am Meer, vanlife, offgrid und Reisen.' },
+      { property: 'og:title', content: 'MojoBus - Perpetual Travelers Blog' },
+      { property: 'og:description', content: 'Perpetual Travelers Blog. Unser Leben am Meer, vanlife, offgrid und Reisen.' },
       { property: 'og:type', content: 'website' }
     ],
       link: [
         { rel: 'canonical', href: 'https://mojobus.co' }
-    ]
+      ]
   });
 
   // PERFORMANCE-OPTIMIERUNG: Home-Spezifische Limits
@@ -222,7 +222,7 @@ export function Home() {
           <div className="max-w-5xl mx-auto text-center space-y-10">
             <div className="space-y-6">
               <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-tight">
-                <span className="gradient-text">Perpetual Traveler</span>
+                <span className="gradient-text">Perpetual Travelers</span>
               </h1>
               <h2 className="text-3xl md:text-5xl font-serif text-muted-foreground leading-relaxed">
                 Unser Leben am Meer
