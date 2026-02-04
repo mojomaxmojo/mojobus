@@ -42,6 +42,9 @@ export default defineConfig(() => ({
       'react-leaflet',
       'ngeohash',
     ],
+    exclude: [
+      '@react-leaflet/core',
+    ],
     force: true,
   },
   build: {
