@@ -14,9 +14,6 @@
     "clean": "rm -rf dist .build-cache.json .assets-cache.json",
     "cache:clear": "npm run clean"
   },
-  "overrides": {
-    "@react-leaflet/core": "npm:react-leaflet@4.2.1"
-  },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/playfair-display": "^5.2.8",
