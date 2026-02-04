@@ -180,10 +180,10 @@ function Articles() {
               {currentCountry ? (
                 <span className="flex items-center justify-center gap-3">
                   <span className="text-3xl">{currentCountry.flag}</span>
-                  Artikel aus {currentCountry.name}
+                  <span className="gradient-text">Artikel aus {currentCountry.name}</span>
                 </span>
               ) : (
-                'Artikel'
+                <span className="gradient-text">Artikel</span>
               )}
             </h1>
             <p className="text-xl text-muted-foreground">
