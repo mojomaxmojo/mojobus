@@ -1388,10 +1388,40 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
           }
         }
       }
-    };
+     };
 
-    autoFillLocation();
-  }, [imageGpsData]);
+    useEffect(() => {
+      const autoFillLocation = async () => {
+        // Use GPS from first image if available
+        const firstGpsData = Object.values(imageGpsData)[0];
+        const firstGpsStatus = Object.values(imageGpsStatuses)[0];
+
+        if (firstGpsData && firstGpsStatus && !firstGpsStatus.includes('manual')) {
+          console.log('[Note GPS] GPS detected, reverse geocoding...');
+          const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
+          if (locationData) {
+            // Set location to city + neighbourhood/suburb (no postcode)
+            const locationParts = [
+              locationData.city,
+              locationData.neighbourhood,
+              locationData.suburb
+            ].filter(Boolean);
+            const loc = locationParts.join(', ');
+            setLocation(loc);
+            console.log('[Note GPS] Location found:', loc);
+
+            // Auto-fill country if detected
+            const country = mapCountryCode(locationData);
+            if (country && !selectedCountry) {
+              setSelectedCountry(country);
+              console.log('[Note GPS] Country auto-filled:', country);
+            }
+          }
+        }
+      };
+
+      autoFillLocation();
+    }, [imageGpsData]);
 
   const handleSubmit = () => {
     if (!content.trim()) {
