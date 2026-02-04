@@ -279,6 +279,8 @@ export interface LocationData {
   display_name?: string;
   /** Suburb or district (for more precision) */
   suburb?: string;
+  /** Neighborhood or quarter (very precise) */
+  neighbourhood?: string;
   /** County or region */
   county?: string;
   /** Postal code */
@@ -309,7 +311,7 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     // Extract relevant location information
     const address = data.address || {};
     const locationData: LocationData = {
-      // Try to get the most specific locality name
+      // Try to get most specific locality name
       city: address.city ||
             address.town ||
             address.village ||
@@ -320,6 +322,7 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
       countryCode: address.country_code?.toUpperCase(),
       county: address.county,
       suburb: address.suburb,
+      neighbourhood: address.neighbourhood,
       postcode: address.postcode,
       fullAddress: data.display_name,
       display_name: data.display_name

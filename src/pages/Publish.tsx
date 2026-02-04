@@ -103,14 +103,20 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
   // Auto-fill location from first GPS-detected image
   useEffect(() => {
-    const autoFillLocation = async () => {
+     const autoFillLocation = async () => {
       const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
       if (firstGpsImage && !location) {
         console.log('[Media GPS] GPS detected, reverse geocoding...');
         const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
         if (locationData) {
-          // Set location to city or full address
-          const loc = locationData.city || locationData.fullAddress || '';
+          // Set location to city + neighbourhood/suburb
+          const locationParts = [
+            locationData.city,
+            locationData.neighbourhood,
+            locationData.suburb,
+            locationData.postcode
+          ].filter(Boolean);
+          const loc = locationParts.join(', ');
           setLocation(loc);
           console.log('[Media GPS] Location found:', loc);
 
@@ -1354,7 +1360,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     });
   };
 
-  // Auto-fill location and country from GPS data (first image)
+   // Auto-fill location and country from GPS data (first image)
   useEffect(() => {
     const autoFillLocation = async () => {
       // Use GPS from first image if available
@@ -1365,8 +1371,14 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         console.log('[Note GPS] GPS detected, reverse geocoding...');
         const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
         if (locationData) {
-          // Set location to city or full address
-          const loc = locationData.city || locationData.fullAddress || '';
+          // Set location to city + neighbourhood/suburb
+          const locationParts = [
+            locationData.city,
+            locationData.neighbourhood,
+            locationData.suburb,
+            locationData.postcode
+          ].filter(Boolean);
+          const loc = locationParts.join(', ');
           setLocation(loc);
           console.log('[Note GPS] Location found:', loc);
 
@@ -1894,15 +1906,21 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     { value: 'berg', label: 'Berg', icon: '⛰️' }
   ];
 
-  // Auto-fill location and country from GPS data
+   // Auto-fill location and country from GPS data
   useEffect(() => {
     const autoFillLocation = async () => {
       if (imageGps && !imageGpsStatus.includes('manual')) {
         console.log('[Place GPS] GPS detected, reverse geocoding...');
         const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
         if (locationData) {
-          // Set location to city or full address
-          const loc = locationData.city || locationData.fullAddress || '';
+          // Set location to city + neighbourhood/suburb
+          const locationParts = [
+            locationData.city,
+            locationData.neighbourhood,
+            locationData.suburb,
+            locationData.postcode
+          ].filter(Boolean);
+          const loc = locationParts.join(', ');
           setLocation(loc);
           console.log('[Place GPS] Location found:', loc);
 
@@ -2701,15 +2719,21 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     }
   };
 
-  // Auto-fill location from GPS data
+   // Auto-fill location from GPS data
   useEffect(() => {
     const autoFillLocation = async () => {
       if (imageGps && !imageGpsStatus.includes('manual')) {
         console.log('[Article GPS] GPS detected, reverse geocoding...');
         const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
         if (locationData) {
-          // Set location to city or full address
-          const loc = locationData.city || locationData.fullAddress || '';
+          // Set location to city + neighbourhood/suburb
+          const locationParts = [
+            locationData.city,
+            locationData.neighbourhood,
+            locationData.suburb,
+            locationData.postcode
+          ].filter(Boolean);
+          const loc = locationParts.join(', ');
           setLocation(loc);
           console.log('[Article GPS] Location found:', loc);
 
