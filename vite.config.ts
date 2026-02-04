@@ -195,14 +195,6 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Node.js polyfills
-      buffer: 'buffer',
-      events: 'events',
-      stream: 'stream-browserify',
-      util: 'util',
-      process: 'process',
-      // Force react-leaflet/core to use correct version
-      '@react-leaflet/core': 'react-leaflet/core',
     },
   },
   // Additional configuration to handle CommonJS
