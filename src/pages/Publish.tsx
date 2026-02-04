@@ -103,13 +103,29 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
   // Auto-fill location from first GPS-detected image
   useEffect(() => {
-    const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
-    if (firstGpsImage && !location) {
-      const coords = formatCoordinates(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
-      setLocation(coords);
-      console.log('[Auto-fill] Location auto-filled from GPS:', coords);
-    }
-  }, [files, location]);
+    const autoFillLocation = async () => {
+      const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
+      if (firstGpsImage && !location) {
+        console.log('[Media GPS] GPS detected, reverse geocoding...');
+        const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
+        if (locationData) {
+          // Set location to city or full address
+          const loc = locationData.city || locationData.fullAddress || '';
+          setLocation(loc);
+          console.log('[Media GPS] Location found:', loc);
+
+          // Auto-fill country if detected
+          const country = mapCountryCode(locationData);
+          if (country && !selectedCountry) {
+            setSelectedCountry(country);
+            console.log('[Media GPS] Country auto-filled:', country);
+          }
+        }
+      }
+    };
+
+    autoFillLocation();
+  }, [files, location, selectedCountry]);
 
   // Handler functions
   const handleMainCategoryChange = (value: string) => {
