@@ -161,12 +161,18 @@ function Articles() {
 
   const hasContent = filteredArticles.length > 0;
 
-  return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-8">
+   return (
+    <>
+      {/* Page Header mit Gradient Background */}
+      <section className="relative py-12 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-4">
-            <h1 className="text-4xl md:text-5xl font-bold">
+            <h1 className="text-4xl md:text-6xl font-bold">
               {currentCountry ? (
                 <span className="flex items-center justify-center gap-3">
                   <span className="text-3xl">{currentCountry.flag}</span>
@@ -176,12 +182,20 @@ function Articles() {
                 'Artikel'
               )}
             </h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
+            <p className="text-xl text-muted-foreground">
               {currentCountry
-                ? `Geschichten, Tipps und Einblicke aus unserem Reisen in ${currentCountry.name}`
+                ? `Geschichten, Tipps und Einblicke aus unseren Reisen in ${currentCountry.name}`
                 : 'Geschichten, Tipps und Einblicke aus unserem Leben als Perpetual Traveler'
               }
             </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="min-h-screen pb-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Article Count */}
             <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <span className="font-semibold">{filteredArticles.length}</span>
@@ -201,7 +215,6 @@ function Articles() {
                 </Link>
               )}
             </div>
-          </div>
 
           {/* Artikel-Kategorien Untermenü (nur auf Hauptseite anzeigen) */}
           {!currentCountry && (
@@ -372,10 +385,11 @@ function Articles() {
                 </Card>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
+    </>
   );
 }
 
