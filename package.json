@@ -116,7 +116,7 @@
     "lucide-react": "^0.462.0",
     "leaflet": "^1.9.4",
     "ngeohash": "^0.6.3",
-    "react-leaflet": "^4.3.1",
+    "react-leaflet": "4.2.1",
     "mdast-util-from-markdown": "^2.0.2",
     "mdast-util-gfm-autolink-literal": "^2.0.1",
     "mdast-util-gfm-footnote": "^2.1.0",
