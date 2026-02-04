@@ -15,7 +15,7 @@ import { COUNTRIES } from '@/config';
 import { Search, Calendar, User, Loader2, Wrench, Dog, MapPin } from 'lucide-react';
 import { useState, useMemo, memo, useEffect, useRef } from 'react';
 import { nip19 } from 'nostr-tools';
-import type { NostrEvent } from '@nostrify/nostrify';
+import type { NostrEvent, NostrMetadata } from '@nostrify/nostrify';
 import { AUTHORS } from '@/config/nostr';
 import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { useInView } from 'react-intersection-observer';
@@ -66,7 +66,8 @@ function Articles() {
   }, [allArticles]);
 
   // 🔥 OPTIMIZATION 1: Batch-Abruf aller Autoren-Profile (statt pro Artikel)
-  const authors = useAuthors(uniquePubkeys);
+  const authorsQuery = useAuthors(uniquePubkeys);
+  const authors = authorsQuery.data || new Map();
 
   // Filter articles mit intelligenter Ländererkennung
   const filteredArticles = useMemo(() => {
@@ -378,7 +379,7 @@ const ArticleCard = memo(function ArticleCard({
   articlesMetadata,
 }: {
   article: NostrEvent;
-  authorsMap: Map<string, { event?: NostrEvent; metadata?: any }>;
+  authorsMap: Map<string, { event?: NostrEvent; metadata?: NostrMetadata }>;
   articlesMetadata: Map<string, any>;
 }) {
   // 🔥 OPTIMIZATION 2: Gecachte Metadata statt neu berechnet
