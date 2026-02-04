@@ -13,13 +13,19 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
-    nodePolyfills({
+     nodePolyfills({
       // Whether to polyfill specific globals.
       globals: {
         Buffer: true,
         global: true,
         process: true,
       },
+      // Exclude leaflet from polyfills - it doesn't need them
+      exclude: ['leaflet'],
+      // Whether to polyfill `process` and `Buffer` for the `browser` field in package.json
+      process: true,
+      buffer: true,
+     }),
       // Whether to polyfill `process` and `Buffer` for the `browser` field in package.json
       process: true,
       buffer: true,
