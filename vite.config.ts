@@ -1,7 +1,6 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 import { defineConfig } from "vitest/config";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
 
@@ -13,22 +12,11 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
-    // Commented out - causing issues with react-leaflet
-    // nodePolyfills({
-    //   globals: {
-    //     Buffer: true,
-    //     global: true,
-    //     process: true,
-    //   },
-    //   exclude: ['leaflet'],
-    //   process: true,
-    //   buffer: true,
-    // }),
   ],
   // Node.js polyfills for nostr-tools
-  define: {
-    'process.env': '{}',
-  },
+  // define: {
+  //   'process.env': '{}',
+  // },
   optimizeDeps: {
     include: [
       'react',
