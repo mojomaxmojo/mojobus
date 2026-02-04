@@ -1283,12 +1283,33 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
 
 
-  const handleImageSelect = (files: FileList | null) => {
+  const handleImageSelect = async (files: FileList | null) => {
     if (!files) return;
 
     // Filter for image files only
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     setImageFiles(prev => [...prev, ...imageFiles]);
+
+    // Extract GPS from each image immediately upon selection
+    const startIndex = imageUrls.length;
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
+      const index = startIndex + i;
+
+      try {
+        const gpsData = await extractGpsFromImage(file);
+        if (gpsData) {
+          setImageGpsData(prev => ({ ...prev, [index]: gpsData }));
+          setImageGpsStatuses(prev => ({ ...prev, [index]: 'detected' }));
+          console.log(`[Note GPS] Extracted from ${file.name} (image ${index}):`, gpsData);
+        } else {
+          setImageGpsStatuses(prev => ({ ...prev, [index]: 'not_found' }));
+        }
+      } catch (error) {
+        console.error(`[Note GPS] Failed to extract from ${file.name}:`, error);
+        setImageGpsStatuses(prev => ({ ...prev, [index]: 'error' }));
+      }
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -1312,23 +1333,6 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         const file = imageFiles[i];
         const [urlTag] = await uploadFile(file);
         uploadedUrls.push(urlTag[1]); // URL is in second position
-
-      // Extract GPS from each image
-      try {
-        const gpsData = await extractGpsFromImage(file);
-        const index = startIndex + i;
-        if (gpsData) {
-          setImageGpsData(prev => ({ ...prev, [index]: gpsData }));
-          setImageGpsStatuses(prev => ({ ...prev, [index]: 'detected' }));
-          console.log(`[Note GPS] Extracted from ${file.name} (image ${index}):`, gpsData);
-        } else {
-          setImageGpsStatuses(prev => ({ ...prev, [index]: 'not_found' }));
-        }
-      } catch (error) {
-        const index = startIndex + i;
-        console.error(`[Note GPS] Failed to extract from ${file.name}:`, error);
-        setImageGpsStatuses(prev => ({ ...prev, [index]: 'error' }));
-      }
       }
 
       setImageUrls(prev => [...prev, ...uploadedUrls]);
@@ -1359,38 +1363,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     });
   };
 
-   // Auto-fill location and country from GPS data (first image)
+  // Auto-fill location and country from GPS data (first image)
   useEffect(() => {
-    const autoFillLocation = async () => {
-      // Use GPS from first image if available
-      const firstGpsData = Object.values(imageGpsData)[0];
-      const firstGpsStatus = Object.values(imageGpsStatuses)[0];
-
-      if (firstGpsData && firstGpsStatus && !firstGpsStatus.includes('manual')) {
-        console.log('[Note GPS] GPS detected, reverse geocoding...');
-        const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
-        if (locationData) {
-          // Set location to city + neighbourhood/suburb (no postcode)
-          const locationParts = [
-            locationData.city,
-            locationData.neighbourhood,
-            locationData.suburb
-          ].filter(Boolean);
-          const loc = locationParts.join(', ');
-          setLocation(loc);
-          console.log('[Note GPS] Location found:', loc);
-
-          // Auto-fill country if detected
-          const country = mapCountryCode(locationData);
-          if (country && !selectedCountry) {
-            setSelectedCountry(country);
-            console.log('[Note GPS] Country auto-filled:', country);
-          }
-        }
-      }
-     };
-
-    useEffect(() => {
       const autoFillLocation = async () => {
         // Use GPS from first image if available
         const firstGpsData = Object.values(imageGpsData)[0];
