@@ -41,7 +41,7 @@ export function About() {
             <div className="flex justify-center mb-6">
               <Waves className="h-16 w-16 text-primary wave-animation" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold">Über Uns</h1>
+            <h1 className="text-4xl md:text-6xl font-bold"><span className="gradient-text">Über Uns</span></h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Perpetual Traveler – Leben zwischen Sand und Horizont
             </p>

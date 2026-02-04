@@ -145,10 +145,10 @@ export function Notes() {
               {currentCountry ? (
                 <span className="flex items-center justify-center gap-3">
                   <span className="text-3xl">{currentCountry.flag}</span>
-                  Notes aus {currentCountry.name}
+                  <span className="gradient-text">Notes aus {currentCountry.name}</span>
                 </span>
               ) : (
-                'Notes'
+                <span className="gradient-text">Notes</span>
               )}
             </h1>
             <p className="text-xl text-muted-foreground">

@@ -138,7 +138,7 @@ export default function MapPage() {
         <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-4">
             <h1 className="text-4xl md:text-6xl font-bold">
-              🗺️ Europa Map
+              <span className="gradient-text">🗺️ Europa Map</span>
             </h1>
             <p className="text-xl text-muted-foreground">
               GPS-aktivierte Beiträge auf einer interaktiven Karte
