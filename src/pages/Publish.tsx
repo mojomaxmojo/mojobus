@@ -1273,6 +1273,34 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       const imageTags = editEvent.tags?.filter((tag: any) => tag[0] === 'image')?.map((tag: any) => tag[1]) || [];
       if (imageTags.length > 0) {
         setImageUrls(imageTags);
+
+        // Load GPS data from tags for each image
+        // GPS tags are stored sequentially with image tags
+        const allGpsLatTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_lat')?.map((tag: any) => tag[1]) || [];
+        const allGpsLonTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_lon')?.map((tag: any) => tag[1]) || [];
+        const allGpsAltTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_alt')?.map((tag: any) => tag[1]) || [];
+        const allGpsPrecisionTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_precision')?.map((tag: any) => tag[1]) || [];
+        const allGpsSourceTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_source')?.map((tag: any) => tag[1]) || [];
+
+        // Assign GPS data to images by index
+        allGpsLatTags.forEach((lat, index) => {
+          if (index < imageTags.length) {
+            setImageGpsData(prev => ({
+              ...prev,
+              [index]: {
+                latitude: parseFloat(lat),
+                longitude: parseFloat(allGpsLonTags[index]),
+                altitude: allGpsAltTags[index] ? parseFloat(allGpsAltTags[index]) : undefined,
+                precision: allGpsPrecisionTags[index] || 'medium'
+              }
+            }));
+            setImageGpsStatuses(prev => ({
+              ...prev,
+              [index]: (allGpsSourceTags[index] as GpsStatus) || 'detected'
+            }));
+          }
+        });
+        console.log('[Note Edit] GPS data loaded from tags for', imageTags.length, 'images');
       }
     }
   }, [editEvent]);
@@ -2788,6 +2816,24 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       const foundCountry = eventTags.find(tag => countryTags.includes(tag));
       if (foundCountry) {
         setSelectedCountry(foundCountry);
+      }
+
+      // Load GPS data from tags
+      const gpsLat = editEvent.tags?.find((tag: any) => tag[0] === 'gps_lat')?.[1];
+      const gpsLon = editEvent.tags?.find((tag: any) => tag[0] === 'gps_lon')?.[1];
+      const gpsAlt = editEvent.tags?.find((tag: any) => tag[0] === 'gps_alt')?.[1];
+      const gpsPrecision = editEvent.tags?.find((tag: any) => tag[0] === 'gps_precision')?.[1];
+      const gpsSource = editEvent.tags?.find((tag: any) => tag[0] === 'gps_source')?.[1] as GpsStatus;
+
+      if (gpsLat && gpsLon) {
+        setImageGps({
+          latitude: parseFloat(gpsLat),
+          longitude: parseFloat(gpsLon),
+          altitude: gpsAlt ? parseFloat(gpsAlt) : undefined,
+          precision: gpsPrecision || 'medium'
+        });
+        setImageGpsStatus(gpsSource || 'detected');
+        console.log('[Article Edit] GPS data loaded from tags:', { gpsLat, gpsLon, gpsAlt, gpsSource });
       }
     } else {
       // Bei neuen Beiträgen: aktuelles Datum setzen
