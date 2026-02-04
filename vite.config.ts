@@ -1,7 +1,6 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 import { defineConfig } from "vitest/config";
 import { DEFAULT_PERFORMANCE_CONFIG } from "./src/config/performance.config";
 
@@ -13,22 +12,11 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
-    nodePolyfills({
-      // Whether to polyfill specific globals.
-      globals: {
-        Buffer: true,
-        global: true,
-        process: true,
-      },
-      // Whether to polyfill `process` and `Buffer` for the `browser` field in package.json
-      process: true,
-      buffer: true,
-    }),
   ],
   // Node.js polyfills for nostr-tools
-  define: {
-    'process.env': '{}',
-  },
+  // define: {
+  //   'process.env': '{}',
+  // },
   optimizeDeps: {
     include: [
       'react',
@@ -38,6 +26,12 @@ export default defineConfig(() => ({
       '@nostrify/react',
       '@nostrify/nostrify',
       'dijkstrajs',
+      'leaflet',
+      'ngeohash',
+    ],
+    exclude: [
+      '@react-leaflet/core',
+      'react-leaflet',
     ],
     force: true,
   },
@@ -201,12 +195,6 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Node.js polyfills
-      buffer: 'buffer',
-      events: 'events',
-      stream: 'stream-browserify',
-      util: 'util',
-      process: 'process',
     },
   },
   // Additional configuration to handle CommonJS

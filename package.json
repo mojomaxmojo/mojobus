@@ -14,9 +14,11 @@
     "clean": "rm -rf dist .build-cache.json .assets-cache.json",
     "cache:clear": "npm run clean"
   },
+,  "overrides": {\n    "@react-leaflet\/core": "npm:react-leaflet@4.2.1"\n  \}
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/playfair-display": "^5.2.8",
+    "@types/leaflet": "^1.9.12",
     "@getalby/sdk": "^5.1.1",
     "@hookform/resolvers": "^3.9.0",
     "@jridgewell/source-map": "^0.3.6",
@@ -113,6 +115,9 @@
     "linkifyjs": "^4.3.2",
     "longest-streak": "^3.1.0",
     "lucide-react": "^0.462.0",
+    "leaflet": "^1.9.4",
+    "ngeohash": "^0.6.3",
+    "react-leaflet": "4.2.1",
     "mdast-util-from-markdown": "^2.0.2",
     "mdast-util-gfm-autolink-literal": "^2.0.1",
     "mdast-util-gfm-footnote": "^2.1.0",
@@ -183,6 +188,7 @@
     "webln": "^0.3.2",
     "zod": "^3.25.71"
   },
+,  "overrides": {\n    "@react-leaflet\/core": "npm:react-leaflet@4.2.1"\n  \}
   "devDependencies": {
     "@eslint/js": "^9.9.0",
     "@fontsource/inter": "^5.2.8",
@@ -217,4 +223,6 @@
     "vite-plugin-node-polyfills": "^0.25.0",
     "vitest": "^3.1.4"
   }
+,  "overrides": {\n    "@react-leaflet\/core": "npm:react-leaflet@4.2.1"\n  \}
 }
+,  "overrides": {\n    "@react-leaflet\/core": "npm:react-leaflet@4.2.1"\n  \}

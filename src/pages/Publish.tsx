@@ -708,7 +708,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                     {/* GPS Info Display */}
                     {file.type === 'image' && (
                       <>
-                        {file.gps ? (
+                        {file.gps && file.gps.latitude && file.gps.longitude ? (
                           <div className="text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
                             <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
                               <MapPin className="h-3 w-3" />
@@ -1273,6 +1273,34 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       const imageTags = editEvent.tags?.filter((tag: any) => tag[0] === 'image')?.map((tag: any) => tag[1]) || [];
       if (imageTags.length > 0) {
         setImageUrls(imageTags);
+
+        // Load GPS data from tags for each image
+        // GPS tags are stored sequentially with image tags
+        const allGpsLatTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_lat')?.map((tag: any) => tag[1]) || [];
+        const allGpsLonTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_lon')?.map((tag: any) => tag[1]) || [];
+        const allGpsAltTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_alt')?.map((tag: any) => tag[1]) || [];
+        const allGpsPrecisionTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_precision')?.map((tag: any) => tag[1]) || [];
+        const allGpsSourceTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_source')?.map((tag: any) => tag[1]) || [];
+
+        // Assign GPS data to images by index
+        allGpsLatTags.forEach((lat, index) => {
+          if (index < imageTags.length) {
+            setImageGpsData(prev => ({
+              ...prev,
+              [index]: {
+                latitude: parseFloat(lat),
+                longitude: parseFloat(allGpsLonTags[index]),
+                altitude: allGpsAltTags[index] ? parseFloat(allGpsAltTags[index]) : undefined,
+                precision: allGpsPrecisionTags[index] || 'medium'
+              }
+            }));
+            setImageGpsStatuses(prev => ({
+              ...prev,
+              [index]: (allGpsSourceTags[index] as GpsStatus) || 'detected'
+            }));
+          }
+        });
+        console.log('[Note Edit] GPS data loaded from tags for', imageTags.length, 'images');
       }
     }
   }, [editEvent]);
@@ -1685,7 +1713,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                         alt={`Uploaded ${index + 1}`}
                         className="w-full h-20 object-cover"
                       />
-                      {gpsData && gpsStatus && (
+                      {gpsData && gpsStatus && gpsData.latitude && gpsData.longitude && (
                         <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1">
                            <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
                              <MapPin className="h-2.5 w-2.5" />
@@ -1988,6 +2016,24 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       if (foundCountry) {
         setSelectedCountry(foundCountry);
       }
+
+      // Load GPS data from tags
+      const gpsLat = editEvent.tags?.find((tag: any) => tag[0] === 'gps_lat')?.[1];
+      const gpsLon = editEvent.tags?.find((tag: any) => tag[0] === 'gps_lon')?.[1];
+      const gpsAlt = editEvent.tags?.find((tag: any) => tag[0] === 'gps_alt')?.[1];
+      const gpsPrecision = editEvent.tags?.find((tag: any) => tag[0] === 'gps_precision')?.[1];
+      const gpsSource = editEvent.tags?.find((tag: any) => tag[0] === 'gps_source')?.[1] as GpsStatus;
+
+      if (gpsLat && gpsLon) {
+        setImageGps({
+          latitude: parseFloat(gpsLat),
+          longitude: parseFloat(gpsLon),
+          altitude: gpsAlt ? parseFloat(gpsAlt) : undefined,
+          precision: gpsPrecision || 'medium'
+        });
+        setImageGpsStatus(gpsSource || 'detected');
+        console.log('[Place Edit] GPS data loaded from tags:', { gpsLat, gpsLon, gpsAlt, gpsSource });
+      }
     }
   }, [editEvent]);
 
@@ -2229,18 +2275,25 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     ];
 
     if (location.trim()) tags.push(['location', location]);
+
+    // Handle GPS coordinates - priority: manual coordinates > image GPS
     if (coordinates.lat && coordinates.lng) {
+      // Manual coordinates entered
       tags.push(['lat', coordinates.lat]);
       tags.push(['lng', coordinates.lng]);
-    }
-    if (price.trim()) tags.push(['price', price.trim()]);
-    if (image) tags.push(['image', image]);
-    additionalImages.forEach((img, index) => {
-      tags.push(['image', img]);
-    });
 
-    // Add GPS tags from title image
-    if (imageGps) {
+      // Also add as GPS tags for map display
+      const lat = parseFloat(coordinates.lat);
+      const lng = parseFloat(coordinates.lng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        tags.push(['gps_lat', lat.toString()]);
+        tags.push(['gps_lon', lng.toString()]);
+        tags.push(['gps_source', 'manual']);
+        tags.push(['gps_precision', 'manual']);
+        console.log('[Place] Manual GPS saved:', { lat, lng });
+      }
+    } else if (imageGps) {
+      // Use GPS from title image
       tags.push(['gps_lat', imageGps.latitude.toString()]);
       tags.push(['gps_lon', imageGps.longitude.toString()]);
       if (imageGps.altitude) {
@@ -2248,7 +2301,14 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       }
       tags.push(['gps_precision', imageGps.precision]);
       tags.push(['gps_source', imageGpsStatus]);
+      console.log('[Place] Image GPS saved:', imageGps);
     }
+
+    if (price.trim()) tags.push(['price', price.trim()]);
+    if (image) tags.push(['image', image]);
+    additionalImages.forEach((img, index) => {
+      tags.push(['image', img]);
+    });
 
     // Add country tags (nur wenn selectedCountry gewählt wurde)
     if (selectedCountry) {
@@ -2397,7 +2457,7 @@ Beschreibe hier den Ort, was macht ihn besonders...
                   )}
                   
                   {/* GPS Info Display */}
-                  {imageGps ? (
+                  {imageGps && imageGps.latitude && imageGps.longitude ? (
                     <div className="mt-2 text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
                        <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
                          <MapPin className="h-3 w-3" />
@@ -2770,6 +2830,24 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       const foundCountry = eventTags.find(tag => countryTags.includes(tag));
       if (foundCountry) {
         setSelectedCountry(foundCountry);
+      }
+
+      // Load GPS data from tags
+      const gpsLat = editEvent.tags?.find((tag: any) => tag[0] === 'gps_lat')?.[1];
+      const gpsLon = editEvent.tags?.find((tag: any) => tag[0] === 'gps_lon')?.[1];
+      const gpsAlt = editEvent.tags?.find((tag: any) => tag[0] === 'gps_alt')?.[1];
+      const gpsPrecision = editEvent.tags?.find((tag: any) => tag[0] === 'gps_precision')?.[1];
+      const gpsSource = editEvent.tags?.find((tag: any) => tag[0] === 'gps_source')?.[1] as GpsStatus;
+
+      if (gpsLat && gpsLon) {
+        setImageGps({
+          latitude: parseFloat(gpsLat),
+          longitude: parseFloat(gpsLon),
+          altitude: gpsAlt ? parseFloat(gpsAlt) : undefined,
+          precision: gpsPrecision || 'medium'
+        });
+        setImageGpsStatus(gpsSource || 'detected');
+        console.log('[Article Edit] GPS data loaded from tags:', { gpsLat, gpsLon, gpsAlt, gpsSource });
       }
     } else {
       // Bei neuen Beiträgen: aktuelles Datum setzen

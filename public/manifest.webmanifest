@@ -1,7 +1,7 @@
 {
   "name": "MojoBus",
   "short_name": "MojoBus",
-  "description": "Perpetual Traveler Blog - Unser Leben am Meer, vanlife, offgrid und Reisen",
+  "description": "Perpetual Travelers Blog - Unser Leben am Meer, vanlife, offgrid und Reisen",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0891B2",

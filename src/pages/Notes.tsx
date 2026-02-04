@@ -131,43 +131,40 @@ export function Notes() {
   }, [notes, searchQuery, selectedAuthor, currentCountry, country]);
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {/* Header */}
+    <>
+      {/* Page Header mit Gradient Background */}
+      <section className="relative py-12 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-4">
-            <h1 className="text-4xl md:text-5xl font-bold">
+            <h1 className="text-4xl md:text-6xl font-bold">
               {currentCountry ? (
                 <span className="flex items-center justify-center gap-3">
                   <span className="text-3xl">{currentCountry.flag}</span>
-                  Notes aus {currentCountry.name}
+                  <span className="gradient-text">Notes aus {currentCountry.name}</span>
                 </span>
               ) : (
-                'Notes'
+                <span className="gradient-text">Notes</span>
               )}
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-xl text-muted-foreground">
               {currentCountry
                 ? `Aktuelle Updates und Gedanken aus ${currentCountry.name}`
                 : 'Kurze Updates und Gedanken aus unserem Alltag am Meer'
               }
             </p>
-            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-semibold">{filteredNotes.length}</span>
-                <span>Notes{currentCountry ? ` aus ${currentCountry.name}` : ''}</span>
-              </span>
-              {currentCountry && (
-                <Link
-                  to="/notes"
-                  className="text-ocean-600 hover:text-ocean-700 underline"
-                >
-                  Alle Notes anzeigen
-                </Link>
-              )}
-            </div>
           </div>
+        </div>
+      </section>
 
+      <div className="min-h-screen pb-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto space-y-8">
+ 
           {/* Search and Author Filter */}
           <div className="space-y-4">
             {/* Author Filter */}
@@ -277,6 +274,7 @@ export function Notes() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

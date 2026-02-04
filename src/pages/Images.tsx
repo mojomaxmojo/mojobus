@@ -323,29 +323,56 @@ function Images() {
   const filteredEvents = events;
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-8">
+    <>
+      {/* Page Header mit Gradient Background */}
+      <section className="relative py-12 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-4">
-            <h1 className="text-4xl md:text-5xl font-bold">
+            <h1 className="text-4xl md:text-6xl font-bold">
               {currentCountry ? (
                 <span className="flex items-center justify-center gap-3">
                   <span className="text-3xl">{currentCountry.flag}</span>
-                  Bilder aus {currentCountry.name}
+                  <span className="gradient-text">Bilder aus {currentCountry.name}</span>
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-3">
-                  <Camera className="h-10 w-10 text-ocean-600" />
-                  Bilder
+                  <Camera className="h-10 w-10 text-primary" />
+                  <span className="gradient-text">Bilder</span>
                 </span>
               )}
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-xl text-muted-foreground">
               {currentCountry
                 ? `Fotografische Eindrücke und Momente aus ${currentCountry.name}`
                 : 'Unsere besten Momente und Eindrücke vom Leben auf Reisen'
               }
             </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="min-h-screen pb-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto space-y-8">
+            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="font-semibold">{filteredEvents.length}</span>
+                <span>Bilder{currentCountry ? ` aus ${currentCountry.name}` : ''}</span>
+              </span>
+              {currentCountry && (
+                <Link
+                  to="/bilder"
+                  className="text-ocean-600 hover:text-ocean-700 underline"
+                >
+                  Alle Bilder anzeigen
+                </Link>
+              )}
+            </div>
             <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <span className="font-semibold">{filteredEvents.length}</span>
@@ -406,10 +433,10 @@ function Images() {
                 </CardContent>
               </Card>
             </div>
-          )}
+           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

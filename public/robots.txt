@@ -1,5 +1,5 @@
 # robots.txt for mojobus.cc
-# MojoBus - Perpetual Traveler Blog
+# MojoBus - Perpetual Travelers Blog
 
 # User-agent: *
 User-agent: *
