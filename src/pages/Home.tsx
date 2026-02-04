@@ -259,14 +259,9 @@ export function Home() {
       </section>
 
       {/* Content Section with Modern Design */}
-      <section className="py-24 md:py-32">
+      <section className="py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16 fade-in-up">
-              <p className="text-2xl md:text-3xl font-serif text-muted-foreground leading-relaxed">
-                Geschichten, Tipps und Einblicke in unser Leben zwischen Sand und Horizont
-              </p>
-            </div>
 
             {isLoading ? (
               <Card className="border-dashed border-2 border-primary/30">
