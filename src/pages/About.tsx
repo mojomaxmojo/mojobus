@@ -189,15 +189,14 @@ export function About() {
                 <Badge variant="secondary" className="gap-1">
                   <Hash className="h-3 w-3" />
                   oceanview
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-    </div>
-  </>
+                 </Badge>
+               </div>
+             </CardContent>
+           </Card>
+         </div>
+       </div>
+     </div>
+     </>
   );
 }
 

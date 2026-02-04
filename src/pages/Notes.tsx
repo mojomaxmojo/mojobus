@@ -164,21 +164,6 @@ export function Notes() {
       <div className="min-h-screen pb-12">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto space-y-8">
-            {/* Notes Count */}
-            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-semibold">{filteredNotes.length}</span>
-                <span>Notes{currentCountry ? ` aus ${currentCountry.name}` : ''}</span>
-              </span>
-              {currentCountry && (
-                <Link
-                  to="/notes"
-                  className="text-ocean-600 hover:text-ocean-700 underline"
-                >
-                  Alle Notes anzeigen
-                </Link>
-              )}
-            </div>
  
           {/* Search and Author Filter */}
           <div className="space-y-4">

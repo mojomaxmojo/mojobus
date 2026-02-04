@@ -245,9 +245,10 @@ export default function MapPage() {
               ))}
             </MapContainer>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+         </CardContent>
+       </Card>
+     </div>
+    </>
   );
 }
 
