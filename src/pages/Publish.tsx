@@ -1246,6 +1246,10 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [isDragging, setIsDragging] = useState(false);
   const [imageGpsData, setImageGpsData] = useState<Record<number, GpsData>>({});
   const [imageGpsStatuses, setImageGpsStatuses] = useState<Record<number, GpsStatus>>({});
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishProgress, setPublishProgress] = useState({ stage: '', status: '' });
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1325,23 +1329,33 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const uploadImages = async () => {
     if (imageFiles.length === 0) return;
 
+    setIsUploadingImages(true);
+    setUploadProgress({ current: 0, total: imageFiles.length, status: 'Upload läuft...' });
+
     try {
       const uploadedUrls: string[] = [];
-      const startIndex = imageUrls.length;
 
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
         const [urlTag] = await uploadFile(file);
         uploadedUrls.push(urlTag[1]); // URL is in second position
+
+        // Update progress
+        setUploadProgress({ current: i + 1, total: imageFiles.length, status: 'Upload läuft...' });
       }
 
       setImageUrls(prev => [...prev, ...uploadedUrls]);
       setImageFiles([]);
+      setIsUploadingImages(false);
+      setUploadProgress({ current: imageFiles.length, total: imageFiles.length, status: '' });
+
       toast({
         title: 'Erfolg!',
         description: `${uploadedUrls.length} Bild(er) erfolgreich hochgeladen.`,
       });
     } catch (error) {
+      setIsUploadingImages(false);
+      setUploadProgress({ current: 0, total: 0, status: 'Upload fehlgeschlagen' });
       toast({
         title: 'Fehler',
         description: 'Bild-Upload fehlgeschlagen. Bitte versuche es erneut.',
@@ -1407,6 +1421,19 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       return;
     }
 
+    // Warn if there are unsaved images
+    if (imageFiles.length > 0) {
+      toast({
+        title: 'Achtung',
+        description: 'Bitte lade die ausgewählten Bilder zuerst hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsPublishing(true);
+    setPublishProgress({ stage: 'publish', status: 'Event wird zu Nostr gesendet...' });
+
     // Entferne Country-Tags aus tags, um Duplikate zu vermeiden
     const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
     const tagsWithoutCountry = tags.filter(tag =>
@@ -1468,27 +1495,43 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       kind: 1, // Note
       content: articleContent,
       tags: eventTags
+    }, {
+      onSuccess: () => {
+        setIsPublishing(false);
+        setPublishProgress({ stage: 'success', status: 'Erfolgreich veröffentlicht!' });
+
+        toast({
+          title: 'Erfolg!',
+          description: 'Note erfolgreich veroeffentlicht.'
+        });
+
+        // Reset form and redirect
+        setContent('');
+        setTags([]);
+        setLocation('');
+        setSelectedCountry('');
+        setImageFiles([]);
+        setImageUrls([]);
+        setImageGpsData({});
+        setImageGpsStatuses({});
+        setPublishProgress({ stage: '', status: '' });
+
+        // Redirect to notes page after successful publish
+        setTimeout(() => {
+          navigate('/notes');
+        }, 1000);
+      },
+      onError: (error) => {
+        setIsPublishing(false);
+        setPublishProgress({ stage: 'error', status: 'Veröffentlichung fehlgeschlagen' });
+
+        toast({
+          title: 'Fehler',
+          description: 'Veröffentlichung fehlgeschlagen. Bitte versuche es erneut.',
+          variant: 'destructive'
+        });
+      }
     });
-
-    toast({
-      title: 'Erfolg!',
-      description: 'Note erfolgreich veroeffentlicht.'
-    });
-
-    // Reset form and redirect
-    setContent('');
-    setTags([]);
-    setLocation('');
-    setSelectedCountry('');
-    setImageFiles([]);
-    setImageUrls([]);
-    setImageGpsData({});
-    setImageGpsStatuses({});
-
-    // Redirect to notes page after successful publish
-    setTimeout(() => {
-      navigate('/notes');
-    }, 1000);
   };
 
   return (
@@ -1558,12 +1601,40 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                 <Button
                   onClick={uploadImages}
                   size="sm"
-                  disabled={imageFiles.length === 0}
+                  disabled={imageFiles.length === 0 || isUploadingImages}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Hochladen
+                  {isUploadingImages ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Upload...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Hochladen
+                    </>
+                  )}
                 </Button>
               </div>
+
+              {/* Upload Progress */}
+              {isUploadingImages && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm text-ocean-600 dark:text-ocean-400">
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      {uploadProgress.status}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {uploadProgress.current} von {uploadProgress.total}
+                    </Badge>
+                  </div>
+                  <Progress
+                    value={(uploadProgress.current / uploadProgress.total) * 100}
+                    className="h-2"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {imageFiles.map((file, index) => (
                   <div key={index} className="relative group border rounded-lg overflow-hidden">
@@ -1754,11 +1825,32 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
             <Label htmlFor="note-public">Öffentlich sichtbar</Label>
           </div>
 
-          <Button onClick={handleSubmit} disabled={!content}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Note veroeffentlichen
+          <Button onClick={handleSubmit} disabled={!content || isPublishing || isUploadingImages}>
+            {isPublishing ? (
+              <>
+                {publishProgress.stage === 'publish' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {publishProgress.stage === 'success' && <CheckCircle className="h-4 w-4 mr-2" />}
+                {publishProgress.stage === 'error' && <span className="mr-2">⚠️</span>}
+                {publishProgress.stage === 'publish' && 'Note wird veröffentlicht...'}
+                {publishProgress.stage === 'success' && '✅ Erfolgreich!'}
+                {publishProgress.stage === 'error' && 'Fehler aufgetreten'}
+              </>
+            ) : (
+              <>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Note veroeffentlichen
+              </>
+            )}
           </Button>
         </div>
+
+        {/* Publishing Progress */}
+        {publishProgress.stage === 'publish' && (
+          <div className="flex items-center gap-3 text-sm text-ocean-600 dark:text-ocean-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <p>{publishProgress.status}</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
