@@ -5,7 +5,7 @@
  * Lazy-loaded to not affect initial page load
  */
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ L.Icon.Default.mergeOptions({
  */
 export default function MapPage() {
   const { data: markers = [], isLoading, error, refetch } = useGpsContent();
+  const [activeFilter, setActiveFilter] = useState<'all' | 'media' | 'note' | 'place' | 'article'>('all');
 
   // Filter markers to Europe only
   const europeMarkers = useMemo(() => {
@@ -44,6 +45,12 @@ export default function MapPage() {
       );
     });
   }, [markers]);
+
+  // Filter markers by type
+  const filteredMarkers = useMemo(() => {
+    if (activeFilter === 'all') return europeMarkers;
+    return europeMarkers.filter(m => m.type === activeFilter);
+  }, [europeMarkers, activeFilter]);
 
   // Count markers by type
   const counts = useMemo(() => ({
@@ -149,15 +156,35 @@ export default function MapPage() {
             <div className="flex items-center gap-1">
               <MapPin className="w-4 h-4" />
               <span>
-                <strong>{counts.total}</strong> Beiträge
+                <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
               </span>
             </div>
             <span className="text-muted-foreground">•</span>
-            <div className="flex items-center gap-4">
-              <span>📷 {counts.media}</span>
-              <span>📝 {counts.note}</span>
-              <span>📍 {counts.place}</span>
-              <span>📄 {counts.article}</span>
+            <div className="flex items-center gap-3">
+              <FilterButton
+                emoji="📷"
+                count={counts.media}
+                isActive={activeFilter === 'media'}
+                onClick={() => setActiveFilter(activeFilter === 'media' ? 'all' : 'media')}
+              />
+              <FilterButton
+                emoji="📝"
+                count={counts.note}
+                isActive={activeFilter === 'note'}
+                onClick={() => setActiveFilter(activeFilter === 'note' ? 'all' : 'note')}
+              />
+              <FilterButton
+                emoji="📍"
+                count={counts.place}
+                isActive={activeFilter === 'place'}
+                onClick={() => setActiveFilter(activeFilter === 'place' ? 'all' : 'place')}
+              />
+              <FilterButton
+                emoji="📄"
+                count={counts.article}
+                isActive={activeFilter === 'article'}
+                onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
+              />
             </div>
           </div>
         </CardContent>
@@ -189,7 +216,7 @@ export default function MapPage() {
               />
 
               {/* Map Markers */}
-              {europeMarkers.map((marker) => (
+              {filteredMarkers.map((marker) => (
                 <Marker
                   key={marker.id}
                   position={[marker.lat, marker.lon]}
@@ -205,5 +232,37 @@ export default function MapPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * Get filter label in German
+ */
+function getFilterLabel(filter: 'media' | 'note' | 'place' | 'article'): string {
+  const labels = {
+    media: 'Bilder',
+    note: 'Notizen',
+    place: 'Plätze',
+    article: 'Artikel'
+  };
+  return labels[filter];
+}
+
+/**
+ * Filter Button Component
+ */
+function FilterButton({ emoji, count, isActive, onClick }: { emoji: string; count: number; isActive: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+        isActive
+          ? 'bg-primary text-primary-foreground font-medium'
+          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+      }`}
+    >
+      <span>{emoji}</span>
+      <span>{count}</span>
+    </button>
   );
 }
