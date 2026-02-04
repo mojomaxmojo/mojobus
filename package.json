@@ -14,7 +14,9 @@
     "clean": "rm -rf dist .build-cache.json .assets-cache.json",
     "cache:clear": "npm run clean"
   },
-,  "overrides": {\n    "@react-leaflet\/core": "npm:react-leaflet@4.2.1"\n  \}
+  "overrides": {
+    "@react-leaflet/core": "npm:react-leaflet@4.2.1"
+  },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/playfair-display": "^5.2.8",
@@ -188,7 +190,6 @@
     "webln": "^0.3.2",
     "zod": "^3.25.71"
   },
-,  "overrides": {\n    "@react-leaflet\/core": "npm:react-leaflet@4.2.1"\n  \}
   "devDependencies": {
     "@eslint/js": "^9.9.0",
     "@fontsource/inter": "^5.2.8",
@@ -223,6 +224,4 @@
     "vite-plugin-node-polyfills": "^0.25.0",
     "vitest": "^3.1.4"
   }
-,  "overrides": {\n    "@react-leaflet\/core": "npm:react-leaflet@4.2.1"\n  \}
 }
-,  "overrides": {\n    "@react-leaflet\/core": "npm:react-leaflet@4.2.1"\n  \}
