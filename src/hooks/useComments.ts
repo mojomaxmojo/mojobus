@@ -8,6 +8,9 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
   return useQuery({
     queryKey: ['comments', root instanceof URL ? root.toString() : root.id, limit],
     queryFn: async (c) => {
+      console.log('[useComments] Starting query for root:', root instanceof URL ? root.toString() : root.id);
+      console.log('[useComments] Root kind:', root instanceof URL ? 'URL' : (root as NostrEvent).kind);
+      
       const filters: NostrFilter[] = [];
       
       // Build filters to catch comments using different tag formats
@@ -41,11 +44,15 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
         filters.forEach(f => f.limit = limit);
       }
 
+      console.log('[useComments] Built filters:', JSON.stringify(filters, null, 2));
+
       // Query for all kind 1111 comments using all filter variations
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
       const allEvents = await Promise.all(
         filters.map(filter => nostr.query([filter], { signal }))
       );
+      
+      console.log('[useComments] Query results:', allEvents.map(events => events.length));
       
       // Flatten and deduplicate events by ID
       const eventMap = new Map<string, NostrEvent>();
@@ -55,6 +62,8 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
         }
       }
       const events = Array.from(eventMap.values());
+      
+      console.log('[useComments] Total unique events after deduplication:', events.length);
 
       // Helper function to get tag value (case-insensitive)
       const getTagValue = (event: NostrEvent, tagName: string): string | undefined => {
@@ -117,6 +126,13 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
 
       // Sort top-level comments by creation time (newest first)
       const sortedTopLevel = topLevelComments.sort((a, b) => b.created_at - a.created_at);
+      
+      console.log('[useComments] Top-level comments found:', sortedTopLevel.length);
+      console.log('[useComments] Top-level comments:', sortedTopLevel.map(c => ({
+        id: c.id.substring(0, 8),
+        content: c.content.substring(0, 50),
+        tags: c.tags
+      })));
 
       return {
         allComments: events,
