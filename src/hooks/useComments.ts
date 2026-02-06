@@ -2,6 +2,15 @@ import { NKinds, NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 
+// Public relays that support NIP-22 comments
+const COMMENT_RELAYS = [
+  'wss://relay.mojobus.co',
+  'wss://relays.mojobus.co',
+  'wss://relay.primal.net',
+  'wss://relay.damus.io',
+  'wss://nos.lol',
+];
+
 export function useComments(root: NostrEvent | URL, limit?: number) {
   const { nostr } = useNostr();
 
@@ -48,10 +57,15 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
       window.console.log('[useComments] Built filters:', JSON.stringify(filters, null, 2));
 
       // Query for all kind 1111 comments using all filter variations
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
+      // Use a relay group with public relays that support NIP-22
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
+      const commentRelayGroup = nostr.group(COMMENT_RELAYS);
+      
       const allEvents = await Promise.all(
-        filters.map(filter => nostr.query([filter], { signal }))
+        filters.map(filter => commentRelayGroup.query([filter], { signal }))
       );
+      
+      window.console.log('[useComments] Queried relays:', COMMENT_RELAYS);
       
       window.console.log('[useComments] Query results:', allEvents.map(events => events.length));
       
