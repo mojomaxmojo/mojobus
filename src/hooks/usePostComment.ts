@@ -26,13 +26,17 @@ export function usePostComment() {
         tags.push(['I', root.toString()]);
       } else if (NKinds.addressable(root.kind)) {
         tags.push(['A', `${root.kind}:${root.pubkey}:${dRoot}`]);
+        // Add E tag as well for addressable events per NIP-22
+        tags.push(['E', root.id, '', root.pubkey]);
       } else if (NKinds.replaceable(root.kind)) {
         tags.push(['A', `${root.kind}:${root.pubkey}:`]);
+        // Add E tag as well for replaceable events per NIP-22
+        tags.push(['E', root.id, '', root.pubkey]);
       } else {
-        tags.push(['E', root.id]);
+        tags.push(['E', root.id, '', root.pubkey]);
       }
       if (root instanceof URL) {
-        tags.push(['K', root.hostname]);
+        tags.push(['K', 'web']);
       } else {
         tags.push(['K', root.kind.toString()]);
         tags.push(['P', root.pubkey]);
@@ -44,13 +48,17 @@ export function usePostComment() {
           tags.push(['i', reply.toString()]);
         } else if (NKinds.addressable(reply.kind)) {
           tags.push(['a', `${reply.kind}:${reply.pubkey}:${dReply}`]);
+          // Add e tag as well for addressable events per NIP-22
+          tags.push(['e', reply.id, '', reply.pubkey]);
         } else if (NKinds.replaceable(reply.kind)) {
           tags.push(['a', `${reply.kind}:${reply.pubkey}:`]);
+          // Add e tag as well for replaceable events per NIP-22
+          tags.push(['e', reply.id, '', reply.pubkey]);
         } else {
-          tags.push(['e', reply.id]);
+          tags.push(['e', reply.id, '', reply.pubkey]);
         }
         if (reply instanceof URL) {
-          tags.push(['k', reply.hostname]);
+          tags.push(['k', 'web']);
         } else {
           tags.push(['k', reply.kind.toString()]);
           tags.push(['p', reply.pubkey]);
@@ -61,13 +69,17 @@ export function usePostComment() {
           tags.push(['i', root.toString()]);
         } else if (NKinds.addressable(root.kind)) {
           tags.push(['a', `${root.kind}:${root.pubkey}:${dRoot}`]);
+          // Add e tag as well for addressable events per NIP-22
+          tags.push(['e', root.id, '', root.pubkey]);
         } else if (NKinds.replaceable(root.kind)) {
           tags.push(['a', `${root.kind}:${root.pubkey}:`]);
+          // Add e tag as well for replaceable events per NIP-22
+          tags.push(['e', root.id, '', root.pubkey]);
         } else {
-          tags.push(['e', root.id]);
+          tags.push(['e', root.id, '', root.pubkey]);
         }
         if (root instanceof URL) {
-          tags.push(['k', root.hostname]);
+          tags.push(['k', 'web']);
         } else {
           tags.push(['k', root.kind.toString()]);
           tags.push(['p', root.pubkey]);
