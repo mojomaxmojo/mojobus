@@ -17,10 +17,6 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
   return useQuery({
     queryKey: ['comments', root instanceof URL ? root.toString() : root.id, limit],
     queryFn: async (c) => {
-      // Force logs to appear in production
-      window.console.log('[useComments] Starting query for root:', root instanceof URL ? root.toString() : root.id);
-      window.console.log('[useComments] Root kind:', root instanceof URL ? 'URL' : (root as NostrEvent).kind);
-      
       const filters: NostrFilter[] = [];
       
       // Build filters to catch comments using different tag formats
@@ -63,20 +59,14 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
         filters.forEach(f => f.limit = limit);
       }
 
-      window.console.log('[useComments] Built filters:', JSON.stringify(filters, null, 2));
-
-      // Query for all kind 1111 comments using all filter variations
-      // Use a relay group with public relays that support NIP-22
+      // Query for all comments using all filter variations
+      // Use a relay group with public relays that support NIP-22 and NIP-10
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(8000)]);
       const commentRelayGroup = nostr.group(COMMENT_RELAYS);
       
       const allEvents = await Promise.all(
         filters.map(filter => commentRelayGroup.query([filter], { signal }))
       );
-      
-      window.console.log('[useComments] Queried relays:', COMMENT_RELAYS);
-      
-      window.console.log('[useComments] Query results:', allEvents.map(events => events.length));
       
       // Flatten and deduplicate events by ID
       const eventMap = new Map<string, NostrEvent>();
@@ -86,8 +76,6 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
         }
       }
       const events = Array.from(eventMap.values());
-      
-      window.console.log('[useComments] Total unique events after deduplication:', events.length);
 
       // Helper function to get tag value (case-insensitive)
       const getTagValue = (event: NostrEvent, tagName: string): string | undefined => {
@@ -195,17 +183,6 @@ export function useComments(root: NostrEvent | URL, limit?: number) {
 
       // Sort top-level comments by creation time (newest first)
       const sortedTopLevel = topLevelComments.sort((a, b) => b.created_at - a.created_at);
-      
-      window.console.log('[useComments] Top-level comments found:', sortedTopLevel.length);
-      window.console.log('[useComments] All events tags:', events.map(c => ({
-        id: c.id.substring(0, 8),
-        tags: c.tags
-      })));
-      window.console.log('[useComments] Top-level comments:', sortedTopLevel.map(c => ({
-        id: c.id.substring(0, 8),
-        content: c.content.substring(0, 50),
-        tags: c.tags
-      })));
 
       return {
         allComments: events,

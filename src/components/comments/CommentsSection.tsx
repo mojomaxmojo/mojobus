@@ -27,11 +27,6 @@ export function CommentsSection({
   const { data: commentsData, isLoading, error } = useComments(root, limit);
   const comments = commentsData?.topLevelComments || [];
 
-  // Debug info
-  const rootId = root instanceof URL ? root.toString() : root.id;
-  const rootKind = root instanceof URL ? 'URL' : root.kind;
-  const allCommentsCount = commentsData?.allComments?.length || 0;
-
   if (error) {
     return (
       <Card className="rounded-none sm:rounded-lg mx-0 sm:mx-0">
@@ -39,7 +34,6 @@ export function CommentsSection({
           <div className="text-center text-muted-foreground">
             <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>Failed to load comments</p>
-            <p className="text-xs mt-2">Error: {String(error)}</p>
           </div>
         </CardContent>
       </Card>
@@ -88,15 +82,6 @@ export function CommentsSection({
             <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
             <p className="text-lg font-medium mb-2">{emptyStateMessage}</p>
             <p className="text-sm">{emptyStateSubtitle}</p>
-            <div className="mt-4 p-3 bg-muted/50 rounded text-xs text-left">
-              <div className="font-mono space-y-1">
-                <div>🔍 Debug Info:</div>
-                <div>Root ID: {rootId.substring(0, 16)}...</div>
-                <div>Root Kind: {rootKind}</div>
-                <div>All Events Found: {allCommentsCount}</div>
-                <div>Top-Level Comments: {comments.length}</div>
-              </div>
-            </div>
           </div>
         ) : (
           <div className="space-y-4">
