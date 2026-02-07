@@ -28,7 +28,7 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
       naddr = nip19.noteEncode(marker.id);
     } else if (marker.kind === 30023) {
       // Long-form article - use naddr
-      const d = marker.tags.find(t => t[0] === 'd')?.[1] || `post-${marker.id}`;
+      const d = marker.event.tags.find(t => t[0] === 'd')?.[1] || `post-${marker.id}`;
 
       // Get author-specific relay configuration
       const authorRelayConfig = getAuthorRelayConfigByPubkey(marker.author);
@@ -45,7 +45,9 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
     console.error('Error generating naddr:', error);
   }
 
-  const href = `/${naddr}`;
+  // Generate href based on content type
+  // Media (images) go to /bild/{nip19}, everything else to /{nip19}
+  const href = marker.type === 'media' ? `/bild/${naddr}` : `/${naddr}`;
 
   return (
     <div className="p-3 min-w-[250px] max-w-[300px]">
