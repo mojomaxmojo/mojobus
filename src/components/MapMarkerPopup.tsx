@@ -46,8 +46,13 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
   }
 
   // Generate href based on content type
-  // Media (images) go to /bild/{nip19}, everything else to /{nip19}
-  const href = marker.type === 'media' ? `/bild/${naddr}` : `/${naddr}`;
+  // Media (images) go to /bild/{nip19}, articles to /artikel/{nip19}, everything else to /{nip19}
+  let href = `/${naddr}`;
+  if (marker.type === 'media') {
+    href = `/bild/${naddr}`;
+  } else if (marker.type === 'article') {
+    href = `/artikel/${naddr}`;
+  }
 
   return (
     <div className="p-3 min-w-[250px] max-w-[300px]">
