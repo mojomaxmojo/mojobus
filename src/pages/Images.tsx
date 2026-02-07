@@ -515,18 +515,14 @@ function ImageCardComponent({
             {images.length > 0 && (
                <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
                  {isVideoUrl(images[0]) ? (
-                   <div className="w-full h-full flex items-center justify-center">
-                     {/* Video thumbnail poster - just a placeholder */}
-                     <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                       <div className="text-6xl text-gray-400">▶️</div>
-                     </div>
-                     {/* Video indicator overlay */}
-                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                       <div className="bg-white/90 dark:bg-gray-800/90 rounded-full p-4">
-                         <ExternalLink className="h-8 w-8 text-gray-800 dark:text-white" />
-                       </div>
-                     </div>
-                   </div>
+                   <video
+                     src={images[0]}
+                     className="w-full h-full object-contain"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       window.open(images[0], '_blank');
+                     }}
+                   />
                  ) : (
                    <>
                      <img
