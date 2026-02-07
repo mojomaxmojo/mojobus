@@ -172,6 +172,8 @@ function parseEventToMarker(event: NostrEvent): MapMarker | null {
 export function useGpsContent() {
   const { nostr } = useNostr();
 
+  console.log('[useGpsContent] Component mounted, starting query...');
+
   return useQuery({
     queryKey: ['gps-content'],
     queryFn: async (c) => {
