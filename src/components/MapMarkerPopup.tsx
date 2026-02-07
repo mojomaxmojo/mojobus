@@ -45,7 +45,7 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
     console.error('Error generating naddr:', error);
   }
 
-  const href = `/${marker.kind === 1 ? 'note' : ''}${naddr}`;
+  const href = `/${naddr}`;
 
   return (
     <div className="p-3 min-w-[250px] max-w-[300px]">
