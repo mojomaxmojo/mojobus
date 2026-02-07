@@ -517,11 +517,7 @@ function ImageCardComponent({
                  {isVideoUrl(images[0]) ? (
                    <video
                      src={images[0]}
-                     className="w-full h-full object-contain"
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       window.open(images[0], '_blank');
-                     }}
+                     className="w-full h-full object-contain pointer-events-none"
                    />
                  ) : (
                    <>

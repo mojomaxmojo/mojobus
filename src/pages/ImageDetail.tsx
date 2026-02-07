@@ -401,11 +401,7 @@ export function ImageDetail() {
                    {isVideoUrl(images[0]) ? (
                      <video
                        src={images[0]}
-                       className="w-full h-auto object-contain bg-gray-100 dark:bg-gray-900 max-h-[800px]"
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         window.open(images[0], '_blank');
-                       }}
+                       className="w-full h-auto object-contain bg-gray-100 dark:bg-gray-900 max-h-[800px] pointer-events-none"
                      />
                    ) : (
                      <img
@@ -445,7 +441,7 @@ export function ImageDetail() {
                      {images.slice(1).map((img, index) => (
                        <div
                          key={index}
-                         className={`relative rounded-lg overflow-hidden ${isVideoUrl(img) ? 'bg-gray-900' : 'cursor-pointer'}`}
+                         className={`relative rounded-lg overflow-hidden ${isVideoUrl(img) ? 'cursor-pointer bg-gray-900' : 'cursor-pointer'}`}
                          onClick={() => {
                            if (isVideoUrl(img)) {
                              window.open(img, '_blank');
@@ -457,11 +453,7 @@ export function ImageDetail() {
                          {isVideoUrl(img) ? (
                            <video
                              src={img}
-                             className="w-full h-32 object-contain"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               window.open(img, '_blank');
-                             }}
+                             className="w-full h-32 object-contain pointer-events-none"
                            />
                          ) : (
                            <>
@@ -584,15 +576,11 @@ export function ImageDetail() {
             </Button>
           )}
 
-          {/* Main image/video */}
+           {/* Main image/video */}
           {isVideoUrl(images[currentImageIndex]) ? (
             <video
               src={images[currentImageIndex]}
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(images[currentImageIndex], '_blank');
-              }}
-              className="max-h-[90vh] max-w-[90vw] object-contain"
+              className="max-h-[90vh] max-w-[90vw] object-contain pointer-events-none"
             />
           ) : (
             <img
