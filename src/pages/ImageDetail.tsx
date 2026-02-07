@@ -390,7 +390,7 @@ export function ImageDetail() {
                      <video
                        src={images[0]}
                        controls
-                       className="w-full bg-gray-100 dark:bg-gray-900 max-h-[800px]"
+                       className="w-full h-auto object-contain bg-gray-100 dark:bg-gray-900 max-h-[800px]"
                        loading="eager"
                      />
                    ) : (
@@ -437,7 +437,7 @@ export function ImageDetail() {
                          {isVideoUrl(img) ? (
                            <video
                              src={img}
-                             className="w-full h-32 object-cover"
+                             className="w-full h-32 object-contain"
                              controls
                              loading="lazy"
                            />
