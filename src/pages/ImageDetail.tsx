@@ -195,6 +195,14 @@ export function ImageDetail() {
     setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
   };
 
+  const handleVideoClick = () => {
+    window.open(images[0], '_blank');
+  };
+
+  const handleFullscreenVideoClick = () => {
+    window.open(images[currentImageIndex], '_blank');
+  };
+
   // Only show invalid image error if NOT loading and NOT an image event
   if (!isLoading && !isValidImageEvent) {
     console.log('Event does not contain images or media tags, showing error');
@@ -383,16 +391,25 @@ export function ImageDetail() {
 
                  {/* Image/Video */}
                  <div
-                   className={`relative group ${isVideoUrl(images[0]) ? 'cursor-default' : 'cursor-pointer'}`}
-                   onClick={() => !isVideoUrl(images[0]) && openFullscreen(0)}
+                   className={`relative group ${isVideoUrl(images[0]) ? 'cursor-pointer' : 'cursor-pointer'}`}
+                   onClick={isVideoUrl(images[0]) ? handleVideoClick : () => openFullscreen(0)}
                  >
                    {isVideoUrl(images[0]) ? (
-                     <video
-                       src={images[0]}
-                       controls
-                       className="w-full h-auto object-contain bg-gray-100 dark:bg-gray-900 max-h-[800px]"
-                       loading="eager"
-                     />
+                     <div className="w-full h-auto object-contain bg-gray-100 dark:bg-gray-900 max-h-[800px] flex items-center justify-center">
+                       {/* Video placeholder */}
+                       <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                         <div className="text-6xl text-gray-400">▶️</div>
+                       </div>
+                       {/* Click to open overlay */}
+                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                         <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-4 flex flex-col items-center gap-2">
+                           <ExternalLink className="h-8 w-8 text-gray-800 dark:text-white" />
+                           <div className="text-gray-800 dark:text-white font-medium text-center">
+                             Klick zum Öffnen
+                           </div>
+                         </div>
+                       </div>
+                     </div>
                    ) : (
                      <img
                        src={getArticleHeaderUrl(images[0])}
@@ -432,15 +449,24 @@ export function ImageDetail() {
                        <div
                          key={index}
                          className={`relative rounded-lg overflow-hidden ${isVideoUrl(img) ? 'bg-gray-900' : 'cursor-pointer'}`}
-                         onClick={() => !isVideoUrl(img) && openFullscreen(index + 1)}
+                         onClick={() => {
+                           if (isVideoUrl(img)) {
+                             window.open(img, '_blank');
+                           } else {
+                             openFullscreen(index + 1);
+                           }
+                         }}
                        >
                          {isVideoUrl(img) ? (
-                           <video
-                             src={img}
-                             className="w-full h-32 object-contain"
-                             controls
-                             loading="lazy"
-                           />
+                           <div className="w-full h-32 object-contain bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                             <div className="text-4xl text-gray-400">▶️</div>
+                             {/* Click to open overlay */}
+                             <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                               <div className="bg-white/90 dark:bg-gray-800/90 rounded-full p-2">
+                                 <ExternalLink className="h-6 w-6 text-gray-800 dark:text-white" />
+                               </div>
+                             </div>
+                           </div>
                          ) : (
                            <>
                              <img
@@ -564,12 +590,17 @@ export function ImageDetail() {
 
           {/* Main image/video */}
           {isVideoUrl(images[currentImageIndex]) ? (
-            <video
-              src={images[currentImageIndex]}
-              controls
-              className="max-h-[90vh] max-w-[90vw] object-contain"
-              onClick={() => setIsImageFullscreen(false)}
-            />
+            <div className="flex flex-col items-center justify-center gap-4">
+              <div className="bg-gray-200 dark:bg-gray-700 flex items-center justify-center max-h-[80vh] max-w-[90vw] p-8 rounded-lg">
+                <div className="text-8xl text-gray-400">▶️</div>
+              </div>
+              <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-6 flex items-center gap-4">
+                <ExternalLink className="h-8 w-8 text-gray-800 dark:text-white" />
+                <div className="text-gray-800 dark:text-white font-medium">
+                  Video in neuem Fenster öffnen
+                </div>
+              </div>
+            </div>
           ) : (
             <img
               src={getArticleHeaderUrl(images[currentImageIndex])}
