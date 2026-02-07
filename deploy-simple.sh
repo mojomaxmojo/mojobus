@@ -275,9 +275,6 @@ summary() {
     echo "   Log: $LOG_FILE"
     echo ""
     info_msg "Teste: https://mojobus.co"
-    echo "   🗺️  Map mit Leaflet und GPS-Markern"
-    echo "   📷 Bilder-Links: /bild/{nip19}"
-    echo "   📄 Artikel-Links: /artikel/{nip19}"
     echo ""
 }
 
