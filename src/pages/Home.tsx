@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
+import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
@@ -418,11 +419,14 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
     title = metadata.title;
     summary = metadata.summary;
 
+    const authorRelayConfig = getAuthorRelayConfigByPubkey(item.event.pubkey);
+    const relay = authorRelayConfig?.activeRelay || 'wss://relay.mojobus.co';
+
     const naddr = nip19.naddrEncode({
       kind: item.event.kind,
       pubkey: item.event.pubkey,
       identifier: metadata.identifier,
-      relays: ['wss://relay.mojobus.co'],
+      relays: [relay],
     });
     link = `/${naddr}`;
   } else if (item.type === 'image') {
