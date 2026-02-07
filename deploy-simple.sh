@@ -128,8 +128,10 @@ main() {
 
     git_pull "$@"
     install_dependencies
+    restore_map_for_production
     build_project
     deploy_files "$1" "$2"
+    restore_dev_config
     verify_deployment
     summary
 }
