@@ -191,13 +191,33 @@ export function useGpsContent() {
 
       console.log('📍 GPS Content: Loaded', events.length, 'events');
 
+      // Debug: Logge die ersten 5 Events
+      if (events.length > 0) {
+        console.log('📍 GPS Content: First 5 events:', events.slice(0, 5).map(e => ({
+          id: e.id,
+          kind: e.kind,
+          pubkey: e.pubkey,
+          tags: e.tags.slice(0, 10), // Log nur die ersten 10 Tags
+          hasGpsTags: hasGpsTags(e),
+        })));
+      }
+
       // Filter and parse events
-      const markers = events
-        .filter(isValidPublishedEvent)
+      const validEvents = events.filter(isValidPublishedEvent);
+      console.log('📍 GPS Content: Valid events after filter:', validEvents.length);
+
+      const markers = validEvents
         .map(parseEventToMarker)
         .filter((m): m is MapMarker => m !== null);
 
       console.log('✅ GPS Content: Parsed', markers.length, 'markers');
+
+      // Debug: Logge die Marker nach Typ
+      const markersByType = markers.reduce((acc, m) => {
+        acc[m.type] = (acc[m.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('✅ GPS Content: Markers by type:', markersByType);
 
       return markers;
     },
