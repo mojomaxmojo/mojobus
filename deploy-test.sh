@@ -123,6 +123,51 @@ install_dependencies() {
     success_msg "Dependencies installiert (npm install)"
 }
 
+# Map-Dateien für Production wiederherstellen
+restore_map_for_production() {
+    info_msg "Stelle Map-Dateien für Production wieder her..."
+    
+    # Backup erstellen
+    mkdir -p "$PROJECT_DIR/.deployment-backup"
+    cp "$PROJECT_DIR/src/AppRouter.tsx" "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
+    
+    # Map-Datei wiederherstellen
+    if [ -f "$PROJECT_DIR/src/pages/MapPage.production.tsx" ]; then
+        mv "$PROJECT_DIR/src/pages/MapPage.production.tsx" "$PROJECT_DIR/src/pages/MapPage.tsx" 2>&1 | tee -a "$LOG_FILE"
+        success_msg "MapPage.tsx wiederhergestellt"
+    else
+        warn_msg "MapPage.production.tsx nicht gefunden"
+    fi
+    
+    # AppRouter.tsx aktualisieren
+    info_msg "Aktualisiere AppRouter.tsx..."
+    sed -i 's/import("\.\/pages\/MapPagePlaceholder")/import("\.\/pages\/MapPage")/g' "$PROJECT_DIR/src/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
+    
+    success_msg "Map-Dateien für Production bereit"
+}
+
+# Development-Konfiguration nach Build wiederherstellen  
+restore_dev_config() {
+    info_msg "Stelle Development-Konfiguration wieder her..."
+    
+    # Map-Datei zurück zu .production.tsx
+    if [ -f "$PROJECT_DIR/src/pages/MapPage.tsx" ]; then
+        mv "$PROJECT_DIR/src/pages/MapPage.tsx" "$PROJECT_DIR/src/pages/MapPage.production.tsx" 2>&1 | tee -a "$LOG_FILE"
+        success_msg "MapPage.tsx → MapPage.production.tsx"
+    fi
+    
+    # AppRouter.tsx wiederherstellen
+    if [ -f "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" ]; then
+        cp "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" "$PROJECT_DIR/src/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
+        success_msg "AppRouter.tsx wiederhergestellt"
+    fi
+    
+    # Backup löschen
+    rm -rf "$PROJECT_DIR/.deployment-backup" 2>&1 | tee -a "$LOG_FILE"
+    
+    success_msg "Development-Konfiguration wiederhergestellt"
+}
+
 # Projekt bauen
 build_project() {
     info_msg "Baue Projekt für Production..."
@@ -256,8 +301,10 @@ main() {
 
     git_pull "$@"
     install_dependencies
+    restore_map_for_production
     build_project
     deploy_files "$1" "$2"
+    restore_dev_config
     verify_deployment
     summary
 }
