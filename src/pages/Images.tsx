@@ -518,12 +518,11 @@ function ImageCardComponent({
                    <div className="w-full h-full flex items-center justify-center">
                      <video
                        src={images[0]}
-                       className="max-w-full max-h-full object-contain"
+                       className="max-w-full max-h-full object-contain pointer-events-none"
                        muted
-                       onMouseEnter={(e) => e.currentTarget.play()}
-                       onMouseLeave={(e) => {
-                         e.currentTarget.pause();
-                         e.currentTarget.currentTime = 0;
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         window.open(images[0], '_blank');
                        }}
                      />
                      {/* Video indicator overlay */}
