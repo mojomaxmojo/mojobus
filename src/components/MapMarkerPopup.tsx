@@ -22,10 +22,21 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
 
   // Generate naddr for navigation
   let naddr = '';
+  let pathPrefix = '';
+
   try {
     if (marker.kind === 1) {
       // Note - use note identifier
       naddr = nip19.noteEncode(marker.id);
+
+      // Determine path prefix based on content type
+      if (marker.type === 'media') {
+        // Images should go to /bild/
+        pathPrefix = '/bild/';
+      } else if (marker.type === 'note') {
+        // Notes should go to root /
+        pathPrefix = '/';
+      }
     } else if (marker.kind === 30023) {
       // Long-form article - use naddr
       const d = marker.tags.find(t => t[0] === 'd')?.[1] || `post-${marker.id}`;
@@ -40,12 +51,14 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
         identifier: d,
         relays: [relay],
       });
+      // Articles and places go to root /
+      pathPrefix = '/';
     }
   } catch (error) {
     console.error('Error generating naddr:', error);
   }
 
-  const href = `/${marker.kind === 1 ? 'note' : ''}${naddr}`;
+  const href = `${pathPrefix}${naddr}`;
 
   return (
     <div className="p-3 min-w-[250px] max-w-[300px]">
