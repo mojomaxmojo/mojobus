@@ -63,6 +63,14 @@ function App() {
               <Route path="/veroeffentlichen/modern" element={<ContentEditorMinimal />} />
               <Route path="/:nip19" element={<NIP19Page />} />
               <Route path="*" element={<NotFound />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/artikel" element={<Articles />} />
+              <Route path="/artikel/:country" element={<Articles />} />
+              <Route path="/artikel/diy" element={<DIY />} />
+              <Route path="/artikel/diy/:category" element={<DIY />} />
+              <Route path="/artikel/leon" element={<Leon />} />
+              <Route path="/artikel/rvlife" element={<RVLife />} />
+              <Route path="/artikel/rvlife/:category" element={<RVLife />} />
             </Routes>
           </Suspense>
         </main>
