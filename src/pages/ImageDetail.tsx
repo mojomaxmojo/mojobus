@@ -86,22 +86,27 @@ export function ImageDetail() {
     if (!content) return [];
 
     // Match image URLs with extensions OR from known image hosting services
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/blossom\.primal\.net\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
+    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|avi|mkv)|https?:\/\/i\.imgur\.com\/[^\s]+|https?:\/\/cdn\.blossom\.social\/[^\s]+|https?:\/\/blossom\.primal\.net\/[^\s]+|https?:\/\/nostr\.build\/[^\s]+|https?:\/\/imgur\.com\/[^\s]+)/gi;
     const matches = content.match(urlRegex) || [];
 
-    // Filter out URLs that are not actually image files
-    const imageUrls = matches.filter(url => {
+    // Filter out URLs that are not actually image or video files
+    const mediaUrls = matches.filter(url => {
       const lower = url.toLowerCase();
       return lower.includes('.jpg') ||
              lower.includes('.jpeg') ||
              lower.includes('.png') ||
              lower.includes('.gif') ||
              lower.includes('.webp') ||
+             lower.includes('.mp4') ||
+             lower.includes('.webm') ||
+             lower.includes('.mov') ||
+             lower.includes('.avi') ||
+             lower.includes('.mkv') ||
              lower.includes('imgur.com') ||
              lower.includes('blossom');
     });
 
-    return imageUrls;
+    return mediaUrls;
   };
 
   const extractTags = (event: ImageEvent): string[] => {
@@ -124,6 +129,16 @@ export function ImageDetail() {
     )
   );
 
+  // Determine if a URL is a video
+  const isVideoUrl = (url: string) => {
+    const lower = url.toLowerCase();
+    return lower.includes('.mp4') ||
+           lower.includes('.webm') ||
+           lower.includes('.mov') ||
+           lower.includes('.avi') ||
+           lower.includes('.mkv');
+  };
+
   console.log('Image validation:', {
     isLoading,
     eventExists: !!events,
@@ -135,6 +150,11 @@ export function ImageDetail() {
   // Handle keyboard navigation for fullscreen
   useEffect(() => {
     if (!isImageFullscreen) return;
+
+    // Deaktiviere Tastaturnavigation für Videos
+    if (isVideoUrl(images[currentImageIndex])) {
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -148,7 +168,7 @@ export function ImageDetail() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isImageFullscreen, images.length]);
+  }, [isImageFullscreen, images.length, currentImageIndex]);
 
   // Prevent body scroll when fullscreen
   useEffect(() => {
@@ -361,82 +381,104 @@ export function ImageDetail() {
                   </div>
                 </div>
 
-                {/* Image */}
-                <div
-                  className="relative group cursor-pointer"
-                  onClick={() => openFullscreen(0)}
-                >
-                  <img
-                    src={getArticleHeaderUrl(images[0])}
-                    srcSet={generateSrcset(images[0], 'gallery')}
-                    sizes={generateSizes('header')}
-                    alt="Reisebild"
-                    className="w-full object-cover bg-gray-100 dark:bg-gray-900 max-h-[800px]"
-                    loading="eager"
-                    decoding="sync"
-                  />
+                 {/* Image/Video */}
+                 <div
+                   className={`relative group ${isVideoUrl(images[0]) ? 'cursor-default' : 'cursor-pointer'}`}
+                   onClick={() => !isVideoUrl(images[0]) && openFullscreen(0)}
+                 >
+                   {isVideoUrl(images[0]) ? (
+                     <video
+                       src={images[0]}
+                       controls
+                       className="w-full bg-gray-100 dark:bg-gray-900 max-h-[800px]"
+                       loading="eager"
+                     />
+                   ) : (
+                     <img
+                       src={getArticleHeaderUrl(images[0])}
+                       srcSet={generateSrcset(images[0], 'gallery')}
+                       sizes={generateSizes('header')}
+                       alt="Reisebild"
+                       className="w-full object-cover bg-gray-100 dark:bg-gray-900 max-h-[800px]"
+                       loading="eager"
+                       decoding="sync"
+                     />
+                   )}
 
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-4 flex flex-col items-center gap-2">
-                      <ZoomIn className="h-8 w-8 text-gray-800 dark:text-white" />
-                      <div className="text-gray-800 dark:text-white font-medium">
-                        Klick für Vollbild
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                   {/* Hover overlay - nur für Bilder */}
+                   {!isVideoUrl(images[0]) && (
+                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                       <div className="bg-white/90 dark:bg-gray-800/90 rounded-lg p-4 flex flex-col items-center gap-2">
+                         <ZoomIn className="h-8 w-8 text-gray-800 dark:text-white" />
+                         <div className="text-gray-800 dark:text-white font-medium">
+                           Klick für Vollbild
+                         </div>
+                       </div>
+                     </div>
+                   )}
+                 </div>
               </CardContent>
             </Card>
 
-            {/* Multiple Images Gallery */}
-            {images.length > 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Weitere Bilder ({images.length - 1})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {images.slice(1).map((img, index) => (
-                      <div
-                        key={index}
-                        className="relative group cursor-pointer rounded-lg overflow-hidden"
-                        onClick={() => openFullscreen(index + 1)}
-                      >
-                        <img
-                          src={getGalleryThumbnailUrl(img)}
-                          srcSet={generateSrcset(img, 'card')}
-                          sizes={generateSizes('card')}
-                          alt={`Bild ${index + 2}`}
-                          className="w-full h-32 object-cover transition-transform group-hover:scale-105"
-                          loading="lazy"
-                        />
-
-                        {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <ZoomIn className="h-6 w-6 text-white" />
-                            <span className="text-xs text-white">Vollbild</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-              {/* Content and Description */}
-              <Card>
+             {/* Multiple Images/Videos Gallery */}
+             {images.length > 1 && (
+               <Card>
+                 <CardHeader>
+                   <CardTitle>Weitere Medien ({images.length - 1})</CardTitle>
+                 </CardHeader>
                  <CardContent>
-                   <div className="prose prose-gray dark:prose-invert max-w-none mb-4">
-                     <Suspense fallback={<Skeleton className="h-20 w-full" />}>
-                       <NoteContent event={events} className="text-base" />
-                     </Suspense>
+                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                     {images.slice(1).map((img, index) => (
+                       <div
+                         key={index}
+                         className={`relative rounded-lg overflow-hidden ${isVideoUrl(img) ? 'bg-gray-900' : 'cursor-pointer'}`}
+                         onClick={() => !isVideoUrl(img) && openFullscreen(index + 1)}
+                       >
+                         {isVideoUrl(img) ? (
+                           <video
+                             src={img}
+                             className="w-full h-32 object-cover"
+                             controls
+                             loading="lazy"
+                           />
+                         ) : (
+                           <>
+                             <img
+                               src={getGalleryThumbnailUrl(img)}
+                               srcSet={generateSrcset(img, 'card')}
+                               sizes={generateSizes('card')}
+                               alt={`Bild ${index + 2}`}
+                               className="w-full h-32 object-cover transition-transform group-hover:scale-105"
+                               loading="lazy"
+                             />
+
+                             {/* Hover overlay - nur für Bilder */}
+                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                               <div className="flex flex-col items-center gap-1">
+                                 <ZoomIn className="h-6 w-6 text-white" />
+                                 <span className="text-xs text-white">Vollbild</span>
+                               </div>
+                             </div>
+                           </>
+                         )}
+                       </div>
+                     ))}
                    </div>
-                   <SocialBar event={events} />
                  </CardContent>
                </Card>
+             )}
+
+              {/* Content and Description */}
+               <Card>
+                  <CardContent>
+                    <div className="prose prose-gray dark:prose-invert max-w-none mb-4 [&_a]:hidden">
+                      <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+                        <NoteContent event={events} className="text-base" />
+                      </Suspense>
+                    </div>
+                    <SocialBar event={events} />
+                  </CardContent>
+                </Card>
 
               {/* Tags and Comments */}
               <Card>
@@ -491,7 +533,7 @@ export function ImageDetail() {
           </Button>
 
           {/* Previous button */}
-          {images.length > 1 && (
+          {images.length > 1 && !isVideoUrl(images[currentImageIndex]) && (
             <Button
               variant="ghost"
               size="icon"
@@ -506,7 +548,7 @@ export function ImageDetail() {
           )}
 
           {/* Next button */}
-          {images.length > 1 && (
+          {images.length > 1 && !isVideoUrl(images[currentImageIndex]) && (
             <Button
               variant="ghost"
               size="icon"
@@ -520,20 +562,31 @@ export function ImageDetail() {
             </Button>
           )}
 
-          {/* Main image */}
-          <img
-            src={getArticleHeaderUrl(images[currentImageIndex])}
-            srcSet={generateSrcset(images[currentImageIndex], 'gallery')}
-            sizes="(max-width: 640px) 400px, (max-width: 1024px) 800px, (max-width: 1280px) 1200px, 1600px"
-            alt={`Bild ${currentImageIndex + 1}`}
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-            onClick={() => setIsImageFullscreen(false)}
-          />
+          {/* Main image/video */}
+          {isVideoUrl(images[currentImageIndex]) ? (
+            <video
+              src={images[currentImageIndex]}
+              controls
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+              onClick={() => setIsImageFullscreen(false)}
+            />
+          ) : (
+            <img
+              src={getArticleHeaderUrl(images[currentImageIndex])}
+              srcSet={generateSrcset(images[currentImageIndex], 'gallery')}
+              sizes="(max-width: 640px) 400px, (max-width: 1024px) 800px, (max-width: 1280px) 1200px, 1600px"
+              alt={`Bild ${currentImageIndex + 1}`}
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+              onClick={() => setIsImageFullscreen(false)}
+            />
+          )}
 
           {/* Keyboard hint */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 text-white/70 text-sm bg-black/50 px-4 py-2 rounded-md">
-            ESC zum Schließen {images.length > 1 && '• ← → zum Navigieren'}
-          </div>
+          {!isVideoUrl(images[currentImageIndex]) && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 text-white/70 text-sm bg-black/50 px-4 py-2 rounded-md">
+              ESC zum Schließen {images.length > 1 && '• ← → zum Navigieren'}
+            </div>
+          )}
         </div>
       )}
     </div>
