@@ -133,8 +133,17 @@ function parseEventToMarker(event: NostrEvent): MapMarker | null {
     title = firstLine.substring(0, 50); // Limit to 50 chars
   }
 
-  // Extract first image
-  const image = event.tags.find(([name]) => name === 'image')?.[1];
+  // Extract first image from tags or content
+  let image = event.tags.find(([name]) => name === 'image')?.[1];
+  
+  // If no image tag, try to extract from content
+  if (!image) {
+    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/i;
+    const match = event.content.match(urlRegex);
+    if (match) {
+      image = match[1];
+    }
+  }
 
   // Extract location
   const location = event.tags.find(([name]) => name === 'location')?.[1];
