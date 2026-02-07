@@ -422,6 +422,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
       kind: item.event.kind,
       pubkey: item.event.pubkey,
       identifier: metadata.identifier,
+      relays: ['wss://relay.mojobus.co'],
     });
     link = `/${naddr}`;
   } else if (item.type === 'image') {
