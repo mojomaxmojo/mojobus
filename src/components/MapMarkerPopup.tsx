@@ -1,13 +1,14 @@
 /**
  * Map Marker Popup Component
  *
- * Displays details for GPS-enabled posts on the map
+ * Displays details for GPS-enabled posts on map
  */
 
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getContentTypeEmoji, getContentTypeLabel } from '@/lib/markerIcons';
+import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { nip19 } from 'nostr-tools';
 import type { MapMarker } from '@/hooks/useGpsContent';
 

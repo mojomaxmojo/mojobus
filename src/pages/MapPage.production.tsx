@@ -215,7 +215,6 @@ export default function MapPage() {
                 [EUROPA_BOUNDS.south, EUROPA_BOUNDS.west],
                 [EUROPA_BOUNDS.north, EUROPA_BOUNDS.east],
               ]}
-              maxBoundsViscosity={1.0}
               style={{ height: '100%', width: '100%', zIndex: 0 }}
               zoomControl={true}
               scrollWheelZoom={true}
