@@ -74,8 +74,15 @@ function determineContentType(event: NostrEvent): MapMarker['type'] {
  * Extract GPS coordinates from event tags
  */
 function extractGpsCoordinates(event: NostrEvent): { lat: number; lon: number } | null {
-  const latStr = event.tags.find(([name]) => name === 'gps_lat')?.[1];
-  const lonStr = event.tags.find(([name]) => name === 'gps_lon')?.[1];
+  // Try gps_lat/gps_lon first (for /veroeffentlichen content)
+  let latStr = event.tags.find(([name]) => name === 'gps_lat')?.[1];
+  let lonStr = event.tags.find(([name]) => name === 'gps_lon')?.[1];
+
+  // Fallback to lat/lng (for /plaetze places)
+  if (!latStr || !lonStr) {
+    latStr = event.tags.find(([name]) => name === 'lat')?.[1];
+    lonStr = event.tags.find(([name]) => name === 'lng')?.[1];
+  }
 
   if (!latStr || !lonStr) return null;
 
