@@ -195,18 +195,6 @@ export function ImageDetail() {
     setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
   };
 
-  const handleVideoClick = () => {
-    window.open(images[0], '_blank');
-  };
-
-  const handleFullscreenVideoClick = () => {
-    window.open(images[currentImageIndex], '_blank');
-  };
-
-  const handleGalleryVideoClick = (url: string) => {
-    window.open(url, '_blank');
-  };
-
   // Only show invalid image error if NOT loading and NOT an image event
   if (!isLoading && !isValidImageEvent) {
     console.log('Event does not contain images or media tags, showing error');
@@ -395,13 +383,15 @@ export function ImageDetail() {
 
                  {/* Image/Video */}
                  <div
-                   className={`relative group ${isVideoUrl(images[0]) ? 'cursor-pointer' : 'cursor-pointer'}`}
-                   onClick={isVideoUrl(images[0]) ? handleVideoClick : () => openFullscreen(0)}
+                   className={`relative group ${isVideoUrl(images[0]) ? 'cursor-default' : 'cursor-pointer'}`}
+                   onClick={() => !isVideoUrl(images[0]) && openFullscreen(0)}
                  >
                    {isVideoUrl(images[0]) ? (
                      <video
                        src={images[0]}
-                       className="w-full h-auto object-contain bg-gray-100 dark:bg-gray-900 max-h-[800px] pointer-events-none"
+                       controls
+                       className="w-full bg-gray-100 dark:bg-gray-900 max-h-[800px]"
+                       loading="eager"
                      />
                    ) : (
                      <img
@@ -441,19 +431,15 @@ export function ImageDetail() {
                      {images.slice(1).map((img, index) => (
                        <div
                          key={index}
-                         className={`relative rounded-lg overflow-hidden ${isVideoUrl(img) ? 'cursor-pointer bg-gray-900' : 'cursor-pointer'}`}
-                         onClick={() => {
-                           if (isVideoUrl(img)) {
-                             window.open(img, '_blank');
-                           } else {
-                             openFullscreen(index + 1);
-                           }
-                         }}
+                         className={`relative rounded-lg overflow-hidden ${isVideoUrl(img) ? 'bg-gray-900' : 'cursor-pointer'}`}
+                         onClick={() => !isVideoUrl(img) && openFullscreen(index + 1)}
                        >
                          {isVideoUrl(img) ? (
                            <video
                              src={img}
-                             className="w-full h-32 object-contain pointer-events-none"
+                             className="w-full h-32 object-cover"
+                             controls
+                             loading="lazy"
                            />
                          ) : (
                            <>
@@ -576,11 +562,13 @@ export function ImageDetail() {
             </Button>
           )}
 
-           {/* Main image/video */}
+          {/* Main image/video */}
           {isVideoUrl(images[currentImageIndex]) ? (
             <video
               src={images[currentImageIndex]}
-              className="max-h-[90vh] max-w-[90vw] object-contain pointer-events-none"
+              controls
+              className="max-h-[90vh] max-w-[90vw] object-contain"
+              onClick={() => setIsImageFullscreen(false)}
             />
           ) : (
             <img

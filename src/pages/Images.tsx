@@ -480,11 +480,6 @@ function ImageCardComponent({
     navigate(`/bild/${noteId}`);
   };
 
-  const handleVideoClick = () => {
-    // Open video in new window for full size viewing
-    window.open(images[0], '_blank');
-  };
-
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -511,13 +506,15 @@ function ImageCardComponent({
    return (
      <div className="relative w-full">
        <Card className="overflow-hidden hover:shadow-lg transition-shadow group w-full rounded-b-none border-b-0">
-          <div onClick={isVideoUrl(images[0]) ? handleVideoClick : handleImageClick} className="cursor-pointer">
+         <div onClick={handleImageClick} className="cursor-pointer">
             {images.length > 0 && (
                <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
                  {isVideoUrl(images[0]) ? (
                    <video
                      src={images[0]}
-                     className="w-full h-full object-contain pointer-events-none"
+                     className="w-full h-full object-cover"
+                     controls
+                     loading="lazy"
                    />
                  ) : (
                    <>
@@ -531,7 +528,7 @@ function ImageCardComponent({
                        decoding="async"
                      />
 
-                    {/* Hover overlay with eye icon */}
+                    {/* Hover overlay with eye icon - nur für Bilder */}
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                       <div className="bg-white/90 rounded-full p-4">
                         <Eye className="h-8 w-8 text-gray-800" />
@@ -576,11 +573,13 @@ function ImageCardComponent({
                  </span>
                </div>
                <div className="flex items-center gap-1">
-                 {/* Quick view hint */}
-                 <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
-                   <span>Klick</span>
-                   <ArrowRight className="h-3 w-3" />
-                 </div>
+                 {/* Quick view hint - nur für Bilder */}
+                 {!isVideoUrl(images[0]) && (
+                   <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
+                     <span>Klick</span>
+                     <ArrowRight className="h-3 w-3" />
+                   </div>
+                 )}
                  {images.map((img, index) => (
                    <Button
                      key={index}
