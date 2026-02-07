@@ -24,6 +24,18 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
   let naddr = '';
   let pathPrefix = '';
 
+  // Debug: Logge Platz-Marker
+  if (marker.type === 'place') {
+    console.log('[MapMarkerPopup] Place marker:', {
+      type: marker.type,
+      kind: marker.kind,
+      id: marker.id,
+      author: marker.author,
+      title: marker.title,
+      tags: marker.tags,
+    });
+  }
+
   try {
     if (marker.kind === 1) {
       // Note - use note identifier
@@ -53,6 +65,17 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
       });
       // Articles and places go to root /
       pathPrefix = '/';
+
+      // Debug: Logge generierte naddr für Plätze
+      if (marker.type === 'place') {
+        console.log('[MapMarkerPopup] Place naddr generated:', {
+          identifier: d,
+          relay: relay,
+          naddr: naddr,
+          pathPrefix: pathPrefix,
+          href: `${pathPrefix}${naddr}`,
+        });
+      }
     }
   } catch (error) {
     console.error('Error generating naddr:', error);
@@ -128,6 +151,13 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
           Details anzeigen
         </Link>
       </Button>
+
+      {/* Debug: Zeige den generierten Link */}
+      {marker.type === 'place' && (
+        <div className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded">
+          <div>Link: {href}</div>
+        </div>
+      )}
     </div>
   );
 }
