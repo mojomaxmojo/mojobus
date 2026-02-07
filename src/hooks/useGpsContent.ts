@@ -249,10 +249,10 @@ export function useGpsContent() {
 
       return markers;
     },
-    staleTime: DEFAULT_CACHE_CONFIG.lists.staleTime, // 24 hours cache
+    staleTime: 0, // Immer neu holen für Debugging
     gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 days garbage collection
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on component mount
+    refetchOnMount: 'always', // IMMER beim Mount ausführen
     refetchInterval: false, // No auto-refresh
   });
 }
