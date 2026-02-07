@@ -175,6 +175,7 @@ export function useGpsContent() {
   return useQuery({
     queryKey: ['gps-content'],
     queryFn: async (c) => {
+      console.log('📍 GPS Content: Starting query...');
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       // 🔥 PERFORMANCE: SINGLE QUERY for all kinds!
@@ -201,6 +202,33 @@ export function useGpsContent() {
           hasGpsTags: hasGpsTags(e),
         })));
       }
+
+      // Filter and parse events
+      const validEvents = events.filter(isValidPublishedEvent);
+      console.log('📍 GPS Content: Valid events after filter:', validEvents.length);
+
+      const markers = validEvents
+        .map(parseEventToMarker)
+        .filter((m): m is MapMarker => m !== null);
+
+      console.log('✅ GPS Content: Parsed', markers.length, 'markers');
+
+      // Debug: Logge die Marker nach Typ
+      const markersByType = markers.reduce((acc, m) => {
+        acc[m.type] = (acc[m.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('✅ GPS Content: Markers by type:', markersByType);
+
+      return markers;
+    },
+    staleTime: 0, // Immer neu holen für Debugging
+    gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 days garbage collection
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: 'always', // IMMER beim Mount ausführen
+    refetchInterval: false, // No auto-refresh
+  });
+}
 
       // Filter and parse events
       const validEvents = events.filter(isValidPublishedEvent);
