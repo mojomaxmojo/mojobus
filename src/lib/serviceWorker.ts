@@ -41,7 +41,9 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     // Warte auf Service Worker Activation
     if (registration.waiting) {
       console.log('ℹ️ Service Worker wartet auf Activation');
-      sendMessageToSW({ type: 'SKIP_WAITING' });
+      sendMessageToSW({ type: 'SKIP_WAITING' }).catch((error) => {
+        console.warn('⚠️ Konnte Nachricht an Service Worker nicht senden:', error);
+      });
     }
 
     // Überwache Service Worker Updates
@@ -92,7 +94,9 @@ export async function unregisterServiceWorker(): Promise<void> {
 export function sendMessageToSW(message: any): Promise<any> {
   return new Promise((resolve, reject) => {
     if (!navigator.serviceWorker.controller) {
-      reject(new Error('Kein Service Worker Controller aktiv'));
+      // Instead of rejecting, resolve with null to avoid unhandled promise rejections
+      console.warn('⚠️ Kein Service Worker Controller aktiv');
+      resolve(null);
       return;
     }
 
@@ -100,6 +104,11 @@ export function sendMessageToSW(message: any): Promise<any> {
     const messageChannel = new MessageChannel();
     messageChannel.port1.onmessage = (event) => {
       resolve(event.data);
+    };
+
+    messageChannel.port1.onerror = (error) => {
+      console.error('❌ MessageChannel Fehler:', error);
+      reject(error);
     };
 
     navigator.serviceWorker.controller.postMessage(message, [messageChannel.port2]);
