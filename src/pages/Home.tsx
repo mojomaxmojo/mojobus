@@ -210,6 +210,22 @@ export function Home() {
     .sort((a, b) => b.date - a.date)
     .slice(0, 6);
 
+  // Debug: Logge die geladenen Items
+  console.log('[Home] Recent items:', {
+    totalItems: contentItems.length,
+    recentItemsCount: recentItems.length,
+    itemsByType: recentItems.reduce((acc, item) => {
+      acc[item.type] = (acc[item.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    items: recentItems.map(item => ({
+      type: item.type,
+      eventId: item.event.id,
+      kind: item.event.kind,
+      pubkey: item.event.pubkey,
+    })),
+  });
+
   return (
     <div className="min-h-screen">
       {/* Hero Section with Modern Design */}
@@ -429,6 +445,20 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
       relays: [relay],
     });
     link = `/${naddr}`;
+
+    // Debug: Logge die generierten Links für Plätze
+    if (item.type === 'place') {
+      console.log('[Home] Place card generated:', {
+        itemType: item.type,
+        title: title,
+        identifier: metadata.identifier,
+        kind: item.event.kind,
+        pubkey: item.event.pubkey,
+        relay: relay,
+        naddr: naddr,
+        link: link,
+      });
+    }
   } else if (item.type === 'image') {
     title = item.event.content.substring(0, 80);
     const note = nip19.noteEncode(item.event.id);
