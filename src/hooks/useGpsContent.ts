@@ -74,15 +74,8 @@ function determineContentType(event: NostrEvent): MapMarker['type'] {
  * Extract GPS coordinates from event tags
  */
 function extractGpsCoordinates(event: NostrEvent): { lat: number; lon: number } | null {
-  // Try gps_lat/gps_lon first (for /veroeffentlichen content)
-  let latStr = event.tags.find(([name]) => name === 'gps_lat')?.[1];
-  let lonStr = event.tags.find(([name]) => name === 'gps_lon')?.[1];
-
-  // Fallback to lat/lng (for /plaetze places)
-  if (!latStr || !lonStr) {
-    latStr = event.tags.find(([name]) => name === 'lat')?.[1];
-    lonStr = event.tags.find(([name]) => name === 'lng')?.[1];
-  }
+  const latStr = event.tags.find(([name]) => name === 'gps_lat')?.[1];
+  const lonStr = event.tags.find(([name]) => name === 'gps_lon')?.[1];
 
   if (!latStr || !lonStr) return null;
 
@@ -172,12 +165,9 @@ function parseEventToMarker(event: NostrEvent): MapMarker | null {
 export function useGpsContent() {
   const { nostr } = useNostr();
 
-  console.log('[useGpsContent] Component mounted, starting query...');
-
   return useQuery({
     queryKey: ['gps-content'],
     queryFn: async (c) => {
-      console.log('📍 GPS Content: Starting query...');
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(5000)]);
 
       // 🔥 PERFORMANCE: SINGLE QUERY for all kinds!
@@ -194,67 +184,20 @@ export function useGpsContent() {
 
       console.log('📍 GPS Content: Loaded', events.length, 'events');
 
-      // Debug: Logge die ersten 5 Events
-      if (events.length > 0) {
-        console.log('📍 GPS Content: First 5 events:', events.slice(0, 5).map(e => ({
-          id: e.id,
-          kind: e.kind,
-          pubkey: e.pubkey,
-          tags: e.tags.slice(0, 10), // Log nur die ersten 10 Tags
-          hasGpsTags: hasGpsTags(e),
-        })));
-      }
-
       // Filter and parse events
-      const validEvents = events.filter(isValidPublishedEvent);
-      console.log('📍 GPS Content: Valid events after filter:', validEvents.length);
-
-      const markers = validEvents
+      const markers = events
+        .filter(isValidPublishedEvent)
         .map(parseEventToMarker)
         .filter((m): m is MapMarker => m !== null);
 
       console.log('✅ GPS Content: Parsed', markers.length, 'markers');
 
-      // Debug: Logge die Marker nach Typ
-      const markersByType = markers.reduce((acc, m) => {
-        acc[m.type] = (acc[m.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      console.log('✅ GPS Content: Markers by type:', markersByType);
-
       return markers;
     },
-    staleTime: 0, // Immer neu holen für Debugging
+    staleTime: DEFAULT_CACHE_CONFIG.lists.staleTime, // 24 hours cache
     gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 days garbage collection
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: 'always', // IMMER beim Mount ausführen
-    refetchInterval: false, // No auto-refresh
-  });
-}
-
-      // Filter and parse events
-      const validEvents = events.filter(isValidPublishedEvent);
-      console.log('📍 GPS Content: Valid events after filter:', validEvents.length);
-
-      const markers = validEvents
-        .map(parseEventToMarker)
-        .filter((m): m is MapMarker => m !== null);
-
-      console.log('✅ GPS Content: Parsed', markers.length, 'markers');
-
-      // Debug: Logge die Marker nach Typ
-      const markersByType = markers.reduce((acc, m) => {
-        acc[m.type] = (acc[m.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      console.log('✅ GPS Content: Markers by type:', markersByType);
-
-      return markers;
-    },
-    staleTime: 0, // Immer neu holen für Debugging
-    gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 days garbage collection
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: 'always', // IMMER beim Mount ausführen
+    refetchOnMount: false, // Don't refetch on component mount
     refetchInterval: false, // No auto-refresh
   });
 }
