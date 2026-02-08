@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,7 +91,7 @@ export function LocationPicker({
   const mapRef = useRef<L.Map>(null);
 
   // Sync manual inputs with marker position
-  React.useEffect(() => {
+  useEffect(() => {
     setManualLat(position[0].toFixed(6));
     setManualLon(position[1].toFixed(6));
   }, [position]);
