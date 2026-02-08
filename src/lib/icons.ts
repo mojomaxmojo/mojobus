@@ -10,7 +10,7 @@
 // NAVIGATION ICONS
 // ============================================================================
 
-export { Menu, X, Home, Navigation, Search } from 'lucide-react';
+export { Menu, X, Home } from 'lucide-react';
 
 // ============================================================================
 // CONTENT ICONS
