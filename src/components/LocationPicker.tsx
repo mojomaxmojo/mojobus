@@ -213,9 +213,10 @@ export function LocationPicker({
         className={cn(
           'relative rounded-lg overflow-hidden border-2',
           isFullscreen
-            ? 'fixed inset-0 z-50 rounded-none'
+            ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-none'
             : 'border-gray-200 dark:border-gray-700'
         )}
+        style={isFullscreen ? { width: '600px', height: '600px' } : {}}
       >
         {isFullscreen && (
           <Button
@@ -232,7 +233,7 @@ export function LocationPicker({
         <MapContainer
           center={position}
           zoom={zoom}
-          style={{ height: isFullscreen ? '100%' : height, width: '100%' }}
+          style={{ height: isFullscreen ? '600px' : height, width: isFullscreen ? '600px' : '100%' }}
           zoomControl={false}
           ref={mapRef}
         >
