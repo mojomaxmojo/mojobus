@@ -27,12 +27,7 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
 import { Progress } from '@/components/ui/progress';
-import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocodeCached, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
-import { useGpsImage, useGpsBatchOperations, type GpsImage } from '@/hooks/useGpsImage';
-import { GpsStatusIndicator } from '@/components/GpsStatusIndicator';
-import { GpsEditor } from '@/components/GpsEditor';
-import { LocationPicker } from '@/components/LocationPicker';
-import { GpsBatchOperations } from '@/components/GpsBatchOperations';
+import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
 
 // Media Types Configuration
 const mediaTypes = [
@@ -102,38 +97,40 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const { mutate: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
 
-  // 🔥 GPS: Use new custom hook for GPS operations
-  const { extractGps, autoFillLocation: autoFillLocationFromGps, autoFillCountry } = useGpsImage();
-  const { copyFirstToAll, clearAll } = useGpsBatchOperations();
-
   // GPS editing state
   const [editingGpsFile, setEditingGpsFile] = useState<string | null>(null);
   const [batchEditMode, setBatchEditMode] = useState(false);
 
-  // 🔥 GPS: Auto-fill location from first GPS-detected image (using cached geocoding)
+  // Auto-fill location from first GPS-detected image
   useEffect(() => {
      const autoFillLocation = async () => {
-       const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
-       if (firstGpsImage && !location) {
-         console.log('[Media GPS] GPS detected, reverse geocoding...');
-         // 🔥 PERFORMANCE: Using cached reverse geocoding
-         const loc = await autoFillLocationFromGps(firstGpsImage.gps);
-         if (loc) {
-           setLocation(loc);
-           console.log('[Media GPS] Location found:', loc);
+      const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
+      if (firstGpsImage && !location) {
+        console.log('[Media GPS] GPS detected, reverse geocoding...');
+        const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
+        if (locationData) {
+          // Set location to city + neighbourhood/suburb (no postcode)
+          const locationParts = [
+            locationData.city,
+            locationData.neighbourhood,
+            locationData.suburb
+          ].filter(Boolean);
+          const loc = locationParts.join(', ');
+          setLocation(loc);
+          console.log('[Media GPS] Location found:', loc);
 
-           // Auto-fill country if detected
-           const country = await autoFillCountry(firstGpsImage.gps);
-           if (country && !selectedCountry) {
-             setSelectedCountry(country);
-             console.log('[Media GPS] Country auto-filled:', country);
-           }
-         }
-       }
-     };
+          // Auto-fill country if detected
+          const country = mapCountryCode(locationData);
+          if (country && !selectedCountry) {
+            setSelectedCountry(country);
+            console.log('[Media GPS] Country auto-filled:', country);
+          }
+        }
+      }
+    };
 
     autoFillLocation();
-  }, [files, location, selectedCountry, autoFillLocationFromGps, autoFillCountry]);
+  }, [files, location, selectedCountry]);
 
   // Handler functions
   const handleMainCategoryChange = (value: string) => {
