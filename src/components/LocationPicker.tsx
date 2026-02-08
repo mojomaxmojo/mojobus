@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { MapPin, Maximize2, Minimize2, Check, Map as MapIcon, Crosshair } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GpsData } from '@/lib/gpsExtraction';
+import { reverseGeocode, mapCountryCode } from '@/lib/gpsExtraction';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -29,8 +30,12 @@ export interface LocationPickerProps {
   onCancel: () => void;
   /** Initial zoom level */
   initialZoom?: number;
-  /** Height of the map */
+  /** Height of map */
   height?: string;
+  /** Callback when country is detected from GPS */
+  onCountryDetected?: (country: string) => void;
+  /** Callback when location text is detected from GPS */
+  onLocationDetected?: (location: string) => void;
 }
 
 /**
@@ -79,6 +84,8 @@ export function LocationPicker({
   onCancel,
   initialZoom = 13,
   height = '400px',
+  onCountryDetected,
+  onLocationDetected,
 }: LocationPickerProps) {
   const [position, setPosition] = useState<[number, number]>(() => {
     // Check if GPS data is valid
@@ -147,6 +154,32 @@ export function LocationPicker({
         if (mapRef.current) {
           mapRef.current.setView(newPosition, 16);
         }
+
+        // Reverse geocode to get location and country
+        reverseGeocode(latitude, longitude).then(locationData => {
+          if (locationData) {
+            console.log('[LocationPicker] Reverse geocoding result:', locationData);
+
+            // Extract country and map to internal country code
+            const internalCountry = mapCountryCode(locationData);
+            if (internalCountry && onCountryDetected) {
+              onCountryDetected(internalCountry);
+            }
+
+            // Extract location text (city + region if available)
+            const locationParts = [
+              locationData.city,
+              locationData.neighbourhood,
+              locationData.suburb
+            ].filter(Boolean);
+
+            if (locationParts.length > 0 && onLocationDetected) {
+              onLocationDetected(locationParts.join(', '));
+            }
+          }
+        }).catch(err => {
+          console.warn('[LocationPicker] Reverse geocoding failed:', err);
+        });
 
         setIsLoadingLocation(false);
       },

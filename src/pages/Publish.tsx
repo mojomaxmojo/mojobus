@@ -680,6 +680,14 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                           onCancel={closeGpsEditor}
                           initialZoom={13}
                           height="300px"
+                          onCountryDetected={(country) => {
+                            console.log('[Publish] Country detected:', country);
+                            setSelectedCountry(country);
+                          }}
+                          onLocationDetected={(locationText) => {
+                            console.log('[Publish] Location detected:', locationText);
+                            setLocation(locationText);
+                          }}
                         />
                       ) : (
                         /* Show Simple Editor */
