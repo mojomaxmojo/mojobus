@@ -1158,6 +1158,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState({ stage: '', status: '' });
+  const [editingGpsImage, setEditingGpsImage] = useState<number | null>(null);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1311,6 +1312,39 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       const { [index]: _, ...rest } = prev;
       return rest;
     });
+  };
+
+  // GPS editing functions for Note Form
+  const openGpsEditor = (imageIndex: number) => {
+    setEditingGpsImage(imageIndex);
+  };
+
+  const closeGpsEditor = () => {
+    setEditingGpsImage(null);
+  };
+
+  const saveGps = (imageIndex: number, gps: GpsData) => {
+    setImageGpsData(prev => ({
+      ...prev,
+      [imageIndex]: gps
+    }));
+    setImageGpsStatuses(prev => ({
+      ...prev,
+      [imageIndex]: 'manual'
+    }));
+    closeGpsEditor();
+  };
+
+  const removeGps = (imageIndex: number) => {
+    setImageGpsData(prev => {
+      const { [imageIndex]: _, ...rest } = prev;
+      return rest;
+    });
+    setImageGpsStatuses(prev => ({
+      ...prev,
+      [imageIndex]: 'not_found'
+    }));
+    closeGpsEditor();
   };
 
   // Auto-fill location and country from GPS data (first image)
@@ -1610,45 +1644,76 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                   Alle entfernen
                 </Button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {imageUrls.map((url, index) => {
-                  const gpsData = imageGpsData[index];
-                  const gpsStatus = imageGpsStatuses[index];
-                  return (
-                    <div key={index} className="relative group border rounded-lg overflow-hidden">
-                      <img
-                        src={url}
-                        alt={`Uploaded ${index + 1}`}
-                        className="w-full h-20 object-cover"
-                      />
-                      {gpsData && gpsStatus && gpsData.latitude && gpsData.longitude && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1">
+               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                 {imageUrls.map((url, index) => {
+                   const gpsData = imageGpsData[index];
+                   const gpsStatus = imageGpsStatuses[index];
+                   return (
+                     <div key={index} className="relative group border rounded-lg overflow-hidden">
+                       <img
+                         src={url}
+                         alt={`Uploaded ${index + 1}`}
+                         className="w-full h-20 object-cover"
+                       />
+
+                       {/* GPS Display */}
+                       {gpsData && gpsStatus && gpsData.latitude && gpsData.longitude && editingGpsImage !== index && (
+                         <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1 cursor-pointer hover:bg-green-100 dark:hover:bg-green-800"
+                           onClick={() => openGpsEditor(index)}
+                         >
                            <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
                              <MapPin className="h-2.5 w-2.5" />
                              <span className="truncate font-medium">
                                {formatCoordinatesSimple(gpsData.latitude, gpsData.longitude)}
                              </span>
                            </div>
-                          {gpsStatus === 'manual' && (
-                            <span className="text-[10px] text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
-                          )}
-                          {gpsStatus === 'detected' && (
-                            <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
-                          )}
-                        </div>
-                      )}
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeImageUrl(index)}
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
+                           {gpsStatus === 'manual' && (
+                             <span className="text-[10px] text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
+                           )}
+                           {gpsStatus === 'detected' && (
+                             <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
+                           )}
+                         </div>
+                       )}
+
+                       {/* Add GPS Button */}
+                       {!gpsData && editingGpsImage !== index && (
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           className="absolute bottom-1 right-1 text-xs h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                           onClick={() => openGpsEditor(index)}
+                         >
+                           <MapPin className="h-2.5 w-2.5 mr-1" />
+                           GPS+
+                         </Button>
+                       )}
+
+                       {/* GPS Editor */}
+                       {editingGpsImage === index && (
+                         <div className="absolute bottom-0 left-0 right-0 z-10">
+                           <GpsEditor
+                             gps={gpsData || undefined}
+                             onSave={(gps) => saveGps(index, gps)}
+                             onCancel={closeGpsEditor}
+                             onRemove={() => removeGps(index)}
+                           />
+                         </div>
+                       )}
+
+                       {/* Delete Button */}
+                       <Button
+                         variant="destructive"
+                         size="sm"
+                         className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                         onClick={() => removeImageUrl(index)}
+                       >
+                         ×
+                       </Button>
+                     </div>
+                   );
+                 })}
+               </div>
             </div>
           )}
         </div>
