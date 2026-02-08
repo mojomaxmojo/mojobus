@@ -234,7 +234,7 @@ export function LocationPicker({
             ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-none border-gray-300 dark:border-gray-600'
             : 'border-gray-200 dark:border-gray-700'
         )}
-        style={isFullscreen ? { width: '800px', height: '800px' } : {}}
+        style={isFullscreen ? { width: '800px', height: '800px' } : { height }}
       >
         {isFullscreen && (
           <Button
