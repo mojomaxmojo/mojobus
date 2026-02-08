@@ -1,6 +1,7 @@
-import { MapPin, Edit, AlertCircle, XCircle } from 'lucide-react';
+import { MapPin, Edit, AlertCircle, XCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GpsStatus } from '@/lib/gpsExtraction';
+import type { GpsData } from '@/lib/gpsExtraction';
 
 /**
  * Props for GpsStatusIndicator component
@@ -8,6 +9,8 @@ import type { GpsStatus } from '@/lib/gpsExtraction';
 export interface GpsStatusIndicatorProps {
   /** Current GPS status */
   status: GpsStatus | undefined;
+  /** GPS data (optional, for precision display) */
+  gps?: GpsData;
   /** Custom class name for styling */
   className?: string;
   /** Show compact version (icon only) */
@@ -17,7 +20,7 @@ export interface GpsStatusIndicatorProps {
 /**
  * GpsStatusIndicator Component
  *
- * Visual indicator for GPS extraction status
+ * Visual indicator for GPS extraction status with precision display
  * Shows different colors and icons based on status:
  * - detected: Green with MapPin icon (auto-detected from EXIF)
  * - manual: Blue with Edit icon (manually entered)
@@ -28,9 +31,10 @@ export interface GpsStatusIndicatorProps {
  * ```tsx
  * <GpsStatusIndicator status="detected" />
  * <GpsStatusIndicator status="manual" compact />
+ * <GpsStatusIndicator status="detected" gps={gpsData} />
  * ```
  */
-export function GpsStatusIndicator({ status, className, compact = false }: GpsStatusIndicatorProps) {
+export function GpsStatusIndicator({ status, gps, className, compact = false }: GpsStatusIndicatorProps) {
   if (!status) {
     return null;
   }
@@ -41,8 +45,9 @@ export function GpsStatusIndicator({ status, className, compact = false }: GpsSt
       bgColor: 'bg-green-50 dark:bg-green-900/20',
       borderColor: 'border-green-200 dark:border-green-800',
       icon: MapPin,
-      label: 'EXIF',
+      label: 'Auto-Detected',
       tooltip: 'GPS aus Bilddaten extrahiert',
+      iconBgColor: 'bg-green-100 dark:bg-green-800',
     },
     manual: {
       color: 'text-blue-600 dark:text-blue-400',
@@ -51,6 +56,7 @@ export function GpsStatusIndicator({ status, className, compact = false }: GpsSt
       icon: Edit,
       label: 'Manuell',
       tooltip: 'GPS manuell eingegeben',
+      iconBgColor: 'bg-blue-100 dark:bg-blue-800',
     },
     not_found: {
       color: 'text-gray-400 dark:text-gray-500',
@@ -59,6 +65,7 @@ export function GpsStatusIndicator({ status, className, compact = false }: GpsSt
       icon: XCircle,
       label: 'Kein GPS',
       tooltip: 'Keine GPS-Daten gefunden',
+      iconBgColor: 'bg-gray-100 dark:bg-gray-800',
     },
     error: {
       color: 'text-red-600 dark:text-red-400',
@@ -67,18 +74,26 @@ export function GpsStatusIndicator({ status, className, compact = false }: GpsSt
       icon: AlertCircle,
       label: 'Fehler',
       tooltip: 'Fehler beim GPS-Auslesen',
+      iconBgColor: 'bg-red-100 dark:bg-red-800',
     },
   };
 
   const config = statusConfig[status];
   const Icon = config.icon;
 
+  // Display precision (high/medium/low) based on GPS data
+  const precisionLabel = gps ? {
+    high: 'Hoch',
+    medium: 'Mittel',
+    low: 'Niedrig'
+  }[gps.precision] : null;
+
   if (compact) {
     return (
       <div
         className={cn(
-          'flex items-center justify-center',
-          config.color,
+          'flex items-center justify-center rounded-full',
+          config.iconBgColor,
           className
         )}
         title={config.tooltip}
@@ -91,7 +106,7 @@ export function GpsStatusIndicator({ status, className, compact = false }: GpsSt
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium',
+        'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm',
         config.bgColor,
         config.borderColor,
         'border',
@@ -99,8 +114,19 @@ export function GpsStatusIndicator({ status, className, compact = false }: GpsSt
       )}
       title={config.tooltip}
     >
-      <Icon className="h-3 w-3" />
-      <span>{config.label}</span>
+      <div className={cn('p-1 rounded-full', config.iconBgColor)}>
+        <Icon className="h-3 w-3" />
+      </div>
+      <span className={config.color}>{config.label}</span>
+      {precisionLabel && status === 'detected' && (
+        <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-medium',
+          gps?.precision === 'high' ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' :
+          gps?.precision === 'medium' ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200' :
+          'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+        )}>
+          {precisionLabel}
+        </span>
+      )}
     </div>
   );
 }

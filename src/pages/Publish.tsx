@@ -618,22 +618,22 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                     {file.type === 'image' && (
                       <>
                         {file.gps && file.gps.latitude && file.gps.longitude ? (
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
-                              <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
-                                <MapPin className="h-3 w-3" />
-                                <span className="truncate font-medium">
+                          <div className="space-y-2">
+                            <GpsStatusIndicator status={file.gpsStatus} gps={file.gps} />
+                            <div className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
+                              <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                                <MapPin className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                <span className="truncate font-mono">
                                   {formatCoordinatesSimple(file.gps.latitude, file.gps.longitude)}
                                 </span>
                               </div>
                             </div>
-                            <GpsStatusIndicator status={file.gpsStatus} compact />
                           </div>
                         ) : (
                           <Button
                             size="sm"
                             variant="outline"
-                            className="w-full text-xs h-7"
+                            className="w-full text-xs h-8"
                             onClick={() => openGpsEditor(file.id)}
                           >
                             <MapPin className="h-3 w-3 mr-1" />
@@ -1656,16 +1656,16 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
                         {/* GPS Display */}
                         {gpsData && gpsStatus && gpsData.latitude && gpsData.longitude && editingGpsImage !== index && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1 cursor-pointer hover:bg-green-100 dark:hover:bg-green-800"
-                            onClick={() => openGpsEditor(index)}
-                          >
-                            <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
-                              <MapPin className="h-2.5 w-2.5" />
-                              <span className="truncate font-medium">
-                                {formatCoordinatesSimple(gpsData.latitude, gpsData.longitude)}
-                              </span>
+                          <div className="space-y-2 cursor-pointer" onClick={() => openGpsEditor(index)}>
+                            <GpsStatusIndicator status={gpsStatus} gps={gpsData} />
+                            <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                              <div className="flex items-center gap-1.5 text-[10px] text-gray-700 dark:text-gray-300">
+                                <MapPin className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
+                                <span className="truncate font-mono">
+                                  {formatCoordinatesSimple(gpsData.latitude, gpsData.longitude)}
+                                </span>
+                              </div>
                             </div>
-                            <GpsStatusIndicator status={gpsStatus} compact />
                           </div>
                         )}
 
@@ -1711,30 +1711,29 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
           )}
         </div>
 
-        {/* Location (auto-filled from GPS) */}
-        <div className="space-y-2">
-          <Label htmlFor="note-location">Standort</Label>
-          <div className="flex gap-2">
-            <Input
-              id="note-location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Wo wurde diese Note erstellt? (z.B. Lagos, Portugal)"
-              className="flex-1"
-            />
-            {Object.values(imageGpsData).length > 0 && (
-              <Badge variant="secondary" className="flex items-center gap-1 h-10 px-3">
-                <MapPin className="h-3 w-3" />
-                <span className="text-xs">GPS aktiv</span>
-              </Badge>
-            )}
-          </div>
-          {location && Object.values(imageGpsData).length > 0 && (
-            <p className="text-xs text-green-600 dark:text-green-400">
-              📍 Standort automatisch aus GPS-Koordinaten ermittelt
-            </p>
-          )}
-        </div>
+         {/* Location (auto-filled from GPS) */}
+         <div className="space-y-2">
+           <Label htmlFor="note-location">Standort</Label>
+           <div className="space-y-2">
+             <div className="flex gap-2">
+               <Input
+                 id="note-location"
+                 value={location}
+                 onChange={(e) => setLocation(e.target.value)}
+                 placeholder="Wo wurde diese Note erstellt? (z.B. Lagos, Portugal)"
+                 className="flex-1"
+               />
+             </div>
+             {Object.values(imageGpsData).length > 0 && (
+               <GpsStatusIndicator status={Object.values(imageGpsStatuses)[0] as GpsStatus} gps={Object.values(imageGpsData)[0]} />
+             )}
+           </div>
+           {location && Object.values(imageGpsData).length > 0 && (
+             <p className="text-xs text-green-600 dark:text-green-400">
+               📍 Standort automatisch aus GPS-Koordinaten ermittelt
+             </p>
+           )}
+         </div>
 
         <div className="space-y-3">
           <Label>Tags</Label>
@@ -2424,25 +2423,22 @@ Beschreibe hier den Ort, was macht ihn besonders...
                   
                   {/* GPS Info Display */}
                   {imageGps && imageGps.latitude && imageGps.longitude ? (
-                    <div className="mt-2 text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
-                       <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
-                         <MapPin className="h-3 w-3" />
-                         <span className="truncate font-medium">
-                           {formatCoordinatesSimple(imageGps.latitude, imageGps.longitude)}
-                         </span>
-                       </div>
-                      {imageGpsStatus === 'manual' && (
-                        <span className="text-xs text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
-                      )}
-                      {imageGpsStatus === 'detected' && (
-                        <span className="text-xs text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
-                      )}
+                    <div className="mt-3 space-y-2">
+                      <GpsStatusIndicator status={imageGpsStatus} gps={imageGps} />
+                      <div className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
+                         <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                           <MapPin className="h-3 w-3 text-green-600 dark:text-green-400" />
+                           <span className="truncate font-mono">
+                             {formatCoordinatesSimple(imageGps.latitude, imageGps.longitude)}
+                           </span>
+                         </div>
+                      </div>
                     </div>
                   ) : (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="w-full text-xs h-7 mt-2"
+                      className="w-full text-xs h-8 mt-3"
                       onClick={() => setEditingImageGps(true)}
                     >
                       <MapPin className="h-3 w-3 mr-1" />
@@ -3124,19 +3120,18 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         {/* Location (auto-filled from GPS) */}
         <div className="space-y-2">
           <Label htmlFor="article-location">Standort</Label>
-          <div className="flex gap-2">
-            <Input
-              id="article-location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Wo wurde dieser Artikel erstellt? (z.B. Lagos, Portugal)"
-              className="flex-1"
-            />
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                id="article-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Wo wurde dieser Artikel erstellt? (z.B. Lagos, Portugal)"
+                className="flex-1"
+              />
+            </div>
             {imageGps && (
-              <Badge variant="secondary" className="flex items-center gap-1 h-10 px-3">
-                <MapPin className="h-3 w-3" />
-                <span className="text-xs">GPS aktiv</span>
-              </Badge>
+              <GpsStatusIndicator status={imageGpsStatus} gps={imageGps} />
             )}
           </div>
           {location && imageGps && (
