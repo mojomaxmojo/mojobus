@@ -222,7 +222,6 @@ export function LocationPicker({
       {isFullscreen && (
         <div
           className="fixed inset-0 bg-black/50 z-40"
-          onClick={toggleFullscreen}
         />
       )}
 
@@ -235,6 +234,12 @@ export function LocationPicker({
             : 'border-gray-200 dark:border-gray-700'
         )}
         style={isFullscreen ? { width: '800px', height: '800px' } : {}}
+        onClick={(e) => {
+          // Close fullscreen when clicking outside map (on backdrop)
+          if (isFullscreen && e.currentTarget === e.target) {
+            toggleFullscreen();
+          }
+        }}
       >
         {isFullscreen && (
           <Button
