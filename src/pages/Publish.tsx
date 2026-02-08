@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/useToast';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { ImageOptimizationToggle } from '@/components/ImageOptimizationToggle';
+import { GpsEditor } from '@/components/GpsEditor';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -274,17 +275,12 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     setEditingGpsFile(null);
   };
 
-  const saveGps = (fileId: string, latitude: number, longitude: number, altitude?: number) => {
+  const saveGps = (fileId: string, gps: GpsData) => {
     setFiles(prev => prev.map(file => {
       if (file.id === fileId) {
         return {
           ...file,
-          gps: {
-            latitude,
-            longitude,
-            altitude,
-            precision: 'medium' as const,
-          },
+          gps,
           gpsStatus: 'manual',
         };
       }
@@ -303,6 +299,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       }
       return file;
     }));
+    closeGpsEditor();
   };
 
   const toggleBatchEditMode = () => {
@@ -535,96 +532,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     }
   };
 
-  // GPS Editor Component (Inline)
-  function GpsEditor({
-    file,
-    onSave,
-    onCancel,
-    onRemove,
-    onApplyToAll,
-  }: {
-    file: MediaFile;
-    onSave: (fileId: string, lat: number, lon: number, alt?: number) => void;
-    onCancel: () => void;
-    onRemove: (fileId: string) => void;
-    onApplyToAll: (fileId: string) => void;
-  }) {
-    const [latitude, setLatitude] = useState(file.gps?.latitude || 0);
-    const [longitude, setLongitude] = useState(file.gps?.longitude || 0);
-    const [altitude, setAltitude] = useState(file.gps?.altitude || 0);
 
-    const handleSave = () => {
-      if (latitude === 0 && longitude === 0) {
-        alert('Bitte gib GPS-Koordinaten ein.');
-        return;
-      }
-      onSave(file.id, latitude, longitude, altitude || undefined);
-    };
-
-    return (
-      <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <div className="grid grid-cols-1 gap-2">
-          <div>
-            <Label className="text-xs">Breitengrad (Latitude)</Label>
-            <Input
-              type="number"
-              step="0.0001"
-              value={latitude || ''}
-              onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)}
-              placeholder="z.B. 37.7749"
-              className="h-8 text-sm"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Längengrad (Longitude)</Label>
-            <Input
-              type="number"
-              step="0.0001"
-              value={longitude || ''}
-              onChange={(e) => setLongitude(parseFloat(e.target.value) || 0)}
-              placeholder="z.B. -122.4194"
-              className="h-8 text-sm"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Höhe (Altitude) - Optional</Label>
-            <Input
-              type="number"
-              step="1"
-              value={altitude || ''}
-              onChange={(e) => setAltitude(parseFloat(e.target.value) || 0)}
-              placeholder="z.B. 120"
-              className="h-8 text-sm"
-            />
-          </div>
-          <div className="flex gap-1 pt-1">
-            <Button size="sm" className="flex-1 h-7" onClick={handleSave}>
-              💾 Speichern
-            </Button>
-            <Button size="sm" variant="outline" className="flex-1 h-7" onClick={onCancel}>
-              Abbrechen
-            </Button>
-            {file.gps && (
-              <Button size="sm" variant="destructive" className="h-7" onClick={() => onRemove(file.id)}>
-                🗑️
-              </Button>
-            )}
-            {file.gps && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7"
-                onClick={() => onApplyToAll(file.id)}
-                title="Auf alle Bilder anwenden"
-              >
-                📋
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -738,14 +646,14 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                     )}
                   </div>
 
-                  {/* GPS Editor (Inline) */}
+                  {/* GPS Editor */}
                   {editingGpsFile === file.id && file.type === 'image' && (
                     <GpsEditor
-                      file={file}
-                      onSave={saveGps}
+                      gps={file.gps}
+                      onSave={(gps) => saveGps(file.id, gps)}
                       onCancel={closeGpsEditor}
-                      onRemove={removeGps}
-                      onApplyToAll={applyGpsToAll}
+                      onRemove={() => removeGps(file.id)}
+                      onApplyToAll={() => applyGpsToAll(file.id)}
                     />
                   )}
 
@@ -2484,83 +2392,22 @@ Beschreibe hier den Ort, was macht ihn besonders...
                     </Button>
                   )}
 
-                  {/* GPS Editor (Inline) */}
+                  {/* GPS Editor */}
                   {editingImageGps && (
-                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <div className="grid grid-cols-1 gap-2">
-                        <div>
-                          <Label className="text-xs">Breitengrad (Latitude)</Label>
-                          <Input
-                            type="number"
-                            step="0.0001"
-                            value={imageGps?.latitude || ''}
-                            onChange={(e) => setImageGps(prev => ({ ...prev!, latitude: parseFloat(e.target.value) || 0 }))}
-                            placeholder="z.B. 37.7749"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Längengrad (Longitude)</Label>
-                          <Input
-                            type="number"
-                            step="0.0001"
-                            value={imageGps?.longitude || ''}
-                            onChange={(e) => setImageGps(prev => ({ ...prev!, longitude: parseFloat(e.target.value) || 0 }))}
-                            placeholder="z.B. -122.4194"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Höhe (Altitude) - Optional</Label>
-                          <Input
-                            type="number"
-                            step="1"
-                            value={imageGps?.altitude || ''}
-                            onChange={(e) => setImageGps(prev => ({ ...prev!, altitude: parseFloat(e.target.value) || undefined }))}
-                            placeholder="z.B. 120"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="flex gap-1 pt-1">
-                          <Button
-                            size="sm"
-                            className="flex-1 h-7"
-                            onClick={() => {
-                              if (imageGps?.latitude && imageGps?.longitude) {
-                                setImageGpsStatus('manual');
-                                setEditingImageGps(false);
-                              }
-                            }}
-                          >
-                            💾 Speichern
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 h-7"
-                            onClick={() => {
-                              setEditingImageGps(false);
-                            }}
-                          >
-                            Abbrechen
-                          </Button>
-                          {imageGps && (
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="h-7"
-                              onClick={() => {
-                                setImageGps(null);
-                                setImageGpsStatus('not_found');
-                                setEditingImageGps(false);
-                              }}
-                            >
-                              🗑️
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <GpsEditor
+                      gps={imageGps || undefined}
+                      onSave={(gps) => {
+                        setImageGps(gps);
+                        setImageGpsStatus('manual');
+                        setEditingImageGps(false);
+                      }}
+                      onCancel={() => setEditingImageGps(false)}
+                      onRemove={() => {
+                        setImageGps(null);
+                        setImageGpsStatus('not_found');
+                        setEditingImageGps(false);
+                      }}
+                    />
                   )}
 
                   <Button
