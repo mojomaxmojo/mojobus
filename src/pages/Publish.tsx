@@ -101,7 +101,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   // GPS editing state
   const [editingGpsFile, setEditingGpsFile] = useState<string | null>(null);
   const [batchEditMode, setBatchEditMode] = useState(false);
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   // Auto-fill location from first GPS-detected image
   useEffect(() => {
@@ -155,27 +154,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
     );
-  };
-
-  const handleLocationSelect = (gps: GpsData, locationData: LocationData) => {
-    // Set location to city + neighbourhood/suburb (no postcode)
-    const locationParts = [
-      locationData.city,
-      locationData.neighbourhood,
-      locationData.suburb
-    ].filter(Boolean);
-    const loc = locationParts.join(', ') || locationData.display_name || '';
-
-    setLocation(loc);
-    setShowLocationPicker(false);
-
-    // Auto-fill country if detected
-    const country = mapCountryCode(locationData);
-    if (country && !selectedCountry) {
-      setSelectedCountry(country);
-    }
-
-    console.log('[Media] Location selected from picker:', { loc, gps, locationData });
   };
 
   // Load edit data
@@ -857,27 +835,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
               onChange={(e) => setLocation(e.target.value)}
               placeholder="📍 Wo wurden die Bilder aufgenommen?"
             />
-            {showLocationPicker && (
-              <div className="mt-4">
-                <LocationPicker
-                  onLocationSelect={handleLocationSelect}
-                  className="border-primary"
-                />
-              </div>
-            )}
-            {!showLocationPicker && location && (
-              <div className="flex gap-2 mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowLocationPicker(true)}
-                >
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Standort ändern
-                </Button>
-              </div>
-            )}
           </div>
 
           {/* Country Selection */}
@@ -1290,7 +1247,6 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [isDragging, setIsDragging] = useState(false);
   const [imageGpsData, setImageGpsData] = useState<Record<number, GpsData>>({});
   const [imageGpsStatuses, setImageGpsStatuses] = useState<Record<number, GpsStatus>>({});
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
   const [isPublishing, setIsPublishing] = useState(false);
@@ -1356,27 +1312,6 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
     );
-  };
-
-  const handleLocationSelect = (gps: GpsData, locationData: LocationData) => {
-    // Set location to city + neighbourhood/suburb (no postcode)
-    const locationParts = [
-      locationData.city,
-      locationData.neighbourhood,
-      locationData.suburb
-    ].filter(Boolean);
-    const loc = locationParts.join(', ') || locationData.display_name || '';
-
-    setLocation(loc);
-    setShowLocationPicker(false);
-
-    // Auto-fill country if detected
-    const country = mapCountryCode(locationData);
-    if (country && !selectedCountry) {
-      setSelectedCountry(country);
-    }
-
-    console.log('[Note] Location selected from picker:', { loc, gps, locationData });
   };
 
 
@@ -1834,27 +1769,6 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
               📍 Standort automatisch aus GPS-Koordinaten ermittelt
             </p>
           )}
-          {showLocationPicker && (
-            <div className="mt-4">
-              <LocationPicker
-                onLocationSelect={handleLocationSelect}
-                className="border-primary"
-              />
-            </div>
-          )}
-          {!showLocationPicker && location && (
-            <div className="flex gap-2 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowLocationPicker(true)}
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                Standort ändern
-              </Button>
-            </div>
-          )}
         </div>
 
         <div className="space-y-3">
@@ -2195,6 +2109,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     );
   };
 
+  // Place-Tab: Keep LocationPicker for GPS input
   const handleLocationSelect = (gps: GpsData, locationData: LocationData) => {
     // Set location to city + neighbourhood/suburb (no postcode)
     const locationParts = [
@@ -2909,7 +2824,6 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [imageGps, setImageGps] = useState<GpsData | null>(null);
   const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
   const [editingImageGps, setEditingImageGps] = useState(false);
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [location, setLocation] = useState('');
@@ -3051,27 +2965,6 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
     autoFillLocation();
   }, [imageGps]);
-
-  const handleLocationSelect = (gps: GpsData, locationData: LocationData) => {
-    // Set location to city + neighbourhood/suburb (no postcode)
-    const locationParts = [
-      locationData.city,
-      locationData.neighbourhood,
-      locationData.suburb
-    ].filter(Boolean);
-    const loc = locationParts.join(', ') || locationData.display_name || '';
-
-    setLocation(loc);
-    setShowLocationPicker(false);
-
-    // Auto-fill country if detected
-    const country = mapCountryCode(locationData);
-    if (country && !selectedCountry) {
-      setSelectedCountry(country);
-    }
-
-    console.log('[Article] Location selected from picker:', { loc, gps, locationData });
-  };
 
   // Get available tags from config (excluding DIY & Leon tags which are shown separately)
   const availableTags = TAG_GROUPS
@@ -3391,27 +3284,6 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
             <p className="text-xs text-green-600 dark:text-green-400">
               📍 Standort automatisch aus GPS-Koordinaten ermittelt
             </p>
-          )}
-          {showLocationPicker && (
-            <div className="mt-4">
-              <LocationPicker
-                onLocationSelect={handleLocationSelect}
-                className="border-primary"
-              />
-            </div>
-          )}
-          {!showLocationPicker && location && (
-            <div className="flex gap-2 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowLocationPicker(true)}
-              >
-                <MapPin className="h-4 w-4 mr-2" />
-                Standort ändern
-              </Button>
-            </div>
           )}
         </div>
 
