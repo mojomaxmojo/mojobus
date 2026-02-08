@@ -81,7 +81,7 @@ export function LocationPicker({
   height = '400px',
 }: LocationPickerProps) {
   const [position, setPosition] = useState<[number, number]>(
-    gps ? [gps.latitude, gps.longitude] : [37.7749, -122.4194] // Default: San Francisco
+    gps ? [gps.latitude, gps.longitude] : [39.5, -8.0] // Default: Portugal
   );
   const [zoom, setZoom] = useState(initialZoom);
   const [isFullscreen, setIsFullscreen] = useState(false);
