@@ -16,6 +16,7 @@ import { useUploadFile } from '@/hooks/useUploadFile';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { ImageOptimizationToggle } from '@/components/ImageOptimizationToggle';
 import { GpsEditor } from '@/components/GpsEditor';
+import { GpsStatusIndicator } from '@/components/GpsStatusIndicator';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -617,19 +618,16 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                     {file.type === 'image' && (
                       <>
                         {file.gps && file.gps.latitude && file.gps.longitude ? (
-                          <div className="text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
-                            <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
-                              <MapPin className="h-3 w-3" />
-                              <span className="truncate font-medium">
-                                {formatCoordinatesSimple(file.gps.latitude, file.gps.longitude)}
-                              </span>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 text-xs bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-1.5">
+                              <div className="flex items-center gap-1 text-green-700 dark:text-green-300">
+                                <MapPin className="h-3 w-3" />
+                                <span className="truncate font-medium">
+                                  {formatCoordinatesSimple(file.gps.latitude, file.gps.longitude)}
+                                </span>
+                              </div>
                             </div>
-                            {file.gpsStatus === 'manual' && (
-                              <span className="text-xs text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
-                            )}
-                            {file.gpsStatus === 'detected' && (
-                              <span className="text-xs text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
-                            )}
+                            <GpsStatusIndicator status={file.gpsStatus} compact />
                           </div>
                         ) : (
                           <Button
@@ -1656,25 +1654,20 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                          className="w-full h-20 object-cover"
                        />
 
-                       {/* GPS Display */}
-                       {gpsData && gpsStatus && gpsData.latitude && gpsData.longitude && editingGpsImage !== index && (
-                         <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1 cursor-pointer hover:bg-green-100 dark:hover:bg-green-800"
-                           onClick={() => openGpsEditor(index)}
-                         >
-                           <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
-                             <MapPin className="h-2.5 w-2.5" />
-                             <span className="truncate font-medium">
-                               {formatCoordinatesSimple(gpsData.latitude, gpsData.longitude)}
-                             </span>
-                           </div>
-                           {gpsStatus === 'manual' && (
-                             <span className="text-[10px] text-blue-600 dark:text-blue-400 ml-auto">(manuell)</span>
-                           )}
-                           {gpsStatus === 'detected' && (
-                             <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">(EXIF)</span>
-                           )}
-                         </div>
-                       )}
+                        {/* GPS Display */}
+                        {gpsData && gpsStatus && gpsData.latitude && gpsData.longitude && editingGpsImage !== index && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-green-50/90 dark:bg-green-900/90 border-t border-green-200 dark:border-green-800 p-1 cursor-pointer hover:bg-green-100 dark:hover:bg-green-800"
+                            onClick={() => openGpsEditor(index)}
+                          >
+                            <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-300">
+                              <MapPin className="h-2.5 w-2.5" />
+                              <span className="truncate font-medium">
+                                {formatCoordinatesSimple(gpsData.latitude, gpsData.longitude)}
+                              </span>
+                            </div>
+                            <GpsStatusIndicator status={gpsStatus} compact />
+                          </div>
+                        )}
 
                        {/* Add GPS Button */}
                        {!gpsData && editingGpsImage !== index && (

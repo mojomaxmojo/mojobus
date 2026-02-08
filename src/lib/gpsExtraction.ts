@@ -287,7 +287,41 @@ export interface LocationData {
   postcode?: string;
 }
 
+// Geocoding cache for performance optimization
+const geocodeCache = new Map<string, LocationData>();
+const CACHE_MAX_SIZE = 100; // Max entries in cache to prevent memory bloat
+
+/**
+ * Generate cache key from coordinates (rounded to 4 decimal places)
+ * This provides ~11m precision which is sufficient for city-level geocoding
+ */
+function getCacheKey(latitude: number, longitude: number): string {
+  return `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+}
+
+/**
+ * Clean up old cache entries when cache exceeds max size
+ */
+function cleanupCache() {
+  if (geocodeCache.size > CACHE_MAX_SIZE) {
+    // Remove oldest entries (first half of cache)
+    const entries = Array.from(geocodeCache.entries());
+    for (let i = 0; i < entries.length / 2; i++) {
+      geocodeCache.delete(entries[i][0]);
+    }
+    console.log('[Geocode Cache] Cleaned up, size:', geocodeCache.size);
+  }
+}
+
 export async function reverseGeocode(latitude: number, longitude: number): Promise<LocationData | null> {
+  const cacheKey = getCacheKey(latitude, longitude);
+
+  // Check cache first
+  if (geocodeCache.has(cacheKey)) {
+    console.log('[Geocode Cache] Cache hit for:', cacheKey);
+    return geocodeCache.get(cacheKey)!;
+  }
+
   try {
     // Rate limiting: Nominatim allows 1 request per second
     // User-Agent header is required by Nominatim policy
@@ -329,6 +363,11 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     };
 
     console.log('[Reverse Geocoding] Location found:', locationData);
+
+    // Cache the result
+    geocodeCache.set(cacheKey, locationData);
+    cleanupCache();
+
     return locationData;
   } catch (error) {
     console.error('[Reverse Geocoding] Error:', error);
