@@ -80,9 +80,14 @@ export function LocationPicker({
   initialZoom = 13,
   height = '400px',
 }: LocationPickerProps) {
-  const [position, setPosition] = useState<[number, number]>(
-    gps ? [gps.latitude, gps.longitude] : [39.5, -8.0] // Default: Portugal
-  );
+  const [position, setPosition] = useState<[number, number]>(() => {
+    // Check if GPS data is valid
+    if (gps && gps.latitude !== 0 && gps.longitude !== 0) {
+      return [gps.latitude, gps.longitude];
+    }
+    // Default: Portugal
+    return [39.5, -8.0];
+  });
   const [zoom, setZoom] = useState(initialZoom);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [manualLat, setManualLat] = useState(position[0].toFixed(6));
@@ -114,6 +119,13 @@ export function LocationPicker({
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude, altitude } = position.coords;
+
+        // Validate coordinates (should not be 0,0)
+        if (latitude === 0 && longitude === 0) {
+          alert('Ungültige Position erhalten. Bitte versuchen Sie es erneut.');
+          setIsLoadingLocation(false);
+          return;
+        }
 
         const newPosition: [number, number] = [latitude, longitude];
         setPosition(newPosition);
@@ -159,8 +171,15 @@ export function LocationPicker({
     const longitude = parseFloat(manualLon);
     const altitude = parseFloat(manualAlt) || undefined;
 
+    // Validate coordinates (should not be 0,0)
     if (latitude === 0 && longitude === 0) {
-      alert('Bitte gib GPS-Koordinaten ein.');
+      alert('Bitte gib GPS-Koordinaten ein oder nutze den Position-Button (🎯).');
+      return;
+    }
+
+    // Validate coordinate ranges
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      alert('Ungültige GPS-Koordinaten. Bitte prüfe deine Eingabe.');
       return;
     }
 
