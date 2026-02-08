@@ -222,6 +222,7 @@ export function LocationPicker({
       {isFullscreen && (
         <div
           className="fixed inset-0 bg-black/50 z-40"
+          onClick={toggleFullscreen}
         />
       )}
 
@@ -230,23 +231,17 @@ export function LocationPicker({
         className={cn(
           'relative rounded-lg overflow-hidden border-2',
           isFullscreen
-            ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-none'
+            ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-none border-gray-300 dark:border-gray-600'
             : 'border-gray-200 dark:border-gray-700'
         )}
         style={isFullscreen ? { width: '800px', height: '800px' } : {}}
-        onClick={(e) => {
-          // Close fullscreen when clicking outside map (on backdrop)
-          if (isFullscreen && e.currentTarget === e.target) {
-            toggleFullscreen();
-          }
-        }}
       >
         {isFullscreen && (
           <Button
             onClick={toggleFullscreen}
             variant="outline"
             size="sm"
-            className="absolute top-4 right-4 z-[1000]"
+            className="absolute top-4 right-4 z-[1000] bg-white dark:bg-gray-800"
           >
             <Minimize2 className="h-4 w-4 mr-2" />
             Vollbild schließen
@@ -256,7 +251,7 @@ export function LocationPicker({
         <MapContainer
           center={position}
           zoom={zoom}
-          style={{ height: isFullscreen ? '800px' : height, width: isFullscreen ? '800px' : '100%' }}
+          style={{ height: '100%', width: '100%' }}
           zoomControl={false}
           ref={mapRef}
         >
