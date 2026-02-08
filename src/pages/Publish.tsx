@@ -17,6 +17,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { ImageOptimizationToggle } from '@/components/ImageOptimizationToggle';
 import { GpsEditor } from '@/components/GpsEditor';
 import { GpsStatusIndicator } from '@/components/GpsStatusIndicator';
+import { LocationPicker } from '@/components/LocationPicker';
 import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -102,6 +103,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   // GPS editing state
   const [editingGpsFile, setEditingGpsFile] = useState<string | null>(null);
   const [batchEditMode, setBatchEditMode] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   // Auto-fill location from first GPS-detected image
   useEffect(() => {
@@ -274,6 +276,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
   const closeGpsEditor = () => {
     setEditingGpsFile(null);
+    setShowMapPicker(false);
   };
 
   const saveGps = (fileId: string, gps: GpsData) => {
@@ -646,13 +649,49 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
                   {/* GPS Editor */}
                   {editingGpsFile === file.id && file.type === 'image' && (
-                    <GpsEditor
-                      gps={file.gps}
-                      onSave={(gps) => saveGps(file.id, gps)}
-                      onCancel={closeGpsEditor}
-                      onRemove={() => removeGps(file.id)}
-                      onApplyToAll={() => applyGpsToAll(file.id)}
-                    />
+                    <div className="mt-2 space-y-2">
+                      {/* Toggle between Simple Editor and Map */}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant={!showMapPicker ? 'default' : 'outline'}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowMapPicker(false)}
+                        >
+                          <span className="mr-1">✏️</span>
+                          Einfach
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={showMapPicker ? 'default' : 'outline'}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowMapPicker(true)}
+                        >
+                          <span className="mr-1">🗺️</span>
+                          Karte
+                        </Button>
+                      </div>
+
+                      {/* Show Map Picker */}
+                      {showMapPicker ? (
+                        <LocationPicker
+                          gps={file.gps}
+                          onSave={(gps) => saveGps(file.id, gps)}
+                          onCancel={closeGpsEditor}
+                          initialZoom={13}
+                          height="300px"
+                        />
+                      ) : (
+                        /* Show Simple Editor */
+                        <GpsEditor
+                          gps={file.gps}
+                          onSave={(gps) => saveGps(file.id, gps)}
+                          onCancel={closeGpsEditor}
+                          onRemove={() => removeGps(file.id)}
+                          onApplyToAll={() => applyGpsToAll(file.id)}
+                        />
+                      )}
+                    </div>
                   )}
 
                   <Button
