@@ -187,7 +187,13 @@ export function LocationPicker({
         {/* Zoom Controls */}
         <div className="absolute top-4 left-4 flex flex-col gap-1 z-[1000]">
           <Button
-            onClick={() => setZoom(Math.min(zoom + 1, 19))}
+            onClick={() => {
+              const newZoom = Math.min(zoom + 1, 19);
+              setZoom(newZoom);
+              if (mapRef.current) {
+                mapRef.current.setZoom(newZoom);
+              }
+            }}
             variant="outline"
             size="sm"
             className="w-8 h-8 p-0 bg-white dark:bg-gray-800"
@@ -196,7 +202,13 @@ export function LocationPicker({
             <Maximize2 className="h-4 w-4" />
           </Button>
           <Button
-            onClick={() => setZoom(Math.max(zoom - 1, 1))}
+            onClick={() => {
+              const newZoom = Math.max(zoom - 1, 1);
+              setZoom(newZoom);
+              if (mapRef.current) {
+                mapRef.current.setZoom(newZoom);
+              }
+            }}
             variant="outline"
             size="sm"
             className="w-8 h-8 p-0 bg-white dark:bg-gray-800"
