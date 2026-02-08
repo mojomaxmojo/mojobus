@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Maximize2, Minimize2, Check, Map as MapIcon } from 'lucide-react';
+import { MapPin, Maximize2, Minimize2, Check, Map as MapIcon, Crosshair } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GpsData } from '@/lib/gpsExtraction';
 import L from 'leaflet';
@@ -88,6 +88,7 @@ export function LocationPicker({
   const [manualLat, setManualLat] = useState(position[0].toFixed(6));
   const [manualLon, setManualLon] = useState(position[1].toFixed(6));
   const [manualAlt, setManualAlt] = useState(gps?.altitude?.toFixed(1) || '0');
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const mapRef = useRef<L.Map>(null);
 
   // Sync manual inputs with marker position
@@ -99,6 +100,57 @@ export function LocationPicker({
   // Handle map click to move marker
   const handleMapClick = ({ lat, lng }: { lat: number; lng: number }) => {
     setPosition([lat, lng]);
+  };
+
+  // Get current location from browser/smartphone
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation wird von diesem Browser nicht unterstützt.');
+      return;
+    }
+
+    setIsLoadingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, altitude } = position.coords;
+
+        const newPosition: [number, number] = [latitude, longitude];
+        setPosition(newPosition);
+        setManualLat(latitude.toFixed(6));
+        setManualLon(longitude.toFixed(6));
+        setManualAlt(altitude ? altitude.toFixed(1) : '0');
+
+        // Zoom in and pan to current location
+        if (mapRef.current) {
+          mapRef.current.setView(newPosition, 16);
+        }
+
+        setIsLoadingLocation(false);
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        let errorMessage = 'Standort konnte nicht abgerufen werden.';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Standort-Zugriff verweigert. Bitte erlaube den Zugriff in den Browsereinstellungen.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Standortinformationen sind nicht verfügbar.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Timeout beim Abrufen des Standorts.';
+            break;
+        }
+        alert(errorMessage);
+        setIsLoadingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
   // Save handler
@@ -216,6 +268,20 @@ export function LocationPicker({
           >
             <Minimize2 className="h-4 w-4" />
           </Button>
+          <Button
+            onClick={getCurrentLocation}
+            variant="outline"
+            size="sm"
+            className="w-8 h-8 p-0 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+            title="Aktuelle Position"
+            disabled={isLoadingLocation}
+          >
+            {isLoadingLocation ? (
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 dark:border-blue-400 rounded-full border-t-transparent" />
+            ) : (
+              <Crosshair className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            )}
+          </Button>
         </div>
 
         {/* Current Coordinates Display */}
@@ -284,6 +350,7 @@ export function LocationPicker({
         <div className="text-xs text-muted-foreground flex items-start gap-2 bg-muted/50 p-3 rounded-lg">
           <MapIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
           <ul className="space-y-1">
+            <li><strong>🎯 Position</strong> Button für GPS vom Smartphone/Browser</li>
             <li><strong>Klicke</strong> auf die Karte, um die Position zu ändern</li>
             <li><strong>Ziehe</strong> den Marker (MapPin), um ihn zu verschieben</li>
             <li><strong>Gib</strong> Koordinaten manuell in die Felder ein</li>
