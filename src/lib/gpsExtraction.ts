@@ -287,7 +287,92 @@ export interface LocationData {
   postcode?: string;
 }
 
-export async function reverseGeocode(latitude: number, longitude: number): Promise<LocationData | null> {
+// 🔥 PERFORMANCE: Cache for reverse geocoding results
+const geocodeCache = new Map<string, LocationData>();
+const geocodePendingRequests = new Map<string, Promise<LocationData | null>>();
+
+// 🔥 PERFORMANCE: Debounce timeout for rapid consecutive requests
+const geocodeTimeouts = new Map<string, NodeJS.Timeout>();
+
+/**
+ * Optimized reverse geocoding with caching and debouncing
+ * Reduces API calls and improves performance
+ *
+ * @param latitude - Latitude in decimal degrees
+ * @param longitude - Longitude in decimal degrees
+ * @param debounceMs - Debounce delay in milliseconds (default: 500ms)
+ * @returns Promise with location data (city, country, full address)
+ *
+ * @example
+ * ```typescript
+ * const location = await reverseGeocodeCached(37.7749, -122.4194);
+ * console.log(location.city); // "San Francisco"
+ * ```
+ */
+export async function reverseGeocodeCached(
+  latitude: number,
+  longitude: number,
+  debounceMs: number = 500
+): Promise<LocationData | null> {
+  // Round coordinates to 4 decimal places for cache key (approx 11m precision)
+  const cacheKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+
+  // 🔥 PERFORMANCE: Check cache first
+  if (geocodeCache.has(cacheKey)) {
+    console.log('[Reverse Geocoding Cache] HIT:', cacheKey);
+    return geocodeCache.get(cacheKey)!;
+  }
+
+  // 🔥 PERFORMANCE: Check for pending request (avoid duplicate API calls)
+  if (geocodePendingRequests.has(cacheKey)) {
+    console.log('[Reverse Geocoding Cache] Pending request:', cacheKey);
+    return geocodePendingRequests.get(cacheKey)!;
+  }
+
+  // 🔥 PERFORMANCE: Debounce rapid consecutive requests
+  return new Promise((resolve) => {
+    // Clear existing timeout for this coordinate
+    if (geocodeTimeouts.has(cacheKey)) {
+      clearTimeout(geocodeTimeouts.get(cacheKey)!);
+    }
+
+    // Set new timeout
+    geocodeTimeouts.set(cacheKey, setTimeout(async () => {
+      try {
+        console.log('[Reverse Geocoding API] Fetching:', cacheKey);
+
+        // Make the API request
+        const locationData = await reverseGeocodeInternal(latitude, longitude);
+
+        // Cache the result
+        if (locationData) {
+          geocodeCache.set(cacheKey, locationData);
+
+          // Clean up old cache entries (keep last 50)
+          if (geocodeCache.size > 50) {
+            const oldestKey = geocodeCache.keys().next().value;
+            geocodeCache.delete(oldestKey);
+          }
+        }
+
+        resolve(locationData);
+      } catch (error) {
+        console.error('[Reverse Geocoding API] Error:', error);
+        resolve(null);
+      } finally {
+        // Clean up
+        geocodePendingRequests.delete(cacheKey);
+        geocodeTimeouts.delete(cacheKey);
+      }
+    }, debounceMs));
+  });
+}
+
+/**
+ * Internal reverse geocoding function (actual API call)
+ * Separated from cached version for better testability
+ */
+async function reverseGeocodeInternal(latitude: number, longitude: number): Promise<LocationData | null> {
   try {
     // Rate limiting: Nominatim allows 1 request per second
     // User-Agent header is required by Nominatim policy
@@ -334,6 +419,14 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     console.error('[Reverse Geocoding] Error:', error);
     return null;
   }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use reverseGeocodeCached instead
+ */
+export async function reverseGeocode(latitude: number, longitude: number): Promise<LocationData | null> {
+  return reverseGeocodeCached(latitude, longitude, 0);
 }
 
 /**
