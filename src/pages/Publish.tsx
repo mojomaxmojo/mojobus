@@ -725,15 +725,15 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                             )}
                           </div>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-xs h-7"
-                            onClick={() => openGpsEditor(file.id)}
-                          >
-                            <MapPin className="h-3 w-3 mr-1" />
-                            GPS hinzufügen
-                          </Button>
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="w-full text-xs h-7"
+                             onClick={() => setEditingGpsFile(file.id)}
+                           >
+                             <MapPin className="h-3 w-3 mr-1" />
+                             GPS hinzufügen
+                           </Button>
                         )}
                       </>
                     )}
