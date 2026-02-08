@@ -102,6 +102,16 @@ export function LocationPicker({
     setManualLon(position[1].toFixed(6));
   }, [position]);
 
+  // Update map size when fullscreen toggles
+  useEffect(() => {
+    if (mapRef.current) {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        mapRef.current?.invalidateSize();
+      }, 100);
+    }
+  }, [isFullscreen]);
+
   // Handle map click to move marker
   const handleMapClick = ({ lat, lng }: { lat: number; lng: number }) => {
     setPosition([lat, lng]);
@@ -208,6 +218,14 @@ export function LocationPicker({
 
   return (
     <div className="space-y-4">
+      {/* Fullscreen backdrop */}
+      {isFullscreen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={toggleFullscreen}
+        />
+      )}
+
       {/* Map */}
       <div
         className={cn(
@@ -216,7 +234,7 @@ export function LocationPicker({
             ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-none'
             : 'border-gray-200 dark:border-gray-700'
         )}
-        style={isFullscreen ? { width: '600px', height: '600px' } : {}}
+        style={isFullscreen ? { width: '800px', height: '800px' } : {}}
       >
         {isFullscreen && (
           <Button
@@ -233,7 +251,7 @@ export function LocationPicker({
         <MapContainer
           center={position}
           zoom={zoom}
-          style={{ height: isFullscreen ? '600px' : height, width: isFullscreen ? '600px' : '100%' }}
+          style={{ height: isFullscreen ? '800px' : height, width: isFullscreen ? '800px' : '100%' }}
           zoomControl={false}
           ref={mapRef}
         >
