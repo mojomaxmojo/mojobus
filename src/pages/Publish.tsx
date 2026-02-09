@@ -575,6 +575,39 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         </CardContent>
       </Card>
 
+      {/* Location */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Standort
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="location">Standort</Label>
+            <Input
+              id="location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="📍 Wo wurden die Bilder aufgenommen?"
+            />
+            {files.some(f => f.type === 'image' && f.gps) && (
+              <p className="text-xs text-green-600 dark:text-green-400">
+                📍 GPS-Daten verfügbar - Standort kann automatisch ausgefüllt werden
+              </p>
+            )}
+          </div>
+
+          {/* Country Selection */}
+          <CountrySelector
+            selectedCountry={selectedCountry}
+            onCountryChange={setSelectedCountry}
+            placeholder="Land auswaehlen"
+          />
+        </CardContent>
+      </Card>
+
        {/* Media Preview */}
       {files.length > 0 && (
         <Card>
@@ -778,23 +811,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
               rows={4}
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Standort</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="📍 Wo wurden die Bilder aufgenommen?"
-            />
-          </div>
-
-          {/* Country Selection */}
-          <CountrySelector
-            selectedCountry={selectedCountry}
-            onCountryChange={setSelectedCountry}
-            placeholder="Land auswaehlen"
-          />
 
           {/* Categories */}
           <div className="space-y-4">
@@ -1204,6 +1220,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState({ stage: '', status: '' });
   const [editingGpsImage, setEditingGpsImage] = useState<number | null>(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1366,6 +1383,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
   const closeGpsEditor = () => {
     setEditingGpsImage(null);
+    setShowMapPicker(false);
   };
 
   const saveGps = (imageIndex: number, gps: GpsData) => {
@@ -1729,17 +1747,59 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                          </Button>
                        )}
 
-                       {/* GPS Editor */}
-                       {editingGpsImage === index && (
-                         <div className="absolute bottom-0 left-0 right-0 z-10">
-                           <GpsEditor
-                             gps={gpsData || undefined}
-                             onSave={(gps) => saveGps(index, gps)}
-                             onCancel={closeGpsEditor}
-                             onRemove={() => removeGps(index)}
-                           />
-                         </div>
-                       )}
+                        {/* GPS Editor */}
+                        {editingGpsImage === index && (
+                          <div className="absolute bottom-0 left-0 right-0 z-10 p-2 bg-white dark:bg-gray-800 border-t">
+                            {/* Toggle between Simple Editor and Map */}
+                            <div className="flex gap-2 mb-2">
+                              <Button
+                                size="sm"
+                                variant={!showMapPicker ? 'default' : 'outline'}
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => setShowMapPicker(false)}
+                              >
+                                <span className="mr-1">✏️</span>
+                                Einfach
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={showMapPicker ? 'default' : 'outline'}
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => setShowMapPicker(true)}
+                              >
+                                <span className="mr-1">🗺️</span>
+                                Karte
+                              </Button>
+                            </div>
+
+                            {/* Show Map Picker */}
+                            {showMapPicker ? (
+                              <LocationPicker
+                                gps={gpsData}
+                                onSave={(gps) => saveGps(index, gps)}
+                                onCancel={closeGpsEditor}
+                                initialZoom={13}
+                                height="300px"
+                                onCountryDetected={(country) => {
+                                  console.log('[NoteForm] Country detected:', country);
+                                  setSelectedCountry(country);
+                                }}
+                                onLocationDetected={(locationText) => {
+                                  console.log('[NoteForm] Location detected:', locationText);
+                                  setLocation(locationText);
+                                }}
+                              />
+                            ) : (
+                              /* Show Simple Editor */
+                              <GpsEditor
+                                gps={gpsData || undefined}
+                                onSave={(gps) => saveGps(index, gps)}
+                                onCancel={closeGpsEditor}
+                                onRemove={() => removeGps(index)}
+                              />
+                            )}
+                          </div>
+                        )}
 
                        {/* Delete Button */}
                        <Button
@@ -2495,20 +2555,68 @@ Beschreibe hier den Ort, was macht ihn besonders...
 
                   {/* GPS Editor */}
                   {editingImageGps && (
-                    <GpsEditor
-                      gps={imageGps || undefined}
-                      onSave={(gps) => {
-                        setImageGps(gps);
-                        setImageGpsStatus('manual');
-                        setEditingImageGps(false);
-                      }}
-                      onCancel={() => setEditingImageGps(false)}
-                      onRemove={() => {
-                        setImageGps(null);
-                        setImageGpsStatus('not_found');
-                        setEditingImageGps(false);
-                      }}
-                    />
+                    <div className="space-y-2">
+                      {/* Toggle between Simple Editor and Map */}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant={!showMapPicker ? 'default' : 'outline'}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowMapPicker(false)}
+                        >
+                          <span className="mr-1">✏️</span>
+                          Einfach
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={showMapPicker ? 'default' : 'outline'}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowMapPicker(true)}
+                        >
+                          <span className="mr-1">🗺️</span>
+                          Karte
+                        </Button>
+                      </div>
+
+                      {/* Show Map Picker */}
+                      {showMapPicker ? (
+                        <LocationPicker
+                          gps={imageGps || undefined}
+                          onSave={(gps) => {
+                            setImageGps(gps);
+                            setImageGpsStatus('manual');
+                            setEditingImageGps(false);
+                          }}
+                          onCancel={() => setEditingImageGps(false)}
+                          initialZoom={13}
+                          height="300px"
+                          onCountryDetected={(country) => {
+                            console.log('[ArticleForm] Country detected:', country);
+                            setSelectedCountry(country);
+                          }}
+                          onLocationDetected={(locationText) => {
+                            console.log('[ArticleForm] Location detected:', locationText);
+                            setLocation(locationText);
+                          }}
+                        />
+                      ) : (
+                        /* Show Simple Editor */
+                        <GpsEditor
+                          gps={imageGps || undefined}
+                          onSave={(gps) => {
+                            setImageGps(gps);
+                            setImageGpsStatus('manual');
+                            setEditingImageGps(false);
+                          }}
+                          onCancel={() => setEditingImageGps(false)}
+                          onRemove={() => {
+                            setImageGps(null);
+                            setImageGpsStatus('not_found');
+                            setEditingImageGps(false);
+                          }}
+                        />
+                      )}
+                    </div>
                   )}
 
                   <Button
@@ -2726,6 +2834,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [imageGps, setImageGps] = useState<GpsData | null>(null);
   const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
   const [editingImageGps, setEditingImageGps] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [location, setLocation] = useState('');
