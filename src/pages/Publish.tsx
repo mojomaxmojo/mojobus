@@ -106,35 +106,35 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [showMapPicker, setShowMapPicker] = useState(false);
 
   // Auto-fill location from first GPS-detected image
-  useEffect(() => {
-     const autoFillLocation = async () => {
-      const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
-      if (firstGpsImage && !location) {
-        console.log('[Media GPS] GPS detected, reverse geocoding...');
-        const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
-        if (locationData) {
-          // Set location to city + neighbourhood/suburb (no postcode)
-          const locationParts = [
-            locationData.city,
-            locationData.neighbourhood,
-            locationData.suburb
-          ].filter(Boolean);
-          const loc = locationParts.join(', ');
-          setLocation(loc);
-          console.log('[Media GPS] Location found:', loc);
+   useEffect(() => {
+      const autoFillLocation = async () => {
+       const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
+       if (firstGpsImage && !location) {
+         console.log('[Media GPS] GPS detected, reverse geocoding...');
+         const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
+         if (locationData) {
+           // Set location to city + neighbourhood/suburb (no postcode)
+           const locationParts = [
+             locationData.city,
+             locationData.neighbourhood,
+             locationData.suburb
+           ].filter(Boolean);
+           const loc = locationParts.join(', ');
+           setLocation(loc);
+           console.log('[Media GPS] Location found:', loc);
 
-          // Auto-fill country if detected
-          const country = mapCountryCode(locationData);
-          if (country && !selectedCountry) {
-            setSelectedCountry(country);
-            console.log('[Media GPS] Country auto-filled:', country);
-          }
-        }
-      }
-    };
+           // Auto-fill country if detected
+           const country = mapCountryCode(locationData);
+           if (country && !selectedCountry) {
+             setSelectedCountry(country);
+             console.log('[Media GPS] Country auto-filled:', country);
+           }
+         }
+       }
+     };
 
-    autoFillLocation();
-  }, [files, location, selectedCountry]);
+     autoFillLocation();
+   }, [files, location, selectedCountry]);
 
   // Handler functions
   const handleMainCategoryChange = (value: string) => {
@@ -279,7 +279,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     setShowMapPicker(false);
   };
 
-  const saveGps = (fileId: string, gps: GpsData) => {
+  const saveGps = async (fileId: string, gps: GpsData) => {
+    // Save GPS to file
     setFiles(prev => prev.map(file => {
       if (file.id === fileId) {
         return {
@@ -290,6 +291,33 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       }
       return file;
     }));
+
+    // Auto-fill location and country using reverse geocoding
+    try {
+      console.log('[Media GPS Manual] Reverse geocoding for manual GPS...', gps);
+      const locationData = await reverseGeocode(gps.latitude, gps.longitude);
+      if (locationData) {
+        // Set location to city + neighbourhood/suburb (no postcode)
+        const locationParts = [
+          locationData.city,
+          locationData.neighbourhood,
+          locationData.suburb
+        ].filter(Boolean);
+        const loc = locationParts.join(', ');
+        setLocation(loc);
+        console.log('[Media GPS Manual] Location found:', loc);
+
+        // Auto-fill country if detected
+        const country = mapCountryCode(locationData);
+        if (country) {
+          setSelectedCountry(country);
+          console.log('[Media GPS Manual] Country auto-filled:', country);
+        }
+      }
+    } catch (error) {
+      console.error('[Media GPS Manual] Reverse geocoding failed:', error);
+    }
+
     closeGpsEditor();
   };
 
@@ -577,6 +605,202 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
        {/* Media Preview */}
       {files.length > 0 && (
+         <Card>
+           <CardHeader>
+             <div className="flex items-center justify-between">
+               <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
+               {files.some(f => f.type === 'image') && (
+                 <Button
+                   size="sm"
+                   variant={batchEditMode ? "default" : "outline"}
+                   onClick={toggleBatchEditMode}
+                   className="gap-1"
+                 >
+                   {batchEditMode ? <CheckCircle className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+                   {batchEditMode ? "Batch-Edit aktiv" : "Batch-Edit"}
+                 </Button>
+               )}
+             </div>
+           </CardHeader>
+           <CardContent>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+               {files.map(file => (
+                 <div key={file.id} className="relative group border rounded-lg overflow-hidden">
+                   {file.preview ? (
+                     <img
+                       src={file.preview}
+                       alt={file.name}
+                       className="w-full h-32 object-cover rounded"
+                     />
+                   ) : (
+                     <div className="w-full h-32 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
+                       {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
+                       {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
+                       {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
+                     </div>
+                   )}
+                   <div className="p-2 space-y-1">
+                     <div className="text-sm">
+                       <p className="font-medium truncate">{file.name}</p>
+                       <p className="text-gray-500 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                     </div>
+
+                     {/* GPS Info Display */}
+                     {file.type === 'image' && (
+                       <>
+                         {file.gps && file.gps.latitude && file.gps.longitude ? (
+                           <div className="space-y-2">
+                             <GpsStatusIndicator status={file.gpsStatus} gps={file.gps} />
+                             <div className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
+                               <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                                 <MapPin className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                 <span className="truncate font-mono">
+                                   {formatCoordinatesSimple(file.gps.latitude, file.gps.longitude)}
+                                 </span>
+                               </div>
+                             </div>
+                           </div>
+                         ) : (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="w-full text-xs h-8"
+                             onClick={() => openGpsEditor(file.id)}
+                           >
+                             <MapPin className="h-3 w-3 mr-1" />
+                             GPS hinzufügen
+                           </Button>
+                         )}
+                       </>
+                     )}
+                   </div>
+
+                   {/* GPS Editor */}
+                   {editingGpsFile === file.id && file.type === 'image' && (
+                     <div className="mt-2 space-y-2">
+                       {/* Toggle between Simple Editor and Map */}
+                       <div className="flex gap-2">
+                         <Button
+                           size="sm"
+                           variant={!showMapPicker ? 'default' : 'outline'}
+                           className="flex-1 h-7 text-xs"
+                           onClick={() => setShowMapPicker(false)}
+                         >
+                           <span className="mr-1">✏️</span>
+                           Einfach
+                         </Button>
+                         <Button
+                           size="sm"
+                           variant={showMapPicker ? 'default' : 'outline'}
+                           className="flex-1 h-7 text-xs"
+                           onClick={() => setShowMapPicker(true)}
+                         >
+                           <span className="mr-1">🗺️</span>
+                           Karte
+                         </Button>
+                       </div>
+
+                       {/* Show Map Picker */}
+                       {showMapPicker ? (
+                         <LocationPicker
+                           gps={file.gps}
+                           onSave={(gps) => saveGps(file.id, gps)}
+                           onCancel={closeGpsEditor}
+                           initialZoom={13}
+                           height="300px"
+                           onCountryDetected={(country) => {
+                             console.log('[Publish] Country detected:', country);
+                             setSelectedCountry(country);
+                           }}
+                           onLocationDetected={(locationText) => {
+                             console.log('[Publish] Location detected:', locationText);
+                             setLocation(locationText);
+                           }}
+                         />
+                       ) : (
+                         /* Show Simple Editor */
+                         <GpsEditor
+                           gps={file.gps}
+                           onSave={(gps) => saveGps(file.id, gps)}
+                           onCancel={closeGpsEditor}
+                           onRemove={() => removeGps(file.id)}
+                           onApplyToAll={() => applyGpsToAll(file.id)}
+                         />
+                       )}
+                     </div>
+                   )}
+
+                   {/* Delete Button */}
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                     onClick={() => removeFile(file.id)}
+                   >
+                     ×
+                   </Button>
+                 </div>
+               ))}
+             </div>
+
+             {/* Batch GPS Edit Panel */}
+             {batchEditMode && files.some(f => f.type === 'image' && f.gps) && (
+               <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                 <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Batch GPS bearbeiten</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {files.filter(f => f.type === 'image' && f.gps).map(file => (
+                     <div key={file.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
+                       <span className="text-sm truncate">{file.name}</span>
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         className="h-7"
+                         onClick={() => applyGpsToAll(file.id)}
+                       >
+                         Auf alle anwenden
+                       </Button>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+           </CardContent>
+         </Card>
+       )}
+
+      {/* Location */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Standort
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="location">Standort</Label>
+            <Input
+              id="location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="📍 Wo wurden die Bilder aufgenommen?"
+            />
+            {files.some(f => f.type === 'image' && f.gps) && (
+              <p className="text-xs text-green-600 dark:text-green-400">
+                📍 GPS-Daten verfügbar - Standort kann automatisch ausgefüllt werden
+              </p>
+            )}
+          </div>
+
+          {/* Country Selection */}
+          <CountrySelector
+            selectedCountry={selectedCountry}
+            onCountryChange={setSelectedCountry}
+            placeholder="Land auswaehlen"
+          />
+        </CardContent>
+      </Card>
+      {files.length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -778,23 +1002,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
               rows={4}
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Standort</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="📍 Wo wurden die Bilder aufgenommen?"
-            />
-          </div>
-
-          {/* Country Selection */}
-          <CountrySelector
-            selectedCountry={selectedCountry}
-            onCountryChange={setSelectedCountry}
-            placeholder="Land auswaehlen"
-          />
 
           {/* Categories */}
           <div className="space-y-4">
@@ -1204,6 +1411,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState({ stage: '', status: '' });
   const [editingGpsImage, setEditingGpsImage] = useState<number | null>(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1366,9 +1574,11 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
   const closeGpsEditor = () => {
     setEditingGpsImage(null);
+    setShowMapPicker(false);
   };
 
-  const saveGps = (imageIndex: number, gps: GpsData) => {
+  const saveGps = async (imageIndex: number, gps: GpsData) => {
+    // Save GPS data
     setImageGpsData(prev => ({
       ...prev,
       [imageIndex]: gps
@@ -1377,6 +1587,33 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       ...prev,
       [imageIndex]: 'manual'
     }));
+
+    // Auto-fill location and country using reverse geocoding
+    try {
+      console.log('[Note GPS Manual] Reverse geocoding for manual GPS...', gps);
+      const locationData = await reverseGeocode(gps.latitude, gps.longitude);
+      if (locationData) {
+        // Set location to city + neighbourhood/suburb (no postcode)
+        const locationParts = [
+          locationData.city,
+          locationData.neighbourhood,
+          locationData.suburb
+        ].filter(Boolean);
+        const loc = locationParts.join(', ');
+        setLocation(loc);
+        console.log('[Note GPS Manual] Location found:', loc);
+
+        // Auto-fill country if detected
+        const country = mapCountryCode(locationData);
+        if (country) {
+          setSelectedCountry(country);
+          console.log('[Note GPS Manual] Country auto-filled:', country);
+        }
+      }
+    } catch (error) {
+      console.error('[Note GPS Manual] Reverse geocoding failed:', error);
+    }
+
     closeGpsEditor();
   };
 
@@ -1397,9 +1634,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       const autoFillLocation = async () => {
         // Use GPS from first image if available
         const firstGpsData = Object.values(imageGpsData)[0];
-        const firstGpsStatus = Object.values(imageGpsStatuses)[0];
 
-        if (firstGpsData && firstGpsStatus && !firstGpsStatus.includes('manual')) {
+        if (firstGpsData) {
           console.log('[Note GPS] GPS detected, reverse geocoding...');
           const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
           if (locationData) {
@@ -1729,17 +1965,59 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                          </Button>
                        )}
 
-                       {/* GPS Editor */}
-                       {editingGpsImage === index && (
-                         <div className="absolute bottom-0 left-0 right-0 z-10">
-                           <GpsEditor
-                             gps={gpsData || undefined}
-                             onSave={(gps) => saveGps(index, gps)}
-                             onCancel={closeGpsEditor}
-                             onRemove={() => removeGps(index)}
-                           />
-                         </div>
-                       )}
+                        {/* GPS Editor */}
+                        {editingGpsImage === index && (
+                          <div className="absolute bottom-0 left-0 right-0 z-10 p-2 bg-white dark:bg-gray-800 border-t">
+                            {/* Toggle between Simple Editor and Map */}
+                            <div className="flex gap-2 mb-2">
+                              <Button
+                                size="sm"
+                                variant={!showMapPicker ? 'default' : 'outline'}
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => setShowMapPicker(false)}
+                              >
+                                <span className="mr-1">✏️</span>
+                                Einfach
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={showMapPicker ? 'default' : 'outline'}
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => setShowMapPicker(true)}
+                              >
+                                <span className="mr-1">🗺️</span>
+                                Karte
+                              </Button>
+                            </div>
+
+                            {/* Show Map Picker */}
+                            {showMapPicker ? (
+                              <LocationPicker
+                                gps={gpsData}
+                                onSave={(gps) => saveGps(index, gps)}
+                                onCancel={closeGpsEditor}
+                                initialZoom={13}
+                                height="300px"
+                                onCountryDetected={(country) => {
+                                  console.log('[NoteForm] Country detected:', country);
+                                  setSelectedCountry(country);
+                                }}
+                                onLocationDetected={(locationText) => {
+                                  console.log('[NoteForm] Location detected:', locationText);
+                                  setLocation(locationText);
+                                }}
+                              />
+                            ) : (
+                              /* Show Simple Editor */
+                              <GpsEditor
+                                gps={gpsData || undefined}
+                                onSave={(gps) => saveGps(index, gps)}
+                                onCancel={closeGpsEditor}
+                                onRemove={() => removeGps(index)}
+                              />
+                            )}
+                          </div>
+                        )}
 
                        {/* Delete Button */}
                        <Button
@@ -1909,14 +2187,15 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   const [price, setPrice] = useState('');
   const [image, setImage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageGps, setImageGps] = useState<GpsData | null>(null);
-  const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
-  const [editingImageGps, setEditingImageGps] = useState(false);
-  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
-  const [additionalImagesUrlInput, setAdditionalImagesUrlInput] = useState('');
-  const [manualTags, setManualTags] = useState<string[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [isUploading, setIsUploading] = useState(false);
+   const [imageGps, setImageGps] = useState<GpsData | null>(null);
+   const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
+   const [editingImageGps, setEditingImageGps] = useState(false);
+   const [showMapPicker, setShowMapPicker] = useState(false);
+   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+   const [additionalImagesUrlInput, setAdditionalImagesUrlInput] = useState('');
+   const [manualTags, setManualTags] = useState<string[]>([]);
+   const [selectedCountry, setSelectedCountry] = useState<string>('');
+   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -2059,37 +2338,37 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   ];
 
    // Auto-fill location and country from GPS data
-  useEffect(() => {
-    const autoFillLocation = async () => {
-      if (imageGps && !imageGpsStatus.includes('manual')) {
-        console.log('[Place GPS] GPS detected, reverse geocoding...');
-        const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
-        if (locationData) {
-          // Set location to city + neighbourhood/suburb (no postcode)
-          const locationParts = [
-            locationData.city,
-            locationData.neighbourhood,
-            locationData.suburb
-          ].filter(Boolean);
-          const loc = locationParts.join(', ');
-          setLocation(loc);
-          console.log('[Place GPS] Location found:', loc);
+   useEffect(() => {
+     const autoFillLocation = async () => {
+       if (imageGps) {
+         console.log('[Place GPS] GPS detected, reverse geocoding...');
+         const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
+         if (locationData) {
+           // Set location to city + neighbourhood/suburb (no postcode)
+           const locationParts = [
+             locationData.city,
+             locationData.neighbourhood,
+             locationData.suburb
+           ].filter(Boolean);
+           const loc = locationParts.join(', ');
+           setLocation(loc);
+           console.log('[Place GPS] Location found:', loc);
 
-          // Also set coordinates
-          setCoordinates({ lat: imageGps.latitude.toString(), lng: imageGps.longitude.toString() });
+           // Also set coordinates
+           setCoordinates({ lat: imageGps.latitude.toString(), lng: imageGps.longitude.toString() });
 
-          // Auto-fill country if detected
-          const country = mapCountryCode(locationData);
-          if (country && !selectedCountry) {
-            setSelectedCountry(country);
-            console.log('[Place GPS] Country auto-filled:', country);
-          }
-        }
-      }
-    };
+           // Auto-fill country if detected
+           const country = mapCountryCode(locationData);
+           if (country && !selectedCountry) {
+             setSelectedCountry(country);
+             console.log('[Place GPS] Country auto-filled:', country);
+           }
+         }
+       }
+     };
 
-    autoFillLocation();
-  }, [imageGps]);
+     autoFillLocation();
+   }, [imageGps]);
 
   const facilityOptions = [
     'Strom', 'Wasser', 'WC', 'Dusche', 'WLAN',
@@ -2192,6 +2471,11 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
   const removeManualTag = (index: number) => {
     setManualTags(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const closeGpsEditor = () => {
+    setEditingImageGps(false);
+    setShowMapPicker(false);
   };
 
   const handleSubmit = () => {
@@ -2372,82 +2656,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="place-name">Name des Ortes</Label>
-            <Input
-              id="place-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="z.B. Algarve Beach Camping"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="place-category">Kategorie</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Kategorie wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(cat => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Country Selection */}
-        <CountrySelector
-          selectedCountry={selectedCountry}
-          onCountryChange={setSelectedCountry}
-          placeholder="Land auswaehlen"
-        />
-
-        <div className="space-y-2">
-          <Label htmlFor="place-description">Beschreibung</Label>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            WYSIWYG Editor - Beschreibe den Ort mit Formatierung, Bildern und Links
-          </div>
-          <WysiwygEditor
-            content={description}
-            onChange={setDescription}
-            placeholder={`# Erlebnis-Bericht
-
-Beschreibe hier den Ort, was macht ihn besonders...
-
-- Verwende die Toolbar für Formatierung
-- Fett oder kursiv
-
-## Was erwartet dich
-
-### Highlights
-- Der Ort bietet einen tollen Blick auf das Meer
-- Perfekt für Vanlife mit Solarstrom
-- Ruah und Natur
-
-### Tipps und Tricks
-- Beste Zeit für einen Besuch: Frühling/Herbst
-- Versorgungsmöglichkeiten in der Nähe
-
-### Bilder und Videos
-- Füge Bilder über das Bild-Icon ein
-- Oder lade Bilder direkt in den Editor
-
-### Noch mehr...
-`}
-            minHeight="300px"
-            maxLength={30000}
-            onImageUpload={(url) => {
-              // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
-            }}
-          />
-        </div>
-
-        {/* Title Image */}
+        {/* Title Image - Move to top */}
          <div className="space-y-2">
           <Label htmlFor="article-image">Titelbild</Label>
           <div className="flex gap-2">
@@ -2495,20 +2704,68 @@ Beschreibe hier den Ort, was macht ihn besonders...
 
                   {/* GPS Editor */}
                   {editingImageGps && (
-                    <GpsEditor
-                      gps={imageGps || undefined}
-                      onSave={(gps) => {
-                        setImageGps(gps);
-                        setImageGpsStatus('manual');
-                        setEditingImageGps(false);
-                      }}
-                      onCancel={() => setEditingImageGps(false)}
-                      onRemove={() => {
-                        setImageGps(null);
-                        setImageGpsStatus('not_found');
-                        setEditingImageGps(false);
-                      }}
-                    />
+                    <div className="space-y-2">
+                      {/* Toggle between Simple Editor and Map */}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant={!showMapPicker ? 'default' : 'outline'}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowMapPicker(false)}
+                        >
+                          <span className="mr-1">✏️</span>
+                          Einfach
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={showMapPicker ? 'default' : 'outline'}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowMapPicker(true)}
+                        >
+                          <span className="mr-1">🗺️</span>
+                          Karte
+                        </Button>
+                      </div>
+
+                      {/* Show Map Picker */}
+                      {showMapPicker ? (
+                        <LocationPicker
+                          gps={imageGps || undefined}
+                          onSave={(gps) => {
+                            setImageGps(gps);
+                            setImageGpsStatus('manual');
+                            setEditingImageGps(false);
+                          }}
+                          onCancel={() => setEditingImageGps(false)}
+                          initialZoom={13}
+                          height="300px"
+                          onCountryDetected={(country) => {
+                            console.log('[ArticleForm] Country detected:', country);
+                            setSelectedCountry(country);
+                          }}
+                          onLocationDetected={(locationText) => {
+                            console.log('[ArticleForm] Location detected:', locationText);
+                            setLocation(locationText);
+                          }}
+                        />
+                      ) : (
+                        /* Show Simple Editor */
+                        <GpsEditor
+                          gps={imageGps || undefined}
+                          onSave={(gps) => {
+                            setImageGps(gps);
+                            setImageGpsStatus('manual');
+                            setEditingImageGps(false);
+                          }}
+                          onCancel={() => setEditingImageGps(false)}
+                          onRemove={() => {
+                            setImageGps(null);
+                            setImageGpsStatus('not_found');
+                            setEditingImageGps(false);
+                          }}
+                        />
+                      )}
+                    </div>
                   )}
 
                   <Button
@@ -2595,6 +2852,81 @@ Beschreibe hier den Ort, was macht ihn besonders...
               />
             </div>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="place-name">Name des Ortes</Label>
+            <Input
+              id="place-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="z.B. Algarve Beach Camping"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="place-category">Kategorie</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Kategorie wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(cat => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Country Selection */}
+        <CountrySelector
+          selectedCountry={selectedCountry}
+          onCountryChange={setSelectedCountry}
+          placeholder="Land auswaehlen"
+        />
+
+        <div className="space-y-2">
+          <Label htmlFor="place-description">Beschreibung</Label>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            WYSIWYG Editor - Beschreibe den Ort mit Formatierung, Bildern und Links
+          </div>
+          <WysiwygEditor
+            content={description}
+            onChange={setDescription}
+            placeholder={`# Erlebnis-Bericht
+
+Beschreibe hier den Ort, was macht ihn besonders...
+
+- Verwende die Toolbar für Formatierung
+- Fett oder kursiv
+
+## Was erwartet dich
+
+### Highlights
+- Der Ort bietet einen tollen Blick auf das Meer
+- Perfekt für Vanlife mit Solarstrom
+- Ruah und Natur
+
+### Tipps und Tricks
+- Beste Zeit für einen Besuch: Frühling/Herbst
+- Versorgungsmöglichkeiten in der Nähe
+
+### Bilder und Videos
+- Füge Bilder über das Bild-Icon ein
+- Oder lade Bilder direkt in den Editor
+
+### Noch mehr...
+`}
+            minHeight="300px"
+            maxLength={30000}
+            onImageUpload={(url) => {
+              // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
+            }}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2726,6 +3058,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [imageGps, setImageGps] = useState<GpsData | null>(null);
   const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
   const [editingImageGps, setEditingImageGps] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [location, setLocation] = useState('');
@@ -2839,34 +3172,34 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   };
 
    // Auto-fill location from GPS data
-  useEffect(() => {
-    const autoFillLocation = async () => {
-      if (imageGps && !imageGpsStatus.includes('manual')) {
-        console.log('[Article GPS] GPS detected, reverse geocoding...');
-        const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
-        if (locationData) {
-          // Set location to city + neighbourhood/suburb (no postcode)
-          const locationParts = [
-            locationData.city,
-            locationData.neighbourhood,
-            locationData.suburb
-          ].filter(Boolean);
-          const loc = locationParts.join(', ');
-          setLocation(loc);
-          console.log('[Article GPS] Location found:', loc);
+   useEffect(() => {
+     const autoFillLocation = async () => {
+       if (imageGps) {
+         console.log('[Article GPS] GPS detected, reverse geocoding...');
+         const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
+         if (locationData) {
+           // Set location to city + neighbourhood/suburb (no postcode)
+           const locationParts = [
+             locationData.city,
+             locationData.neighbourhood,
+             locationData.suburb
+           ].filter(Boolean);
+           const loc = locationParts.join(', ');
+           setLocation(loc);
+           console.log('[Article GPS] Location found:', loc);
 
-          // Auto-fill country if detected
-          const country = mapCountryCode(locationData);
-          if (country && !selectedCountry) {
-            setSelectedCountry(country);
-            console.log('[Article GPS] Country auto-filled:', country);
-          }
-        }
-      }
-    };
+           // Auto-fill country if detected
+           const country = mapCountryCode(locationData);
+           if (country && !selectedCountry) {
+             setSelectedCountry(country);
+             console.log('[Article GPS] Country auto-filled:', country);
+           }
+         }
+       }
+     };
 
-    autoFillLocation();
-  }, [imageGps]);
+     autoFillLocation();
+   }, [imageGps]);
 
   // Get available tags from config (excluding DIY & Leon tags which are shown separately)
   const availableTags = TAG_GROUPS
@@ -3100,94 +3433,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="article-title">Titel</Label>
-          <Input
-            id="article-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Einprägsamer Titel für deinen Artikel..."
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="article-summary">Zusammenfassung</Label>
-          <Textarea
-            id="article-summary"
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="Kurze Zusammenfassung (1-2 Sätze)..."
-            rows={2}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="article-category">Kategorie</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger>
-              <SelectValue placeholder="Kategorie wählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {ARTICLE_CATEGORIES
-                .sort((a, b) => a.priority - b.priority)
-                .map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <span className="flex items-center gap-2">
-                      <span>{cat.emoji}</span>
-                      {cat.name}
-                      {cat.isDIY && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          🛠️ DIY
-                        </Badge>
-                      )}
-                      {cat.isLeon && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          🦁️ Leon
-                        </Badge>
-                      )}
-                      {cat.isRVLife && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          🚐 RV Life
-                        </Badge>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Country Selection */}
-        <CountrySelector
-          selectedCountry={selectedCountry}
-          onCountryChange={setSelectedCountry}
-          placeholder="Land auswaehlen"
-        />
-
-        {/* Location (auto-filled from GPS) */}
-        <div className="space-y-2">
-          <Label htmlFor="article-location">Standort</Label>
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Input
-                id="article-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Wo wurde dieser Artikel erstellt? (z.B. Lagos, Portugal)"
-                className="flex-1"
-              />
-            </div>
-            {imageGps && (
-              <GpsStatusIndicator status={imageGpsStatus} gps={imageGps} />
-            )}
-          </div>
-          {location && imageGps && (
-            <p className="text-xs text-green-600 dark:text-green-400">
-              📍 Standort automatisch aus GPS-Koordinaten ermittelt
-            </p>
-          )}
-        </div>
-
+        {/* Title Image - Move to top */}
         <div className="space-y-2">
           <Label htmlFor="article-image">Titelbild</Label>
           <div className="flex gap-2">
@@ -3239,29 +3485,96 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
                       </div>
                     </div>
                   )}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button variant="outline" asChild disabled={isUploading}>
+                      <label htmlFor="article-image-url" className="cursor-pointer">
+                        URL
+                      </label>
+                    </Button>
+                    <Input
+                      id="article-image-url"
+                      placeholder="https://..."
+                      value={image}
+                      onChange={(e) => setImage(e.target.value)}
+                      className="flex-1 disabled:opacity-50"
+                      disabled={isUploading}
+                    />
+                  </div>
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <Button variant="outline" asChild disabled={isUploading}>
-                    <label htmlFor="article-image-url" className="cursor-pointer">
-                      URL
-                    </label>
-                  </Button>
-                  <Input
-                    id="article-image-url"
-                    placeholder="https://..."
-                    value={image}
-                    onChange={(e) => setImage(e.target.value)}
-                    className="flex-1 disabled:opacity-50"
-                    disabled={isUploading}
-                  />
+              )}
+            </div>
+
+            {/* GPS Info Display */}
+            {imageGps && imageGps.latitude && imageGps.longitude ? (
+              <div className="space-y-2">
+                <GpsStatusIndicator status={imageGpsStatus} gps={imageGps} />
+                <div className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
+                  <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                    <MapPin className="h-3 w-3 text-green-600 dark:text-green-400" />
+                    <span className="truncate font-mono">
+                      {formatCoordinatesSimple(imageGps.latitude, imageGps.longitude)}
+                    </span>
+                  </div>
                 </div>
               </div>
+             ) : null}
+           </div>
+
+         {/* Location (auto-filled from GPS) */}
+         <div className="space-y-2">
+          <Label htmlFor="article-location">Standort</Label>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                id="article-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Wo wurde dieser Artikel erstellt? (z.B. Lagos, Portugal)"
+                className="flex-1"
+              />
+            </div>
+            {imageGps && (
+              <GpsStatusIndicator status={imageGpsStatus} gps={imageGps} />
             )}
           </div>
+          {location && imageGps && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              📍 Standort automatisch aus GPS-Koordinaten ermittelt
+            </p>
+          )}
+        </div>
+
+        {/* Country Selection */}
+        <CountrySelector
+          selectedCountry={selectedCountry}
+          onCountryChange={setSelectedCountry}
+          placeholder="Land auswaehlen"
+        />
+
+        <div className="space-y-2">
+          <Label htmlFor="article-title">Titel</Label>
+          <Input
+            id="article-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Einprägsamer Titel für deinen Artikel..."
+          />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="article-content">Inhalt</Label>
+          <Label htmlFor="article-summary">Zusammenfassung</Label>
+          <Textarea
+            id="article-summary"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="Kurze Zusammenfassung (1-2 Sätze)..."
+            rows={2}
+          />
+        </div>
+
+         <div className="space-y-2">
+           <Label htmlFor="article-content">Inhalt</Label>
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
             WYSIWYG Editor - Schreibe deinen Artikel mit Formatierung, Bildern und Links
           </div>
