@@ -2432,82 +2432,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="place-name">Name des Ortes</Label>
-            <Input
-              id="place-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="z.B. Algarve Beach Camping"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="place-category">Kategorie</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Kategorie wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(cat => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Country Selection */}
-        <CountrySelector
-          selectedCountry={selectedCountry}
-          onCountryChange={setSelectedCountry}
-          placeholder="Land auswaehlen"
-        />
-
-        <div className="space-y-2">
-          <Label htmlFor="place-description">Beschreibung</Label>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            WYSIWYG Editor - Beschreibe den Ort mit Formatierung, Bildern und Links
-          </div>
-          <WysiwygEditor
-            content={description}
-            onChange={setDescription}
-            placeholder={`# Erlebnis-Bericht
-
-Beschreibe hier den Ort, was macht ihn besonders...
-
-- Verwende die Toolbar für Formatierung
-- Fett oder kursiv
-
-## Was erwartet dich
-
-### Highlights
-- Der Ort bietet einen tollen Blick auf das Meer
-- Perfekt für Vanlife mit Solarstrom
-- Ruah und Natur
-
-### Tipps und Tricks
-- Beste Zeit für einen Besuch: Frühling/Herbst
-- Versorgungsmöglichkeiten in der Nähe
-
-### Bilder und Videos
-- Füge Bilder über das Bild-Icon ein
-- Oder lade Bilder direkt in den Editor
-
-### Noch mehr...
-`}
-            minHeight="300px"
-            maxLength={30000}
-            onImageUpload={(url) => {
-              // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
-            }}
-          />
-        </div>
-
-        {/* Title Image */}
+        {/* Title Image - Move to top */}
          <div className="space-y-2">
           <Label htmlFor="article-image">Titelbild</Label>
           <div className="flex gap-2">
@@ -2703,6 +2628,81 @@ Beschreibe hier den Ort, was macht ihn besonders...
               />
             </div>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="place-name">Name des Ortes</Label>
+            <Input
+              id="place-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="z.B. Algarve Beach Camping"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="place-category">Kategorie</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Kategorie wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(cat => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Country Selection */}
+        <CountrySelector
+          selectedCountry={selectedCountry}
+          onCountryChange={setSelectedCountry}
+          placeholder="Land auswaehlen"
+        />
+
+        <div className="space-y-2">
+          <Label htmlFor="place-description">Beschreibung</Label>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            WYSIWYG Editor - Beschreibe den Ort mit Formatierung, Bildern und Links
+          </div>
+          <WysiwygEditor
+            content={description}
+            onChange={setDescription}
+            placeholder={`# Erlebnis-Bericht
+
+Beschreibe hier den Ort, was macht ihn besonders...
+
+- Verwende die Toolbar für Formatierung
+- Fett oder kursiv
+
+## Was erwartet dich
+
+### Highlights
+- Der Ort bietet einen tollen Blick auf das Meer
+- Perfekt für Vanlife mit Solarstrom
+- Ruah und Natur
+
+### Tipps und Tricks
+- Beste Zeit für einen Besuch: Frühling/Herbst
+- Versorgungsmöglichkeiten in der Nähe
+
+### Bilder und Videos
+- Füge Bilder über das Bild-Icon ein
+- Oder lade Bilder direkt in den Editor
+
+### Noch mehr...
+`}
+            minHeight="300px"
+            maxLength={30000}
+            onImageUpload={(url) => {
+              // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
+            }}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3209,94 +3209,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="article-title">Titel</Label>
-          <Input
-            id="article-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Einprägsamer Titel für deinen Artikel..."
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="article-summary">Zusammenfassung</Label>
-          <Textarea
-            id="article-summary"
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="Kurze Zusammenfassung (1-2 Sätze)..."
-            rows={2}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="article-category">Kategorie</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger>
-              <SelectValue placeholder="Kategorie wählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {ARTICLE_CATEGORIES
-                .sort((a, b) => a.priority - b.priority)
-                .map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <span className="flex items-center gap-2">
-                      <span>{cat.emoji}</span>
-                      {cat.name}
-                      {cat.isDIY && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          🛠️ DIY
-                        </Badge>
-                      )}
-                      {cat.isLeon && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          🦁️ Leon
-                        </Badge>
-                      )}
-                      {cat.isRVLife && (
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          🚐 RV Life
-                        </Badge>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Country Selection */}
-        <CountrySelector
-          selectedCountry={selectedCountry}
-          onCountryChange={setSelectedCountry}
-          placeholder="Land auswaehlen"
-        />
-
-        {/* Location (auto-filled from GPS) */}
-        <div className="space-y-2">
-          <Label htmlFor="article-location">Standort</Label>
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Input
-                id="article-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Wo wurde dieser Artikel erstellt? (z.B. Lagos, Portugal)"
-                className="flex-1"
-              />
-            </div>
-            {imageGps && (
-              <GpsStatusIndicator status={imageGpsStatus} gps={imageGps} />
-            )}
-          </div>
-          {location && imageGps && (
-            <p className="text-xs text-green-600 dark:text-green-400">
-              📍 Standort automatisch aus GPS-Koordinaten ermittelt
-            </p>
-          )}
-        </div>
-
+        {/* Title Image - Move to top */}
         <div className="space-y-2">
           <Label htmlFor="article-image">Titelbild</Label>
           <div className="flex gap-2">
@@ -3348,29 +3261,97 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
                       </div>
                     </div>
                   )}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Button variant="outline" asChild disabled={isUploading}>
+                      <label htmlFor="article-image-url" className="cursor-pointer">
+                        URL
+                      </label>
+                    </Button>
+                    <Input
+                      id="article-image-url"
+                      placeholder="https://..."
+                      value={image}
+                      onChange={(e) => setImage(e.target.value)}
+                      className="flex-1 disabled:opacity-50"
+                      disabled={isUploading}
+                    />
+                  </div>
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <Button variant="outline" asChild disabled={isUploading}>
-                    <label htmlFor="article-image-url" className="cursor-pointer">
-                      URL
-                    </label>
-                  </Button>
-                  <Input
-                    id="article-image-url"
-                    placeholder="https://..."
-                    value={image}
-                    onChange={(e) => setImage(e.target.value)}
-                    className="flex-1 disabled:opacity-50"
-                    disabled={isUploading}
-                  />
+              )}
+            </div>
+
+            {/* GPS Info Display */}
+            {imageGps && imageGps.latitude && imageGps.longitude ? (
+              <div className="space-y-2">
+                <GpsStatusIndicator status={imageGpsStatus} gps={imageGps} />
+                <div className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
+                  <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                    <MapPin className="h-3 w-3 text-green-600 dark:text-green-400" />
+                    <span className="truncate font-mono">
+                      {formatCoordinatesSimple(imageGps.latitude, imageGps.longitude)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
+        {/* Location (auto-filled from GPS) */}
         <div className="space-y-2">
-          <Label htmlFor="article-content">Inhalt</Label>
+          <Label htmlFor="article-location">Standort</Label>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                id="article-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Wo wurde dieser Artikel erstellt? (z.B. Lagos, Portugal)"
+                className="flex-1"
+              />
+            </div>
+            {imageGps && (
+              <GpsStatusIndicator status={imageGpsStatus} gps={imageGps} />
+            )}
+          </div>
+          {location && imageGps && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              📍 Standort automatisch aus GPS-Koordinaten ermittelt
+            </p>
+          )}
+        </div>
+
+        {/* Country Selection */}
+        <CountrySelector
+          selectedCountry={selectedCountry}
+          onCountryChange={setSelectedCountry}
+          placeholder="Land auswaehlen"
+        />
+
+        <div className="space-y-2">
+          <Label htmlFor="article-title">Titel</Label>
+          <Input
+            id="article-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Einprägsamer Titel für deinen Artikel..."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="article-summary">Zusammenfassung</Label>
+          <Textarea
+            id="article-summary"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="Kurze Zusammenfassung (1-2 Sätze)..."
+            rows={2}
+          />
+        </div>
+
+         <div className="space-y-2">
+           <Label htmlFor="article-content">Inhalt</Label>
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
             WYSIWYG Editor - Schreibe deinen Artikel mit Formatierung, Bildern und Links
           </div>
