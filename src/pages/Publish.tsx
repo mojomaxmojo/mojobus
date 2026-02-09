@@ -3294,12 +3294,11 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
                   </div>
                 </div>
               </div>
-            ) : null}
-          </div>
-        </div>
+             ) : null}
+           </div>
 
-        {/* Location (auto-filled from GPS) */}
-        <div className="space-y-2">
+         {/* Location (auto-filled from GPS) */}
+         <div className="space-y-2">
           <Label htmlFor="article-location">Standort</Label>
           <div className="space-y-2">
             <div className="flex gap-2">
