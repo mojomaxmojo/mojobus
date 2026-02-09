@@ -106,35 +106,35 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [showMapPicker, setShowMapPicker] = useState(false);
 
   // Auto-fill location from first GPS-detected image
-  useEffect(() => {
-     const autoFillLocation = async () => {
-      const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
-      if (firstGpsImage && !location) {
-        console.log('[Media GPS] GPS detected, reverse geocoding...');
-        const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
-        if (locationData) {
-          // Set location to city + neighbourhood/suburb (no postcode)
-          const locationParts = [
-            locationData.city,
-            locationData.neighbourhood,
-            locationData.suburb
-          ].filter(Boolean);
-          const loc = locationParts.join(', ');
-          setLocation(loc);
-          console.log('[Media GPS] Location found:', loc);
+   useEffect(() => {
+      const autoFillLocation = async () => {
+       const firstGpsImage = files.find(f => f.type === 'image' && f.gps && f.gpsStatus === 'detected');
+       if (firstGpsImage && !location) {
+         console.log('[Media GPS] GPS detected, reverse geocoding...');
+         const locationData = await reverseGeocode(firstGpsImage.gps.latitude, firstGpsImage.gps.longitude);
+         if (locationData) {
+           // Set location to city + neighbourhood/suburb (no postcode)
+           const locationParts = [
+             locationData.city,
+             locationData.neighbourhood,
+             locationData.suburb
+           ].filter(Boolean);
+           const loc = locationParts.join(', ');
+           setLocation(loc);
+           console.log('[Media GPS] Location found:', loc);
 
-          // Auto-fill country if detected
-          const country = mapCountryCode(locationData);
-          if (country && !selectedCountry) {
-            setSelectedCountry(country);
-            console.log('[Media GPS] Country auto-filled:', country);
-          }
-        }
-      }
-    };
+           // Auto-fill country if detected
+           const country = mapCountryCode(locationData);
+           if (country && !selectedCountry) {
+             setSelectedCountry(country);
+             console.log('[Media GPS] Country auto-filled:', country);
+           }
+         }
+       }
+     };
 
-    autoFillLocation();
-  }, [files, location, selectedCountry]);
+     autoFillLocation();
+   }, [files, location, selectedCountry]);
 
   // Handler functions
   const handleMainCategoryChange = (value: string) => {
@@ -279,7 +279,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     setShowMapPicker(false);
   };
 
-  const saveGps = (fileId: string, gps: GpsData) => {
+  const saveGps = async (fileId: string, gps: GpsData) => {
+    // Save GPS to file
     setFiles(prev => prev.map(file => {
       if (file.id === fileId) {
         return {
@@ -290,6 +291,33 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       }
       return file;
     }));
+
+    // Auto-fill location and country using reverse geocoding
+    try {
+      console.log('[Media GPS Manual] Reverse geocoding for manual GPS...', gps);
+      const locationData = await reverseGeocode(gps.latitude, gps.longitude);
+      if (locationData) {
+        // Set location to city + neighbourhood/suburb (no postcode)
+        const locationParts = [
+          locationData.city,
+          locationData.neighbourhood,
+          locationData.suburb
+        ].filter(Boolean);
+        const loc = locationParts.join(', ');
+        setLocation(loc);
+        console.log('[Media GPS Manual] Location found:', loc);
+
+        // Auto-fill country if detected
+        const country = mapCountryCode(locationData);
+        if (country) {
+          setSelectedCountry(country);
+          console.log('[Media GPS Manual] Country auto-filled:', country);
+        }
+      }
+    } catch (error) {
+      console.error('[Media GPS Manual] Reverse geocoding failed:', error);
+    }
+
     closeGpsEditor();
   };
 
@@ -1386,7 +1414,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     setShowMapPicker(false);
   };
 
-  const saveGps = (imageIndex: number, gps: GpsData) => {
+  const saveGps = async (imageIndex: number, gps: GpsData) => {
+    // Save GPS data
     setImageGpsData(prev => ({
       ...prev,
       [imageIndex]: gps
@@ -1395,6 +1424,33 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       ...prev,
       [imageIndex]: 'manual'
     }));
+
+    // Auto-fill location and country using reverse geocoding
+    try {
+      console.log('[Note GPS Manual] Reverse geocoding for manual GPS...', gps);
+      const locationData = await reverseGeocode(gps.latitude, gps.longitude);
+      if (locationData) {
+        // Set location to city + neighbourhood/suburb (no postcode)
+        const locationParts = [
+          locationData.city,
+          locationData.neighbourhood,
+          locationData.suburb
+        ].filter(Boolean);
+        const loc = locationParts.join(', ');
+        setLocation(loc);
+        console.log('[Note GPS Manual] Location found:', loc);
+
+        // Auto-fill country if detected
+        const country = mapCountryCode(locationData);
+        if (country) {
+          setSelectedCountry(country);
+          console.log('[Note GPS Manual] Country auto-filled:', country);
+        }
+      }
+    } catch (error) {
+      console.error('[Note GPS Manual] Reverse geocoding failed:', error);
+    }
+
     closeGpsEditor();
   };
 
@@ -1415,9 +1471,8 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       const autoFillLocation = async () => {
         // Use GPS from first image if available
         const firstGpsData = Object.values(imageGpsData)[0];
-        const firstGpsStatus = Object.values(imageGpsStatuses)[0];
 
-        if (firstGpsData && firstGpsStatus && !firstGpsStatus.includes('manual')) {
+        if (firstGpsData) {
           console.log('[Note GPS] GPS detected, reverse geocoding...');
           const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
           if (locationData) {
@@ -2948,34 +3003,34 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   };
 
    // Auto-fill location from GPS data
-  useEffect(() => {
-    const autoFillLocation = async () => {
-      if (imageGps && !imageGpsStatus.includes('manual')) {
-        console.log('[Article GPS] GPS detected, reverse geocoding...');
-        const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
-        if (locationData) {
-          // Set location to city + neighbourhood/suburb (no postcode)
-          const locationParts = [
-            locationData.city,
-            locationData.neighbourhood,
-            locationData.suburb
-          ].filter(Boolean);
-          const loc = locationParts.join(', ');
-          setLocation(loc);
-          console.log('[Article GPS] Location found:', loc);
+   useEffect(() => {
+     const autoFillLocation = async () => {
+       if (imageGps) {
+         console.log('[Article GPS] GPS detected, reverse geocoding...');
+         const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
+         if (locationData) {
+           // Set location to city + neighbourhood/suburb (no postcode)
+           const locationParts = [
+             locationData.city,
+             locationData.neighbourhood,
+             locationData.suburb
+           ].filter(Boolean);
+           const loc = locationParts.join(', ');
+           setLocation(loc);
+           console.log('[Article GPS] Location found:', loc);
 
-          // Auto-fill country if detected
-          const country = mapCountryCode(locationData);
-          if (country && !selectedCountry) {
-            setSelectedCountry(country);
-            console.log('[Article GPS] Country auto-filled:', country);
-          }
-        }
-      }
-    };
+           // Auto-fill country if detected
+           const country = mapCountryCode(locationData);
+           if (country && !selectedCountry) {
+             setSelectedCountry(country);
+             console.log('[Article GPS] Country auto-filled:', country);
+           }
+         }
+       }
+     };
 
-    autoFillLocation();
-  }, [imageGps]);
+     autoFillLocation();
+   }, [imageGps]);
 
   // Get available tags from config (excluding DIY & Leon tags which are shown separately)
   const availableTags = TAG_GROUPS
