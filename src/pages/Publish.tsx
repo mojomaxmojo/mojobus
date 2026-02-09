@@ -2024,14 +2024,15 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   const [price, setPrice] = useState('');
   const [image, setImage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageGps, setImageGps] = useState<GpsData | null>(null);
-  const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
-  const [editingImageGps, setEditingImageGps] = useState(false);
-  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
-  const [additionalImagesUrlInput, setAdditionalImagesUrlInput] = useState('');
-  const [manualTags, setManualTags] = useState<string[]>([]);
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [isUploading, setIsUploading] = useState(false);
+   const [imageGps, setImageGps] = useState<GpsData | null>(null);
+   const [imageGpsStatus, setImageGpsStatus] = useState<GpsStatus>('not_found');
+   const [editingImageGps, setEditingImageGps] = useState(false);
+   const [showMapPicker, setShowMapPicker] = useState(false);
+   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+   const [additionalImagesUrlInput, setAdditionalImagesUrlInput] = useState('');
+   const [manualTags, setManualTags] = useState<string[]>([]);
+   const [selectedCountry, setSelectedCountry] = useState<string>('');
+   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -2174,37 +2175,37 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   ];
 
    // Auto-fill location and country from GPS data
-  useEffect(() => {
-    const autoFillLocation = async () => {
-      if (imageGps && !imageGpsStatus.includes('manual')) {
-        console.log('[Place GPS] GPS detected, reverse geocoding...');
-        const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
-        if (locationData) {
-          // Set location to city + neighbourhood/suburb (no postcode)
-          const locationParts = [
-            locationData.city,
-            locationData.neighbourhood,
-            locationData.suburb
-          ].filter(Boolean);
-          const loc = locationParts.join(', ');
-          setLocation(loc);
-          console.log('[Place GPS] Location found:', loc);
+   useEffect(() => {
+     const autoFillLocation = async () => {
+       if (imageGps) {
+         console.log('[Place GPS] GPS detected, reverse geocoding...');
+         const locationData = await reverseGeocode(imageGps.latitude, imageGps.longitude);
+         if (locationData) {
+           // Set location to city + neighbourhood/suburb (no postcode)
+           const locationParts = [
+             locationData.city,
+             locationData.neighbourhood,
+             locationData.suburb
+           ].filter(Boolean);
+           const loc = locationParts.join(', ');
+           setLocation(loc);
+           console.log('[Place GPS] Location found:', loc);
 
-          // Also set coordinates
-          setCoordinates({ lat: imageGps.latitude.toString(), lng: imageGps.longitude.toString() });
+           // Also set coordinates
+           setCoordinates({ lat: imageGps.latitude.toString(), lng: imageGps.longitude.toString() });
 
-          // Auto-fill country if detected
-          const country = mapCountryCode(locationData);
-          if (country && !selectedCountry) {
-            setSelectedCountry(country);
-            console.log('[Place GPS] Country auto-filled:', country);
-          }
-        }
-      }
-    };
+           // Auto-fill country if detected
+           const country = mapCountryCode(locationData);
+           if (country && !selectedCountry) {
+             setSelectedCountry(country);
+             console.log('[Place GPS] Country auto-filled:', country);
+           }
+         }
+       }
+     };
 
-    autoFillLocation();
-  }, [imageGps]);
+     autoFillLocation();
+   }, [imageGps]);
 
   const facilityOptions = [
     'Strom', 'Wasser', 'WC', 'Dusche', 'WLAN',
@@ -2307,6 +2308,11 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
   const removeManualTag = (index: number) => {
     setManualTags(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const closeGpsEditor = () => {
+    setEditingImageGps(false);
+    setShowMapPicker(false);
   };
 
   const handleSubmit = () => {
