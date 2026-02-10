@@ -49,8 +49,196 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     // Check if file is an image type that supports EXIF
     if (!file.type.match(/^image\/(jpeg|jpg|tiff)$/i)) {
       console.log('[GPS Extraction] File type not supported:', file.type);
+      alert(`❌ Dateityp nicht unterstützt!\n\nDatei: ${file.name}\nDateityp: ${file.type}\n\nGPS wird nur für JPEG/JPG und TIFF unterstützt.`);
       return null;
     }
+
+    console.log('[GPS Extraction] File type supported, extracting EXIF...');
+    alert(`🔍 Extrahiere EXIF-Daten...\n\nDatei: ${file.name}\nDateityp: ${file.type}\nDateigröße: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+
+    // Extract EXIF data using exifr
+    const exifData = await exifr.parse(file, ['GPSLatitude', 'GPSLongitude', 'GPSAltitude', 'GPSLatitudeRef', 'GPSLongitudeRef']);
+
+    // Debug log - log ALL EXIF data to see what's actually there
+    console.log('[GPS Extraction] EXIF Data:', JSON.stringify(exifData, null, 2));
+    console.log('[GPS Extraction] EXIF Data specific:', {
+      GPSLatitude: exifData?.GPSLatitude,
+      GPSLongitude: exifData?.GPSLongitude,
+      GPSAltitude: exifData?.GPSAltitude,
+      GPSLatitudeRef: exifData?.GPSLatitudeRef,
+      GPSLongitudeRef: exifData?.GPSLongitudeRef,
+      filename: file.name,
+      filetype: file.type
+    });
+
+    // Show EXIF data to user
+    alert(`📋 EXIF-Daten:\n\nGPSLatitude: ${JSON.stringify(exifData?.GPSLatitude)}\nGPSLongitude: ${JSON.stringify(exifData?.GPSLongitude)}\nGPSLatitudeRef: "${exifData?.GPSLatitudeRef}"\nGPSLongitudeRef: "${exifData?.GPSLongitudeRef}"`);
+
+    // Check if GPS data exists
+    if (!exifData) {
+      console.log('[GPS Extraction] No EXIF data found at all');
+      alert(`❌ Keine EXIF-Daten gefunden!\n\nDie Datei hat keine EXIF-Informationen.`);
+      return null;
+    }
+
+    // Check GPS coordinates (more lenient check)
+    const hasLat = exifData.GPSLatitude !== undefined && exifData.GPSLatitude !== null;
+    const hasLon = exifData.GPSLongitude !== undefined && exifData.GPSLongitude !== null;
+
+    if (!hasLat || !hasLon) {
+      console.log('[GPS Extraction] No GPS coordinates found:', { hasLat, hasLon });
+      alert(`❌ Keine GPS-Koordinaten gefunden!\n\nDie Datei hat EXIF-Daten, aber keine GPS-Koordinaten.`);
+      return null;
+    }
+
+    console.log('[GPS Extraction] GPS coordinates found, converting...');
+    console.log('[GPS Extraction] GPS Latitude value:', exifData.GPSLatitude);
+    console.log('[GPS Extraction] GPS Longitude value:', exifData.GPSLongitude);
+
+    // Extract raw values for debugging
+    const rawLat = exifData.GPSLatitude;
+    const rawLon = exifData.GPSLongitude;
+    const rawLatRef = exifData.GPSLatitudeRef;
+    const rawLonRef = exifData.GPSLongitudeRef;
+
+    console.log('[GPS Extraction] Raw values:', {
+      lat: rawLat,
+      lon: rawLon,
+      latRef: rawLatRef,
+      lonRef: rawLonRef,
+      latType: typeof rawLat,
+      lonType: typeof rawLon,
+      latRefType: typeof rawLatRef,
+      lonRefType: typeof rawLonRef
+    });
+
+    // Show raw values to user
+    alert(`📋 Rohwerte:\n\nLatitude: ${JSON.stringify(rawLat)}\nLongitude: ${JSON.stringify(rawLon)}\nLatRef: "${rawLatRef}"\nLonRef: "${rawLonRef}"\n\nLatType: ${typeof rawLat}\nLonType: ${typeof rawLon}`);
+
+    // Convert GPS coordinates to decimal degrees
+    let latitude: number;
+    let longitude: number;
+
+    try {
+      // Try to convert DMS (Degrees, Minutes, Seconds) format
+      // Pass ref separately as it's stored in GPSLatitudeRef/GPSLongitudeRef
+      let latRef: 'N' | 'S' | 'E' | 'W' = 'N';
+      let lonRef: 'E' | 'W' = 'E';
+
+      // Handle unusual reference values
+      if (typeof rawLatRef === 'string' && rawLatRef.length === 1) {
+        const refChar = rawLatRef.toUpperCase();
+        if (['N', 'S', 'E', 'W'].includes(refChar)) {
+          latRef = refChar;
+        }
+      }
+
+      if (typeof rawLonRef === 'string' && rawLonRef.length === 1) {
+        const refChar = rawLonRef.toUpperCase();
+        if (['E', 'W'].includes(refChar)) {
+          lonRef = refChar;
+        }
+      }
+
+      console.log('[GPS Extraction] Using references:', { latRef, lonRef });
+
+      // Check if we have arrays for DMS
+      if (Array.isArray(rawLat) && rawLat.length >= 3) {
+        console.log('[GPS Extraction] Latitude is DMS array:', rawLat);
+        latitude = convertDMSToDD(rawLat, latRef);
+        console.log('[GPS Extraction] Latitude converted to DD:', latitude);
+      } else if (typeof rawLat === 'number') {
+        latitude = rawLat;
+        if (latRef === 'S') {
+          latitude = -Math.abs(latitude);
+        }
+        console.log('[GPS Extraction] Latitude is number:', latitude);
+      } else if (typeof rawLat === 'string') {
+        latitude = parseFloat(rawLat);
+        if (latRef === 'S') {
+          latitude = -Math.abs(latitude);
+        }
+        console.log('[GPS Extraction] Latitude is string:', latitude);
+      } else {
+        console.error('[GPS Extraction] Unsupported latitude format:', typeof rawLat);
+        alert(`❌ Ungültiges GPS-Längenengrad-Format!\n\nTyp: ${typeof rawLat}\nWert: ${JSON.stringify(rawLat)}`);
+        return null;
+      }
+
+      if (Array.isArray(rawLon) && rawLon.length >= 3) {
+        console.log('[GPS Extraction] Longitude is DMS array:', rawLon);
+        longitude = convertDMSToDD(rawLon, lonRef);
+        console.log('[GPS Extraction] Longitude converted to DD:', longitude);
+      } else if (typeof rawLon === 'number') {
+        longitude = rawLon;
+        if (lonRef === 'W') {
+          longitude = -Math.abs(longitude);
+        }
+        console.log('[GPS Extraction] Longitude is number:', longitude);
+      } else if (typeof rawLon === 'string') {
+        longitude = parseFloat(rawLon);
+        if (lonRef === 'W') {
+          longitude = -Math.abs(longitude);
+        }
+        console.log('[GPS Extraction] Longitude is string:', longitude);
+      } else {
+        console.error('[GPS Extraction] Unsupported longitude format:', typeof rawLon);
+        alert(`❌ Ungültiges GPS-Längengrad-Format!\n\nTyp: ${typeof rawLon}\nWert: ${JSON.stringify(rawLon)}`);
+        return null;
+      }
+
+      console.log('[GPS Extraction] Final coordinates:', { latitude, longitude });
+
+    } catch (err) {
+      console.error('[GPS Extraction] Conversion error:', err);
+      alert(`❌ GPS-Konvertierungsfehler!\n\nFehler: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    }
+
+    // Validate coordinates
+    if (!isValidCoordinate(latitude, longitude)) {
+      console.warn('[GPS Extraction] Invalid GPS coordinates:', { latitude, longitude });
+      alert(`❌ Ungültige GPS-Koordinaten!\n\nBreitengrad: ${latitude}\nLängengrad: ${longitude}\n\nGPS ist außerhalb des gültigen Bereichs.`);
+      return null;
+    }
+
+    // Determine precision based on available data
+    const precision = determinePrecision(exifData);
+
+    const gpsData: GpsData = {
+      latitude,
+      longitude,
+      precision,
+    };
+
+    // Add altitude if available
+    if (exifData.GPSAltitude !== undefined && exifData.GPSAltitude !== null) {
+      const altitudeValue = parseFloat(String(exifData.GPSAltitude));
+      if (!isNaN(altitudeValue)) {
+        gpsData.altitude = altitudeValue;
+        console.log('[GPS Extraction] Altitude added:', gpsData.altitude);
+      }
+    }
+
+    console.log('[GPS Extraction] Successfully extracted GPS:', {
+      latitude: gpsData.latitude,
+      longitude: gpsData.longitude,
+      altitude: gpsData.altitude,
+      precision: gpsData.precision,
+      filename: file.name,
+    });
+
+    // Show final result to user
+    alert(`✅ GPS gefunden!\n\nDatei: ${file.name}\nBreitengrad: ${gpsData.latitude}\nLängengrad: ${gpsData.longitude}\n${gpsData.altitude ? `Höhe: ${gpsData.altitude}m` : ''}`);
+
+    return gpsData;
+  } catch (error) {
+    console.error('[GPS Extraction] Error extracting GPS:', error);
+    console.error('[GPS Extraction] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    alert(`❌ Fehler bei GPS-Extraktion!\n\nDatei: ${file.name}\nFehler: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
+}
 
     console.log('[GPS Extraction] File type supported, extracting EXIF...');
 
