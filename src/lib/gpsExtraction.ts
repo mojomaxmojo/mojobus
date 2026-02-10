@@ -167,6 +167,52 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
       return null;
     }
 
+    // Check for 0,0 coordinates (invalid "Null Island" - likely extraction error)
+    if (latitude === 0 && longitude === 0) {
+      console.log('[GPS Extraction] Got 0,0 coordinates from exifr.gps(), trying raw EXIF parse...');
+      
+      // DEBUG: Alert 0,0 detected
+      if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+        alert('GPS Debug: Got 0,0 from exifr.gps() - trying raw EXIF parse...');
+      }
+      
+      // Try to get raw GPS data and manually convert
+      const rawExifData = await exifr.parse(file, {
+        gps: ['GPSLatitude', 'GPSLongitude', 'GPSAltitude', 'GPSLatitudeRef', 'GPSLongitudeRef'],
+        mergeOutput: true,
+      });
+      
+      // DEBUG: Alert raw EXIF result
+      if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+        alert(`GPS Debug: Raw EXIF data: ${JSON.stringify(rawExifData, null, 2)}`);
+      }
+      
+      if (rawExifData && rawExifData.GPSLatitude && rawExifData.GPSLongitude) {
+        // Manual conversion of DMS to decimal degrees
+        const latRef = rawExifData.GPSLatitudeRef || 'N';
+        const lonRef = rawExifData.GPSLongitudeRef || 'E';
+        
+        latitude = convertDMSToDD(rawExifData.GPSLatitude, latRef);
+        longitude = convertDMSToDD(rawExifData.GPSLongitude, lonRef);
+        
+        // DEBUG: Alert manually converted coordinates
+        if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+          alert(`GPS Debug: Manually converted! Lat: ${latitude}, Lon: ${longitude}`);
+        }
+        
+        // Update altitude if available
+        if (rawExifData.GPSAltitude) {
+          altitude = parseFloat(String(rawExifData.GPSAltitude));
+        }
+      } else {
+        // DEBUG: Alert no raw GPS data
+        if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+          alert('GPS Debug: No raw GPS data found either!');
+        }
+        return null;
+      }
+    }
+
     console.log('[GPS Extraction] GPS coordinates from exifr.gps():', { latitude, longitude });
     
     // DEBUG: Alert GPS found successfully
@@ -288,6 +334,12 @@ function isValidCoordinate(latitude: number, longitude: number): boolean {
 
   // Check for NaN
   if (isNaN(latitude) || isNaN(longitude)) {
+    return false;
+  }
+
+  // Check for 0,0 coordinates (Null Island - likely extraction error)
+  // Real photos at exactly 0,0 are extremely rare
+  if (latitude === 0 && longitude === 0) {
     return false;
   }
 
