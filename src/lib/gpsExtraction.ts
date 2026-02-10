@@ -49,10 +49,19 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     // Check if file is an image type that supports EXIF
     if (!file.type.match(/^image\/(jpeg|jpg|tiff)$/i)) {
       console.log('[GPS Extraction] File type not supported:', file.type);
+      // DEBUG: Alert for unsupported file type
+      if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+        alert(`GPS Debug: File type not supported: ${file.type}`);
+      }
       return null;
     }
 
     console.log('[GPS Extraction] File type supported, extracting EXIF...');
+
+    // DEBUG: Alert start of extraction
+    if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+      alert(`GPS Debug: Starting extraction for ${file.name} (${file.type})`);
+    }
 
     // Extract EXIF data using exifr - use comprehensive GPS extraction
     // First try with gps: true to get all GPS data
@@ -61,9 +70,19 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     // Debug log - log ALL EXIF data to see what's actually there
     console.log('[GPS Extraction] GPS Data from exifr.gps():', JSON.stringify(exifData, null, 2));
 
+    // DEBUG: Alert GPS data from exifr.gps()
+    if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+      alert(`GPS Debug: exifr.gps() result: ${JSON.stringify(exifData, null, 2)}`);
+    }
+
     // Check if GPS data exists - exifr.gps() returns already converted decimal degrees or null
     if (!exifData) {
       console.log('[GPS Extraction] No GPS data found with exifr.gps()');
+      
+      // DEBUG: Alert fallback attempt
+      if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+        alert('GPS Debug: No data from exifr.gps(), trying fallback...');
+      }
       
       // Fallback: Try comprehensive EXIF parse to see if GPS data exists at all
       console.log('[GPS Extraction] Attempting fallback with full EXIF parse...');
@@ -76,8 +95,19 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
       
       console.log('[GPS Extraction] Full EXIF data:', JSON.stringify(fullExifData, null, 2));
       
+      // DEBUG: Alert fallback result
+      if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+        alert(`GPS Debug: Fallback result: ${JSON.stringify(fullExifData, null, 2)}`);
+      }
+      
       if (!fullExifData || !fullExifData.latitude || !fullExifData.longitude) {
         console.log('[GPS Extraction] No GPS coordinates found in full EXIF parse either');
+        
+        // DEBUG: Alert no GPS found
+        if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+          alert('GPS Debug: No GPS coordinates found in any method!');
+        }
+        
         return null;
       }
       
@@ -87,6 +117,11 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
       const altitude = fullExifData.altitude;
       
       console.log('[GPS Extraction] GPS found via fallback:', { latitude, longitude, altitude });
+      
+      // DEBUG: Alert GPS found via fallback
+      if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+        alert(`GPS Debug: GPS found via fallback! Lat: ${latitude}, Lon: ${longitude}`);
+      }
       
       // Validate coordinates
       if (!isValidCoordinate(latitude, longitude)) {
@@ -123,10 +158,21 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     // Check if we got valid coordinates
     if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
       console.log('[GPS Extraction] Missing latitude or longitude in GPS data');
+      
+      // DEBUG: Alert missing coordinates
+      if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+        alert('GPS Debug: Missing latitude or longitude in GPS data from exifr.gps()');
+      }
+      
       return null;
     }
 
     console.log('[GPS Extraction] GPS coordinates from exifr.gps():', { latitude, longitude });
+    
+    // DEBUG: Alert GPS found successfully
+    if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+      alert(`GPS Debug: GPS found successfully! Lat: ${latitude}, Lon: ${longitude}`);
+    }
 
     // Validate coordinates
     if (!isValidCoordinate(latitude, longitude)) {
@@ -162,6 +208,12 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
   } catch (error) {
     console.error('[GPS Extraction] Error extracting GPS:', error);
     console.error('[GPS Extraction] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    
+    // DEBUG: Alert error
+    if (typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co')) {
+      alert(`GPS Debug: Error! ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
     return null;
   }
 }
