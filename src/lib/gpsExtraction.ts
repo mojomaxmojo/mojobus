@@ -42,33 +42,54 @@ export type GpsStatus = 'detected' | 'not_found' | 'manual' | 'error';
  */
 export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
   try {
+    console.log('[GPS Extraction] Starting extraction for:', file.name);
+    console.log('[GPS Extraction] File type:', file.type);
+    console.log('[GPS Extraction] File size:', file.size, 'bytes');
+
     // Check if file is an image type that supports EXIF
     if (!file.type.match(/^image\/(jpeg|jpg|tiff)$/i)) {
+      console.log('[GPS Extraction] File type not supported:', file.type);
       return null;
     }
+
+    console.log('[GPS Extraction] File type supported, extracting EXIF...');
 
     // Extract EXIF data using exifr
     const exifData = await exifr.parse(file, ['GPSLatitude', 'GPSLongitude', 'GPSAltitude', 'GPSLatitudeRef', 'GPSLongitudeRef']);
 
-    // Debug log
-    console.log('[GPS Extraction] EXIF Data:', {
+    // Debug log - log ALL EXIF data to see what's actually there
+    console.log('[GPS Extraction] EXIF Data:', JSON.stringify(exifData, null, 2));
+    console.log('[GPS Extraction] EXIF Data specific:', {
       GPSLatitude: exifData?.GPSLatitude,
       GPSLongitude: exifData?.GPSLongitude,
       GPSAltitude: exifData?.GPSAltitude,
       GPSLatitudeRef: exifData?.GPSLatitudeRef,
       GPSLongitudeRef: exifData?.GPSLongitudeRef,
       filename: file.name,
+      filetype: file.type
     });
 
     // Check if GPS data exists
-    if (!exifData || !exifData.GPSLatitude || !exifData.GPSLongitude) {
+    if (!exifData) {
+      console.log('[GPS Extraction] No EXIF data found at all');
       return null;
     }
 
+    // Check GPS coordinates (more lenient check)
+    const hasLat = exifData.GPSLatitude !== undefined && exifData.GPSLatitude !== null;
+    const hasLon = exifData.GPSLongitude !== undefined && exifData.GPSLongitude !== null;
+
+    if (!hasLat || !hasLon) {
+      console.log('[GPS Extraction] No GPS coordinates found:', { hasLat, hasLon });
+      return null;
+    }
+
+    console.log('[GPS Extraction] GPS coordinates found, converting...');
+
     // Convert GPS coordinates to decimal degrees
-    // EXIF GPS data format: [degrees, minutes, seconds] or just decimal degrees
     let latitude: number;
     let longitude: number;
+    let error: string | null = null;
 
     try {
       // Try to convert DMS (Degrees, Minutes, Seconds) format
@@ -76,26 +97,74 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
       const latRef = (exifData.GPSLatitudeRef as 'N' | 'S') || 'N';
       const lonRef = (exifData.GPSLongitudeRef as 'E' | 'W') || 'E';
 
+      console.log('[GPS Extraction] Converting DMS to DD:', {
+        lat: exifData.GPSLatitude,
+        lon: exifData.GPSLongitude,
+        latRef,
+        lonRef
+      });
+
       latitude = convertDMSToDD(exifData.GPSLatitude, latRef);
       longitude = convertDMSToDD(exifData.GPSLongitude, lonRef);
-    } catch (error) {
-      // If DMS conversion fails, try using direct decimal values
-      console.warn('[GPS Extraction] DMS conversion failed, trying direct values:', error);
+
+      console.log('[GPS Extraction] Converted coordinates:', { latitude, longitude });
+
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+      console.warn('[GPS Extraction] DMS conversion failed:', error);
+
+      console.log('[GPS Extraction] Trying direct decimal values...');
 
       // EXIF might provide decimal degrees directly
-      latitude = parseFloat(exifData.GPSLatitude as string);
-      longitude = parseFloat(exifData.GPSLongitude as string);
+      const latValue = exifData.GPSLatitude;
+      const lonValue = exifData.GPSLongitude;
 
-      // Apply hemisphere reference if available
-      const latRef = exifData.GPSLatitudeRef as 'N' | 'S';
-      const lonRef = exifData.GPSLongitudeRef as 'E' | 'W';
+      console.log('[GPS Extraction] Direct values:', { latValue, lonValue });
 
-      if (latRef === 'S') {
-        latitude = -Math.abs(latitude);
+      // Handle array format [degrees, minutes, seconds]
+      if (Array.isArray(latValue)) {
+        console.log('[GPS Extraction] Latitude is array format:', latValue);
+        const latRef = (exifData.GPSLatitudeRef as 'N' | 'S') || 'N';
+        latitude = convertDMSToDD(latValue, latRef);
+      } else if (typeof latValue === 'number') {
+        latitude = latValue;
+        const latRef = exifData.GPSLatitudeRef as 'N' | 'S';
+        if (latRef === 'S') {
+          latitude = -Math.abs(latitude);
+        }
+      } else if (typeof latValue === 'string') {
+        latitude = parseFloat(latValue);
+        const latRef = exifData.GPSLatitudeRef as 'N' | 'S';
+        if (latRef === 'S') {
+          latitude = -Math.abs(latitude);
+        }
+      } else {
+        console.error('[GPS Extraction] Unsupported latitude format:', typeof latValue);
+        return null;
       }
-      if (lonRef === 'W') {
-        longitude = -Math.abs(longitude);
+
+      if (Array.isArray(lonValue)) {
+        console.log('[GPS Extraction] Longitude is array format:', lonValue);
+        const lonRef = (exifData.GPSLongitudeRef as 'E' | 'W') || 'E';
+        longitude = convertDMSToDD(lonValue, lonRef);
+      } else if (typeof lonValue === 'number') {
+        longitude = lonValue;
+        const lonRef = exifData.GPSLongitudeRef as 'E' | 'W';
+        if (lonRef === 'W') {
+          longitude = -Math.abs(longitude);
+        }
+      } else if (typeof lonValue === 'string') {
+        longitude = parseFloat(lonValue);
+        const lonRef = exifData.GPSLongitudeRef as 'E' | 'W';
+        if (lonRef === 'W') {
+          longitude = -Math.abs(longitude);
+        }
+      } else {
+        console.error('[GPS Extraction] Unsupported longitude format:', typeof lonValue);
+        return null;
       }
+
+      console.log('[GPS Extraction] Final coordinates:', { latitude, longitude });
     }
 
     // Validate coordinates
@@ -114,8 +183,9 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     };
 
     // Add altitude if available
-    if (exifData.GPSAltitude !== undefined) {
-      gpsData.altitude = parseFloat(exifData.GPSAltitude);
+    if (exifData.GPSAltitude !== undefined && exifData.GPSAltitude !== null) {
+      gpsData.altitude = parseFloat(String(exifData.GPSAltitude));
+      console.log('[GPS Extraction] Altitude added:', gpsData.altitude);
     }
 
     console.log('[GPS Extraction] Successfully extracted GPS:', {
@@ -129,6 +199,7 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     return gpsData;
   } catch (error) {
     console.error('[GPS Extraction] Error extracting GPS:', error);
+    console.error('[GPS Extraction] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return null;
   }
 }
@@ -204,7 +275,7 @@ function isValidCoordinate(latitude: number, longitude: number): boolean {
  */
 function determinePrecision(exifData: any): 'high' | 'medium' | 'low' {
   // High precision: altitude and direction data available
-  if (exifData.GPSAltitude !== undefined) {
+  if (exifData.GPSAltitude !== undefined && exifData.GPSAltitude !== null) {
     return 'high';
   }
 
