@@ -227,7 +227,7 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     }
 
     // Determine precision based on available data
-    const altitude = exifData.altitude;
+    let altitude = exifData.altitude;
     const precision: 'high' | 'medium' | 'low' = altitude !== undefined && altitude !== null ? 'high' : 'medium';
 
     const gpsData: GpsData = {
