@@ -52,9 +52,18 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     console.log('[GPS Extraction] File type:', file.type);
     console.log('[GPS Extraction] File size:', file.size, 'bytes');
 
+    // Debug alerts for test.mojobus.co (visible even with dropConsole)
+    const isTestSite = typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co');
+    if (isTestSite) {
+      alert(`GPS Debug: Starte Extraktion für ${file.name}\nDateityp: ${file.type}\nGröße: ${file.size} bytes`);
+    }
+
     // Check if file is an image type that supports EXIF
     if (!file.type.match(/^image\/(jpeg|jpg|tiff)$/i)) {
       console.log('[GPS Extraction] File type not supported:', file.type);
+      if (isTestSite) {
+        alert(`GPS Debug: Dateityp nicht unterstützt: ${file.type}`);
+      }
       return null;
     }
 
@@ -63,6 +72,9 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     // === METHOD 1: Try exifr.gps() (standard EXIF GPS) ===
     const exifData = await exifr.gps(file);
     console.log('[GPS Extraction] Method 1 - exifr.gps() result:', exifData);
+    if (isTestSite) {
+      alert(`GPS Debug: Methode 1 (exifr.gps())\nErgebnis: ${JSON.stringify(exifData, null, 2)}`);
+    }
 
     // Check for valid GPS data from method 1
     if (exifData && exifData.latitude && exifData.longitude) {
@@ -72,12 +84,19 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
       // Skip 0,0 coordinates
       if (latitude !== 0 || longitude !== 0) {
         console.log('[GPS Extraction] Valid GPS from exifr.gps():', { latitude, longitude });
+        if (isTestSite) {
+          alert(`GPS Debug: ✅ GPS gefunden in Methode 1!\nLat: ${latitude}\nLon: ${longitude}`);
+        }
         return createGpsResult(latitude, longitude, exifData.altitude, file.name);
       }
     }
 
     // === METHOD 2: Try XMP GPS data (used by GCam/Google Photos) ===
     console.log('[GPS Extraction] Method 1 failed, trying XMP GPS...');
+    if (isTestSite) {
+      alert('GPS Debug: Methode 1 fehlgeschlagen, versuche XMP GPS...');
+    }
+
     const xmpData = await exifr.parse(file, {
       xmp: true,
       gps: true,
@@ -86,6 +105,9 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
 
     console.log('[GPS Extraction] Method 2 - XMP data keys:', Object.keys(xmpData || {}));
     console.log('[GPS Extraction] Method 2 - Full XMP data:', JSON.stringify(xmpData, null, 2));
+    if (isTestSite) {
+      alert(`GPS Debug: Methode 2 (XMP)\nVerfügbare Keys: ${Object.keys(xmpData || {}).join(', ')}\\nVollständige Daten:\n${JSON.stringify(xmpData, null, 2)}`);
+    }
 
     // XMP GPS tags (various formats used by different apps)
     const xmpLat = xmpData?.GPSLatitude ||
@@ -99,17 +121,27 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
 
     if (xmpLat && xmpLon && (xmpLat !== 0 || xmpLon !== 0)) {
       console.log('[GPS Extraction] Valid GPS from XMP:', { xmpLat, xmpLon });
+      if (isTestSite) {
+        alert(`GPS Debug: ✅ GPS gefunden in XMP (Methode 2)!\nLat: ${xmpLat}\nLon: ${xmpLon}`);
+      }
       return createGpsResult(xmpLat, xmpLon, xmpData?.GPSAltitude, file.name);
     }
 
     // === METHOD 3: Try raw EXIF with all GPS tags ===
     console.log('[GPS Extraction] Method 2 failed, trying raw EXIF...');
+    if (isTestSite) {
+      alert('GPS Debug: Methode 2 fehlgeschlagen, versuche Raw EXIF...');
+    }
+
     const rawExif = await exifr.parse(file, {
       gps: ['GPSLatitude', 'GPSLongitude', 'GPSAltitude', 'GPSLatitudeRef', 'GPSLongitudeRef'],
       mergeOutput: true,
     });
 
     console.log('[GPS Extraction] Method 3 - Raw EXIF:', JSON.stringify(rawExif, null, 2));
+    if (isTestSite) {
+      alert(`GPS Debug: Methode 3 (Raw EXIF)\nDaten:\n${JSON.stringify(rawExif, null, 2)}`);
+    }
 
     if (rawExif && rawExif.GPSLatitude && rawExif.GPSLongitude) {
       const dmsLat = rawExif.GPSLatitude;
@@ -127,18 +159,29 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
         const longitude = convertDMSToDD(dmsLon, lonRef);
 
         console.log('[GPS Extraction] Valid GPS from raw EXIF:', { latitude, longitude });
+        if (isTestSite) {
+          alert(`GPS Debug: ✅ GPS gefunden in Raw EXIF (Methode 3)!\nLat: ${latitude}\nLon: ${longitude}`);
+        }
         return createGpsResult(latitude, longitude, rawExif.GPSAltitude, file.name);
       }
     }
 
     // === METHOD 4: Try full parse with all GPS-related tags ===
     console.log('[GPS Extraction] Method 3 failed, trying comprehensive parse...');
+    if (isTestSite) {
+      alert('GPS Debug: Methode 3 fehlgeschlagen, versuche Method 4 (kompletter Scan)...');
+    }
+
     const fullParse = await exifr.parse(file, {
       pickTags: true,
       mergeOutput: false,
     });
 
     console.log('[GPS Extraction] Method 4 - All available tags:', Object.keys(fullParse || {}).filter(k => k.toLowerCase().includes('gps') || k.toLowerCase().includes('lat') || k.toLowerCase().includes('lon')));
+    if (isTestSite) {
+      const gpsKeys = Object.keys(fullParse || {}).filter(k => k.toLowerCase().includes('gps') || k.toLowerCase().includes('lat') || k.toLowerCase().includes('lon'));
+      alert(`GPS Debug: Methode 4 (Vollständiger Scan)\nGPS-bezogene Tags: ${gpsKeys.join(', ')}\nAlle Tags: ${Object.keys(fullParse || {}).slice(0, 50).join(', ')}...`);
+    }
 
     // Check for any GPS-related keys that might contain coordinates
     const gpsKeys = Object.keys(fullParse || {}).filter(k =>
@@ -154,6 +197,9 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
           const lonValue = fullParse![lonKey];
           if (lonValue && typeof lonValue === 'number' && lonValue !== 0) {
             console.log('[GPS Extraction] GPS from tag pair:', { key, lat: value, lon: lonValue });
+            if (isTestSite) {
+              alert(`GPS Debug: ✅ GPS gefunden in Tag-Paar (Methode 4)!\nLat: ${value}\nLon: ${lonValue}\nTag: ${key}`);
+            }
             return createGpsResult(value, lonValue, fullParse!.GPSAltitude, file.name);
           }
         }
@@ -161,10 +207,17 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     }
 
     console.log('[GPS Extraction] No valid GPS found in any method');
+    if (isTestSite) {
+      alert('GPS Debug: ❌ Keine gültigen GPS-Daten in keiner Methode gefunden!');
+    }
     return null;
 
   } catch (error) {
     console.error('[GPS Extraction] Error:', error);
+    const isTestSite = typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co');
+    if (isTestSite) {
+      alert(`GPS Debug: ❌ FEHLER!\n${error instanceof Error ? error.message : String(error)}\n\nStack:\n${error instanceof Error ? error.stack : 'Kein Stack'}`);
+    }
     return null;
   }
 }
@@ -197,6 +250,11 @@ function createGpsResult(
     precision: result.precision,
     filename: filename || 'unknown',
   });
+
+  const isTestSite = typeof window !== 'undefined' && window.location.hostname.includes('test.mojobus.co');
+  if (isTestSite) {
+    alert(`GPS Debug: 🎉 ERFOLG!\n\nDatei: ${filename || 'unknown'}\nLatitude: ${result.latitude}\nLongitude: ${result.longitude}\nAltitude: ${result.altitude || 'N/A'}\nPrecision: ${result.precision}`);
+  }
 
   return result;
 }
