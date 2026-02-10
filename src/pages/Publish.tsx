@@ -601,12 +601,174 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             </Button>
           </div>
         </CardContent>
-      </Card>
+       </Card>
 
        {/* Media Preview */}
+       {files.length > 0 && (
+         <Card>
+           <CardHeader>
+             <div className="flex items-center justify-between">
+               <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
+               {files.some(f => f.type === 'image') && (
+                 <Button
+                   size="sm"
+                   variant={batchEditMode ? "default" : "outline"}
+                   onClick={toggleBatchEditMode}
+                   className="gap-1"
+                 >
+                   {batchEditMode ? <CheckCircle className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+                   {batchEditMode ? "Batch-Edit aktiv" : "Batch-Edit"}
+                 </Button>
+               )}
+             </div>
+           </CardHeader>
+           <CardContent>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+               {files.map(file => (
+                 <div key={file.id} className="relative group border rounded-lg overflow-hidden">
+                   {file.preview ? (
+                     <img
+                       src={file.preview}
+                       alt={file.name}
+                       className="w-full h-32 object-cover rounded"
+                     />
+                   ) : (
+                     <div className="w-full h-32 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
+                       {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
+                       {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
+                       {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
+                     </div>
+                   )}
+                   <div className="p-2 space-y-1">
+                     <div className="text-sm">
+                       <p className="font-medium truncate">{file.name}</p>
+                       <p className="text-gray-500 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                     </div>
 
+                     {/* GPS Info Display */}
+                     {file.type === 'image' && (
+                       <>
+                         {file.gps && file.gps.latitude && file.gps.longitude ? (
+                           <div className="space-y-2">
+                             <GpsStatusIndicator status={file.gpsStatus} gps={file.gps} />
+                             <div className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
+                               <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                                 <MapPin className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                 <span className="truncate font-mono">
+                                   {formatCoordinatesSimple(file.gps.latitude, file.gps.longitude)}
+                                 </span>
+                               </div>
+                             </div>
+                           </div>
+                         ) : (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="w-full text-xs h-8"
+                             onClick={() => openGpsEditor(file.id)}
+                           >
+                             <MapPin className="h-3 w-3 mr-1" />
+                             GPS hinzufügen
+                           </Button>
+                         )}
+                       </>
+                     )}
+                   </div>
 
-      {/* Location */}
+                   {/* GPS Editor */}
+                   {editingGpsFile === file.id && file.type === 'image' && (
+                     <div className="mt-2 space-y-2">
+                       {/* Toggle between Simple Editor and Map */}
+                       <div className="flex gap-2">
+                         <Button
+                           size="sm"
+                           variant={!showMapPicker ? 'default' : 'outline'}
+                           className="flex-1 h-7 text-xs"
+                           onClick={() => setShowMapPicker(false)}
+                         >
+                           <span className="mr-1">✏️</span>
+                           Einfach
+                         </Button>
+                         <Button
+                           size="sm"
+                           variant={showMapPicker ? 'default' : 'outline'}
+                           className="flex-1 h-7 text-xs"
+                           onClick={() => setShowMapPicker(true)}
+                         >
+                           <span className="mr-1">🗺️</span>
+                           Karte
+                         </Button>
+                       </div>
+
+                       {/* Show Map Picker */}
+                       {showMapPicker ? (
+                         <LocationPicker
+                           gps={file.gps}
+                           onSave={(gps) => saveGps(file.id, gps)}
+                           onCancel={closeGpsEditor}
+                           initialZoom={13}
+                           height="300px"
+                           onCountryDetected={(country) => {
+                             console.log('[Publish] Country detected:', country);
+                             setSelectedCountry(country);
+                           }}
+                           onLocationDetected={(locationText) => {
+                             console.log('[Publish] Location detected:', locationText);
+                             setLocation(locationText);
+                           }}
+                         />
+                       ) : (
+                         /* Show Simple Editor */
+                         <GpsEditor
+                           gps={file.gps}
+                           onSave={(gps) => saveGps(file.id, gps)}
+                           onCancel={closeGpsEditor}
+                           onRemove={() => removeGps(file.id)}
+                           onApplyToAll={() => applyGpsToAll(file.id)}
+                         />
+                       )}
+                     </div>
+                   )}
+
+                   {/* Delete Button */}
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                     onClick={() => removeFile(file.id)}
+                   >
+                     ×
+                   </Button>
+                 </div>
+               ))}
+             </div>
+
+             {/* Batch GPS Edit Panel */}
+             {batchEditMode && files.some(f => f.type === 'image' && f.gps) && (
+               <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                 <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Batch GPS bearbeiten</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {files.filter(f => f.type === 'image' && f.gps).map(file => (
+                     <div key={file.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
+                       <span className="text-sm truncate">{file.name}</span>
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         className="h-7"
+                         onClick={() => applyGpsToAll(file.id)}
+                       >
+                         Auf alle anwenden
+                       </Button>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+           </CardContent>
+         </Card>
+       )}
+
+       {/* Location */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -636,172 +798,10 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             onCountryChange={setSelectedCountry}
             placeholder="Land auswaehlen"
           />
-        </CardContent>
-      </Card>
-      {files.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
-              {files.some(f => f.type === 'image') && (
-                <Button
-                  size="sm"
-                  variant={batchEditMode ? "default" : "outline"}
-                  onClick={toggleBatchEditMode}
-                  className="gap-1"
-                >
-                  {batchEditMode ? <CheckCircle className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
-                  {batchEditMode ? "Batch-Edit aktiv" : "Batch-Edit"}
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {files.map(file => (
-                <div key={file.id} className="relative group border rounded-lg overflow-hidden">
-                  {file.preview ? (
-                    <img
-                      src={file.preview}
-                      alt={file.name}
-                      className="w-full h-32 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="w-full h-32 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
-                      {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
-                      {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
-                      {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
-                    </div>
-                  )}
-                  <div className="p-2 space-y-1">
-                    <div className="text-sm">
-                      <p className="font-medium truncate">{file.name}</p>
-                      <p className="text-gray-500 text-xs">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
+         </CardContent>
+       </Card>
 
-                    {/* GPS Info Display */}
-                    {file.type === 'image' && (
-                      <>
-                        {file.gps && file.gps.latitude && file.gps.longitude ? (
-                          <div className="space-y-2">
-                            <GpsStatusIndicator status={file.gpsStatus} gps={file.gps} />
-                            <div className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2">
-                              <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-                                <MapPin className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                <span className="truncate font-mono">
-                                  {formatCoordinatesSimple(file.gps.latitude, file.gps.longitude)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-xs h-8"
-                            onClick={() => openGpsEditor(file.id)}
-                          >
-                            <MapPin className="h-3 w-3 mr-1" />
-                            GPS hinzufügen
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* GPS Editor */}
-                  {editingGpsFile === file.id && file.type === 'image' && (
-                    <div className="mt-2 space-y-2">
-                      {/* Toggle between Simple Editor and Map */}
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant={!showMapPicker ? 'default' : 'outline'}
-                          className="flex-1 h-7 text-xs"
-                          onClick={() => setShowMapPicker(false)}
-                        >
-                          <span className="mr-1">✏️</span>
-                          Einfach
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={showMapPicker ? 'default' : 'outline'}
-                          className="flex-1 h-7 text-xs"
-                          onClick={() => setShowMapPicker(true)}
-                        >
-                          <span className="mr-1">🗺️</span>
-                          Karte
-                        </Button>
-                      </div>
-
-                      {/* Show Map Picker */}
-                      {showMapPicker ? (
-                        <LocationPicker
-                          gps={file.gps}
-                          onSave={(gps) => saveGps(file.id, gps)}
-                          onCancel={closeGpsEditor}
-                          initialZoom={13}
-                          height="300px"
-                          onCountryDetected={(country) => {
-                            console.log('[Publish] Country detected:', country);
-                            setSelectedCountry(country);
-                          }}
-                          onLocationDetected={(locationText) => {
-                            console.log('[Publish] Location detected:', locationText);
-                            setLocation(locationText);
-                          }}
-                        />
-                      ) : (
-                        /* Show Simple Editor */
-                        <GpsEditor
-                          gps={file.gps}
-                          onSave={(gps) => saveGps(file.id, gps)}
-                          onCancel={closeGpsEditor}
-                          onRemove={() => removeGps(file.id)}
-                          onApplyToAll={() => applyGpsToAll(file.id)}
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => removeFile(file.id)}
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            {/* Batch GPS Edit Panel */}
-            {batchEditMode && files.some(f => f.type === 'image' && f.gps) && (
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Batch GPS bearbeiten</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {files.filter(f => f.type === 'image' && f.gps).map(file => (
-                    <div key={file.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
-                      <span className="text-sm truncate">{file.name}</span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7"
-                        onClick={() => applyGpsToAll(file.id)}
-                      >
-                        Auf alle anwenden
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Media Details */}
+       {/* Media Details */}
       <Card>
         <CardHeader>
           <CardTitle>Bilderdetails</CardTitle>
