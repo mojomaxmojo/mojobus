@@ -3,6 +3,7 @@
  *
  * This module provides functions to extract GPS coordinates from image files
  * using the exifr library. Supports JPEG and other EXIF-enabled formats.
+ * Includes support for XMP GPS data used by Google Camera (GCam).
  */
 
 import exifr from 'exifr';
@@ -29,6 +30,11 @@ export type GpsStatus = 'detected' | 'not_found' | 'manual' | 'error';
 /**
  * Extract GPS coordinates from an image file
  *
+ * Supports multiple GPS data sources:
+ * - Standard EXIF GPS tags
+ * - XMP GPS metadata (used by Google Camera/Google Photos)
+ * - Android-specific GPS tags
+ *
  * @param file - Image file to extract GPS from
  * @returns Promise with GPS data or null if no GPS found
  *
@@ -54,116 +60,145 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
 
     console.log('[GPS Extraction] File type supported, extracting EXIF...');
 
-    // Extract EXIF data using exifr - use comprehensive GPS extraction
-    // First try with gps: true to get all GPS data
+    // === METHOD 1: Try exifr.gps() (standard EXIF GPS) ===
     const exifData = await exifr.gps(file);
+    console.log('[GPS Extraction] Method 1 - exifr.gps() result:', exifData);
 
-    // Debug log - log ALL EXIF data to see what's actually there
-    console.log('[GPS Extraction] GPS Data from exifr.gps():', JSON.stringify(exifData, null, 2));
+    // Check for valid GPS data from method 1
+    if (exifData && exifData.latitude && exifData.longitude) {
+      const latitude = exifData.latitude;
+      const longitude = exifData.longitude;
 
-    // Check if GPS data exists - exifr.gps() returns already converted decimal degrees or null
-    if (!exifData) {
-      console.log('[GPS Extraction] No GPS data found with exifr.gps()');
-      
-      // Fallback: Try comprehensive EXIF parse to see if GPS data exists at all
-      console.log('[GPS Extraction] Attempting fallback with full EXIF parse...');
-      const fullExifData = await exifr.parse(file, {
-        gps: true,
-        mergeOutput: false,
-        translateKeys: false,
-        translateValues: false,
-      });
-      
-      console.log('[GPS Extraction] Full EXIF data:', JSON.stringify(fullExifData, null, 2));
-      
-      if (!fullExifData || !fullExifData.latitude || !fullExifData.longitude) {
-        console.log('[GPS Extraction] No GPS coordinates found in full EXIF parse either');
-        return null;
+      // Skip 0,0 coordinates
+      if (latitude !== 0 || longitude !== 0) {
+        console.log('[GPS Extraction] Valid GPS from exifr.gps():', { latitude, longitude });
+        return createGpsResult(latitude, longitude, exifData.altitude, file.name);
       }
-      
-      // Use the fallback data
-      const latitude = fullExifData.latitude;
-      const longitude = fullExifData.longitude;
-      const altitude = fullExifData.altitude;
-      
-      console.log('[GPS Extraction] GPS found via fallback:', { latitude, longitude, altitude });
-      
-      // Validate coordinates
-      if (!isValidCoordinate(latitude, longitude)) {
-        console.warn('[GPS Extraction] Invalid GPS coordinates from fallback:', { latitude, longitude });
-        return null;
-      }
-      
-      const gpsData: GpsData = {
-        latitude,
-        longitude,
-        precision: altitude !== undefined ? 'high' : 'medium',
-      };
-      
-      if (altitude !== undefined && altitude !== null) {
-        gpsData.altitude = parseFloat(String(altitude));
-      }
-      
-      console.log('[GPS Extraction] Successfully extracted GPS via fallback:', gpsData);
-      return gpsData;
     }
 
-    // exifr.gps() returned data - it should already be in decimal degrees format
-    console.log('[GPS Extraction] GPS data structure:', {
-      latitude: exifData.latitude,
-      longitude: exifData.longitude,
-      altitude: exifData.altitude,
-      type: typeof exifData
+    // === METHOD 2: Try XMP GPS data (used by GCam/Google Photos) ===
+    console.log('[GPS Extraction] Method 1 failed, trying XMP GPS...');
+    const xmpData = await exifr.parse(file, {
+      xmp: true,
+      gps: true,
+      mergeOutput: false,
     });
 
-    // exifr.gps() returns an object with latitude and longitude properties (already converted)
-    let latitude = exifData.latitude;
-    let longitude = exifData.longitude;
+    console.log('[GPS Extraction] Method 2 - XMP data keys:', Object.keys(xmpData || {}));
+    console.log('[GPS Extraction] Method 2 - Full XMP data:', JSON.stringify(xmpData, null, 2));
 
-    // Check if we got valid coordinates
-    if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
-      console.log('[GPS Extraction] Missing latitude or longitude in GPS data');
-      return null;
+    // XMP GPS tags (various formats used by different apps)
+    const xmpLat = xmpData?.GPSLatitude ||
+                   xmpData?.['GPS:Latitude'] ||
+                   xmpData?.latitude ||
+                   xmpData?.Latitude;
+    const xmpLon = xmpData?.GPSLongitude ||
+                   xmpData?.['GPS:Longitude'] ||
+                   xmpData?.longitude ||
+                   xmpData?.Longitude;
+
+    if (xmpLat && xmpLon && (xmpLat !== 0 || xmpLon !== 0)) {
+      console.log('[GPS Extraction] Valid GPS from XMP:', { xmpLat, xmpLon });
+      return createGpsResult(xmpLat, xmpLon, xmpData?.GPSAltitude, file.name);
     }
 
-    console.log('[GPS Extraction] GPS coordinates from exifr.gps():', { latitude, longitude });
-
-    // Validate coordinates
-    if (!isValidCoordinate(latitude, longitude)) {
-      console.warn('[GPS Extraction] Invalid GPS coordinates:', { latitude, longitude });
-      return null;
-    }
-
-    // Determine precision based on available data
-    const altitude = exifData.altitude;
-    const precision: 'high' | 'medium' | 'low' = altitude !== undefined && altitude !== null ? 'high' : 'medium';
-
-    const gpsData: GpsData = {
-      latitude,
-      longitude,
-      precision,
-    };
-
-    // Add altitude if available
-    if (altitude !== undefined && altitude !== null) {
-      gpsData.altitude = parseFloat(String(altitude));
-      console.log('[GPS Extraction] Altitude added:', gpsData.altitude);
-    }
-
-    console.log('[GPS Extraction] Successfully extracted GPS:', {
-      latitude: gpsData.latitude,
-      longitude: gpsData.longitude,
-      altitude: gpsData.altitude,
-      precision: gpsData.precision,
-      filename: file.name,
+    // === METHOD 3: Try raw EXIF with all GPS tags ===
+    console.log('[GPS Extraction] Method 2 failed, trying raw EXIF...');
+    const rawExif = await exifr.parse(file, {
+      gps: ['GPSLatitude', 'GPSLongitude', 'GPSAltitude', 'GPSLatitudeRef', 'GPSLongitudeRef'],
+      mergeOutput: true,
     });
 
-    return gpsData;
+    console.log('[GPS Extraction] Method 3 - Raw EXIF:', JSON.stringify(rawExif, null, 2));
+
+    if (rawExif && rawExif.GPSLatitude && rawExif.GPSLongitude) {
+      const dmsLat = rawExif.GPSLatitude;
+      const dmsLon = rawExif.GPSLongitude;
+
+      // Check if not all zeros
+      const isLatZero = dmsLat.every((v: any) => v === 0);
+      const isLonZero = dmsLon.every((v: any) => v === 0);
+
+      if (!isLatZero || !isLonZero) {
+        const latRef = (rawExif.GPSLatitudeRef as 'N' | 'S') || 'N';
+        const lonRef = (rawExif.GPSLongitudeRef as 'E' | 'W') || 'E';
+
+        const latitude = convertDMSToDD(dmsLat, latRef);
+        const longitude = convertDMSToDD(dmsLon, lonRef);
+
+        console.log('[GPS Extraction] Valid GPS from raw EXIF:', { latitude, longitude });
+        return createGpsResult(latitude, longitude, rawExif.GPSAltitude, file.name);
+      }
+    }
+
+    // === METHOD 4: Try full parse with all GPS-related tags ===
+    console.log('[GPS Extraction] Method 3 failed, trying comprehensive parse...');
+    const fullParse = await exifr.parse(file, {
+      pickTags: true,
+      mergeOutput: false,
+    });
+
+    console.log('[GPS Extraction] Method 4 - All available tags:', Object.keys(fullParse || {}).filter(k => k.toLowerCase().includes('gps') || k.toLowerCase().includes('lat') || k.toLowerCase().includes('lon')));
+
+    // Check for any GPS-related keys that might contain coordinates
+    const gpsKeys = Object.keys(fullParse || {}).filter(k =>
+      k.match(/gps/i) || k.match(/latitude/i) || k.match(/longitude/i) || k.match(/location/i)
+    );
+
+    for (const key of gpsKeys) {
+      const value = fullParse![key];
+      if (value && typeof value === 'number' && value !== 0) {
+        // Try to pair latitude/longitude
+        if (key.toLowerCase().includes('lat')) {
+          const lonKey = key.replace(/lat/i, 'lon');
+          const lonValue = fullParse![lonKey];
+          if (lonValue && typeof lonValue === 'number' && lonValue !== 0) {
+            console.log('[GPS Extraction] GPS from tag pair:', { key, lat: value, lon: lonValue });
+            return createGpsResult(value, lonValue, fullParse!.GPSAltitude, file.name);
+          }
+        }
+      }
+    }
+
+    console.log('[GPS Extraction] No valid GPS found in any method');
+    return null;
+
   } catch (error) {
-    console.error('[GPS Extraction] Error extracting GPS:', error);
-    console.error('[GPS Extraction] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    console.error('[GPS Extraction] Error:', error);
     return null;
   }
+}
+
+/**
+ * Create GPS result object from extracted coordinates
+ */
+function createGpsResult(
+  latitude: number,
+  longitude: number,
+  altitude?: number | null,
+  filename?: string
+): GpsData {
+  const precision: 'high' | 'medium' | 'low' = altitude !== undefined && altitude !== null ? 'high' : 'medium';
+
+  const result: GpsData = {
+    latitude,
+    longitude,
+    precision,
+  };
+
+  if (altitude !== undefined && altitude !== null) {
+    result.altitude = parseFloat(String(altitude));
+  }
+
+  console.log('[GPS Extraction] Successfully extracted GPS:', {
+    latitude: result.latitude,
+    longitude: result.longitude,
+    altitude: result.altitude,
+    precision: result.precision,
+    filename: filename || 'unknown',
+  });
+
+  return result;
 }
 
 /**
@@ -236,6 +271,12 @@ function isValidCoordinate(latitude: number, longitude: number): boolean {
 
   // Check for NaN
   if (isNaN(latitude) || isNaN(longitude)) {
+    return false;
+  }
+
+  // Check for 0,0 coordinates (Null Island - likely extraction error)
+  // Real photos at exactly 0,0 are extremely rare
+  if (latitude === 0 && longitude === 0) {
     return false;
   }
 
