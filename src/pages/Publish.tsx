@@ -246,10 +246,16 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             newFile.gps = gpsData;
             newFile.gpsStatus = 'detected';
             console.log(`[GPS] Extracted from ${file.name}:`, gpsData);
+            // Simple alert to show GPS is working
+            alert(`✅ GPS gefunden!\n\nDatei: ${file.name}\nBreitengrad: ${gpsData.latitude}\nLängengrad: ${gpsData.longitude}\n${gpsData.altitude ? `Höhe: ${gpsData.altitude}m` : ''}`);
+          } else {
+            // Alert if no GPS found
+            alert(`❌ Keine GPS-Daten gefunden!\n\nDatei: ${file.name}\nDateityp: ${file.type}\nDateigröße: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
           }
         } catch (error) {
           console.error(`[GPS] Failed to extract from ${file.name}:`, error);
           newFile.gpsStatus = 'error';
+          alert(`❌ Fehler bei GPS-Extraktion!\n\nDatei: ${file.name}\nFehler: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
