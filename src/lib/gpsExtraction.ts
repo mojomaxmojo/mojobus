@@ -94,15 +94,25 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     try {
       // Try to convert DMS (Degrees, Minutes, Seconds) format
       // Pass ref separately as it's stored in GPSLatitudeRef/GPSLongitudeRef
-      const latRef = (exifData.GPSLatitudeRef as 'N' | 'S') || 'N';
-      const lonRef = (exifData.GPSLongitudeRef as 'E' | 'W') || 'E';
+      let latRef: 'N' | 'S' | 'E' | 'W' = 'N';
+      let lonRef: 'N' | 'S' | 'E' | 'W' = 'E';
 
-      console.log('[GPS Extraction] Converting DMS to DD:', {
-        lat: exifData.GPSLatitude,
-        lon: exifData.GPSLongitude,
-        latRef,
-        lonRef
-      });
+      // Handle unusual reference values
+      if (typeof exifData.GPSLatitudeRef === 'string' && exifData.GPSLatitudeRef.length === 1) {
+        const refChar = exifData.GPSLatitudeRef.toUpperCase();
+        if (['N', 'S', 'E', 'W'].includes(refChar)) {
+          latRef = refChar;
+        }
+      }
+
+      if (typeof exifData.GPSLongitudeRef === 'string' && exifData.GPSLongitudeRef.length === 1) {
+        const refChar = exifData.GPSLongitudeRef.toUpperCase();
+        if (['N', 'S', 'E', 'W'].includes(refChar)) {
+          lonRef = refChar;
+        }
+      }
+
+      console.log('[GPS Extraction] Using references:', { latRef, lonRef, latRefRaw: exifData.GPSLatitudeRef, lonRefRaw: exifData.GPSLongitudeRef });
 
       latitude = convertDMSToDD(exifData.GPSLatitude, latRef);
       longitude = convertDMSToDD(exifData.GPSLongitude, lonRef);
@@ -219,8 +229,16 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
  */
 function convertDMSToDD(dms: any, ref: 'N' | 'S' | 'E' | 'W'): number {
   if (!Array.isArray(dms)) {
+    console.warn('[GPS] DMS is not an array:', dms);
     throw new Error('DMS is not an array');
   }
+
+  console.log('[GPS] Converting DMS:', {
+    dms,
+    ref,
+    dmsType: typeof dms,
+    dmsLength: dms.length
+  });
 
   const degrees = parseFloat(dms[0]);
   const minutes = parseFloat(dms[1] || 0);
@@ -228,8 +246,11 @@ function convertDMSToDD(dms: any, ref: 'N' | 'S' | 'E' | 'W'): number {
 
   // Validate values
   if (isNaN(degrees)) {
+    console.error('[GPS] Degrees is NaN:', dms[0]);
     throw new Error('Degrees is NaN');
   }
+
+  console.log('[GPS] Parsed DMS:', { degrees, minutes, seconds });
 
   let dd = degrees + minutes / 60 + seconds / 3600;
 
@@ -237,6 +258,8 @@ function convertDMSToDD(dms: any, ref: 'N' | 'S' | 'E' | 'W'): number {
   if (ref === 'S' || ref === 'W') {
     dd = -dd;
   }
+
+  console.log('[GPS] Final DD:', { dd, ref });
 
   return dd;
 }
