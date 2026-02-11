@@ -1,0 +1,256 @@
+# ============================================
+# Optimized Nginx Configuration for MojoBus (test.mojobus.co)
+# React SPA with Vite Build - Intelligent Caching + Brotli
+# ============================================
+
+server {
+   listen   80;
+   server_name test.mojobus.co www.test.mojobus.co;
+   return 302 https://test.mojobus.co$request_uri;
+   root /home/nginx/domains/test.mojobus.co/public;
+   include /usr/local/nginx/conf/staticfiles.conf;
+}
+
+server {
+  listen 443 ssl http2;
+
+  server_name test.mojobus.co www.test.mojobus.co;
+
+  include /usr/local/nginx/conf/ssl/test.mojobus.co/test.mojobus.co.crt.key.conf;
+  include /usr/local/nginx/conf/ssl_include.conf;
+
+  # Cloudflare authenticated origin pull cert (optional)
+  #ssl_client_certificate /usr/local/nginx/conf/ssl/cloudflare/test.mojobus.co/origin.crt;
+  #ssl_verify_client on;
+
+  # Mozilla recommended SSL ciphers
+  ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+  ssl_prefer_server_ciphers   on;
+
+  # Security headers
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-XSS-Protection "1; mode=block" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+  ssl_buffer_size 1369;
+  ssl_session_tickets on;
+
+  # Enable OCSP stapling
+  resolver 8.8.8.8 8.8.4.4 1.1.1.1 1.0.0.1 valid=10m;
+  resolver_timeout 10s;
+  ssl_stapling off;
+  ssl_stapling_verify off;
+
+  # Disable ngx_pagespeed (not used)
+  #include /usr/local/nginx/conf/pagespeed.conf;
+  #include /usr/local/nginx/conf/pagespeedhandler.conf;
+  #include /usr/local/nginx/conf/pagespeedstatslog.conf;
+
+  # Logging
+  access_log /home/nginx/domains/test.mojobus.co/log/access.log combined buffer=256k flush=5m;
+  error_log /home/nginx/domains/test.mojobus.co/log/error.log;
+
+  include /usr/local/nginx/conf/autoprotect/test.mojobus.co/autoprotect-test.mojobus.co.conf;
+  root /home/nginx/domains/test.mojobus.co/public;
+
+  # Cloudflare (optional)
+  #include /usr/local/nginx/conf/cloudflare.conf;
+  include /usr/local/nginx/conf/503include-main.conf;
+
+  # ============================================
+  # COMPRESSION (Gzip + Brotli)
+  # ============================================
+
+  # Gzip compression (fallback for older browsers)
+  gzip on;
+  gzip_vary on;
+  gzip_proxied any;
+  gzip_comp_level 6;
+  gzip_min_length 1024;
+  gzip_types
+    text/plain
+    text/css
+    text/xml
+    text/javascript
+    application/javascript
+    application/json
+    application/xml+rss
+    application/atom+xml
+    image/svg+xml
+    image/x-icon
+    application/vnd.ms-fontobject
+    font/truetype
+    font/opentype
+    font/woff
+    font/woff2;
+
+  # Brotli compression (better than gzip, ~20% more compression)
+  brotli on;
+  brotli_comp_level 6;
+  brotli_static on;
+  brotli_types
+    text/plain
+    text/css
+    text/xml
+    text/javascript
+    application/javascript
+    application/json
+    application/xml+rss
+    application/atom+xml
+    image/svg+xml
+    image/x-icon
+    application/vnd.ms-fontobject
+    font/truetype
+    font/opentype
+    font/woff
+    font/woff2;
+
+  # ============================================
+  # CACHE STRATEGIES
+  # ============================================
+
+  # HTML files (index.html) - very short cache
+  location ~* \.(html|htm)$ {
+    expires 5m;
+    add_header Cache-Control "public, no-cache";
+    add_header Pragma "no-cache";
+    try_files $uri $uri/ /index.html;
+  }
+
+  # JavaScript files (hashed by Vite) - 1 year immutable
+  location ~* \.js$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header Vary "Accept-Encoding";
+
+    try_files $uri $uri/ =404;
+  }
+
+  # CSS files (hashed by Vite) - 1 year immutable
+  location ~* \.css$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header Vary "Accept-Encoding";
+
+    try_files $uri $uri/ =404;
+  }
+
+  # WebP images in assets/ - 1 year immutable
+  location ~* ^/assets/.*\.webp$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header Vary "Accept-Encoding";
+    add_header X-Content-Type-Options "nosniff";
+
+    try_files $uri $uri/ =404;
+  }
+
+  # PNG/JPG images in assets/ - 1 year immutable
+  location ~* ^/assets/.*\.(png|jpg|jpeg|gif|avif)$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header Vary "Accept-Encoding";
+    add_header X-Content-Type-Options "nosniff";
+
+    try_files $uri $uri/ =404;
+  }
+
+  # SVG images in assets/ - 1 year immutable
+  location ~* ^/assets/.*\.svg$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header Vary "Accept-Encoding";
+    add_header X-Content-Type-Options "nosniff";
+
+    try_files $uri $uri/ =404;
+  }
+
+  # Fonts - 1 year immutable (very large, rarely changed)
+  location ~* \.(woff|woff2|ttf|otf|eot)$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header Vary "Accept-Encoding";
+    add_header X-Content-Type-Options "nosniff";
+    add_header Access-Control-Allow-Origin "*";
+
+    try_files $uri $uri/ =404;
+  }
+
+  # Favicon files - 1 year immutable
+  location ~* ^/(favicon|apple-touch-icon|icon-).*\.(png|jpg|jpeg|webp|ico)$ {
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    add_header Vary "Accept-Encoding";
+    add_header X-Content-Type-Options "nosniff";
+
+    try_files $uri $uri/ =404;
+  }
+
+  # _redirects file - very short cache (configuration)
+  location = /_redirects {
+    expires 5m;
+    add_header Cache-Control "public, no-cache";
+    add_header Pragma "no-cache";
+    try_files $uri =404;
+  }
+
+  # ============================================
+  # SPA ROUTING (fallback to index.html)
+  # ============================================
+
+  location / {
+    # Try static files first, then fallback to index.html for SPA
+    try_files $uri $uri/ /index.html;
+
+    # Block common exploits
+    #include /usr/local/nginx/conf/block.conf;
+  }
+
+  # Enable directory listings (optional)
+  #autoindex  on;
+  #autoindex_localtime on;
+
+  include /usr/local/nginx/conf/php.conf;
+
+  # Static files includes
+  include /usr/local/nginx/conf/pre-staticfiles-local-test.mojobus.co.conf;
+  include /usr/local/nginx/conf/pre-staticfiles-global.conf;
+  include /usr/local/nginx/conf/staticfiles.conf;
+  include /usr/local/nginx/conf/drop.conf;
+
+  # Error page (optional)
+  #include /usr/local/nginx/conf/errorpage.conf;
+
+  # Virtual Traffic Status (CentminMod)
+  include /usr/local/nginx/conf/vts_server.conf;
+}
+
+# ============================================
+# NOTES
+# ============================================
+#
+# Cache Strategy:
+# - index.html: 5 min (always fresh)
+# - Assets (JS/CSS/Images): 1 year immutable (hashed filenames)
+# - Fonts/Icons: 1 year immutable (large, rarely changed)
+#
+# Compression:
+# - Gzip: Fallback for older browsers
+# - Brotli: ~20% better compression than gzip
+#
+# Performance:
+# - Conditional requests (304 responses)
+# - Vary: Accept-Encoding header
+# - Immutable cache for assets (never invalidates)
+#
+# Deployment:
+# - After each deploy, browsers fetch new index.html
+# - Assets are cached forever (hashes change)
+# - No cache invalidation needed
+#
+# Service Worker:
+# - index.html has short cache (5 min)
+# - Assets have long cache (1 year)
+# - SW and browser cache work together
+#
