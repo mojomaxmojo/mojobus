@@ -185,6 +185,21 @@ export function useZaps(
     }
 
     console.log('⚡ ZAP ENDPOINT RETRIEVAL');
+    console.log('   author.data?.event:', author.data?.event);
+
+    // Verify we have a valid event before calling getZapEndpoint
+    if (!author.data?.event || typeof author.data.event.kind !== 'number') {
+      console.error('❌ INVALID AUTHOR EVENT');
+      console.error('   Event:', author.data?.event);
+      console.error('   Event kind:', author.data?.event?.kind);
+      toast({
+        title: 'Author event not found',
+        description: 'Could not find a valid author event for zapping.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const zapEndpoint = await nip57.getZapEndpoint(author.data.event);
     console.log('   Zap endpoint:', zapEndpoint);
 
