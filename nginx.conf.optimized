@@ -124,10 +124,6 @@ server {
     add_header Cache-Control "public, max-age=31536000, immutable";
     add_header Vary "Accept-Encoding";
 
-    # Conditional requests
-    if_modified_since exact;
-    if_none_match exact;
-
     try_files $uri $uri/ =404;
   }
 
@@ -136,10 +132,6 @@ server {
     expires 1y;
     add_header Cache-Control "public, max-age=31536000, immutable";
     add_header Vary "Accept-Encoding";
-
-    # Conditional requests
-    if_modified_since exact;
-    if_none_match exact;
 
     try_files $uri $uri/ =404;
   }
@@ -151,10 +143,6 @@ server {
     add_header Vary "Accept-Encoding";
     add_header X-Content-Type-Options "nosniff";
 
-    # Conditional requests
-    if_modified_since exact;
-    if_none_match exact;
-
     try_files $uri $uri/ =404;
   }
 
@@ -165,10 +153,6 @@ server {
     add_header Vary "Accept-Encoding";
     add_header X-Content-Type-Options "nosniff";
 
-    # Conditional requests
-    if_modified_since exact;
-    if_none_match exact;
-
     try_files $uri $uri/ =404;
   }
 
@@ -178,10 +162,6 @@ server {
     add_header Cache-Control "public, max-age=31536000, immutable";
     add_header Vary "Accept-Encoding";
     add_header X-Content-Type-Options "nosniff";
-
-    # Conditional requests
-    if_modified_since exact;
-    if_none_match exact;
 
     try_files $uri $uri/ =404;
   }
@@ -194,10 +174,6 @@ server {
     add_header X-Content-Type-Options "nosniff";
     add_header Access-Control-Allow-Origin "*";
 
-    # Conditional requests
-    if_modified_since exact;
-    if_none_match exact;
-
     try_files $uri $uri/ =404;
   }
 
@@ -207,10 +183,6 @@ server {
     add_header Cache-Control "public, max-age=31536000, immutable";
     add_header Vary "Accept-Encoding";
     add_header X-Content-Type-Options "nosniff";
-
-    # Conditional requests
-    if_modified_since exact;
-    if_none_match exact;
 
     try_files $uri $uri/ =404;
   }
