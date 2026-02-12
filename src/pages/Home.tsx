@@ -15,7 +15,7 @@ import { Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
+import { getGalleryThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { SocialBar } from '@/components/SocialBar';
@@ -164,7 +164,7 @@ export function Home() {
         type: 'article',
         event,
         date: event.created_at,
-        thumbnailUrl: metadata.image ? getListThumbnailUrl(metadata.image) : undefined
+        thumbnailUrl: metadata.image ? getGalleryThumbnailUrl(metadata.image) : undefined
       });
     });
   }
@@ -176,7 +176,7 @@ export function Home() {
         type: 'place',
         event,
         date: event.created_at,
-        thumbnailUrl: metadata.image ? getListThumbnailUrl(metadata.image) : undefined
+        thumbnailUrl: metadata.image ? getGalleryThumbnailUrl(metadata.image) : undefined
       });
     });
   }
@@ -188,7 +188,7 @@ export function Home() {
         type: 'note',
         event,
         date: event.created_at,
-        thumbnailUrl: imageUrl ? getListThumbnailUrl(imageUrl) : undefined
+        thumbnailUrl: imageUrl ? getGalleryThumbnailUrl(imageUrl) : undefined
       });
     });
   }
@@ -200,7 +200,7 @@ export function Home() {
         type: 'image',
         event,
         date: event.created_at,
-        thumbnailUrl: imageUrl ? getListThumbnailUrl(imageUrl) : undefined
+        thumbnailUrl: imageUrl ? getGalleryThumbnailUrl(imageUrl) : undefined
       });
     });
   }
