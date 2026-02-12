@@ -501,9 +501,9 @@ export function ImageDetail() {
           </div>
         </div>
 
-       {/* Fullscreen Image Viewer */}
+        {/* Fullscreen Image Viewer */}
       {isImageFullscreen && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
           {/* Close button */}
           <Button
             variant="ghost"
@@ -567,16 +567,16 @@ export function ImageDetail() {
             <video
               src={images[currentImageIndex]}
               controls
-              className="max-h-[90vh] max-w-[90vw] object-contain"
+              className="w-full h-full object-contain"
               onClick={() => setIsImageFullscreen(false)}
             />
           ) : (
             <img
               src={getArticleHeaderUrl(images[currentImageIndex])}
               srcSet={generateSrcset(images[currentImageIndex], 'gallery')}
-              sizes="(max-width: 640px) 400px, (max-width: 1024px) 800px, (max-width: 1280px) 1200px, 1600px"
+              sizes="100vw"
               alt={`Bild ${currentImageIndex + 1}`}
-              className="max-h-[90vh] max-w-[90vw] object-contain"
+              className="w-full h-full object-contain"
               onClick={() => setIsImageFullscreen(false)}
             />
           )}
