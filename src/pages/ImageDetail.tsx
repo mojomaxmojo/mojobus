@@ -567,7 +567,7 @@ export function ImageDetail() {
             <video
               src={images[currentImageIndex]}
               controls
-              className="w-full h-full object-cover md:max-h-[90vh] md:max-w-[90vw] md:object-contain"
+              className="w-full h-full object-contain md:max-h-[90vh] md:max-w-[90vw]"
               onClick={() => setIsImageFullscreen(false)}
             />
           ) : (
@@ -576,7 +576,7 @@ export function ImageDetail() {
               srcSet={generateSrcset(images[currentImageIndex], 'gallery')}
               sizes="(max-width: 640px) 400px, (max-width: 1024px) 800px, (max-width: 1280px) 1200px, 1600px"
               alt={`Bild ${currentImageIndex + 1}`}
-              className="w-full h-full object-cover md:max-h-[90vh] md:max-w-[90vw] md:object-contain"
+              className="w-full h-full object-contain md:max-h-[90vh] md:max-w-[90vw]"
               onClick={() => setIsImageFullscreen(false)}
             />
           )}
