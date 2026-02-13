@@ -203,14 +203,6 @@ export function useCostTracker() {
     },
   });
 
-      console.log('✅ Cost Tracker: Published new entry', event.id);
-      return event;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cost-tracker-events'] });
-    },
-  });
-
   // Calculate monthly statistics
   const monthlyStats = useQuery({
     queryKey: ['cost-tracker-monthly-stats', decryptedEntries.map(e => e.id)],
