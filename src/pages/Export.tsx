@@ -25,6 +25,9 @@ export default function Export() {
   const [loading, setLoading] = useState(true);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
+  // Ensure filteredEvents is never undefined
+  const safeFilteredEvents = filteredEvents || [];
+
   // Filter options
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['article', 'image', 'note']);
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'year' | 'all'>('all');
@@ -113,17 +116,17 @@ export default function Export() {
   };
 
   // Calculate stats
-  const imageCount = filteredEvents.reduce((count, event) => {
+  const imageCount = safeFilteredEvents.reduce((count, event) => {
     return count + event.tags.filter(([name]) => name === 'image').length;
   }, 0);
 
   const uniqueLocations = new Set(
-    filteredEvents
+    safeFilteredEvents
       .map(event => event.tags.find(([name]) => name === 'location')?.[1])
       .filter(Boolean)
   ).size;
 
-  const countryCounts = filteredEvents.reduce((acc, event) => {
+  const countryCounts = safeFilteredEvents.reduce((acc, event) => {
     const country = event.tags.find(([name]) => name === 'country')?.[1] || 'unbekannt';
     acc[country] = (acc[country] || 0) + 1;
     return acc;
@@ -151,9 +154,9 @@ export default function Export() {
                 <div className="p-3 bg-cyan-100 dark:bg-cyan-900 rounded-lg">
                   <FileText className="w-6 h-6 text-cyan-600" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{filteredEvents.length}</p>
-                  <p className="text-sm text-muted-foreground">Inhalte</p>
+                 <div>
+                   <p className="text-2xl font-bold">{safeFilteredEvents.length}</p>
+                   <p className="text-sm text-muted-foreground">Inhalte</p>
                 </div>
               </div>
             </CardContent>
@@ -387,7 +390,7 @@ export default function Export() {
 
                 <Button
                   onClick={() => setExportDialogOpen(true)}
-                  disabled={filteredEvents.length === 0}
+                  disabled={safeFilteredEvents.length === 0}
                   className="w-full"
                 >
                   <Download className="mr-2 h-4 w-4" />
@@ -424,7 +427,7 @@ export default function Export() {
 
                 <Button
                   onClick={() => setExportDialogOpen(true)}
-                  disabled={filteredEvents.length === 0}
+                  disabled={safeFilteredEvents.length === 0}
                   variant="outline"
                   className="w-full"
                 >
@@ -434,7 +437,7 @@ export default function Export() {
               </div>
             </div>
 
-            {filteredEvents.length === 0 && (
+            {safeFilteredEvents.length === 0 && (
               <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <div className="flex items-start gap-3">
                   <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -507,7 +510,7 @@ export default function Export() {
 
       {/* Export Dialog */}
       <ExportDialog
-        events={filteredEvents}
+        events={safeFilteredEvents}
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
         exportName="MojoBus-Export"
