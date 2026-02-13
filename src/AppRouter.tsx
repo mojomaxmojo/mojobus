@@ -18,8 +18,7 @@ const Notes = lazy(() => import("./pages/Notes").then(m => ({ default: m.Notes }
 const About = lazy(() => import("./pages/About").then(m => ({ default: m.About })));
 const Places = lazy(() => import("./pages/Places").then(m => ({ default: m.default })));
 const Images = lazy(() => import("./pages/Images").then(m => ({ default: m.default })));
-// MapPage: Use placeholder in Shakespeare, real MapPage works on VPS in production
-const MapPage = lazy(() => import("./pages/MapPagePlaceholder").then(m => ({ default: m.default })));
+const MapPage = lazy(() => import("./pages/MapPage").then(m => ({ default: m.default })));
 const ImageDetail = lazy(() => import("./pages/ImageDetail").then(m => ({ default: m.ImageDetail })));
 const Publish = lazy(() => import("./pages/Publish").then(m => ({ default: m.Publish })));
 const ContentEditorMinimal = lazy(() => import("./components/ContentEditorMinimal").then(m => ({ default: m.ContentEditorMinimal })));
