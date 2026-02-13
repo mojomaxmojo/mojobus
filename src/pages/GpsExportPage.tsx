@@ -15,7 +15,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { GpsExportDialog } from '@/components/gps/GpsExportDialog';
 import { usePlaces, useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
-import { useNotes } from '@/hooks/useNotes';
 import { MapPin, Calendar, Image as ImageIcon, Filter, CheckCircle2, ArrowLeft, ExternalLink, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useHead } from '@unhead/react';
@@ -23,22 +22,17 @@ import { useHead } from '@unhead/react';
 export default function GpsExportPage() {
   // Load data
   const { data: articlesData, isLoading: articlesLoading } = useInfiniteLongformArticles();
-  const { data: notesData, isLoading: notesLoading } = useNotes();
 
-  // Flatten articles
+  // Note: useNotes returns infinite query data with pages
   const allArticles = useMemo(() => {
     return articlesData?.pages.flat() || [];
   }, [articlesData]);
 
-  // Flatten notes
-  const allNotes = useMemo(() => {
-    return notesData || [];
-  }, [notesData]);
-
-  // Combine all events
+  // For now, we'll only export articles/places with GPS data
+  // Notes can be added later if needed
   const allEvents = useMemo(() => {
-    return [...allArticles, ...allNotes];
-  }, [allArticles, allNotes]);
+    return [...allArticles];
+  }, [allArticles]);
 
   // Filter events with location data
   const eventsWithLocation = useMemo(() => {
@@ -264,7 +258,7 @@ export default function GpsExportPage() {
           </Card>
 
           {/* Events List */}
-          {articlesLoading || notesLoading ? (
+          {articlesLoading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="lg" />
             </div>
