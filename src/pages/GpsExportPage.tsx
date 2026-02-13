@@ -14,25 +14,19 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { GpsExportDialog } from '@/components/gps/GpsExportDialog';
-import { usePlaces, useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
+import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 import { MapPin, Calendar, Image as ImageIcon, Filter, CheckCircle2, ArrowLeft, ExternalLink, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useHead } from '@unhead/react';
 
 export default function GpsExportPage() {
-  // Load data
-  const { data: articlesData, isLoading: articlesLoading } = useInfiniteLongformArticles();
+  // Load places (locations with GPS data)
+  const { data: places, isLoading } = usePlaces({ limit: 200 });
 
-  // Note: useNotes returns infinite query data with pages
-  const allArticles = useMemo(() => {
-    return articlesData?.pages.flat() || [];
-  }, [articlesData]);
-
-  // For now, we'll only export articles/places with GPS data
-  // Notes can be added later if needed
+  // All events are places (already filtered for GPS data later)
   const allEvents = useMemo(() => {
-    return [...allArticles];
-  }, [allArticles]);
+    return places || [];
+  }, [places]);
 
   // Filter events with location data
   const eventsWithLocation = useMemo(() => {
@@ -258,7 +252,7 @@ export default function GpsExportPage() {
           </Card>
 
           {/* Events List */}
-          {articlesLoading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="lg" />
             </div>
