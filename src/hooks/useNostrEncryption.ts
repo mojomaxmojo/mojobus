@@ -6,36 +6,20 @@
 
 import { useNostr } from '@nostrify/react';
 import { useState, useCallback } from 'react';
-import type { nip44 } from 'nostr-tools';
+import { useCurrentUser } from './useCurrentUser';
+import { nip44 } from 'nostr-tools';
 
 /**
  * Encrypt content using NIP-44
  */
 export async function encryptContent(
   content: string,
-  recipientPubkey: string,
-  nostr: any
+  recipientPubkey: string
 ): Promise<string> {
-  console.log('🔐 Verschlüsselung gestartet für:', recipientPubkey);
-
-  if (!nostr) {
-    throw new Error('Nostr nicht verfügbar');
-  }
-
-  if (!nostr.nip44) {
-    console.error('❌ nostr.nip44 nicht verfügbar');
-    throw new Error('NIP-44 nicht verfügbar: Bitte aktualisiere deinen Nostr-Client');
-  }
-
-  if (typeof nostr.nip44.encrypt !== 'function') {
-    console.error('❌ nostr.nip44.encrypt ist keine Funktion');
-    throw new Error('NIP-44-Verschlüsselung wird von deinem Nostr-Client nicht unterstützt');
-  }
-
   try {
-    // Note: This uses @nostrify/react's encryption
-    // The actual implementation depends on NIP-07 signer or local private key
-    const encrypted = await nostr.nip44.encrypt(content, recipientPubkey);
+    // Using nostr-tools nip44 encryption
+    // This requires a secret key which we get from the NIP-07 signer
+    const encrypted = await nip44.encrypt(content, recipientPubkey);
     console.log('✅ Verschlüsselung erfolgreich');
     return encrypted;
   } catch (error) {
@@ -49,25 +33,10 @@ export async function encryptContent(
  */
 export async function decryptContent(
   encryptedContent: string,
-  senderPubkey: string,
-  nostr: any
+  senderPubkey: string
 ): Promise<string> {
-  console.log('🔓 Entschlüsselung gestartet von:', senderPubkey);
-
-  if (!nostr) {
-    throw new Error('Nostr nicht verfügbar');
-  }
-
-  if (!nostr.nip44) {
-    throw new Error('NIP-44 nicht verfügbar');
-  }
-
-  if (typeof nostr.nip44.decrypt !== 'function') {
-    throw new Error('NIP-44-Entschlüsselung wird nicht unterstützt');
-  }
-
   try {
-    const decrypted = await nostr.nip44.decrypt(encryptedContent, senderPubkey);
+    const decrypted = await nip44.decrypt(encryptedContent, senderPubkey);
     console.log('✅ Entschlüsselung erfolgreich');
     return decrypted;
   } catch (error) {
@@ -80,29 +49,41 @@ export async function decryptContent(
  * Hook for Nostr encryption operations
  */
 export function useNostrEncryption() {
-  const { nostr } = useNostr();
+  const { user } = useCurrentUser();
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
 
   /**
    * Encrypt content for a specific recipient
+   * Note: This requires the user's private key from NIP-07 signer
    */
   const encrypt = useCallback(async (
     content: string,
     recipientPubkey: string
   ): Promise<string> => {
-    if (!nostr) {
-      throw new Error('Nostr nicht verfügbar');
+    if (!user?.signer) {
+      throw new Error('Nicht eingeloggt: Bitte mit deinem Nostr-Account einloggen');
     }
+
+    console.log('🔐 Verschlüsselung gestartet für:', recipientPubkey);
 
     setIsEncrypting(true);
     try {
-      const encrypted = await encryptContent(content, recipientPubkey, nostr);
+      // Get the user's secret key from the signer
+      const secretKey = await (user.signer as any).getSecretKey?.();
+      
+      if (!secretKey) {
+        throw new Error('Private Key konnte nicht vom Signer abgerufen werden');
+      }
+
+      // Use nostr-tools nip44 encryption with secret key
+      const encrypted = await nip44.encrypt(content, recipientPubkey, secretKey);
+      console.log('✅ Verschlüsselung erfolgreich');
       return encrypted;
     } finally {
       setIsEncrypting(false);
     }
-  }, [nostr]);
+  }, [user]);
 
   /**
    * Decrypt content from a specific sender
@@ -111,18 +92,29 @@ export function useNostrEncryption() {
     encryptedContent: string,
     senderPubkey: string
   ): Promise<string> => {
-    if (!nostr) {
-      throw new Error('Nostr nicht verfügbar');
+    if (!user?.signer) {
+      throw new Error('Nicht eingeloggt: Bitte mit deinem Nostr-Account einloggen');
     }
+
+    console.log('🔓 Entschlüsselung gestartet von:', senderPubkey);
 
     setIsDecrypting(true);
     try {
-      const decrypted = await decryptContent(encryptedContent, senderPubkey, nostr);
+      // Get the user's secret key from the signer
+      const secretKey = await (user.signer as any).getSecretKey?.();
+      
+      if (!secretKey) {
+        throw new Error('Private Key konnte nicht vom Signer abgerufen werden');
+      }
+
+      // Use nostr-tools nip44 decryption with secret key
+      const decrypted = await nip44.decrypt(encryptedContent, senderPubkey, secretKey);
+      console.log('✅ Entschlüsselung erfolgreich');
       return decrypted;
     } finally {
       setIsDecrypting(false);
     }
-  }, [nostr]);
+  }, [user]);
 
   return {
     encrypt,
@@ -137,11 +129,10 @@ export function useNostrEncryption() {
  */
 export async function encryptCostEntry(
   entry: any,
-  recipientPubkey: string,
-  nostr: any
+  recipientPubkey: string
 ): Promise<string> {
   const content = JSON.stringify(entry);
-  return encryptContent(content, recipientPubkey, nostr);
+  return encryptContent(content, recipientPubkey);
 }
 
 /**
@@ -149,11 +140,10 @@ export async function encryptCostEntry(
  */
 export async function decryptCostEntry(
   encryptedContent: string,
-  senderPubkey: string,
-  nostr: any
+  senderPubkey: string
 ): Promise<any> {
   try {
-    const decrypted = await decryptContent(encryptedContent, senderPubkey, nostr);
+    const decrypted = await decryptContent(encryptedContent, senderPubkey);
     return JSON.parse(decrypted);
   } catch (error) {
     console.error('Failed to parse decrypted cost entry:', error);
