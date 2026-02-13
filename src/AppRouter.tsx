@@ -22,8 +22,6 @@ const MapPage = lazy(() => import("./pages/MapPage").then(m => ({ default: m.def
 const ImageDetail = lazy(() => import("./pages/ImageDetail").then(m => ({ default: m.ImageDetail })));
 const Publish = lazy(() => import("./pages/Publish").then(m => ({ default: m.Publish })));
 const ContentEditorMinimal = lazy(() => import("./components/ContentEditorMinimal").then(m => ({ default: m.ContentEditorMinimal })));
-const KostenTracker = lazy(() => import("./pages/KostenTracker").then(m => ({ default: m.default })));
-const KostenNeu = lazy(() => import("./pages/KostenNeu").then(m => ({ default: m.default })));
 const Profile = lazy(() => import("./pages/Profile").then(m => ({ default: m.Profile })));
 const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.Settings })));
 const ServiceWorkerSettings = lazy(() => import("./pages/ServiceWorkerSettings").then(m => ({ default: m.ServiceWorkerSettings })));
@@ -58,8 +56,6 @@ function App() {
               <Route path="/notes/:country" element={<Notes />} />
               <Route path="/about" element={<About />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/artikel/rvlife/kosten" element={<KostenTracker />} />
-              <Route path="/artikel/rvlife/kosten/neu" element={<KostenNeu />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/service-worker" element={<ServiceWorkerSettings />} />
               <Route path="/veroeffentlichen" element={<Publish />} />
