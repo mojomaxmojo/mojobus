@@ -32,6 +32,9 @@ interface ExportDialogProps {
 }
 
 export function ExportDialog({ events, open, onOpenChange, exportName = "MojoBus-Export" }: ExportDialogProps) {
+  // Ensure events is always an array
+  const safeEvents = events || [];
+
   // Export options
   const [includeImages, setIncludeImages] = useState(true);
   const [includePosts, setIncludePosts] = useState(true);
@@ -46,11 +49,11 @@ export function ExportDialog({ events, open, onOpenChange, exportName = "MojoBus
   const [exportType, setExportType] = useState<'gpx' | 'kmz' | null>(null);
 
   // Calculate stats
-  const imageCount = events.reduce((count, event) => {
+  const imageCount = safeEvents.reduce((count, event) => {
     return count + event.tags.filter(([name]) => name === 'image').length;
   }, 0);
 
-  const postCount = events.length;
+  const postCount = safeEvents.length;
 
   // Handle GPX export
   const handleGPXExport = async () => {
@@ -58,7 +61,7 @@ export function ExportDialog({ events, open, onOpenChange, exportName = "MojoBus
     setExportType('gpx');
 
     try {
-      await exportEventsToGPX(events, {
+      await exportEventsToGPX(safeEvents, {
         includeImages,
         includePosts,
         includeTimestamps,
@@ -91,7 +94,7 @@ export function ExportDialog({ events, open, onOpenChange, exportName = "MojoBus
         maxImageCount: maxImages[0]
       };
 
-      await exportEventsToKMZ(events, options);
+      await exportEventsToKMZ(safeEvents, options);
 
       console.log('✅ KMZ Export erfolgreich!');
     } catch (error) {

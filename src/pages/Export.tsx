@@ -3,7 +3,7 @@
  * For Google Earth Studio and creating professional travel videos
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNostr } from '@nostrify/react';
 import { ExportDialog } from '@/components/ExportDialog';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,11 @@ export default function Export() {
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'year' | 'all'>('all');
   const [countryFilter, setCountryFilter] = useState<string>('');
 
+  // Load events on mount
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
   // Load events
   const loadEvents = async () => {
     setLoading(true);
@@ -41,8 +46,8 @@ export default function Export() {
         }
       ]);
 
-      setEvents(fetchedEvents);
-      setFilteredEvents(fetchedEvents);
+      setEvents(fetchedEvents || []);
+      setFilteredEvents(fetchedEvents || []);
     } catch (error) {
       console.error('Error loading events:', error);
       console.error('Fehler beim Laden der Inhalte');
