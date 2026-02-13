@@ -32,6 +32,7 @@ import { useState } from 'react';
 import { useHead } from '@unhead/react';
 import { nip19, type AddressPointer } from 'nostr-tools';
 import { getArticleHeaderUrl, generateSrcset, generateSizes, getResponsiveImageUrl } from '@/lib/imageUtils';
+import { GpsExportDialog } from '@/components/gps/GpsExportDialog';
 
 interface ArticleViewProps {
   naddr: AddressPointer;
@@ -368,23 +369,38 @@ export function ArticleView({ naddr }: ArticleViewProps) {
 
               {/* Edit/Delete buttons for authors */}
               {isAuthor && (
-                <div className="flex gap-2 mb-4">
-                  <Button asChild variant="outline" size="sm">
-                    <Link to={`/veroeffentlichen?edit=${article.id}&type=${isPlace ? 'place' : 'article'}`}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Bearbeiten
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteDialogOpen(true)}
+                 <div className="flex gap-2 mb-4">
+                   <Button asChild variant="outline" size="sm">
+                     <Link to={`/veroeffentlichen?edit=${article.id}&type=${isPlace ? 'place' : 'article'}`}>
+                       <Edit className="h-4 w-4 mr-2" />
+                       Bearbeiten
+                     </Link>
+                   </Button>
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     onClick={() => setDeleteDialogOpen(true)}
+                   >
+                     <Trash2 className="h-4 w-4 mr-2" />
+                     Löschen
+                   </Button>
+                </div>
+              )}
+
+              {/* GPS Export Button - Available for everyone if location data exists */}
+              {position && isGPS && (
+                <div className="mb-4">
+                  <GpsExportDialog
+                    events={[article]}
+                    trackName={metadata.title}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Löschen
-                  </Button>
-               </div>
-             )}
+                    <Button variant="outline" size="sm">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      GPS Export
+                    </Button>
+                  </GpsExportDialog>
+                </div>
+              )}
 
              <SocialBar event={article} />
 

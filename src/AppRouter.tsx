@@ -26,6 +26,7 @@ const Profile = lazy(() => import("./pages/Profile").then(m => ({ default: m.Pro
 const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.Settings })));
 const ServiceWorkerSettings = lazy(() => import("./pages/ServiceWorkerSettings").then(m => ({ default: m.ServiceWorkerSettings })));
 const NIP19Page = lazy(() => import("./pages/NIP19Page").then(m => ({ default: m.NIP19Page })));
+const GpsExportPage = lazy(() => import("./pages/GpsExportPage").then(m => ({ default: m.default })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.default })));
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
               <Route path="/plaetze" element={<Places />} />
               <Route path="/plaetze/:country" element={<Places />} />
               <Route path="/map" element={<MapPage />} />
+              <Route path="/gps-export" element={<GpsExportPage />} />
               <Route path="/bilder" element={<Images />} />
               <Route path="/bilder/:country" element={<Images />} />
               <Route path="/bilder/natur/:category" element={<Images />} />
