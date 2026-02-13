@@ -20,6 +20,7 @@ import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { SocialBar } from '@/components/SocialBar';
 import { useToast } from '@/hooks/useToast';
+import { LivePositionIndicator } from '@/components/LivePositionIndicator';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';
@@ -220,6 +221,11 @@ export function Home() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-5xl mx-auto text-center space-y-10">
+            {/* Live Position Indicator - One-Liner */}
+            <div className="flex justify-center">
+              <LivePositionIndicator />
+            </div>
+
             <div className="space-y-6">
               <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-tight">
                 <span className="gradient-text">Perpetual Travelers</span>

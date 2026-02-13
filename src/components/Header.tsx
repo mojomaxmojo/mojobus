@@ -5,7 +5,6 @@ import { LoginArea } from '@/components/auth/LoginArea';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { OfflineBanner } from '@/components/ServiceWorkerStatus';
-import { LivePositionIndicator } from '@/components/LivePositionIndicator';
 import {
   Menu,
   X,
@@ -267,11 +266,6 @@ export function Header() {
                <Map className="h-4 w-4" />
                <span>Map</span>
              </Link>
-
-             {/* Live Position Indicator */}
-             <div className="hidden lg:block">
-               <LivePositionIndicator />
-             </div>
 
             {/* Bilder */}
             <DropdownMenu>

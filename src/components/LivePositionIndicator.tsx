@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MapPin, Map as MapIcon, ExternalLink, Loader2 } from 'lucide-react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
 
 interface LivePositionData {
@@ -11,7 +10,6 @@ interface LivePositionData {
   daysAgo: number;
   photoCount?: number;
   articleCount?: number;
-  link: string;
 }
 
 export function LivePositionIndicator() {
@@ -52,50 +50,52 @@ export function LivePositionIndicator() {
       daysAgo,
       photoCount: metadata.image ? 1 : undefined,
       articleCount: 1,
-      link: `/map`,
     });
   }, [places, isLoading]);
 
   if (isLoading || !position) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2 bg-muted/30 rounded-lg">
+      <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/30 rounded-full text-sm">
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Lade Position...</span>
+        <span className="text-muted-foreground">Lade Position...</span>
       </div>
     );
   }
 
   return (
-    <Link to={position.link}>
-      <div className="flex items-center gap-3 px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors cursor-pointer group">
-        <MapPin className="h-5 w-5 text-primary" />
+    <Link to="/map" className="inline-block">
+      <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-primary/10 hover:bg-primary/20 rounded-full transition-all duration-300 cursor-pointer group">
+        <MapPin className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
 
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-sm">{position.name}</span>
-            <Badge variant="secondary" className="text-xs gap-1">
-              ⚡ LIVE
-            </Badge>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            Seit {position.daysAgo === 0 ? 'heute' : position.daysAgo === 1 ? 'gestern' : `${position.daysAgo} Tagen`}
+        <span className="font-semibold text-sm text-foreground">
+          {position.name}
+        </span>
+
+        <Badge variant="secondary" className="gap-1 px-2 py-0.5">
+          ⚡ LIVE
+        </Badge>
+
+        <span className="text-sm text-muted-foreground">
+          Seit {position.daysAgo === 0 ? 'heute' : position.daysAgo === 1 ? 'gestern' : `${position.daysAgo} Tagen`}
+        </span>
+
+        {(position.photoCount || position.articleCount) && (
+          <span className="text-sm text-muted-foreground">
+            •
           </span>
-        </div>
+        )}
 
-        <div className="flex items-center gap-1 ml-2">
-          {position.photoCount && (
-            <Badge variant="outline" className="text-xs gap-1">
-              📸 {position.photoCount}
-            </Badge>
-          )}
-          {position.articleCount && (
-            <Badge variant="outline" className="text-xs gap-1">
-              📝 {position.articleCount}
-            </Badge>
-          )}
-        </div>
+        {position.photoCount && (
+          <Badge variant="outline" className="gap-1 px-2 py-0.5 text-xs">
+            📸 {position.photoCount}
+          </Badge>
+        )}
 
-        <MapIcon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+        {position.articleCount && (
+          <Badge variant="outline" className="gap-1 px-2 py-0.5 text-xs">
+            📝 {position.articleCount}
+          </Badge>
+        )}
       </div>
     </Link>
   );
