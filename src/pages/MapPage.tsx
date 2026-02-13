@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
-import { useNostr } from '@nostrify/react';
+import { useNotes } from '@/hooks/useNotes';
 import { useQuery } from '@tanstack/react-query';
+import { useNostr } from '@nostrify/react';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { nip19 } from 'nostr-tools';
@@ -22,12 +23,14 @@ import {
   Layers,
   BarChart3,
   Map as MapIcon,
+  Globe,
   Maximize2,
   Minimize2,
   Sun,
 } from 'lucide-react';
 
 // Lazy load Leaflet components to reduce initial bundle size
+// This ensures Leaflet is only loaded when the map page is actually visited
 const MapContainer = lazy(() => import('react-leaflet').then(mod => ({ default: mod.MapContainer })));
 const TileLayer = lazy(() => import('react-leaflet').then(mod => ({ default: mod.TileLayer })));
 const Marker = lazy(() => import('react-leaflet').then(mod => ({ default: mod.Marker })));
@@ -58,19 +61,25 @@ const fixLeafletIcons = async () => {
   });
 };
 
+// Fix für Leaflet Marker Icons
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
 interface PlaceData {
   id: string;
   lat: number;
   lng: number;
   name: string;
   country: string;
-  duration?: number;
+  duration?: number; // in days
   photoCount?: number;
   articleCount?: number;
   date: number;
   description?: string;
-  type: 'place' | 'article' | 'image' | 'note';
-  event: any;
 }
 
 interface RoutePoint {
@@ -112,6 +121,7 @@ const MapController = ({
     });
   }, [map, onCenterChange, onZoomChange]);
 
+  // Smooth zoom to current playback point
   useEffect(() => {
     if (currentPlaybackIndex !== null && currentPlaybackIndex >= 0 && currentPlaybackIndex < routePoints.length) {
       const point = routePoints[currentPlaybackIndex];
@@ -134,7 +144,7 @@ function MapPage() {
   }, []);
 
   // State
-  const [center, setCenter] = useState<[number, number]>([39.3999, -8.2245]);
+  const [center, setCenter] = useState<[number, number]>([39.3999, -8.2245]); // Portugal center
   const [zoom, setZoom] = useState(6);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLayers, setShowLayers] = useState(true);
@@ -144,9 +154,8 @@ function MapPage() {
   const [showRoute, setShowRoute] = useState(true);
   const [showDuration, setShowDuration] = useState(true);
   const [showPhotoSpots, setShowPhotoSpots] = useState(true);
-  const [showArticles, setShowArticles] = useState(true);
-  const [showNotes, setShowNotes] = useState(true);
-  const [showImages, setShowImages] = useState(true);
+  const [showCamping, setShowCamping] = useState(false);
+  const [showWater, setShowWater] = useState(false);
 
   // Map type
   const [mapType, setMapType] = useState<'normal' | 'satellite' | 'terrain'>('normal');
@@ -159,40 +168,7 @@ function MapPage() {
   // Fetch places
   const { data: places, isLoading: placesLoading } = usePlaces();
 
-  // Fetch all articles (longform) - INCREASED LIMIT TO 200
-  const { data: articles } = useQuery({
-    queryKey: ['map-articles', NOSTR_CONFIG.authorPubkeys],
-    queryFn: async ({ signal }) => {
-      const events = await nostr.query([
-        {
-          kinds: [30023],
-          authors: NOSTR_CONFIG.authorPubkeys,
-          limit: 200,
-        }
-      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) });
-      return events;
-    },
-    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
-  });
-
-  // Fetch notes - INCREASED LIMIT TO 200
-  const { data: notes } = useQuery({
-    queryKey: ['map-notes', NOSTR_CONFIG.authorPubkeys],
-    queryFn: async ({ signal }) => {
-      const events = await nostr.query([
-        {
-          kinds: [1],
-          authors: NOSTR_CONFIG.authorPubkeys,
-          '#t': ['note', 'notiz'],
-          limit: 200,
-        }
-      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) });
-      return events;
-    },
-    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
-  });
-
-  // Fetch media events for GPS data - INCREASED LIMIT TO 200
+  // Fetch media events for GPS data
   const { data: mediaEvents = [] } = useQuery({
     queryKey: ['map-media', NOSTR_CONFIG.authorPubkeys],
     queryFn: async ({ signal }) => {
@@ -201,82 +177,45 @@ function MapPage() {
           kinds: [1, 30023],
           authors: NOSTR_CONFIG.authorPubkeys,
           '#t': ['medien', 'media', 'bilder', 'images'],
-          limit: 200,
+          limit: 100,
         }
       ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) });
+
       return events;
     },
     staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
   });
 
-  // Extract GPS data from all event types
-  const extractGPSFromEvent = (event: any, type: 'place' | 'article' | 'image' | 'note') => {
-    const metadata = extractArticleMetadata(event);
-    const locationTag = event.tags?.find(tag => tag[0] === 'location');
-    const publishedAtTag = event.tags?.find(tag => tag[0] === 'published_at');
-
-    if (!locationTag || !locationTag[1]) return null;
-
-    // Try to extract coordinates from location tag
-    const coords = locationTag[1].match(/lat=([0-9.-]+),lon=([0-9.-]+)/);
-    if (!coords) return null;
-
-    return {
-      id: event.id,
-      lat: parseFloat(coords[1]),
-      lng: parseFloat(coords[2]),
-      name: metadata.title || locationTag[1].split(',').slice(0, 2).join(','),
-      country: locationTag[1],
-      date: publishedAtTag ? parseInt(publishedAtTag[1]) : event.created_at,
-      description: metadata.summary || event.content?.substring(0, 100),
-      type,
-      event,
-      photoCount: metadata.image ? 1 : 0,
-      articleCount: 1,
-    };
-  };
-
+  // Extract GPS data from places and media
   const placeData = useMemo(() => {
     const data: PlaceData[] = [];
 
-    // Process places
-    places?.forEach(place => {
-      const gps = extractGPSFromEvent(place, 'place');
-      if (gps) {
-        data.push(gps);
-      }
-    });
+    places?.forEach((place) => {
+      const metadata = extractArticleMetadata(place);
+      const locationTag = place.tags?.find(tag => tag[0] === 'location');
+      const publishedAtTag = place.tags?.find(tag => tag[0] === 'published_at');
 
-    // Process articles (that are not already in places)
-    articles?.forEach(article => {
-      const gps = extractGPSFromEvent(article, 'article');
-      if (gps && !data.some(p => p.id === gps.id)) {
-        data.push(gps);
-      }
-    });
+      if (locationTag && locationTag[1]) {
+        // Try to extract coordinates from location tag
+        const coords = locationTag[1].match(/lat=([0-9.-]+),lon=([0-9.-]+)/);
 
-    // Process notes
-    notes?.forEach(note => {
-      const gps = extractGPSFromEvent(note, 'note');
-      if (gps && !data.some(p => p.id === gps.id)) {
-        data.push(gps);
-      }
-    });
-
-    // Process media events with images
-    mediaEvents.forEach(media => {
-      // Check if it has images
-      const hasImage = media.content?.match(/https?:\/\/[^\s]+\.(jpg|jpeg|png|webp|gif)/gi);
-      if (!hasImage) return;
-
-      const gps = extractGPSFromEvent(media, 'image');
-      if (gps && !data.some(p => p.id === gps.id)) {
-        data.push({ ...gps, photoCount: 1 });
+        if (coords) {
+          data.push({
+            id: place.id,
+            lat: parseFloat(coords[1]),
+            lng: parseFloat(coords[2]),
+            name: metadata.title || locationTag[1],
+            country: locationTag[1],
+            date: publishedAtTag ? parseInt(publishedAtTag[1]) : place.created_at,
+            description: metadata.summary,
+            articleCount: 1,
+          });
+        }
       }
     });
 
     return data.sort((a, b) => a.date - b.date);
-  }, [places, articles, notes, mediaEvents]);
+  }, [places]);
 
   // Extract route points chronologically
   const routePoints = useMemo(() => {
@@ -302,11 +241,6 @@ function MapPage() {
     const totalPhotos = placeData.reduce((sum, p) => sum + (p.photoCount || 0), 0);
     const totalArticles = placeData.reduce((sum, p) => sum + (p.articleCount || 0), 0);
 
-    const totalPlaces = placeData.filter(p => p.type === 'place').length;
-    const totalImages = placeData.filter(p => p.type === 'image').length;
-    const totalNotes = placeData.filter(p => p.type === 'note').length;
-    const totalArticlesCount = placeData.filter(p => p.type === 'article').length;
-
     placeData.forEach(p => {
       if (p.country) countries.add(p.country);
     });
@@ -315,11 +249,8 @@ function MapPage() {
       countries: countries.size,
       totalDays,
       totalPhotos,
-      totalArticles: totalArticlesCount,
-      totalPlaces,
-      totalImages,
-      totalNotes,
-      totalContent: placeData.length,
+      totalArticles,
+      totalPlaces: placeData.length,
     };
   }, [placeData]);
 
@@ -363,11 +294,11 @@ function MapPage() {
 
   // SEO Meta Tags
   useHead({
-    title: 'Interaktive Map - Alle Artikel, Plätze, Bilder & Notes',
+    title: 'Reise-Karte - MojoBus',
     meta: [
-      { name: 'description', content: 'Interaktive Map mit allen MojoBus Inhalten: Artikel, Plätze, Bilder und Notes auf einer Karte.' },
-      { property: 'og:title', content: 'Interaktive Map - MojoBus' },
-      { property: 'og:description', content: 'Alle Inhalte auf einer Karte!' },
+      { name: 'description', content: 'Interaktive Karte unserer Reiseroute durch Europa. Live-Tracking, Routen-Animation und Reisestatistiken.' },
+      { property: 'og:title', content: 'Reise-Karte - MojoBus' },
+      { property: 'og:description', content: 'Folge unserer Reise auf der interaktiven Karte!' },
       { property: 'og:type', content: 'website' }
     ],
     link: [
@@ -392,8 +323,8 @@ function MapPage() {
             <div className="flex items-center gap-3">
               <MapIcon className="h-6 w-6 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold">Interaktive Map</h1>
-                <p className="text-sm text-muted-foreground">Alle Inhalte auf einer Karte</p>
+                <h1 className="text-2xl font-bold">Reise-Karte</h1>
+                <p className="text-sm text-muted-foreground">Interaktive Route & Statistiken</p>
               </div>
             </div>
 
@@ -405,7 +336,7 @@ function MapPage() {
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
                   <Camera className="h-3 w-3" />
-                  {stats.totalContent} Inhalte
+                  {stats.totalPlaces} Orte
                 </Badge>
               </div>
             )}
@@ -452,7 +383,7 @@ function MapPage() {
                 <div className="flex flex-col gap-2">
                   {[
                     { value: 'normal', label: 'Normal', icon: MapIcon },
-                    { value: 'satellite', label: 'Satellit', icon: MapIcon },
+                    { value: 'satellite', label: 'Satellit', icon: Globe },
                     { value: 'terrain', label: 'Gelände', icon: Sun },
                   ].map((type) => (
                     <Button
@@ -486,16 +417,12 @@ function MapPage() {
                     <Switch id="show-photos" checked={showPhotoSpots} onCheckedChange={setShowPhotoSpots} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="show-articles" className="text-sm">Artikel</Label>
-                    <Switch id="show-articles" checked={showArticles} onCheckedChange={setShowArticles} />
+                    <Label htmlFor="show-camping" className="text-sm">Campingplätze</Label>
+                    <Switch id="show-camping" checked={showCamping} onCheckedChange={setShowCamping} />
                   </div>
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="show-notes" className="text-sm">Notes</Label>
-                    <Switch id="show-notes" checked={showNotes} onCheckedChange={setShowNotes} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-images" className="text-sm">Bilder</Label>
-                    <Switch id="show-images" checked={showImages} onCheckedChange={setShowImages} />
+                    <Label htmlFor="show-water" className="text-sm">Wasser-Points</Label>
+                    <Switch id="show-water" checked={showWater} onCheckedChange={setShowWater} />
                   </div>
                 </div>
               </div>
@@ -586,126 +513,113 @@ function MapPage() {
                     lineJoin="round"
                   />
                 )}
-
-                {/* Place Markers with Duration Circles */}
-                {placeData.map((place, index) => {
-                  const isCurrentLocation = currentLocation?.id === place.id;
-                  const isPlaybackPoint = currentPlaybackIndex === index;
-
-                  return (
-                    <div key={place.id}>
-                      {/* Duration Circle */}
-                      {showDuration && (place.duration || 1) > 1 && (
-                        <CircleMarker
-                          center={[place.lat, place.lng]}
-                          radius={Math.min((place.duration || 1) * 2, 50)}
-                          pathOptions={{
-                            color: isCurrentLocation ? '#ef4444' : '#0891B2',
-                            fillColor: isCurrentLocation ? '#ef4444' : '#0891B2',
-                            fillOpacity: 0.2,
-                            weight: 1,
-                          }}
-                        />
-                      )}
-
-                      {/* Photo Spot Marker */}
-                      {showPhotoSpots && (place.photoCount || 0) > 0 && (
-                        <CircleMarker
-                          center={[place.lat, place.lng]}
-                          radius={8 + Math.min(place.photoCount!, 20)}
-                          pathOptions={{
-                            color: '#f59e0b',
-                            fillColor: '#f59e0b',
-                            fillOpacity: 0.4,
-                            weight: 1,
-                          }}
-                        >
-                          <Popup>
-                            <div className="space-y-2">
-                              <h3 className="font-semibold">{place.name}</h3>
-                              {place.description && <p className="text-sm">{place.description}</p>}
-                              <div className="flex gap-2 text-sm">
-                                <Badge variant="secondary">📸 {place.photoCount}</Badge>
-                                <Badge variant="secondary">📝 {place.articleCount || 1}</Badge>
-                              </div>
-                            </div>
-                          </Popup>
-                        </CircleMarker>
-                      )}
-
-                      {/* Main Marker - Different icons for different types */}
-                      {(showArticles && place.type === 'article') ||
-                       (showNotes && place.type === 'note') ||
-                       (showImages && place.type === 'image') ||
-                       (showArticles && place.type === 'place')} && (
-                        <Suspense fallback={null}>
-                          <Marker
-                            position={[place.lat, place.lng]}
-                            icon={(window as any).L?.icon({
-                              // Different colors for different types
-                              iconUrl: isCurrentLocation || isPlaybackPoint
-                                ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
-                                : place.type === 'place'
-                                  ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png'
-                                  : place.type === 'article'
-                                    ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png'
-                                    : place.type === 'image'
-                                      ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png'
-                                      : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
-                              iconSize: [25, 41],
-                              iconAnchor: [12, 41],
-                              popupAnchor: [1, -34],
-                              shadowSize: [41, 41]
-                            })}
-                          >
-                            <Popup>
-                              <div className="space-y-2 min-w-[200px]">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-bold">{place.name}</h3>
-                                  {isCurrentLocation && (
-                                    <Badge variant="destructive" className="gap-1">
-                                      <MapPin className="h-3 w-3" />
-                                      AKTUELL
-                                    </Badge>
-                                  )}
-                                  <Badge variant="outline" className="gap-1 text-xs">
-                                    {place.type === 'place' ? '📍 Ort' : place.type === 'article' ? '📝 Artikel' : place.type === 'image' ? '📷 Bild' : '📝 Note'}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                  {new Date(place.date * 1000).toLocaleDateString('de-DE')}
-                                </p>
-                                {place.description && (
-                                  <p className="text-sm">{place.description}</p>
-                                )}
-                                <div className="flex gap-2">
-                                  {(place.duration || 1) > 1 && (
-                                    <Badge variant="secondary">
-                                      ⏱️ {place.duration} Tage
-                                    </Badge>
-                                  )}
-                                  {(place.photoCount || 0) > 0 && (
-                                    <Badge variant="secondary">
-                                      📸 {place.photoCount}
-                                    </Badge>
-                                  )}
-                                  {(place.articleCount || 0) > 0 && (
-                                    <Badge variant="secondary">
-                                      📝 {place.articleCount}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </Popup>
-                          </Marker>
-                        </Suspense>
-                      )}
-                    </div>
-                  );
-                })}
               </Suspense>
             </MapContainer>
           </Suspense>
+        </div>
+
+            {/* Place Markers with Duration Circles */}
+            {placeData.map((place, index) => {
+              const isCurrentLocation = currentLocation?.id === place.id;
+              const isPlaybackPoint = currentPlaybackIndex === index;
+
+              return (
+                <div key={place.id}>
+                  {/* Duration Circle */}
+                  {showDuration && (place.duration || 1) > 1 && (
+                    <CircleMarker
+                      center={[place.lat, place.lng]}
+                      radius={Math.min((place.duration || 1) * 2, 50)}
+                      pathOptions={{
+                        color: isCurrentLocation ? '#ef4444' : '#0891B2',
+                        fillColor: isCurrentLocation ? '#ef4444' : '#0891B2',
+                        fillOpacity: 0.2,
+                        weight: 1,
+                      }}
+                    />
+                  )}
+
+                  {/* Photo Spot Marker */}
+                  {showPhotoSpots && (place.photoCount || 0) > 0 && (
+                    <CircleMarker
+                      center={[place.lat, place.lng]}
+                      radius={8 + Math.min(place.photoCount!, 20)}
+                      pathOptions={{
+                        color: '#f59e0b',
+                        fillColor: '#f59e0b',
+                        fillOpacity: 0.4,
+                        weight: 1,
+                      }}
+                    >
+                      <Popup>
+                        <div className="space-y-2">
+                          <h3 className="font-semibold">{place.name}</h3>
+                          {place.description && <p className="text-sm">{place.description}</p>}
+                          <div className="flex gap-2 text-sm">
+                            <Badge variant="secondary">📸 {place.photoCount}</Badge>
+                            <Badge variant="secondary">📝 {place.articleCount || 1}</Badge>
+                          </div>
+                        </div>
+                      </Popup>
+                    </CircleMarker>
+                  )}
+
+                  {/* Main Marker */}
+                  <Suspense fallback={null}>
+                    <Marker
+                      position={[place.lat, place.lng]}
+                      icon={(window as any).L?.icon({
+                        iconUrl: isCurrentLocation || isPlaybackPoint
+                          ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
+                          : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                      })}
+                    >
+                      <Popup>
+                        <div className="space-y-2 min-w-[200px]">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold">{place.name}</h3>
+                            {isCurrentLocation && (
+                              <Badge variant="destructive" className="gap-1">
+                                <MapPin className="h-3 w-3" />
+                                AKTUELL
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(place.date * 1000).toLocaleDateString('de-DE')}
+                          </p>
+                          {place.description && (
+                            <p className="text-sm">{place.description}</p>
+                          )}
+                          <div className="flex gap-2">
+                            {(place.duration || 1) > 1 && (
+                              <Badge variant="secondary">
+                                ⏱️ {place.duration} Tage
+                              </Badge>
+                            )}
+                            {(place.photoCount || 0) > 0 && (
+                              <Badge variant="secondary">
+                                📸 {place.photoCount}
+                              </Badge>
+                            )}
+                            {(place.articleCount || 0) > 0 && (
+                              <Badge variant="secondary">
+                                📝 {place.articleCount}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </Suspense>
+                </div>
+              );
+            })}
+          </MapContainer>
         </div>
 
         {/* Stats Panel */}
@@ -717,8 +631,8 @@ function MapPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalContent}</div>
-                    <div className="text-xs text-muted-foreground">Gesamt</div>
+                    <div className="text-2xl font-bold text-primary">{stats.totalPlaces}</div>
+                    <div className="text-xs text-muted-foreground">Orte</div>
                   </div>
                   <div className="bg-primary/10 rounded-lg p-3 text-center">
                     <div className="text-2xl font-bold text-primary">{stats.countries}</div>
@@ -726,27 +640,11 @@ function MapPage() {
                   </div>
                   <div className="bg-primary/10 rounded-lg p-3 text-center">
                     <div className="text-2xl font-bold text-primary">{stats.totalDays}</div>
-                    <div className="text-xs text-muted-foreground">Tage</div>
-                  </div>
-                  <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalPlaces}</div>
-                    <div className="text-xs text-muted-foreground">Orte</div>
-                  </div>
-                  <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalArticles}</div>
-                    <div className="text-xs text-muted-foreground">Artikel</div>
-                  </div>
-                  <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalImages}</div>
-                    <div className="text-xs text-muted-foreground">Bilder</div>
-                  </div>
-                  <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalNotes}</div>
-                    <div className="text-xs text-muted-foreground">Notes</div>
+                    <div className="text-xs text-muted-foreground">Gesamttage</div>
                   </div>
                   <div className="bg-primary/10 rounded-lg p-3 text-center">
                     <div className="text-2xl font-bold text-primary">{stats.totalPhotos}</div>
-                    <div className="text-xs text-muted-foreground">Medien</div>
+                    <div className="text-xs text-muted-foreground">Fotos</div>
                   </div>
                 </div>
               </div>
