@@ -15,19 +15,49 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { GpsExportDialog } from '@/components/gps/GpsExportDialog';
-import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
+import { usePlaces, useInfiniteLongformArticles, extractArticleMetadata } from '@/hooks/useLongformArticles';
+import { useNotes } from '@/hooks/useNotes';
 import { MapPin, Calendar, Image as ImageIcon, Filter, CheckCircle2, ArrowLeft, ExternalLink, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useHead } from '@unhead/react';
+import type { NostrEvent } from '@nostrify/nostrify';
 
 export default function GpsExportPage() {
-  // Load places (locations with GPS data)
-  const { data: places, isLoading } = usePlaces({ limit: 200 });
+  // Load all events that might have GPS data
+  const { data: articlesData, isLoading: articlesLoading } = useInfiniteLongformArticles();
+  const { data: places, isLoading: placesLoading } = usePlaces({ limit: 200 });
+  const { data: notesData, isLoading: notesLoading } = useNotes();
 
-  // All events are places (already filtered for GPS data later)
+  // Flatten articles
+  const allArticles = useMemo(() => {
+    return articlesData?.pages.flat() || [];
+  }, [articlesData]);
+
+  // Flatten notes (infinite query)
+  const allNotes = useMemo(() => {
+    return notesData?.pages.flat() || [];
+  }, [notesData]);
+
+  // Combine all events
   const allEvents = useMemo(() => {
-    return places || [];
-  }, [places]);
+    const events: NostrEvent[] = [];
+
+    // Add articles (includes places)
+    events.push(...allArticles);
+
+    // Add notes
+    events.push(...allNotes);
+
+    // Deduplicate by ID
+    const uniqueEvents = new Map<string, NostrEvent>();
+    events.forEach(event => {
+      uniqueEvents.set(event.id, event);
+    });
+
+    return Array.from(uniqueEvents.values());
+  }, [allArticles, allNotes]);
+
+  const isLoading = articlesLoading || placesLoading || notesLoading;
 
   // Filter events with location data
   const eventsWithLocation = useMemo(() => {
@@ -96,9 +126,9 @@ export default function GpsExportPage() {
   // SEO
   useHead(() => {
     return {
-      title: 'GPS Export - MojoBus',
+      title: 'GPS Export - Alle Events - MojoBus',
       meta: [
-        { name: 'description', content: 'Exportiere GPS-Daten für Google Earth Studio und andere Kartentools' },
+        { name: 'description', content: 'Exportiere alle Events mit GPS-Daten für Google Earth Studio und andere Kartentools' },
       ],
     };
   });
@@ -121,10 +151,10 @@ export default function GpsExportPage() {
             <div className="space-y-2">
               <h1 className="text-4xl font-bold flex items-center gap-3">
                 <MapPin className="h-10 w-10 text-ocean-600" />
-                GPS Export
+                GPS Export - Alle Events
               </h1>
               <p className="text-xl text-muted-foreground">
-                Exportiere deine GPS-Daten für Google Earth Studio, Google Earth Pro oder andere Kartentools
+                Exportiere alle Events mit GPS-Daten für Google Earth Studio, Google Earth Pro oder andere Kartentools
               </p>
             </div>
           </div>
@@ -137,9 +167,10 @@ export default function GpsExportPage() {
           {/* Info Alert */}
           <Alert>
             <Info className="h-4 w-4" />
-            <AlertTitle>Google Earth Studio Tutorial</AlertTitle>
+            <AlertTitle>Alle Events mit GPS-Daten</AlertTitle>
             <AlertDescription>
-              Erfahre, wie du GPX-Dateien in Google Earth Studio importierst und professionelle Videos erstellst.
+              Hier werden alle Events mit GPS-Koordinaten angezeigt: Orte, Artikel, und Notizen.
+              Exportiere sie für Google Earth Studio oder andere Kartentools.
               <br />
               <a
                 href="https://docs.mojobus.org/google-earth-studio-tutorial"
@@ -147,7 +178,7 @@ export default function GpsExportPage() {
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline inline-flex items-center gap-1 mt-2"
               >
-                Tutorial öffnen <ExternalLink className="h-3 w-3" />
+                Google Earth Studio Tutorial <ExternalLink className="h-3 w-3" />
               </a>
             </AlertDescription>
           </Alert>
@@ -156,7 +187,7 @@ export default function GpsExportPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Locations mit GPS</CardTitle>
+                <CardTitle className="text-sm font-medium">Events mit GPS</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{eventsWithLocation.length}</div>
@@ -261,24 +292,31 @@ export default function GpsExportPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Keine Locations gefunden</h3>
+                <h3 className="text-lg font-semibold mb-2">Keine Events mit GPS gefunden</h3>
                 <p className="text-muted-foreground mb-4">
                   {searchQuery || dateRange.start || dateRange.end
                     ? 'Versuche andere Filter'
-                    : 'Du hast noch keine Locations mit GPS-Daten erstellt.'}
+                    : 'Du hast noch keine Events mit GPS-Daten erstellt.'}
                 </p>
                 {!searchQuery && !dateRange.start && !dateRange.end && (
-                  <Button asChild>
-                    <Link to="/veroeffentlich?tab=place">
-                      Erste Location erstellen
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2 justify-center">
+                    <Button asChild variant="outline">
+                      <Link to="/veroeffentlichen?tab=place">
+                        Location erstellen
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link to="/veroeffentlichen?tab=article">
+                        Artikel erstellen
+                      </Link>
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
-              {/* Select All */}
+               {/* Select All */}
               <div className="flex items-center space-x-2 p-4 bg-muted rounded-lg">
                 <Checkbox
                   id="select-all"
@@ -286,14 +324,21 @@ export default function GpsExportPage() {
                   onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
                 />
                 <Label htmlFor="select-all" className="flex-1 cursor-pointer font-medium">
-                  Alle auswählen ({filteredEvents.length})
+                  Alle Events auswählen ({filteredEvents.length})
                 </Label>
               </div>
 
-              {/* Events */}
+               {/* Events */}
               {filteredEvents.map((event) => {
                 const metadata = extractArticleMetadata(event);
                 const isSelected = selectedEventIds.has(event.id);
+
+                // Determine event type
+                const typeTag = event.tags.find(([name]) => name === 'type')?.[1];
+                const isPlace = typeTag === 'place' || event.tags.some(([name, value]) => name === 't' && ['place', 'places'].includes(value));
+                const eventTypeName = event.kind === 30023
+                  ? (isPlace ? 'Ort' : 'Artikel')
+                  : 'Notiz';
 
                 return (
                   <Card
@@ -323,7 +368,7 @@ export default function GpsExportPage() {
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <h3 className="font-semibold line-clamp-1">{metadata.title}</h3>
                             <Badge variant="outline" className="flex-shrink-0">
-                              {event.kind === 30023 ? 'Artikel' : 'Notiz'}
+                              {eventTypeName}
                             </Badge>
                           </div>
 
@@ -338,7 +383,7 @@ export default function GpsExportPage() {
                               <Calendar className="h-3 w-3" />
                               {new Date(metadata.publishedAt * 1000).toLocaleDateString('de-DE')}
                             </div>
-                            {event.tags.some(tag => tag[0] === 'image') && (
+                            {metadata.image && (
                               <div className="flex items-center gap-1">
                                 <ImageIcon className="h-3 w-3" />
                                 Mit Bildern
