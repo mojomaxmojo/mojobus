@@ -80,6 +80,8 @@ interface PlaceData {
   articleCount?: number;
   date: number;
   description?: string;
+  type: 'place' | 'article' | 'image' | 'note';
+  event: any;
 }
 
 interface RoutePoint {
@@ -154,6 +156,9 @@ function MapPage() {
   const [showRoute, setShowRoute] = useState(true);
   const [showDuration, setShowDuration] = useState(true);
   const [showPhotoSpots, setShowPhotoSpots] = useState(true);
+  const [showArticles, setShowArticles] = useState(true);
+  const [showNotes, setShowNotes] = useState(true);
+  const [showImages, setShowImages] = useState(true);
   const [showCamping, setShowCamping] = useState(false);
   const [showWater, setShowWater] = useState(false);
 
@@ -167,6 +172,39 @@ function MapPage() {
 
   // Fetch places
   const { data: places, isLoading: placesLoading } = usePlaces();
+
+  // Fetch all articles (longform)
+  const { data: articles } = useQuery({
+    queryKey: ['map-articles', NOSTR_CONFIG.authorPubkeys],
+    queryFn: async ({ signal }) => {
+      const events = await nostr.query([
+        {
+          kinds: [30023],
+          authors: NOSTR_CONFIG.authorPubkeys,
+          limit: 50,
+        }
+      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) });
+      return events;
+    },
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
+  });
+
+  // Fetch notes
+  const { data: notes } = useQuery({
+    queryKey: ['map-notes', NOSTR_CONFIG.authorPubkeys],
+    queryFn: async ({ signal }) => {
+      const events = await nostr.query([
+        {
+          kinds: [1],
+          authors: NOSTR_CONFIG.authorPubkeys,
+          '#t': ['note', 'notiz'],
+          limit: 50,
+        }
+      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) });
+      return events;
+    },
+    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
+  });
 
   // Fetch media events for GPS data
   const { data: mediaEvents = [] } = useQuery({
@@ -186,36 +224,74 @@ function MapPage() {
     staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
   });
 
-  // Extract GPS data from places and media
+  // Extract GPS data from all event types
+  const extractGPSFromEvent = (event: any, type: 'place' | 'article' | 'image' | 'note') => {
+    const metadata = extractArticleMetadata(event);
+    const locationTag = event.tags?.find(tag => tag[0] === 'location');
+    const publishedAtTag = event.tags?.find(tag => tag[0] === 'published_at');
+
+    if (!locationTag || !locationTag[1]) return null;
+
+    // Try to extract coordinates from location tag
+    const coords = locationTag[1].match(/lat=([0-9.-]+),lon=([0-9.-]+)/);
+    if (!coords) return null;
+
+    return {
+      id: event.id,
+      lat: parseFloat(coords[1]),
+      lng: parseFloat(coords[2]),
+      name: metadata.title || locationTag[1].split(',').slice(0, 2).join(','),
+      country: locationTag[1],
+      date: publishedAtTag ? parseInt(publishedAtTag[1]) : event.created_at,
+      description: metadata.summary || event.content?.substring(0, 100),
+      type,
+      event,
+      photoCount: metadata.image ? 1 : 0,
+      articleCount: 1,
+    };
+  };
+
   const placeData = useMemo(() => {
     const data: PlaceData[] = [];
 
-    places?.forEach((place) => {
-      const metadata = extractArticleMetadata(place);
-      const locationTag = place.tags?.find(tag => tag[0] === 'location');
-      const publishedAtTag = place.tags?.find(tag => tag[0] === 'published_at');
+    // Process places
+    places?.forEach(place => {
+      const gps = extractGPSFromEvent(place, 'place');
+      if (gps) {
+        data.push(gps);
+      }
+    });
 
-      if (locationTag && locationTag[1]) {
-        // Try to extract coordinates from location tag
-        const coords = locationTag[1].match(/lat=([0-9.-]+),lon=([0-9.-]+)/);
+    // Process articles (that are not already in places)
+    articles?.forEach(article => {
+      const gps = extractGPSFromEvent(article, 'article');
+      if (gps && !data.some(p => p.id === gps.id)) {
+        data.push(gps);
+      }
+    });
 
-        if (coords) {
-          data.push({
-            id: place.id,
-            lat: parseFloat(coords[1]),
-            lng: parseFloat(coords[2]),
-            name: metadata.title || locationTag[1],
-            country: locationTag[1],
-            date: publishedAtTag ? parseInt(publishedAtTag[1]) : place.created_at,
-            description: metadata.summary,
-            articleCount: 1,
-          });
-        }
+    // Process notes
+    notes?.forEach(note => {
+      const gps = extractGPSFromEvent(note, 'note');
+      if (gps && !data.some(p => p.id === gps.id)) {
+        data.push(gps);
+      }
+    });
+
+    // Process media events with images
+    mediaEvents.forEach(media => {
+      // Check if it has images
+      const hasImage = media.content?.match(/https?:\/\/[^\s]+\.(jpg|jpeg|png|webp|gif)/gi);
+      if (!hasImage) return;
+
+      const gps = extractGPSFromEvent(media, 'image');
+      if (gps && !data.some(p => p.id === gps.id)) {
+        data.push({ ...gps, photoCount: 1 });
       }
     });
 
     return data.sort((a, b) => a.date - b.date);
-  }, [places]);
+  }, [places, articles, notes, mediaEvents]);
 
   // Extract route points chronologically
   const routePoints = useMemo(() => {
@@ -241,6 +317,11 @@ function MapPage() {
     const totalPhotos = placeData.reduce((sum, p) => sum + (p.photoCount || 0), 0);
     const totalArticles = placeData.reduce((sum, p) => sum + (p.articleCount || 0), 0);
 
+    const totalPlaces = placeData.filter(p => p.type === 'place').length;
+    const totalImages = placeData.filter(p => p.type === 'image').length;
+    const totalNotes = placeData.filter(p => p.type === 'note').length;
+    const totalArticlesCount = placeData.filter(p => p.type === 'article').length;
+
     placeData.forEach(p => {
       if (p.country) countries.add(p.country);
     });
@@ -249,8 +330,11 @@ function MapPage() {
       countries: countries.size,
       totalDays,
       totalPhotos,
-      totalArticles,
-      totalPlaces: placeData.length,
+      totalArticles: totalArticlesCount,
+      totalPlaces,
+      totalImages,
+      totalNotes,
+      totalContent: placeData.length,
     };
   }, [placeData]);
 
@@ -294,11 +378,11 @@ function MapPage() {
 
   // SEO Meta Tags
   useHead({
-    title: 'Reise-Karte - MojoBus',
+    title: 'Interaktive Map - Alle Artikel, Plätze, Bilder & Notes',
     meta: [
-      { name: 'description', content: 'Interaktive Karte unserer Reiseroute durch Europa. Live-Tracking, Routen-Animation und Reisestatistiken.' },
-      { property: 'og:title', content: 'Reise-Karte - MojoBus' },
-      { property: 'og:description', content: 'Folge unserer Reise auf der interaktiven Karte!' },
+      { name: 'description', content: 'Interaktive Map mit allen MojoBus Inhalten: Artikel, Plätze, Bilder und Notes auf einer Karte.' },
+      { property: 'og:title', content: 'Interaktive Map - MojoBus' },
+      { property: 'og:description', content: 'Alle Inhalte auf einer Karte!' },
       { property: 'og:type', content: 'website' }
     ],
     link: [
@@ -323,8 +407,8 @@ function MapPage() {
             <div className="flex items-center gap-3">
               <MapIcon className="h-6 w-6 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold">Reise-Karte</h1>
-                <p className="text-sm text-muted-foreground">Interaktive Route & Statistiken</p>
+                <h1 className="text-2xl font-bold">Interaktive Map</h1>
+                <p className="text-sm text-muted-foreground">Alle Inhalte auf einer Karte</p>
               </div>
             </div>
 
@@ -336,7 +420,7 @@ function MapPage() {
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
                   <Camera className="h-3 w-3" />
-                  {stats.totalPlaces} Orte
+                  {stats.totalContent} Inhalte
                 </Badge>
               </div>
             )}
@@ -415,6 +499,18 @@ function MapPage() {
                   <div className="flex items-center justify-between">
                     <Label htmlFor="show-photos" className="text-sm">Foto-Hotspots</Label>
                     <Switch id="show-photos" checked={showPhotoSpots} onCheckedChange={setShowPhotoSpots} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-articles" className="text-sm">Artikel</Label>
+                    <Switch id="show-articles" checked={showArticles} onCheckedChange={setShowArticles} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-notes" className="text-sm">Notes</Label>
+                    <Switch id="show-notes" checked={showNotes} onCheckedChange={setShowNotes} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="show-images" className="text-sm">Bilder</Label>
+                    <Switch id="show-images" checked={showImages} onCheckedChange={setShowImages} />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label htmlFor="show-camping" className="text-sm">Campingplätze</Label>
@@ -564,58 +660,73 @@ function MapPage() {
                     </CircleMarker>
                   )}
 
-                  {/* Main Marker */}
-                  <Suspense fallback={null}>
-                    <Marker
-                      position={[place.lat, place.lng]}
-                      icon={(window as any).L?.icon({
-                        iconUrl: isCurrentLocation || isPlaybackPoint
-                          ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
-                          : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                      })}
-                    >
-                      <Popup>
-                        <div className="space-y-2 min-w-[200px]">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold">{place.name}</h3>
-                            {isCurrentLocation && (
-                              <Badge variant="destructive" className="gap-1">
-                                <MapPin className="h-3 w-3" />
-                                AKTUELL
+                  {/* Main Marker - Different icons for different types */}
+                  {(showArticles && place.type === 'article') ||
+                   (showNotes && place.type === 'note') ||
+                   (showImages && place.type === 'image') ||
+                   (showArticles && place.type === 'place')} && (
+                    <Suspense fallback={null}>
+                      <Marker
+                        position={[place.lat, place.lng]}
+                        icon={(window as any).L?.icon({
+                          // Different colors for different types
+                          iconUrl: isCurrentLocation || isPlaybackPoint
+                            ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
+                            : place.type === 'place'
+                              ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png'
+                              : place.type === 'article'
+                                ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png'
+                                : place.type === 'image'
+                                  ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png'
+                                  : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
+                          iconSize: [25, 41],
+                          iconAnchor: [12, 41],
+                          popupAnchor: [1, -34],
+                          shadowSize: [41, 41]
+                        })}
+                      >
+                        <Popup>
+                          <div className="space-y-2 min-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold">{place.name}</h3>
+                              {isCurrentLocation && (
+                                <Badge variant="destructive" className="gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  AKTUELL
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="gap-1 text-xs">
+                                {place.type === 'place' ? '📍 Ort' : place.type === 'article' ? '📝 Artikel' : place.type === 'image' ? '📷 Bild' : '📝 Note'}
                               </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(place.date * 1000).toLocaleDateString('de-DE')}
+                            </p>
+                            {place.description && (
+                              <p className="text-sm">{place.description}</p>
                             )}
+                            <div className="flex gap-2">
+                              {(place.duration || 1) > 1 && (
+                                <Badge variant="secondary">
+                                  ⏱️ {place.duration} Tage
+                                </Badge>
+                              )}
+                              {(place.photoCount || 0) > 0 && (
+                                <Badge variant="secondary">
+                                  📸 {place.photoCount}
+                                </Badge>
+                              )}
+                              {(place.articleCount || 0) > 0 && (
+                                <Badge variant="secondary">
+                                  📝 {place.articleCount}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(place.date * 1000).toLocaleDateString('de-DE')}
-                          </p>
-                          {place.description && (
-                            <p className="text-sm">{place.description}</p>
-                          )}
-                          <div className="flex gap-2">
-                            {(place.duration || 1) > 1 && (
-                              <Badge variant="secondary">
-                                ⏱️ {place.duration} Tage
-                              </Badge>
-                            )}
-                            {(place.photoCount || 0) > 0 && (
-                              <Badge variant="secondary">
-                                📸 {place.photoCount}
-                              </Badge>
-                            )}
-                            {(place.articleCount || 0) > 0 && (
-                              <Badge variant="secondary">
-                                📝 {place.articleCount}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  </Suspense>
+                        </Popup>
+                      </Marker>
+                    </Suspense>
+                  )}
                 </div>
               );
             })}
@@ -631,8 +742,8 @@ function MapPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalPlaces}</div>
-                    <div className="text-xs text-muted-foreground">Orte</div>
+                    <div className="text-2xl font-bold text-primary">{stats.totalContent}</div>
+                    <div className="text-xs text-muted-foreground">Gesamt</div>
                   </div>
                   <div className="bg-primary/10 rounded-lg p-3 text-center">
                     <div className="text-2xl font-bold text-primary">{stats.countries}</div>
@@ -640,11 +751,27 @@ function MapPage() {
                   </div>
                   <div className="bg-primary/10 rounded-lg p-3 text-center">
                     <div className="text-2xl font-bold text-primary">{stats.totalDays}</div>
-                    <div className="text-xs text-muted-foreground">Gesamttage</div>
+                    <div className="text-xs text-muted-foreground">Tage</div>
+                  </div>
+                  <div className="bg-primary/10 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-primary">{stats.totalPlaces}</div>
+                    <div className="text-xs text-muted-foreground">Orte</div>
+                  </div>
+                  <div className="bg-primary/10 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-primary">{stats.totalArticles}</div>
+                    <div className="text-xs text-muted-foreground">Artikel</div>
+                  </div>
+                  <div className="bg-primary/10 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-primary">{stats.totalImages}</div>
+                    <div className="text-xs text-muted-foreground">Bilder</div>
+                  </div>
+                  <div className="bg-primary/10 rounded-lg p-3 text-center">
+                    <div className="text-2xl font-bold text-primary">{stats.totalNotes}</div>
+                    <div className="text-xs text-muted-foreground">Notes</div>
                   </div>
                   <div className="bg-primary/10 rounded-lg p-3 text-center">
                     <div className="text-2xl font-bold text-primary">{stats.totalPhotos}</div>
-                    <div className="text-xs text-muted-foreground">Fotos</div>
+                    <div className="text-xs text-muted-foreground">Medien</div>
                   </div>
                 </div>
               </div>
