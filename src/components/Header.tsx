@@ -28,6 +28,7 @@ import {
   Calendar,
   Lightbulb,
   Sun,
+  Download,
 } from '@/lib/icons';
 import {
   DropdownMenu,
@@ -369,6 +370,12 @@ export function Header() {
                       Einstellungen
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/export" className="flex items-center gap-2">
+                      <Download className="h-4 w-4" />
+                      GPX/KMZ Export
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="flex items-center gap-2 text-red-600">
                     <LogOut className="h-4 w-4" />
@@ -562,6 +569,14 @@ export function Header() {
                   >
                     <Settings className="h-5 w-5 text-gray-600" />
                     <span className="text-gray-900 dark:text-gray-100">Einstellungen</span>
+                  </Link>
+                  <Link
+                    to="/export"
+                    className="flex items-center gap-3 p-3 hover:bg-cyan-50 dark:hover:bg-cyan-900 rounded-lg"
+                    onClick={handleMobileMenuClick}
+                  >
+                    <Download className="h-5 w-5 text-cyan-600" />
+                    <span className="text-gray-900 dark:text-gray-100">GPX/KMZ Export</span>
                   </Link>
                   <button
                     onClick={() => {
