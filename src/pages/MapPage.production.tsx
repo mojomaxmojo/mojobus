@@ -6,15 +6,17 @@
  */
 
 import { useMemo, useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGpsContent, type MapMarker } from '@/hooks/useGpsContent';
 import { MapMarkerPopup } from '@/components/MapMarkerPopup';
 import { getMarkerIcon } from '@/lib/markerIcons';
 import { EUROPA_BOUNDS, EUROPA_CENTER, ZOOM_SETTINGS } from '@/lib/mapConfig';
-import { MapPin, RefreshCw, Loader2 } from '@/lib/icons';
+import { MapPin, RefreshCw, Loader2, Map as MapIcon, BarChart3 } from '@/lib/icons';
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -33,6 +35,8 @@ L.Icon.Default.mergeOptions({
 export default function MapPage() {
   const { data: markers = [], isLoading, error, refetch } = useGpsContent();
   const [activeFilter, setActiveFilter] = useState<'all' | 'media' | 'note' | 'place' | 'article'>('all');
+  const [showRoute, setShowRoute] = useState(true);
+  const [showStats, setShowStats] = useState(true);
 
   // Filter markers to Europe only
   const europeMarkers = useMemo(() => {
@@ -52,6 +56,11 @@ export default function MapPage() {
     return europeMarkers.filter(m => m.type === activeFilter);
   }, [europeMarkers, activeFilter]);
 
+  // Sort markers chronologically for route
+  const sortedMarkers = useMemo(() => {
+    return [...filteredMarkers].sort((a, b) => a.createdAt - b.createdAt);
+  }, [filteredMarkers]);
+
   // Count markers by type
   const counts = useMemo(() => ({
     media: europeMarkers.filter(m => m.type === 'media').length,
@@ -60,6 +69,41 @@ export default function MapPage() {
     article: europeMarkers.filter(m => m.type === 'article').length,
     total: europeMarkers.length,
   }), [europeMarkers]);
+
+  // Calculate route statistics
+  const routeStats = useMemo(() => {
+    if (sortedMarkers.length < 2) {
+      return { totalDistance: 0, firstDate: null, lastDate: null, daysBetween: 0 };
+    }
+
+    // Calculate total distance using Haversine formula
+    let totalDistance = 0;
+    for (let i = 1; i < sortedMarkers.length; i++) {
+      const from = sortedMarkers[i - 1];
+      const to = sortedMarkers[i];
+      const distance = calculateDistance(from.lat, from.lon, to.lat, to.lon);
+      totalDistance += distance;
+    }
+
+    const firstDate = new Date(sortedMarkers[0].createdAt * 1000);
+    const lastDate = new Date(sortedMarkers[sortedMarkers.length - 1].createdAt * 1000);
+    const daysBetween = Math.floor((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    return { totalDistance, firstDate, lastDate, daysBetween };
+  }, [sortedMarkers]);
+
+  // Calculate distance between two coordinates (Haversine formula)
+  function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
 
   // Handle loading state
   if (isLoading) {
@@ -151,8 +195,8 @@ export default function MapPage() {
         {/* Map Card mit integrierter Filter-Bar */}
         <Card className="overflow-hidden">
           {/* Filter Bar - Teil der Map-Card */}
-          <div className="p-4 h-[60px] bg-muted/50 border-b flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="p-4 h-[70px] bg-muted/50 border-b flex items-center justify-between">
+            <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5" />
                 <span className="text-sm text-muted-foreground">
@@ -189,19 +233,32 @@ export default function MapPage() {
                 </div>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
-              )}
-              Neu laden
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mr-2">
+                <Label htmlFor="show-route" className="text-sm cursor-pointer">Route</Label>
+                <Switch id="show-route" checked={showRoute} onCheckedChange={setShowRoute} />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowStats(!showStats)}
+              >
+                <BarChart3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                Neu laden
+              </Button>
+            </div>
           </div>
 
           {/* Map */}
@@ -226,6 +283,18 @@ export default function MapPage() {
                 maxZoom={19}
               />
 
+              {/* Route Line */}
+              {showRoute && sortedMarkers.length > 1 && (
+                <Polyline
+                  positions={sortedMarkers.map(m => [m.lat, m.lon])}
+                  color="#0891B2"
+                  weight={3}
+                  opacity={0.8}
+                  lineCap="round"
+                  lineJoin="round"
+                />
+              )}
+
               {/* Map Markers */}
               {filteredMarkers.map((marker) => (
                 <Marker
@@ -240,6 +309,50 @@ export default function MapPage() {
               ))}
             </MapContainer>
           </div>
+
+          {/* Route Statistics Panel */}
+          {showStats && routeStats.totalDistance > 0 && (
+            <div className="p-4 border-t bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapIcon className="w-5 h-5 text-primary" />
+                  <span className="font-semibold">Route-Statistiken</span>
+                </div>
+                <div className="flex gap-6 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Gesamtdistanz:</span>
+                    <span className="ml-2 font-semibold text-primary">
+                      {routeStats.totalDistance.toFixed(0)} km
+                    </span>
+                  </div>
+                  {routeStats.daysBetween > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Zeitraum:</span>
+                      <span className="ml-2 font-semibold">
+                        {routeStats.daysBetween} Tage
+                      </span>
+                    </div>
+                  )}
+                  {routeStats.firstDate && (
+                    <div>
+                      <span className="text-muted-foreground">Erster Ort:</span>
+                      <span className="ml-2">
+                        {routeStats.firstDate.toLocaleDateString('de-DE')}
+                      </span>
+                    </div>
+                  )}
+                  {routeStats.lastDate && (
+                    <div>
+                      <span className="text-muted-foreground">Letzter Ort:</span>
+                      <span className="ml-2">
+                        {routeStats.lastDate.toLocaleDateString('de-DE')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
     </div>
     </>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -513,113 +513,109 @@ function MapPage() {
                     lineJoin="round"
                   />
                 )}
+
+                {/* Place Markers with Duration Circles */}
+                {placeData.map((place, index) => {
+                  const isCurrentLocation = currentLocation?.id === place.id;
+                  const isPlaybackPoint = currentPlaybackIndex === index;
+
+                  return (
+                    <React.Fragment key={place.id}>
+                      {/* Duration Circle */}
+                      {showDuration && (place.duration || 1) > 1 && (
+                        <CircleMarker
+                          center={[place.lat, place.lng]}
+                          radius={Math.min((place.duration || 1) * 2, 50)}
+                          pathOptions={{
+                            color: isCurrentLocation ? '#ef4444' : '#0891B2',
+                            fillColor: isCurrentLocation ? '#ef4444' : '#0891B2',
+                            fillOpacity: 0.2,
+                            weight: 1,
+                          }}
+                        />
+                      )}
+
+                      {/* Photo Spot Marker */}
+                      {showPhotoSpots && (place.photoCount || 0) > 0 && (
+                        <CircleMarker
+                          center={[place.lat, place.lng]}
+                          radius={8 + Math.min(place.photoCount!, 20)}
+                          pathOptions={{
+                            color: '#f59e0b',
+                            fillColor: '#f59e0b',
+                            fillOpacity: 0.4,
+                            weight: 1,
+                          }}
+                        >
+                          <Popup>
+                            <div className="space-y-2">
+                              <h3 className="font-semibold">{place.name}</h3>
+                              {place.description && <p className="text-sm">{place.description}</p>}
+                              <div className="flex gap-2 text-sm">
+                                <Badge variant="secondary">📸 {place.photoCount}</Badge>
+                                <Badge variant="secondary">📝 {place.articleCount || 1}</Badge>
+                              </div>
+                            </div>
+                          </Popup>
+                        </CircleMarker>
+                      )}
+
+                      {/* Main Marker */}
+                      <Marker
+                        position={[place.lat, place.lng]}
+                        icon={(window as any).L?.icon({
+                          iconUrl: isCurrentLocation || isPlaybackPoint
+                            ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
+                            : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+                          iconSize: [25, 41],
+                          iconAnchor: [12, 41],
+                          popupAnchor: [1, -34],
+                          shadowSize: [41, 41]
+                        })}
+                      >
+                        <Popup>
+                          <div className="space-y-2 min-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold">{place.name}</h3>
+                              {isCurrentLocation && (
+                                <Badge variant="destructive" className="gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  AKTUELL
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(place.date * 1000).toLocaleDateString('de-DE')}
+                            </p>
+                            {place.description && (
+                              <p className="text-sm">{place.description}</p>
+                            )}
+                            <div className="flex gap-2">
+                              {(place.duration || 1) > 1 && (
+                                <Badge variant="secondary">
+                                  ⏱️ {place.duration} Tage
+                                </Badge>
+                              )}
+                              {(place.photoCount || 0) > 0 && (
+                                <Badge variant="secondary">
+                                  📸 {place.photoCount}
+                                </Badge>
+                              )}
+                              {(place.articleCount || 0) > 0 && (
+                                <Badge variant="secondary">
+                                  📝 {place.articleCount}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    </React.Fragment>
+                  );
+                })}
               </Suspense>
             </MapContainer>
           </Suspense>
-        </div>
-
-            {/* Place Markers with Duration Circles */}
-            {placeData.map((place, index) => {
-              const isCurrentLocation = currentLocation?.id === place.id;
-              const isPlaybackPoint = currentPlaybackIndex === index;
-
-              return (
-                <div key={place.id}>
-                  {/* Duration Circle */}
-                  {showDuration && (place.duration || 1) > 1 && (
-                    <CircleMarker
-                      center={[place.lat, place.lng]}
-                      radius={Math.min((place.duration || 1) * 2, 50)}
-                      pathOptions={{
-                        color: isCurrentLocation ? '#ef4444' : '#0891B2',
-                        fillColor: isCurrentLocation ? '#ef4444' : '#0891B2',
-                        fillOpacity: 0.2,
-                        weight: 1,
-                      }}
-                    />
-                  )}
-
-                  {/* Photo Spot Marker */}
-                  {showPhotoSpots && (place.photoCount || 0) > 0 && (
-                    <CircleMarker
-                      center={[place.lat, place.lng]}
-                      radius={8 + Math.min(place.photoCount!, 20)}
-                      pathOptions={{
-                        color: '#f59e0b',
-                        fillColor: '#f59e0b',
-                        fillOpacity: 0.4,
-                        weight: 1,
-                      }}
-                    >
-                      <Popup>
-                        <div className="space-y-2">
-                          <h3 className="font-semibold">{place.name}</h3>
-                          {place.description && <p className="text-sm">{place.description}</p>}
-                          <div className="flex gap-2 text-sm">
-                            <Badge variant="secondary">📸 {place.photoCount}</Badge>
-                            <Badge variant="secondary">📝 {place.articleCount || 1}</Badge>
-                          </div>
-                        </div>
-                      </Popup>
-                    </CircleMarker>
-                  )}
-
-                  {/* Main Marker */}
-                  <Suspense fallback={null}>
-                    <Marker
-                      position={[place.lat, place.lng]}
-                      icon={(window as any).L?.icon({
-                        iconUrl: isCurrentLocation || isPlaybackPoint
-                          ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
-                          : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41],
-                        popupAnchor: [1, -34],
-                        shadowSize: [41, 41]
-                      })}
-                    >
-                      <Popup>
-                        <div className="space-y-2 min-w-[200px]">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold">{place.name}</h3>
-                            {isCurrentLocation && (
-                              <Badge variant="destructive" className="gap-1">
-                                <MapPin className="h-3 w-3" />
-                                AKTUELL
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(place.date * 1000).toLocaleDateString('de-DE')}
-                          </p>
-                          {place.description && (
-                            <p className="text-sm">{place.description}</p>
-                          )}
-                          <div className="flex gap-2">
-                            {(place.duration || 1) > 1 && (
-                              <Badge variant="secondary">
-                                ⏱️ {place.duration} Tage
-                              </Badge>
-                            )}
-                            {(place.photoCount || 0) > 0 && (
-                              <Badge variant="secondary">
-                                📸 {place.photoCount}
-                              </Badge>
-                            )}
-                            {(place.articleCount || 0) > 0 && (
-                              <Badge variant="secondary">
-                                📝 {place.articleCount}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  </Suspense>
-                </div>
-              );
-            })}
-          </MapContainer>
         </div>
 
         {/* Stats Panel */}
