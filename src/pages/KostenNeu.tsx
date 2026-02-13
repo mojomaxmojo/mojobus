@@ -82,11 +82,14 @@ export default function KostenNeu() {
     if (!validateForm()) return;
 
     try {
+      console.log('📝 Speichere Kosten-Eintrag...', formData);
       await addEntry(formData);
+      console.log('✅ Kosten-Eintrag gespeichert');
       navigate('/artikel/rvlife/kosten');
     } catch (error) {
-      console.error('Failed to add cost entry:', error);
-      setErrors({ submit: 'Eintrag konnte nicht gespeichert werden' });
+      console.error('❌ Fehler beim Speichern:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Eintrag konnte nicht gespeichert werden';
+      setErrors({ submit: errorMessage });
     }
   };
 
@@ -265,8 +268,11 @@ export default function KostenNeu() {
               </div>
 
               {errors.submit && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-600">{errors.submit}</p>
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                  <p className="text-sm text-red-800 dark:text-red-200 font-medium">{errors.submit}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                    💡 Tipp: Stelle sicher, dass du mit deinem Nostr-Account eingeloggt bist.
+                  </p>
                 </div>
               )}
 

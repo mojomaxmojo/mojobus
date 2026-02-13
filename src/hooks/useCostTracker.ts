@@ -7,8 +7,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useNostrEncryption, decryptCostEntry } from './useNostrEncryption';
+import { useNostrPublish } from './useNostrPublish';
+import { useCurrentUser } from './useCurrentUser';
 import { COST_TRACKER_CONFIG, type CostEntry, type CostFormData, type MonthlyStats, type CategoryStats, COST_CATEGORIES } from '@/types/costs';
 import { DEFAULT_CACHE_CONFIG } from '@/config/cache';
+import type { NostrEvent } from '@nostrify/nostrify';
 
 /**
  * Parse Nostr event to CostEntry
@@ -59,6 +62,8 @@ function parseEventToCostEntry(event: any): CostEntry | null {
 export function useCostTracker() {
   const { nostr } = useNostr();
   const { decrypt } = useNostrEncryption();
+  const { mutate: publishEvent } = useNostrPublish();
+  const { user } = useCurrentUser();
   const queryClient = useQueryClient();
 
   // Query cost entries from Nostr
@@ -119,11 +124,23 @@ export function useCostTracker() {
   // Mutation to add new cost entry
   const addCostMutation = useMutation({
     mutationFn: async (formData: CostFormData) => {
-      if (!nostr) throw new Error('Nostr nicht verfügbar');
+      if (!nostr) {
+        console.error('❌ Cost Tracker: Nostr nicht verfügbar');
+        throw new Error('Nostr nicht verfügbar');
+      }
 
       // Check if user is authorized
-      const userPubkey = nostr.pool?.relays?.[0]?.options?.pubkey;
-      if (!userPubkey || !COST_TRACKER_CONFIG.allowedPubkeys.includes(userPubkey)) {
+      if (!user) {
+        console.error('❌ Cost Tracker: User nicht eingeloggt');
+        throw new Error('Nicht eingeloggt: Bitte mit deinem Nostr-Account (Mojo oder Susanne) einloggen');
+      }
+
+      const userPubkey = user.pubkey;
+      console.log('🔑 User pubkey:', userPubkey);
+
+      if (!COST_TRACKER_CONFIG.allowedPubkeys.includes(userPubkey)) {
+        console.error('❌ Cost Tracker: User nicht autorisiert:', userPubkey);
+        console.error('❌ Erlaubte Pubkeys:', COST_TRACKER_CONFIG.allowedPubkeys);
         throw new Error('Nicht autorisiert: Nur Mojo und Susanne können Kosten eintragen');
       }
 
@@ -135,9 +152,21 @@ export function useCostTracker() {
         notes: formData.notes,
       };
 
-      // Encrypt for both Mojo and Susanne
-      const encryptedForMojo = await nostr.nip44.encrypt(JSON.stringify(content), COST_TRACKER_CONFIG.allowedPubkeys[0]);
-      const encryptedForSusanne = await nostr.nip44.encrypt(JSON.stringify(content), COST_TRACKER_CONFIG.allowedPubkeys[1]);
+      // Encrypt content using NIP-44
+      let encryptedContent: string;
+      try {
+        if (!nostr.nip44 || !nostr.nip44.encrypt) {
+          console.error('❌ Cost Tracker: NIP-44 nicht verfügbar');
+          throw new Error('NIP-44 Verschlüsselung nicht verfügbar');
+        }
+
+        // Encrypt for self (the other user can decrypt it when reading their copy)
+        encryptedContent = await nostr.nip44.encrypt(JSON.stringify(content), userPubkey);
+        console.log('✅ Cost Tracker: Content verschlüsselt');
+      } catch (error) {
+        console.error('❌ Cost Tracker: Verschlüsselung fehlgeschlagen:', error);
+        throw new Error('Verschlüsselung fehlgeschlagen: ' + (error as Error).message);
+      }
 
       // Create tags
       const tags = [
@@ -158,12 +187,21 @@ export function useCostTracker() {
         tags.push(['gps_lon', formData.gps_lon.toString()]);
       }
 
-      // Publish event
-      const event = await nostr.publish({
+      // Publish event using useNostrPublish hook
+      console.log('📤 Cost Tracker: Publishing event...');
+      const event = await publishEvent({
         kind: COST_TRACKER_CONFIG.kind,
+        content: encryptedContent,
         tags,
-        content: encryptedForMojo, // For Mojo (author sees their own)
       });
+
+      console.log('✅ Cost Tracker: Published new entry', event.id);
+      return event;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cost-tracker-events'] });
+    },
+  });
 
       console.log('✅ Cost Tracker: Published new entry', event.id);
       return event;
