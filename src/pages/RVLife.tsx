@@ -12,7 +12,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
-import { Search, Calendar, User, Home, ChefHat, Compass, Truck } from 'lucide-react';
+import { Search, Calendar, User, Home, ChefHat, Compass, Truck, Wallet } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
@@ -152,6 +152,27 @@ export function RVLife() {
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Kategorien</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Kosten-Tracker Link */}
+              <Link to="/artikel/rvlife/kosten">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer border-primary/50 bg-primary/5">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-green-100 dark:bg-green-900">
+                        <Wallet className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          💰 Kosten-Tracker
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Private Ausgabenübersicht
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+
               {Object.values(RV_LIFE_CONFIG.categories).map((cat) => {
                 const Icon = getRVLifeIcon(cat.icon);
                 return (
