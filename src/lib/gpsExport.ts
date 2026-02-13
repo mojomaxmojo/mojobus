@@ -127,6 +127,32 @@ export function extractGpsWaypoints(events: NostrEvent[]): GpsWaypoint[] {
         }
       }
 
+      // Method 3: Extract "latitude" and "longitude" tags
+      if (!lat || !lon) {
+        const latitudeTag = event.tags.find(([name]) => name === 'latitude')?.[1];
+        const longitudeTag = event.tags.find(([name]) => name === 'longitude')?.[1];
+        const altitudeTag = event.tags.find(([name]) => name === 'altitude')?.[1];
+
+        if (latitudeTag && longitudeTag) {
+          lat = parseFloat(latitudeTag);
+          lon = parseFloat(longitudeTag);
+          ele = altitudeTag ? parseFloat(altitudeTag) : undefined;
+        }
+      }
+
+      // Method 4: Extract "coord" tag
+      if (!lat || !lon) {
+        const coordTag = event.tags.find(([name]) => name === 'coord')?.[1];
+        if (coordTag) {
+          const coords = coordTag.match(/(-?\d+\.?\d*)[,\s](-?\d+\.?\d*)(?:[,\s](-?\d+\.?\d*))?/);
+          if (coords) {
+            lat = parseFloat(coords[1]);
+            lon = parseFloat(coords[2]);
+            ele = coords[3] ? parseFloat(coords[3]) : undefined;
+          }
+        }
+      }
+
       // Skip if no coordinates found
       if (!lat || !lon) continue;
 

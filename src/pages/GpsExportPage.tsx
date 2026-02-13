@@ -59,20 +59,28 @@ export default function GpsExportPage() {
 
   const isLoading = articlesLoading || placesLoading || notesLoading;
 
-  // Filter events with location data (supports both "location" tag AND separate "lat"/"lon" tags)
+  // Filter events with location data (supports multiple GPS tag formats)
   const eventsWithLocation = useMemo(() => {
     const withLocation = allEvents.filter(event => {
-      // Check for "location" tag (format: "lat,lon" or "lat,lon,alt")
+      // Check for various GPS tag formats
       const locationTag = event.tags.find(([name]) => name === 'location')?.[1];
-
-      // Check for separate "lat" and "lon" tags
       const latTag = event.tags.find(([name]) => name === 'lat')?.[1];
       const lonTag = event.tags.find(([name]) => name === 'lon')?.[1];
+      const latitudeTag = event.tags.find(([name]) => name === 'latitude')?.[1];
+      const longitudeTag = event.tags.find(([name]) => name === 'longitude')?.[1];
+      const coordTag = event.tags.find(([name]) => name === 'coord')?.[1];
 
       const hasLocation = locationTag !== undefined && locationTag !== '';
       const hasLatLon = latTag !== undefined && lonTag !== undefined;
+      const hasLatitudeLongitude = latitudeTag !== undefined && longitudeTag !== undefined;
+      const hasCoord = coordTag !== undefined && coordTag !== '';
 
-      return hasLocation || hasLatLon;
+      // Debug: Log tag structure for first few events
+      if (allEvents.indexOf(event) < 5) {
+        console.log(`Event ${event.id} tags:`, event.tags.map(t => t[0]));
+      }
+
+      return hasLocation || hasLatLon || hasLatitudeLongitude || hasCoord;
     });
 
     return withLocation;
