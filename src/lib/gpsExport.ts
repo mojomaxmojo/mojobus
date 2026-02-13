@@ -99,16 +99,36 @@ export function extractGpsWaypoints(events: NostrEvent[]): GpsWaypoint[] {
 
   for (const event of events) {
     try {
-      // Extract location tag (format: "lat,lon" or "lat,lon,alt")
+      // Method 1: Extract location tag (format: "lat,lon" or "lat,lon,alt")
+      let lat: number | undefined;
+      let lon: number | undefined;
+      let ele: number | undefined;
+
       const locationTag = event.tags.find(([name]) => name === 'location')?.[1];
-      if (!locationTag) continue;
+      if (locationTag) {
+        const coords = locationTag.match(/(-?\d+\.?\d*)[,\s](-?\d+\.?\d*)(?:[,\s](-?\d+\.?\d*))?/);
+        if (coords) {
+          lat = parseFloat(coords[1]);
+          lon = parseFloat(coords[2]);
+          ele = coords[3] ? parseFloat(coords[3]) : undefined;
+        }
+      }
 
-      const coords = locationTag.match(/(-?\d+\.?\d*)[,\s](-?\d+\.?\d*)(?:[,\s](-?\d+\.?\d*))?/);
-      if (!coords) continue;
+      // Method 2: Extract separate "lat" and "lon" tags
+      if (!lat || !lon) {
+        const latTag = event.tags.find(([name]) => name === 'lat')?.[1];
+        const lonTag = event.tags.find(([name]) => name === 'lon')?.[1];
+        const altTag = event.tags.find(([name]) => name === 'alt')?.[1];
 
-      const lat = parseFloat(coords[1]);
-      const lon = parseFloat(coords[2]);
-      const ele = coords[3] ? parseFloat(coords[3]) : undefined;
+        if (latTag && lonTag) {
+          lat = parseFloat(latTag);
+          lon = parseFloat(lonTag);
+          ele = altTag ? parseFloat(altTag) : undefined;
+        }
+      }
+
+      // Skip if no coordinates found
+      if (!lat || !lon) continue;
 
       // Validate coordinates
       if (isNaN(lat) || isNaN(lon)) continue;

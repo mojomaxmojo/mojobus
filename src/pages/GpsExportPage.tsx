@@ -54,23 +54,26 @@ export default function GpsExportPage() {
       uniqueEvents.set(event.id, event);
     });
 
-    const result = Array.from(uniqueEvents.values());
-    console.log('[GpsExportPage] Total events loaded:', result.length);
-    return result;
+    return Array.from(uniqueEvents.values());
   }, [allArticles, allNotes]);
 
   const isLoading = articlesLoading || placesLoading || notesLoading;
 
-  // Filter events with location data
+  // Filter events with location data (supports both "location" tag AND separate "lat"/"lon" tags)
   const eventsWithLocation = useMemo(() => {
     const withLocation = allEvents.filter(event => {
+      // Check for "location" tag (format: "lat,lon" or "lat,lon,alt")
       const locationTag = event.tags.find(([name]) => name === 'location')?.[1];
-      const hasLocation = locationTag !== undefined && locationTag !== '';
-      return hasLocation;
-    });
 
-    console.log('[GpsExportPage] Events with location:', withLocation.length, '/', allEvents.length);
-    console.log('[GpsExportPage] Events with location IDs:', withLocation.map(e => e.id));
+      // Check for separate "lat" and "lon" tags
+      const latTag = event.tags.find(([name]) => name === 'lat')?.[1];
+      const lonTag = event.tags.find(([name]) => name === 'lon')?.[1];
+
+      const hasLocation = locationTag !== undefined && locationTag !== '';
+      const hasLatLon = latTag !== undefined && lonTag !== undefined;
+
+      return hasLocation || hasLatLon;
+    });
 
     return withLocation;
   }, [allEvents]);
