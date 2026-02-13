@@ -55,7 +55,7 @@ export function LivePositionIndicator() {
 
   if (isLoading || !position) {
     return (
-      <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/30 rounded-full text-sm">
+      <div className="inline-flex items-center gap-2 px-4 py-1 bg-muted/30 rounded-full text-sm">
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         <span className="text-muted-foreground">Lade Position...</span>
       </div>
@@ -64,7 +64,7 @@ export function LivePositionIndicator() {
 
   return (
     <Link to="/map" className="inline-block">
-      <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-primary/10 hover:bg-primary/20 rounded-full transition-all duration-300 cursor-pointer group">
+      <div className="inline-flex items-center gap-3 px-5 py-1.25 bg-primary/10 hover:bg-primary/20 rounded-full transition-all duration-300 cursor-pointer group">
         <MapPin className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
 
         <span className="font-semibold text-sm text-foreground">

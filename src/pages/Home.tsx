@@ -220,7 +220,7 @@ export function Home() {
 
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
-          <div className="max-w-5xl mx-auto text-center space-y-10">
+          <div className="max-w-5xl mx-auto text-center space-y-5">
             {/* Live Position Indicator - One-Liner */}
             <div className="flex justify-center">
               <LivePositionIndicator />
