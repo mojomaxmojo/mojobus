@@ -54,17 +54,25 @@ export default function GpsExportPage() {
       uniqueEvents.set(event.id, event);
     });
 
-    return Array.from(uniqueEvents.values());
+    const result = Array.from(uniqueEvents.values());
+    console.log('[GpsExportPage] Total events loaded:', result.length);
+    return result;
   }, [allArticles, allNotes]);
 
   const isLoading = articlesLoading || placesLoading || notesLoading;
 
   // Filter events with location data
   const eventsWithLocation = useMemo(() => {
-    return allEvents.filter(event => {
+    const withLocation = allEvents.filter(event => {
       const locationTag = event.tags.find(([name]) => name === 'location')?.[1];
-      return locationTag !== undefined && locationTag !== '';
+      const hasLocation = locationTag !== undefined && locationTag !== '';
+      return hasLocation;
     });
+
+    console.log('[GpsExportPage] Events with location:', withLocation.length, '/', allEvents.length);
+    console.log('[GpsExportPage] Events with location IDs:', withLocation.map(e => e.id));
+
+    return withLocation;
   }, [allEvents]);
 
   // Selection state
@@ -184,7 +192,16 @@ export default function GpsExportPage() {
           </Alert>
 
           {/* Export Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Alle Events</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{allEvents.length}</div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Events mit GPS</CardTitle>
@@ -220,7 +237,7 @@ export default function GpsExportPage() {
                   </GpsExportDialog>
                 ) : (
                   <Button disabled className="w-full">
-                    Wähle Locations aus
+                    Wähle Events aus
                   </Button>
                 )}
               </CardContent>
