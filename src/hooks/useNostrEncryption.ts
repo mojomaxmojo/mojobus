@@ -75,24 +75,6 @@ export async function decryptContent(
     throw new Error('Entschlüsselung fehlgeschlagen: ' + (error as Error).message);
   }
 }
-}
-
-/**
- * Decrypt content using NIP-44
- */
-export async function decryptContent(
-  encryptedContent: string,
-  senderPubkey: string,
-  nostr: any
-): Promise<string> {
-  try {
-    const decrypted = await nostr.nip44.decrypt(encryptedContent, senderPubkey);
-    return decrypted;
-  } catch (error) {
-    console.error('Decryption failed:', error);
-    throw new Error('Entschlüsselung fehlgeschlagen');
-  }
-}
 
 /**
  * Hook for Nostr encryption operations
