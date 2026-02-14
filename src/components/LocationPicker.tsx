@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,306 +39,426 @@ export interface LocationPickerProps {
 }
 
 /**
- * Main LocationPicker Component
- * Uses pure Leaflet instead of react-leaflet
+ * Component to handle map clicks
+ */
+function MapClickHandler({ onMapClick }: { onMapClick: (e: any) => void }) {
+  const map = useMap();
+
+  return (
+    <div
+      onClick={(e) => {
+        const { lat, lng } = map.mouseEventToLatLng(e.nativeEvent);
+        onMapClick({ lat, lng });
+      }}
+      style={{ cursor: 'crosshair' }}
+      className="absolute inset-0"
+    />
+  );
+}
+
+/**
+ * LocationPicker Component
+ *
+ * Interactive map component for picking GPS coordinates
+ * Features:
+ * - Drag & Drop marker to pick location
+ * - Click on map to move marker
+ * - Manual coordinate input
+ * - Zoom controls
+ * - Auto-center on GPS data
+ *
+ * @example
+ * ```tsx
+ * <LocationPicker
+ *   gps={currentGps}
+ *   onSave={(gps) => setGps(gps)}
+ *   onCancel={() => setIsEditing(false)}
+ *   initialZoom={13}
+ *   height="400px"
+ * />
+ * ```
  */
 export function LocationPicker({
   gps,
   onSave,
   onCancel,
-  initialZoom = 6,
+  initialZoom = 13,
   height = '400px',
   onCountryDetected,
   onLocationDetected,
 }: LocationPickerProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
-
-  // State
-  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(
-    gps && gps.lat && gps.lon ? { lat: gps.lat, lon: gps.lon } : null
-  );
+  const [position, setPosition] = useState<[number, number]>(() => {
+    // Check if GPS data is valid
+    if (gps && gps.latitude !== 0 && gps.longitude !== 0) {
+      return [gps.latitude, gps.longitude];
+    }
+    // Default: Portugal
+    return [39.5, -8.0];
+  });
+  const [zoom, setZoom] = useState(initialZoom);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [locationText, setLocationText] = useState(gps?.location || '');
-  const [country, setCountry] = useState(gps?.country || '');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
+  const [manualLat, setManualLat] = useState(position[0].toFixed(6));
+  const [manualLon, setManualLon] = useState(position[1].toFixed(6));
+  const [manualAlt, setManualAlt] = useState(gps?.altitude?.toFixed(1) || '0');
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const mapRef = useRef<L.Map>(null);
 
-  // Get tile URL
-  const getTileUrl = () => {
-    return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  // Sync manual inputs with marker position
+  useEffect(() => {
+    setManualLat(position[0].toFixed(6));
+    setManualLon(position[1].toFixed(6));
+  }, [position]);
+
+  // Update map size when fullscreen toggles
+  useEffect(() => {
+    if (mapRef.current) {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        mapRef.current?.invalidateSize();
+      }, 100);
+    }
+  }, [isFullscreen]);
+
+  // Handle map click to move marker
+  const handleMapClick = ({ lat, lng }: { lat: number; lng: number }) => {
+    setPosition([lat, lng]);
   };
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    // Initialize map
-    const map = L.map(mapRef.current).setView(
-      selectedLocation ? [selectedLocation.lat, selectedLocation.lon] : [54.5260, 15.2551],
-      selectedLocation ? initialZoom : 4
-    );
-
-    mapInstanceRef.current = map;
-
-    // Add tiles
-    tileLayerRef.current = L.tileLayer(getTileUrl(), {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19
-    }).addTo(map);
-
-    // Add marker if initial location exists
-    if (selectedLocation) {
-      const marker = L.marker([selectedLocation.lat, selectedLocation.lon])
-        .addTo(map)
-        .bindPopup(`📍 Location: ${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lon.toFixed(6)}`)
-        .openPopup();
-      markerRef.current = marker;
-    }
-
-    // Add click handler
-    map.on('click', async (e) => {
-      const { lat, lng } = e.latlng;
-
-      // Remove existing marker
-      if (markerRef.current) {
-        map.removeLayer(markerRef.current);
-      }
-
-      // Add new marker
-      const marker = L.marker([lat, lng])
-        .addTo(map)
-        .bindPopup(`📍 Selected: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
-        .openPopup();
-
-      markerRef.current = marker;
-      setSelectedLocation({ lat, lon: lng });
-
-      // Reverse geocode
-      setIsLoading(true);
-      try {
-        const locationData = await reverseGeocode(lat, lng);
-        setLocationText(locationData.location || '');
-        setCountry(locationData.country || '');
-        onCountryDetected?.(locationData.country || '');
-        onLocationDetected?.(locationData.location || '');
-      } catch (err) {
-        console.warn('[LocationPicker] Reverse geocoding failed:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    });
-
-    // Cleanup function
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []); // Only run on mount
-
-  // Update marker when selectedLocation changes from GPS
-  useEffect(() => {
-    if (!mapInstanceRef.current || !selectedLocation) return;
-
-    // Remove existing marker
-    if (markerRef.current) {
-      mapInstanceRef.current.removeLayer(markerRef.current);
-    }
-
-    // Add new marker
-    const marker = L.marker([selectedLocation.lat, selectedLocation.lon])
-      .addTo(mapInstanceRef.current)
-      .bindPopup(`📍 Location: ${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lon.toFixed(6)}`)
-      .openPopup();
-
-    markerRef.current = marker;
-
-    // Center map on new location
-    mapInstanceRef.current.setView([selectedLocation.lat, selectedLocation.lon], initialZoom);
-  }, [selectedLocation, initialZoom]);
-
-  // Handle save
-  const handleSave = () => {
-    if (!selectedLocation) return;
-
-    const gpsData: GpsData = {
-      lat: selectedLocation.lat,
-      lon: selectedLocation.lon,
-      location: locationText,
-      country: country,
-      accuracy: 10,
-      timestamp: Date.now(),
-      provider: 'manual'
-    };
-
-    onSave(gpsData);
-  };
-
-  // Handle current location
-  const handleGetCurrentLocation = () => {
+  // Get current location from browser/smartphone
+  const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      alert('Geolocation wird von diesem Browser nicht unterstützt.');
       return;
     }
 
-    setIsLocating(true);
+    setIsLoadingLocation(true);
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
+      (position) => {
+        const { latitude, longitude, altitude } = position.coords;
 
-        // Update map
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setView([latitude, longitude], 15);
+        // Validate coordinates (should not be 0,0)
+        if (latitude === 0 && longitude === 0) {
+          alert('Ungültige Position erhalten. Bitte versuchen Sie es erneut.');
+          setIsLoadingLocation(false);
+          return;
         }
 
-        // Update marker
-        if (markerRef.current) {
-          mapInstanceRef.current?.removeLayer(markerRef.current);
+        const newPosition: [number, number] = [latitude, longitude];
+        setPosition(newPosition);
+        setManualLat(latitude.toFixed(6));
+        setManualLon(longitude.toFixed(6));
+        setManualAlt(altitude ? altitude.toFixed(1) : '0');
+
+        // Zoom in and pan to current location
+        if (mapRef.current) {
+          mapRef.current.setView(newPosition, 16);
         }
 
-        if (mapInstanceRef.current) {
-          const marker = L.marker([latitude, longitude])
-            .addTo(mapInstanceRef.current)
-            .bindPopup(`📍 Current: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`)
-            .openPopup();
+        // Reverse geocode to get location and country
+        reverseGeocode(latitude, longitude).then(locationData => {
+          if (locationData) {
+            console.log('[LocationPicker] Reverse geocoding result:', locationData);
 
-          markerRef.current = marker;
-        }
+            // Extract country and map to internal country code
+            const internalCountry = mapCountryCode(locationData);
+            if (internalCountry && onCountryDetected) {
+              onCountryDetected(internalCountry);
+            }
 
-        setSelectedLocation({ lat: latitude, lon: longitude });
+            // Extract location text (city + region if available)
+            const locationParts = [
+              locationData.city,
+              locationData.neighbourhood,
+              locationData.suburb
+            ].filter(Boolean);
 
-        // Reverse geocode
-        setIsLoading(true);
-        try {
-          const locationData = await reverseGeocode(latitude, longitude);
-          setLocationText(locationData.location || '');
-          setCountry(locationData.country || '');
-          onCountryDetected?.(locationData.country || '');
-          onLocationDetected?.(locationData.location || '');
-        } catch (err) {
+            if (locationParts.length > 0 && onLocationDetected) {
+              onLocationDetected(locationParts.join(', '));
+            }
+          }
+        }).catch(err => {
           console.warn('[LocationPicker] Reverse geocoding failed:', err);
-        } finally {
-          setIsLoading(false);
-        }
+        });
 
-        setIsLocating(false);
+        setIsLoadingLocation(false);
       },
       (error) => {
         console.error('Geolocation error:', error);
-        alert('Unable to get your current location. Please check your browser permissions.');
-        setIsLocating(false);
+        let errorMessage = 'Standort konnte nicht abgerufen werden.';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Standort-Zugriff verweigert. Bitte erlaube den Zugriff in den Browsereinstellungen.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Standortinformationen sind nicht verfügbar.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Timeout beim Abrufen des Standorts.';
+            break;
+        }
+        alert(errorMessage);
+        setIsLoadingLocation(false);
       },
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 0
+        maximumAge: 0,
       }
     );
   };
 
+  // Save handler
+  const handleSave = () => {
+    const latitude = parseFloat(manualLat);
+    const longitude = parseFloat(manualLon);
+    const altitude = parseFloat(manualAlt) || undefined;
+
+    // Validate coordinates (should not be 0,0)
+    if (latitude === 0 && longitude === 0) {
+      alert('Bitte gib GPS-Koordinaten ein oder nutze den Position-Button (🎯).');
+      return;
+    }
+
+    // Validate coordinate ranges
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      alert('Ungültige GPS-Koordinaten. Bitte prüfe deine Eingabe.');
+      return;
+    }
+
+    onSave({
+      latitude,
+      longitude,
+      altitude,
+      precision: 'medium', // Manual entries get medium precision
+    });
+  };
+
+  // Reset to initial GPS
+  const handleReset = () => {
+    if (gps) {
+      setPosition([gps.latitude, gps.longitude]);
+      setManualLat(gps.latitude.toFixed(6));
+      setManualLon(gps.longitude.toFixed(6));
+      setManualAlt(gps.altitude?.toFixed(1) || '0');
+    }
+  };
+
+  // Toggle fullscreen
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Map Container */}
+      {/* Fullscreen backdrop */}
+      {isFullscreen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={toggleFullscreen}
+        />
+      )}
+
+      {/* Map */}
       <div
         className={cn(
-          "relative rounded-lg overflow-hidden border",
-          isFullscreen && "fixed inset-0 z-50 rounded-none"
+          'relative rounded-lg overflow-hidden border-2',
+          isFullscreen
+            ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-none border-gray-300 dark:border-gray-600'
+            : 'border-gray-200 dark:border-gray-700'
         )}
-        style={{ height: isFullscreen ? '100vh' : height }}
+        style={isFullscreen ? { width: '800px', height: '800px' } : { height }}
       >
-        <div ref={mapRef} className="w-full h-full" />
+        {isFullscreen && (
+          <Button
+            onClick={toggleFullscreen}
+            variant="outline"
+            size="sm"
+            className="absolute top-4 right-4 z-[1000] bg-white dark:bg-gray-800"
+          >
+            <Minimize2 className="h-4 w-4 mr-2" />
+            Vollbild schließen
+          </Button>
+        )}
 
-        {/* Controls */}
-        <div className="absolute top-4 right-4 flex gap-2 z-[1000]">
+        <MapContainer
+          center={position}
+          zoom={zoom}
+          style={{ height: '100%', width: '100%' }}
+          zoomControl={false}
+          ref={mapRef}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
+          <Marker
+            position={position}
+            draggable={true}
+            eventHandlers={{
+              dragend: (e) => {
+                const marker = e.target;
+                const { lat, lng } = marker.getLatLng();
+                setPosition([lat, lng]);
+              },
+            }}
+          />
+          <MapClickHandler onMapClick={handleMapClick} />
+        </MapContainer>
+
+        {/* Zoom Controls */}
+        <div className="absolute top-4 left-4 flex flex-col gap-1 z-[1000]">
           <Button
-            size="icon"
-            variant="secondary"
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            onClick={() => {
+              const newZoom = Math.min(zoom + 1, 19);
+              setZoom(newZoom);
+              if (mapRef.current) {
+                mapRef.current.setZoom(newZoom);
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="w-8 h-8 p-0 bg-white dark:bg-gray-800"
+            title="Vergrößern"
           >
-            {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            <Maximize2 className="h-4 w-4" />
           </Button>
           <Button
-            size="icon"
-            variant="secondary"
-            onClick={handleGetCurrentLocation}
-            disabled={isLocating}
-            title="Get Current Location"
+            onClick={() => {
+              const newZoom = Math.max(zoom - 1, 1);
+              setZoom(newZoom);
+              if (mapRef.current) {
+                mapRef.current.setZoom(newZoom);
+              }
+            }}
+            variant="outline"
+            size="sm"
+            className="w-8 h-8 p-0 bg-white dark:bg-gray-800"
+            title="Verkleinern"
           >
-            <Crosshair className={cn("h-5 w-5", isLocating && "animate-spin")} />
+            <Minimize2 className="h-4 w-4" />
           </Button>
+          <Button
+            onClick={getCurrentLocation}
+            variant="outline"
+            size="sm"
+            className="w-8 h-8 p-0 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+            title="Aktuelle Position"
+            disabled={isLoadingLocation}
+          >
+            {isLoadingLocation ? (
+              <div className="animate-spin h-4 w-4 border-2 border-blue-600 dark:border-blue-400 rounded-full border-t-transparent" />
+            ) : (
+              <Crosshair className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            )}
+          </Button>
+        </div>
+
+        {/* Current Coordinates Display */}
+        <div className="absolute bottom-4 left-4 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg z-[1000] border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <span className="font-mono">
+              {position[0].toFixed(6)}° N, {position[1].toFixed(6)}° E
+            </span>
+          </div>
+        </div>
+
+        {/* Toggle Fullscreen Button */}
+        {!isFullscreen && (
+          <Button
+            onClick={toggleFullscreen}
+            variant="outline"
+            size="sm"
+            className="absolute top-4 right-4 z-[1000] bg-white dark:bg-gray-800"
+            title="Vollbild anzeigen"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* Manual Coordinate Input */}
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Breitengrad (Latitude)</Label>
+            <Input
+              type="number"
+              step="0.000001"
+              value={manualLat}
+              onChange={(e) => setManualLat(e.target.value)}
+              placeholder="z.B. 37.7749"
+              className="font-mono"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Längengrad (Longitude)</Label>
+            <Input
+              type="number"
+              step="0.000001"
+              value={manualLon}
+              onChange={(e) => setManualLon(e.target.value)}
+              placeholder="z.B. -122.4194"
+              className="font-mono"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Höhe (Altitude) - Optional</Label>
+            <Input
+              type="number"
+              step="0.1"
+              value={manualAlt}
+              onChange={(e) => setManualAlt(e.target.value)}
+              placeholder="z.B. 120"
+              className="font-mono"
+            />
+          </div>
         </div>
 
         {/* Instructions */}
-        <div className="absolute bottom-4 left-4 right-4 z-[1000]">
-          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg text-sm">
-            <p className="font-medium mb-1">📍 Click on the map to select location</p>
-            <p className="text-xs text-muted-foreground">
-              {selectedLocation
-                ? `Selected: ${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lon.toFixed(6)}`
-                : 'Click anywhere on the map'}
-            </p>
-          </div>
+        <div className="text-xs text-muted-foreground flex items-start gap-2 bg-muted/50 p-3 rounded-lg">
+          <MapIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <ul className="space-y-1">
+            <li><strong>🎯 Position</strong> Button für GPS vom Smartphone/Browser</li>
+            <li><strong>Klicke</strong> auf die Karte, um die Position zu ändern</li>
+            <li><strong>Ziehe</strong> den Marker (MapPin), um ihn zu verschieben</li>
+            <li><strong>Gib</strong> Koordinaten manuell in die Felder ein</li>
+            <li><strong>Nutze</strong> +/- Buttons oder Mausrad für Zoom</li>
+          </ul>
         </div>
       </div>
 
-      {/* Location Info */}
-      {selectedLocation && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="location-text" className="text-sm font-medium">Location</Label>
-              <Input
-                id="location-text"
-                value={locationText}
-                onChange={(e) => setLocationText(e.target.value)}
-                placeholder="e.g., Paris, France"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="country" className="text-sm font-medium">Country</Label>
-              <Input
-                id="country"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="e.g., France"
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          {isLoading && (
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-              Reverse geocoding...
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button
-              onClick={handleSave}
-              disabled={!selectedLocation}
-              className="flex-1"
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Save Location
-            </Button>
-            <Button
-              onClick={onCancel}
-              variant="outline"
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <Button
+          onClick={handleSave}
+          className="flex-1"
+          size="lg"
+        >
+          <Check className="h-4 w-4 mr-2" />
+          GPS speichern
+        </Button>
+        <Button
+          onClick={onCancel}
+          variant="outline"
+          className="flex-1"
+          size="lg"
+        >
+          Abbrechen
+        </Button>
+        {gps && (
+          <Button
+            onClick={handleReset}
+            variant="outline"
+            size="lg"
+            title="Auf ursprüngliche GPS zurücksetzen"
+          >
+            <MapPin className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

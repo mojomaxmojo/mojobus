@@ -3,9 +3,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import App from './App.tsx';
 import './index.css';
 
-// Import Leaflet CSS for maps (global import for all map pages)
-import 'leaflet/dist/leaflet.css';
-
 // Register Service Worker
 import '@/lib/serviceWorker';
 
