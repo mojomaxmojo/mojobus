@@ -374,27 +374,31 @@ function MapPage() {
               </Button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
-                <div className="text-3xl font-bold text-primary">{stats.totalPlaces}</div>
-                <div className="text-sm text-muted-foreground mt-2">Orte</div>
+            {/* Stats Cards - Compact Single Row */}
+            <div className="flex flex-wrap items-center justify-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-primary">{stats.totalPlaces}</span>
+                <span className="text-sm text-muted-foreground">Orte</span>
               </div>
-              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
-                <div className="text-3xl font-bold text-primary">{stats.countries}</div>
-                <div className="text-sm text-muted-foreground mt-2">Länder</div>
+              <div className="w-px h-6 bg-border"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-primary">{stats.countries}</span>
+                <span className="text-sm text-muted-foreground">Länder</span>
               </div>
-              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
-                <div className="text-3xl font-bold text-primary">{stats.totalDays}</div>
-                <div className="text-sm text-muted-foreground mt-2">Tage</div>
+              <div className="w-px h-6 bg-border"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-primary">{stats.totalDays}</span>
+                <span className="text-sm text-muted-foreground">Tage</span>
               </div>
-              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
-                <div className="text-3xl font-bold text-primary">{stats.totalPhotos}</div>
-                <div className="text-sm text-muted-foreground mt-2">Fotos</div>
+              <div className="w-px h-6 bg-border"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-primary">{stats.totalPhotos}</span>
+                <span className="text-sm text-muted-foreground">Fotos</span>
               </div>
-              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
-                <div className="text-3xl font-bold text-primary">{stats.totalArticles}</div>
-                <div className="text-sm text-muted-foreground mt-2">Artikel</div>
+              <div className="w-px h-6 bg-border"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-primary">{stats.totalArticles}</span>
+                <span className="text-sm text-muted-foreground">Artikel</span>
               </div>
             </div>
 
