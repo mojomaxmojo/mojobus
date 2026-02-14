@@ -297,26 +297,19 @@ function MapPage() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-5xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
-              <span className="gradient-text">Reise-Karte</span>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight">
+              <span className="gradient-text">GPS-aktivierte Beiträge auf einer interaktiven Karte</span>
             </h1>
           </div>
         </div>
       </section>
 
       {/* Stats Section with Filter */}
-      <section className="py-12 bg-background">
+      <section className="py-8 bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
-            {/* Subtitle */}
-            <div className="text-center mb-8">
-              <p className="text-lg text-muted-foreground">
-                GPS-aktivierte Beiträge auf einer interaktiven Karte
-              </p>
-            </div>
-
             {/* Filter Tabs */}
-            <div className="flex flex-wrap justify-center gap-3 mb-8">
+            <div className="flex flex-wrap justify-center gap-3 mb-4">
               <Button
                 variant={activeFilter === 'all' ? 'default' : 'outline'}
                 size="lg"
@@ -365,7 +358,7 @@ function MapPage() {
             </div>
 
             {/* Stats Cards - Compact Single Row */}
-            <div className="flex flex-wrap items-center justify-center gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-6 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-bold text-primary">{stats.totalPlaces}</span>
                 <span className="text-sm text-muted-foreground">Orte</span>
@@ -393,8 +386,8 @@ function MapPage() {
             </div>
 
             {/* Route Toggle */}
-            <div className="flex justify-center mt-6">
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+            <div className="flex justify-center">
+              <div className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg">
                 <Switch
                   id="show-route"
                   checked={showRoute}
