@@ -5,11 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
-import { useNotes } from '@/hooks/useNotes';
-import { useNostr } from '@nostrify/react';
-import { NOSTR_CONFIG } from '@/config/nostr';
-import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
+import { useGpsContent, type MapMarker } from '@/hooks/useGpsContent';
 import { useHead } from '@unhead/react';
 import {
   BarChart3,
@@ -22,27 +18,12 @@ import {
 // Use plain Leaflet (imported globally in main.tsx)
 import L from 'leaflet';
 
-interface PlaceData {
-  id: string;
-  lat: number;
-  lng: number;
-  name: string;
-  country: string;
-  duration?: number;
-  photoCount?: number;
-  articleCount?: number;
-  date: number;
-  description?: string;
-}
-
 type FilterType = 'all' | 'articles' | 'places' | 'images' | 'notes';
 
 /**
  * Main Map Page - Hero + Stats with Filter + Full Width Map
  */
 function MapPage() {
-  const { nostr } = useNostr();
-
   // Refs
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -56,80 +37,58 @@ function MapPage() {
   const [showRoute, setShowRoute] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
-  // Fetch places
-  const { data: places, isLoading } = usePlaces();
-  const { data: notes } = useNotes();
+  // Fetch GPS content
+  const { data: markers = [], isLoading } = useGpsContent();
 
-  // Extract GPS data from places
-  const placeData = useMemo(() => {
-    const data: PlaceData[] = [];
+  // Filter markers based on active filter
+  const filteredMarkers = useMemo(() => {
+    if (activeFilter === 'all') return markers;
 
-    places?.forEach((place) => {
-      const metadata = extractArticleMetadata(place);
-      const locationTag = place.tags?.find(tag => tag[0] === 'location');
-      const publishedAtTag = place.tags?.find(tag => tag[0] === 'published_at');
+    switch (activeFilter) {
+      case 'articles':
+        return markers.filter(m => m.type === 'article');
+      case 'places':
+        return markers.filter(m => m.type === 'place');
+      case 'images':
+        return markers.filter(m => m.type === 'media');
+      case 'notes':
+        return markers.filter(m => m.type === 'note');
+      default:
+        return markers;
+    }
+  }, [markers, activeFilter]);
 
-      if (locationTag && locationTag[1]) {
-        const coords = locationTag[1].match(/lat=([0-9.-]+),lon=([0-9.-]+)/);
-
-        if (coords) {
-          data.push({
-            id: place.id,
-            lat: parseFloat(coords[1]),
-            lng: parseFloat(coords[2]),
-            name: metadata.title || locationTag[1],
-            country: locationTag[1],
-            date: publishedAtTag ? parseInt(publishedAtTag[1]) : place.created_at,
-            description: metadata.summary,
-            articleCount: 1,
-          });
-        }
-      }
-    });
-
-    return data.sort((a, b) => a.date - b.date);
-  }, [places]);
-
-  // Filter places based on active filter
-  const filteredPlaceData = useMemo(() => {
-    if (activeFilter === 'all') return placeData;
-
-    // For map, we show all places regardless of filter
-    // The filter controls what stats are shown
-    return placeData;
-  }, [placeData, activeFilter]);
+  // Always show all GPS markers on map (filter only affects stats)
+  const mapMarkers = useMemo(() => markers, [markers]);
 
   // Route points for polyline
   const routePoints = useMemo(() => {
-    return filteredPlaceData.map(place => [place.lat, place.lng] as [number, number]);
-  }, [filteredPlaceData]);
+    return mapMarkers.map(marker => [marker.lat, marker.lon] as [number, number]);
+  }, [mapMarkers]);
 
-  // Current location
+  // Current location (most recent marker)
   const currentLocation = useMemo(() => {
-    if (filteredPlaceData.length === 0) return null;
-    return filteredPlaceData[filteredPlaceData.length - 1];
-  }, [filteredPlaceData]);
+    if (mapMarkers.length === 0) return null;
+    return mapMarkers[mapMarkers.length - 1];
+  }, [mapMarkers]);
 
-  // Statistics
+  // Statistics based on filtered markers
   const stats = useMemo(() => {
     const countries = new Set<string>();
-    const totalDays = filteredPlaceData.reduce((sum, p) => sum + (p.duration || 1), 0);
-    const totalPhotos = filteredPlaceData.reduce((sum, p) => sum + (p.photoCount || 0), 0);
-    const totalArticles = filteredPlaceData.reduce((sum, p) => sum + (p.articleCount || 0), 0);
 
-    filteredPlaceData.forEach(p => {
-      if (p.country) countries.add(p.country);
+    filteredMarkers.forEach(m => {
+      if (m.country) countries.add(m.country);
     });
 
     return {
       countries: countries.size,
-      totalDays,
-      totalPhotos,
-      totalArticles,
-      totalPlaces: filteredPlaceData.length,
-      totalNotes: notes?.length || 0,
+      totalDays: 0, // Not tracked in current implementation
+      totalPhotos: filteredMarkers.filter(m => m.type === 'media').length,
+      totalArticles: filteredMarkers.filter(m => m.type === 'article').length,
+      totalPlaces: filteredMarkers.filter(m => m.type === 'place').length,
+      totalNotes: filteredMarkers.filter(m => m.type === 'note').length,
     };
-  }, [filteredPlaceData, notes]);
+  }, [filteredMarkers]);
 
   // Initialize map
   useEffect(() => {
@@ -173,10 +132,10 @@ function MapPage() {
     markersRef.current = [];
 
     // Add new markers
-    filteredPlaceData.forEach((place) => {
-      const isCurrentLocation = currentLocation?.id === place.id;
+    mapMarkers.forEach((marker) => {
+      const isCurrentLocation = currentLocation?.id === marker.id;
 
-      const marker = L.marker([place.lat, place.lng], {
+      const leafletMarker = L.marker([marker.lat, marker.lon], {
         icon: L.icon({
           iconUrl: isCurrentLocation
             ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
@@ -194,51 +153,37 @@ function MapPage() {
 
       const title = document.createElement('div');
       title.className = 'font-bold flex items-center gap-2';
-      title.innerHTML = `${place.name}${isCurrentLocation ? '<span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs ml-2">AKTUELL</span>' : ''}`;
+      title.innerHTML = `${marker.title || 'Beitrag'}${isCurrentLocation ? '<span class="bg-red-500 text-white px-2 py-0.5 rounded text-xs ml-2">AKTUELL</span>' : ''}`;
 
       const date = document.createElement('p');
       date.className = 'text-sm text-gray-600 dark:text-gray-400';
-      date.textContent = new Date(place.date * 1000).toLocaleDateString('de-DE');
+      date.textContent = new Date(marker.date * 1000).toLocaleDateString('de-DE');
 
       popupContent.appendChild(title);
       popupContent.appendChild(date);
 
-      if (place.description) {
+      if (marker.summary) {
         const desc = document.createElement('p');
         desc.className = 'text-sm';
-        desc.textContent = place.description;
+        desc.textContent = marker.summary;
         popupContent.appendChild(desc);
       }
 
       const badges = document.createElement('div');
       badges.className = 'flex gap-1 flex-wrap';
 
-      if (place.duration && place.duration > 1) {
+      if (marker.type) {
         const badge = document.createElement('span');
         badge.className = 'bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs';
-        badge.textContent = `⏱️ ${place.duration} Tage`;
-        badges.appendChild(badge);
-      }
-
-      if (place.photoCount && place.photoCount > 0) {
-        const badge = document.createElement('span');
-        badge.className = 'bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs';
-        badge.textContent = `📸 ${place.photoCount}`;
-        badges.appendChild(badge);
-      }
-
-      if (place.articleCount && place.articleCount > 0) {
-        const badge = document.createElement('span');
-        badge.className = 'bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs';
-        badge.textContent = `📝 ${place.articleCount}`;
+        badge.textContent = marker.type === 'media' ? '📸' : marker.type === 'article' ? '📝' : marker.type === 'place' ? '📍' : '💬';
         badges.appendChild(badge);
       }
 
       popupContent.appendChild(badges);
 
-      marker.bindPopup(popupContent);
-      marker.addTo(mapInstanceRef.current);
-      markersRef.current.push(marker);
+      leafletMarker.bindPopup(popupContent);
+      leafletMarker.addTo(mapInstanceRef.current);
+      markersRef.current.push(leafletMarker);
     });
 
     // Update polyline
@@ -255,12 +200,12 @@ function MapPage() {
     }
 
     // Fit bounds to show all markers
-    if (filteredPlaceData.length > 0) {
-      const bounds = L.latLngBounds(filteredPlaceData.map(p => [p.lat, p.lng] as [number, number]));
+    if (mapMarkers.length > 0) {
+      const bounds = L.latLngBounds(mapMarkers.map(m => [m.lat, m.lon] as [number, number]));
       mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
     }
 
-  }, [filteredPlaceData, currentLocation, showRoute, routePoints]);
+  }, [mapMarkers, currentLocation, showRoute, routePoints]);
 
   // SEO Meta Tags
   useHead({
@@ -316,7 +261,7 @@ function MapPage() {
               >
                 <BarChart3 className="h-6 w-6" />
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                  {stats.totalPlaces}
+                  {mapMarkers.length}
                 </Badge>
               </Button>
               <Button
