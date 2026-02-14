@@ -67,7 +67,7 @@ export function LocationPicker({
 
   // Get tile URL
   const getTileUrl = () => {
-    return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
   };
 
   // Initialize map
@@ -84,7 +84,7 @@ export function LocationPicker({
 
     // Add tiles
     tileLayerRef.current = L.tileLayer(getTileUrl(), {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19
     }).addTo(map);
 

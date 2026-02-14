@@ -14,10 +14,9 @@ import {
   MapPin,
   BarChart3,
   Map as MapIcon,
+  Globe,
   Maximize2,
   Minimize2,
-  Sun,
-  Moon,
 } from 'lucide-react';
 
 // Use plain Leaflet (imported globally in main.tsx)
@@ -55,7 +54,7 @@ function MapPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showStats, setShowStats] = useState(true);
   const [showRoute, setShowRoute] = useState(true);
-  const [mapType, setMapType] = useState<'normal' | 'satellite' | 'carto' | 'carto-dark'>('carto');
+  const [mapType, setMapType] = useState<'normal' | 'satellite'>('normal');
 
   // Fetch places
   const { data: places, isLoading } = usePlaces();
@@ -126,10 +125,6 @@ function MapPage() {
     switch (mapType) {
       case 'satellite':
         return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-      case 'carto':
-        return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-      case 'carto-dark':
-        return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
       default: // normal
         return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     }
@@ -140,9 +135,6 @@ function MapPage() {
     switch (mapType) {
       case 'satellite':
         return '&copy; Esri';
-      case 'carto':
-      case 'carto-dark':
-        return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
       default:
         return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
     }
@@ -296,9 +288,9 @@ function MapPage() {
   useHead({
     title: 'Reise-Karte - MojoBus',
     meta: [
-      { name: 'description', content: 'Interaktive Karte unserer Reiseroute durch Europa mit CartoDB Karten.' },
+      { name: 'description', content: 'Interaktive Karte unserer Reiseroute durch Europa.' },
       { property: 'og:title', content: 'Reise-Karte - MojoBus' },
-      { property: 'og:description', content: 'Folge unserer Reise auf der interaktiven Karte mit verschiedenen Kartentypen!' },
+      { property: 'og:description', content: 'Folge unserer Reise auf der interaktiven Karte!' },
       { property: 'og:type', content: 'website' }
     ],
     link: [
@@ -324,7 +316,7 @@ function MapPage() {
               <MapIcon className="h-6 w-6 text-primary" />
               <div>
                 <h1 className="text-2xl font-bold">Reise-Karte</h1>
-                <p className="text-sm text-muted-foreground">Interaktive Route mit CartoDB</p>
+                <p className="text-sm text-muted-foreground">Interaktive Route</p>
               </div>
             </div>
 
@@ -370,10 +362,8 @@ function MapPage() {
             <Label className="text-sm font-semibold mb-3 block">Kartentyp</Label>
             <div className="flex flex-col gap-2">
               {[
-                { value: 'carto' as const, label: 'Carto (Hell)', icon: Sun },
-                { value: 'carto-dark' as const, label: 'Carto (Dunkel)', icon: Moon },
                 { value: 'normal' as const, label: 'OpenStreetMap', icon: MapIcon },
-                { value: 'satellite' as const, label: 'Satellit', icon: MapIcon },
+                { value: 'satellite' as const, label: 'Satellit', icon: Globe },
               ].map((type) => (
                 <Button
                   key={type.value}
