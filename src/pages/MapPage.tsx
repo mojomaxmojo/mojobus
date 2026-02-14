@@ -288,35 +288,18 @@ function MapPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative min-h-[auto] py-12 flex items-center justify-center overflow-hidden">
+      {/* Hero Section - 100px height */}
+      <section className="relative h-[100px] flex items-center justify-center overflow-hidden">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
 
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
-          <div className="max-w-5xl mx-auto text-center space-y-6">
-            <div className="space-y-6">
-              <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-tight">
-                <span className="gradient-text">Reise-Karte</span>
-              </h1>
-              <h2 className="text-3xl md:text-5xl font-serif text-muted-foreground leading-relaxed">
-                Interaktive Route
-              </h2>
-              <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Verfolge unsere Reise durch Europa auf der interaktiven Karte
-              </p>
-            </div>
-
-            {currentLocation && (
-              <div className="pt-6 flex justify-center">
-                <Badge variant="outline" className="text-base px-6 py-2 gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Aktuell: {currentLocation.name}
-                </Badge>
-              </div>
-            )}
+          <div className="max-w-5xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
+              <span className="gradient-text">Reise-Karte</span>
+            </h1>
           </div>
         </div>
       </section>
@@ -325,6 +308,13 @@ function MapPage() {
       <section className="py-12 bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
+            {/* Subtitle */}
+            <div className="text-center mb-8">
+              <p className="text-lg text-muted-foreground">
+                GPS-aktivierte Beiträge auf einer interaktiven Karte
+              </p>
+            </div>
+
             {/* Filter Tabs */}
             <div className="flex flex-wrap justify-center gap-3 mb-8">
               <Button
