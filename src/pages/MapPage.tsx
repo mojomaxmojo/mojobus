@@ -19,6 +19,9 @@ import {
   Home,
   Image,
   MessageCircle,
+  Globe,
+  Calendar,
+  Camera,
 } from 'lucide-react';
 
 // Use plain Leaflet (imported globally in main.tsx)
@@ -357,31 +360,47 @@ function MapPage() {
               </Button>
             </div>
 
-            {/* Stats Cards - Compact Single Row */}
-            <div className="flex flex-wrap items-center justify-center gap-6 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-primary">{stats.totalPlaces}</span>
-                <span className="text-sm text-muted-foreground">Orte</span>
+            {/* Stats - Icons only with badges */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <div className="relative group cursor-pointer">
+                <div className="p-3 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                  <MapPin className="h-6 w-6 text-primary" />
+                </div>
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalPlaces}
+                </Badge>
               </div>
-              <div className="w-px h-6 bg-border"></div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-primary">{stats.countries}</span>
-                <span className="text-sm text-muted-foreground">Länder</span>
+              <div className="relative group cursor-pointer">
+                <div className="p-3 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                  <Globe className="h-6 w-6 text-primary" />
+                </div>
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.countries}
+                </Badge>
               </div>
-              <div className="w-px h-6 bg-border"></div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-primary">{stats.totalDays}</span>
-                <span className="text-sm text-muted-foreground">Tage</span>
+              <div className="relative group cursor-pointer">
+                <div className="p-3 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                  <Calendar className="h-6 w-6 text-primary" />
+                </div>
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalDays}
+                </Badge>
               </div>
-              <div className="w-px h-6 bg-border"></div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-primary">{stats.totalPhotos}</span>
-                <span className="text-sm text-muted-foreground">Fotos</span>
+              <div className="relative group cursor-pointer">
+                <div className="p-3 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                  <Camera className="h-6 w-6 text-primary" />
+                </div>
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalPhotos}
+                </Badge>
               </div>
-              <div className="w-px h-6 bg-border"></div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-primary">{stats.totalArticles}</span>
-                <span className="text-sm text-muted-foreground">Artikel</span>
+              <div className="relative group cursor-pointer">
+                <div className="p-3 bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                  <FileText className="h-6 w-6 text-primary" />
+                </div>
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalArticles}
+                </Badge>
               </div>
             </div>
 
