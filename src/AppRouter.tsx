@@ -47,7 +47,7 @@ function App() {
               <Route path="/artikel/rvlife/:category" element={<RVLife />} />
               <Route path="/plaetze" element={<Places />} />
               <Route path="/plaetze/:country" element={<Places />} />
-              <Route path="/map" element={<MapPagePlaceholder />} />
+              <Route path="/map" element={<MapPage />} />
               <Route path="/bilder" element={<Images />} />
               <Route path="/bilder/:country" element={<Images />} />
               <Route path="/bilder/natur/:category" element={<Images />} />
