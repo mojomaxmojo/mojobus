@@ -12,7 +12,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 /**
  * Map marker interface
- * Represents a GPS-enabled post on the map
+ * Represents a GPS-enabled post on map
  */
 export interface MapMarker {
   /** Event ID */
@@ -37,6 +37,8 @@ export interface MapMarker {
   location?: string;
   /** GPS source (detected from image or manual) */
   gpsSource?: 'detected' | 'manual';
+  /** Summary from content */
+  summary?: string;
   /** Full event object */
   event: NostrEvent;
 }
@@ -109,8 +111,31 @@ function isValidPublishedEvent(event: NostrEvent): boolean {
   const hasMediaTag = event.tags.some(([name, value]) => name === 't' && value === 'media');
   const hasNoteTag = event.tags.some(([name, value]) => name === 't' && ['note', 'notiz'].includes(value));
   const hasPlaceTag = event.tags.some(([name, value]) => name === 't' && ['place', 'places'].includes(value));
+  const hasArticleTag = event.tags.some(([name, value]) => name === 't' && ['artikel', 'article'].includes(value));
 
-  return hasMediaTag || hasNoteTag || hasPlaceTag;
+  return hasMediaTag || hasNoteTag || hasPlaceTag || hasArticleTag;
+}
+
+/**
+ * Extract GPS source
+ */
+function getGpsSource(event: NostrEvent): 'detected' | 'manual' | undefined {
+  return event.tags.find(([name]) => name === 'gps_source')?.[1] as 'detected' | 'manual' | undefined;
+}
+
+/**
+ * Extract summary from content (first non-empty line after title)
+ */
+function extractSummary(content: string, title: string): string | undefined {
+  const lines = content.split('\n').filter(line => line.trim().length > 0);
+  // Skip first line (title)
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line && line !== title) {
+      return line.substring(0, 200); // Limit to 200 chars
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -135,7 +160,7 @@ function parseEventToMarker(event: NostrEvent): MapMarker | null {
 
   // Extract first image from tags or content
   let image = event.tags.find(([name]) => name === 'image')?.[1];
-  
+
   // If no image tag, try to extract from content
   if (!image) {
     const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/i;
@@ -149,7 +174,10 @@ function parseEventToMarker(event: NostrEvent): MapMarker | null {
   const location = event.tags.find(([name]) => name === 'location')?.[1];
 
   // Extract GPS source
-  const gpsSource = event.tags.find(([name]) => name === 'gps_source')?.[1] as 'detected' | 'manual' | undefined;
+  const gpsSource = getGpsSource(event);
+
+  // Extract summary
+  const summary = extractSummary(event.content, title);
 
   return {
     id: event.id,
@@ -163,6 +191,7 @@ function parseEventToMarker(event: NostrEvent): MapMarker | null {
     image,
     location,
     gpsSource,
+    summary,
     event,
   };
 }
@@ -206,7 +235,7 @@ export function useGpsContent() {
     staleTime: DEFAULT_CACHE_CONFIG.lists.staleTime, // 24 hours cache
     gcTime: DEFAULT_CACHE_CONFIG.lists.gcTime, // 3 days garbage collection
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Don't refetch on component mount
+    refetchOnMount: true, // ✅ Refetch on component mount (load data immediately!)
     refetchInterval: false, // No auto-refresh
   });
 }

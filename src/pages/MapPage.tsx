@@ -77,7 +77,7 @@ function MapPage() {
     const countries = new Set<string>();
 
     filteredMarkers.forEach(m => {
-      if (m.country) countries.add(m.country);
+      if (m.location) countries.add(m.location);
     });
 
     return {
@@ -90,9 +90,11 @@ function MapPage() {
     };
   }, [filteredMarkers]);
 
-  // Initialize map
+  // Initialize map immediately
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
+
+    console.log('🗺️ Map: Initializing...');
 
     const map = L.map(mapRef.current).setView(center, zoom);
     mapInstanceRef.current = map;
@@ -105,13 +107,18 @@ function MapPage() {
 
     // Event listeners
     map.on('moveend', () => {
-      const center = map.getCenter();
-      setCenter([center.lat, center.lng]);
+      const mapCenter = map.getCenter();
+      setCenter([mapCenter.lat, mapCenter.lng]);
     });
 
     map.on('zoomend', () => {
       setZoom(map.getZoom());
     });
+
+    // Always invalidate map size on window resize
+    map.invalidateSize();
+
+    console.log('✅ Map: Initialized');
 
     return () => {
       if (mapInstanceRef.current) {
@@ -123,7 +130,12 @@ function MapPage() {
 
   // Update markers
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current) {
+      console.log('⚠️ Map: Map instance not ready');
+      return;
+    }
+
+    console.log('🗺️ Map: Updating', mapMarkers.length, 'markers');
 
     // Remove existing markers
     markersRef.current.forEach(marker => {
@@ -157,7 +169,7 @@ function MapPage() {
 
       const date = document.createElement('p');
       date.className = 'text-sm text-gray-600 dark:text-gray-400';
-      date.textContent = new Date(marker.date * 1000).toLocaleDateString('de-DE');
+      date.textContent = new Date(marker.createdAt * 1000).toLocaleDateString('de-DE');
 
       popupContent.appendChild(title);
       popupContent.appendChild(date);
@@ -172,10 +184,17 @@ function MapPage() {
       const badges = document.createElement('div');
       badges.className = 'flex gap-1 flex-wrap';
 
+      const typeIcons: Record<string, string> = {
+        'media': '📸',
+        'note': '💬',
+        'place': '📍',
+        'article': '📝',
+      };
+
       if (marker.type) {
         const badge = document.createElement('span');
         badge.className = 'bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs';
-        badge.textContent = marker.type === 'media' ? '📸' : marker.type === 'article' ? '📝' : marker.type === 'place' ? '📍' : '💬';
+        badge.textContent = typeIcons[marker.type] || '📝';
         badges.appendChild(badge);
       }
 
@@ -203,6 +222,9 @@ function MapPage() {
     if (mapMarkers.length > 0) {
       const bounds = L.latLngBounds(mapMarkers.map(m => [m.lat, m.lon] as [number, number]));
       mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+      console.log('✅ Map: Fitted bounds to', mapMarkers.length, 'markers');
+    } else {
+      console.log('ℹ️ Map: No markers to show, using default view');
     }
 
   }, [mapMarkers, currentLocation, showRoute, routePoints]);
