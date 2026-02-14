@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,76 +7,17 @@ import { cn } from '@/lib/utils';
 import type { GpsData } from '@/lib/gpsExtraction';
 import { reverseGeocode, mapCountryCode } from '@/lib/gpsExtraction';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
-// Fix for Leaflet default markers in bundled applications
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-/**
- * Props for LocationPicker Component
- */
-export interface LocationPickerProps {
-  /** Current GPS data */
+interface LocationPickerProps {
   gps?: GpsData;
-  /** Callback when GPS coordinates are saved */
   onSave: (gps: GpsData) => void;
-  /** Callback when editing is cancelled */
   onCancel: () => void;
-  /** Initial zoom level */
   initialZoom?: number;
-  /** Height of map */
   height?: string;
-  /** Callback when country is detected from GPS */
   onCountryDetected?: (country: string) => void;
-  /** Callback when location text is detected from GPS */
   onLocationDetected?: (location: string) => void;
 }
 
-/**
- * Component to handle map clicks
- */
-function MapClickHandler({ onMapClick }: { onMapClick: (e: any) => void }) {
-  const map = useMap();
-
-  return (
-    <div
-      onClick={(e) => {
-        const { lat, lng } = map.mouseEventToLatLng(e.nativeEvent);
-        onMapClick({ lat, lng });
-      }}
-      style={{ cursor: 'crosshair' }}
-      className="absolute inset-0"
-    />
-  );
-}
-
-/**
- * LocationPicker Component
- *
- * Interactive map component for picking GPS coordinates
- * Features:
- * - Drag & Drop marker to pick location
- * - Click on map to move marker
- * - Manual coordinate input
- * - Zoom controls
- * - Auto-center on GPS data
- *
- * @example
- * ```tsx
- * <LocationPicker
- *   gps={currentGps}
- *   onSave={(gps) => setGps(gps)}
- *   onCancel={() => setIsEditing(false)}
- *   initialZoom={13}
- *   height="400px"
- * />
- * ```
- */
 export function LocationPicker({
   gps,
   onSave,
@@ -88,41 +28,112 @@ export function LocationPicker({
   onLocationDetected,
 }: LocationPickerProps) {
   const [position, setPosition] = useState<[number, number]>(() => {
-    // Check if GPS data is valid
     if (gps && gps.latitude !== 0 && gps.longitude !== 0) {
       return [gps.latitude, gps.longitude];
     }
-    // Default: Portugal
-    return [39.5, -8.0];
+    return [39.5, -8.0]; // Default: Portugal
   });
+
   const [zoom, setZoom] = useState(initialZoom);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [manualLat, setManualLat] = useState(position[0].toFixed(6));
   const [manualLon, setManualLon] = useState(position[1].toFixed(6));
   const [manualAlt, setManualAlt] = useState(gps?.altitude?.toFixed(1) || '0');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const mapRef = useRef<L.Map>(null);
 
-  // Sync manual inputs with marker position
+  const mapRef = useRef<L.Map | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+
+  // Create custom marker icon
+  const createMarkerIcon = (color: string = '#f59e0b') => {
+    return L.icon({
+      iconUrl: `data:image/svg+xml;base64,${btoa(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="40" height="60">
+          <path d="M12 0C5.4 0 0 5.4 0 12c0 8.4 12 24 12 24s12-15.6 12-24c0-6.6-5.4-12-12-12z" fill="${color}" stroke="white" stroke-width="2"/>
+          <circle cx="12" cy="12" r="6" fill="white"/>
+        </svg>
+      `)}`,
+      iconSize: [40, 60],
+      iconAnchor: [20, 60],
+      popupAnchor: [0, -60],
+    });
+  };
+
+  // Initialize map
   useEffect(() => {
-    setManualLat(position[0].toFixed(6));
-    setManualLon(position[1].toFixed(6));
-  }, [position]);
+    if (!mapContainerRef.current) return;
+
+    const map = L.map(mapContainerRef.current, {
+      center: position,
+      zoom: zoom,
+      zoomControl: false,
+    });
+
+    mapRef.current = map;
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Add marker
+    const marker = L.marker(position, {
+      icon: createMarkerIcon('#f59e0b'),
+      draggable: true,
+    }).addTo(map);
+
+    markerRef.current = marker;
+
+    // Handle marker drag
+    marker.on('dragend', (e) => {
+      const { lat, lng } = e.target.getLatLng();
+      setPosition([lat, lng]);
+    });
+
+    // Handle map click
+    map.on('click', (e) => {
+      const { lat, lng } = e.latlng;
+      setPosition([lat, lng]);
+
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      }
+    });
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []); // Only run on mount
+
+  // Update marker when position changes
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setLatLng(position);
+    }
+    if (mapRef.current) {
+      mapRef.current.setView(position, zoom);
+    }
+  }, [position, zoom]);
 
   // Update map size when fullscreen toggles
   useEffect(() => {
     if (mapRef.current) {
-      // Small delay to ensure DOM has updated
       setTimeout(() => {
         mapRef.current?.invalidateSize();
       }, 100);
     }
   }, [isFullscreen]);
 
-  // Handle map click to move marker
-  const handleMapClick = ({ lat, lng }: { lat: number; lng: number }) => {
-    setPosition([lat, lng]);
-  };
+  // Sync manual inputs
+  useEffect(() => {
+    setManualLat(position[0].toFixed(6));
+    setManualLon(position[1].toFixed(6));
+  }, [position]);
 
   // Get current location from browser/smartphone
   const getCurrentLocation = () => {
@@ -137,7 +148,6 @@ export function LocationPicker({
       (position) => {
         const { latitude, longitude, altitude } = position.coords;
 
-        // Validate coordinates (should not be 0,0)
         if (latitude === 0 && longitude === 0) {
           alert('Ungültige Position erhalten. Bitte versuchen Sie es erneut.');
           setIsLoadingLocation(false);
@@ -150,23 +160,19 @@ export function LocationPicker({
         setManualLon(longitude.toFixed(6));
         setManualAlt(altitude ? altitude.toFixed(1) : '0');
 
-        // Zoom in and pan to current location
         if (mapRef.current) {
           mapRef.current.setView(newPosition, 16);
         }
 
-        // Reverse geocode to get location and country
         reverseGeocode(latitude, longitude).then(locationData => {
           if (locationData) {
             console.log('[LocationPicker] Reverse geocoding result:', locationData);
 
-            // Extract country and map to internal country code
             const internalCountry = mapCountryCode(locationData);
             if (internalCountry && onCountryDetected) {
               onCountryDetected(internalCountry);
             }
 
-            // Extract location text (city + region if available)
             const locationParts = [
               locationData.city,
               locationData.neighbourhood,
@@ -214,13 +220,11 @@ export function LocationPicker({
     const longitude = parseFloat(manualLon);
     const altitude = parseFloat(manualAlt) || undefined;
 
-    // Validate coordinates (should not be 0,0)
     if (latitude === 0 && longitude === 0) {
       alert('Bitte gib GPS-Koordinaten ein oder nutze den Position-Button (🎯).');
       return;
     }
 
-    // Validate coordinate ranges
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
       alert('Ungültige GPS-Koordinaten. Bitte prüfe deine Eingabe.');
       return;
@@ -230,7 +234,7 @@ export function LocationPicker({
       latitude,
       longitude,
       altitude,
-      precision: 'medium', // Manual entries get medium precision
+      precision: 'medium',
     });
   };
 
@@ -281,31 +285,7 @@ export function LocationPicker({
           </Button>
         )}
 
-        <MapContainer
-          center={position}
-          zoom={zoom}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-          ref={mapRef}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maxZoom={19}
-          />
-          <Marker
-            position={position}
-            draggable={true}
-            eventHandlers={{
-              dragend: (e) => {
-                const marker = e.target;
-                const { lat, lng } = marker.getLatLng();
-                setPosition([lat, lng]);
-              },
-            }}
-          />
-          <MapClickHandler onMapClick={handleMapClick} />
-        </MapContainer>
+        <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
 
         {/* Zoom Controls */}
         <div className="absolute top-4 left-4 flex flex-col gap-1 z-[1000]">
