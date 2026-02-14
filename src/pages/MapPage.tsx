@@ -306,52 +306,47 @@ function MapPage() {
       <section className="py-8 bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
-            {/* Filter Tabs */}
+            {/* Filter Tabs - Icons only */}
             <div className="flex flex-wrap justify-center gap-3 mb-4">
               <Button
                 variant={activeFilter === 'all' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('all')}
-                className="gap-2"
+                className="p-3"
               >
-                <BarChart3 className="h-5 w-5" />
-                Alle ({stats.totalPlaces})
+                <BarChart3 className="h-6 w-6" />
               </Button>
               <Button
                 variant={activeFilter === 'articles' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('articles')}
-                className="gap-2"
+                className="p-3"
               >
-                <FileText className="h-5 w-5" />
-                Artikel ({stats.totalArticles})
+                <FileText className="h-6 w-6" />
               </Button>
               <Button
                 variant={activeFilter === 'places' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('places')}
-                className="gap-2"
+                className="p-3"
               >
-                <Home className="h-5 w-5" />
-                Plätze ({stats.totalPlaces})
+                <Home className="h-6 w-6" />
               </Button>
               <Button
                 variant={activeFilter === 'images' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('images')}
-                className="gap-2"
+                className="p-3"
               >
-                <Image className="h-5 w-5" />
-                Bilder ({stats.totalPhotos})
+                <Image className="h-6 w-6" />
               </Button>
               <Button
                 variant={activeFilter === 'notes' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('notes')}
-                className="gap-2"
+                className="p-3"
               >
-                <MessageCircle className="h-5 w-5" />
-                Notes ({stats.totalNotes})
+                <MessageCircle className="h-6 w-6" />
               </Button>
             </div>
 
