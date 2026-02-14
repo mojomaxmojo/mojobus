@@ -306,8 +306,8 @@ function MapPage() {
       <section className="py-8 bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
-            {/* Filter Tabs - Icons with badges */}
-            <div className="flex flex-wrap justify-center gap-3 mb-4">
+            {/* Filter Tabs - Icons with badges and Route Toggle */}
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
               <Button
                 variant={activeFilter === 'all' ? 'default' : 'outline'}
                 size="lg"
@@ -363,17 +363,18 @@ function MapPage() {
                   {stats.totalNotes}
                 </Badge>
               </Button>
-            </div>
 
-            {/* Route Toggle */}
-            <div className="flex justify-center">
+              {/* Separator */}
+              <div className="w-px h-8 bg-border mx-2"></div>
+
+              {/* Route Toggle */}
               <div className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg">
                 <Switch
                   id="show-route"
                   checked={showRoute}
                   onCheckedChange={setShowRoute}
                 />
-                <Label htmlFor="show-route" className="text-sm font-medium cursor-pointer">
+                <Label htmlFor="show-route" className="text-sm font-medium cursor-pointer whitespace-nowrap">
                   Route anzeigen
                 </Label>
               </div>
