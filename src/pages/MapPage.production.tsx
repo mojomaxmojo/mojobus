@@ -2,10 +2,11 @@
  * Europa Reviews Map Page
  *
  * Displays all GPS-enabled posts from /veroeffentlichen on a Europe map
- * Using direct Leaflet API (no react-leaflet wrapper)
+ * Lazy-loaded to not affect initial page load
  */
 
-import { useMemo, useEffect, useState, useRef } from 'react';
+import { useMemo, useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -15,9 +16,18 @@ import { useGpsContent, type MapMarker } from '@/hooks/useGpsContent';
 import { MapMarkerPopup } from '@/components/MapMarkerPopup';
 import { getMarkerIcon } from '@/lib/markerIcons';
 import { EUROPA_BOUNDS, EUROPA_CENTER, ZOOM_SETTINGS } from '@/lib/mapConfig';
-import { MapPin, RefreshCw, Loader2, Map as MapIcon, BarChart3 } from 'lucide-react';
+import { MapPin, RefreshCw, Loader2, Map as MapIcon, BarChart3 } from '@/lib/icons';
 
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for Leaflet default markers in bundled applications
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 /**
  * Main Map Page Component
@@ -27,11 +37,6 @@ export default function MapPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'media' | 'note' | 'place' | 'article'>('all');
   const [showRoute, setShowRoute] = useState(true);
   const [showStats, setShowStats] = useState(true);
-
-  const mapRef = useRef<L.Map | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const markersRef = useRef<Map<string, L.Marker>>(new Map());
-  const routePolylineRef = useRef<L.Polyline | null>(null);
 
   // Filter markers to Europe only
   const europeMarkers = useMemo(() => {
@@ -98,143 +103,6 @@ export default function MapPage() {
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
-  }
-
-  // Initialize map
-  useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
-
-    const map = L.map(mapContainerRef.current, {
-      center: [EUROPA_CENTER.lat, EUROPA_CENTER.lng],
-      zoom: ZOOM_SETTINGS.default,
-      minZoom: ZOOM_SETTINGS.min,
-      maxZoom: ZOOM_SETTINGS.max,
-      maxBounds: [
-        [EUROPA_BOUNDS.south, EUROPA_BOUNDS.west],
-        [EUROPA_BOUNDS.north, EUROPA_BOUNDS.east],
-      ],
-      zoomControl: true,
-    });
-
-    mapRef.current = map;
-
-    // Add tile layer
-    const tileLayer = L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }
-    );
-
-    tileLayer.addTo(map);
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, []);
-
-  // Update markers when filteredMarkers or showRoute changes
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    // Clear existing markers
-    markersRef.current.forEach(marker => mapRef.current!.removeLayer(marker));
-    markersRef.current.clear();
-
-    // Clear route polyline
-    if (routePolylineRef.current) {
-      mapRef.current.removeLayer(routePolylineRef.current);
-      routePolylineRef.current = null;
-    }
-
-    // Add route polyline
-    if (showRoute && sortedMarkers.length > 1) {
-      const polyline = L.polyline(
-        sortedMarkers.map(m => [m.lat, m.lon]),
-        {
-          color: '#0891B2',
-          weight: 3,
-          opacity: 0.8,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }
-      );
-
-      polyline.addTo(mapRef.current);
-      routePolylineRef.current = polyline;
-    }
-
-    // Add markers
-    filteredMarkers.forEach((marker) => {
-      const leafletMarker = L.marker([marker.lat, marker.lon], {
-        icon: getMarkerIcon(marker.type),
-      });
-
-      // Create popup content
-      const popupContent = document.createElement('div');
-      const root = document.createElement('div');
-      popupContent.appendChild(root);
-
-      leafletMarker.bindPopup(popupContent);
-
-      // Custom popup content
-      const popup = leafletMarker.getPopup();
-      popup?.on('open', () => {
-        // Create a temporary element for MapMarkerPopup to render into
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = `
-          <div class="p-3 min-w-[250px] max-w-[300px]">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="text-xl">${getMarkerEmoji(marker.type)}</span>
-              <h3 class="font-bold text-sm line-clamp-1 flex-1">${marker.title}</h3>
-            </div>
-            ${marker.image ? `<img src="${marker.image}" alt="${marker.title}" class="w-full h-auto max-h-[150px] object-cover rounded-lg mb-2" />` : ''}
-            ${marker.location ? `<div class="mb-2 text-sm text-muted-foreground">📍 ${marker.location}</div>` : ''}
-            <div class="mb-3 text-xs text-muted-foreground">
-              <div class="flex items-center gap-1">🌐 ${marker.lat.toFixed(6)}° N</div>
-              <div class="flex items-center gap-1">🌐 ${marker.lon.toFixed(6)}° E</div>
-            </div>
-            <a href="/${getMarkerLink(marker)}" class="inline-block w-full text-center px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90">Details anzeigen</a>
-          </div>
-        `;
-        root.innerHTML = tempDiv.innerHTML;
-      });
-
-      leafletMarker.addTo(mapRef.current!);
-      markersRef.current.set(marker.id, leafletMarker);
-    });
-  }, [filteredMarkers, showRoute, sortedMarkers]);
-
-  function getMarkerEmoji(type: string): string {
-    const emojis: Record<string, string> = {
-      media: '📷',
-      note: '📝',
-      place: '📍',
-      article: '📄',
-    };
-    return emojis[type] || '📍';
-  }
-
-  function getMarkerLink(marker: MapMarker): string {
-    if (marker.kind === 1) {
-      return marker.id; // Use note ID directly
-    }
-    // For articles, use naddr (simplified)
-    return marker.id;
-  }
-
-  function getFilterLabel(filter: 'media' | 'note' | 'place' | 'article'): string {
-    const labels = {
-      media: 'Bilder',
-      note: 'Notizen',
-      place: 'Plätze',
-      article: 'Artikel'
-    };
-    return labels[filter];
   }
 
   // Handle loading state
@@ -395,7 +263,51 @@ export default function MapPage() {
 
           {/* Map */}
           <div style={{ height: '600px', width: '100%' }}>
-            <div ref={mapContainerRef} style={{ height: '100%', width: '100%', zIndex: 0 }} />
+            <MapContainer
+              center={[EUROPA_CENTER.lat, EUROPA_CENTER.lng]}
+              zoom={ZOOM_SETTINGS.default}
+              minZoom={ZOOM_SETTINGS.min}
+              maxZoom={ZOOM_SETTINGS.max}
+              maxBounds={[
+                [EUROPA_BOUNDS.south, EUROPA_BOUNDS.west],
+                [EUROPA_BOUNDS.north, EUROPA_BOUNDS.east],
+              ]}
+              style={{ height: '100%', width: '100%', zIndex: 0 }}
+              zoomControl={true}
+              scrollWheelZoom={true}
+            >
+              {/* OpenStreetMap Tile Layer */}
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maxZoom={19}
+              />
+
+              {/* Route Line */}
+              {showRoute && sortedMarkers.length > 1 && (
+                <Polyline
+                  positions={sortedMarkers.map(m => [m.lat, m.lon])}
+                  color="#0891B2"
+                  weight={3}
+                  opacity={0.8}
+                  lineCap="round"
+                  lineJoin="round"
+                />
+              )}
+
+              {/* Map Markers */}
+              {filteredMarkers.map((marker) => (
+                <Marker
+                  key={marker.id}
+                  position={[marker.lat, marker.lon]}
+                  icon={getMarkerIcon(marker.type)}
+                >
+                  <Popup>
+                    <MapMarkerPopup marker={marker} />
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
           </div>
 
           {/* Route Statistics Panel */}
@@ -442,9 +354,22 @@ export default function MapPage() {
             </div>
           )}
         </Card>
-      </div>
+    </div>
     </>
   );
+}
+
+/**
+ * Get filter label in German
+ */
+function getFilterLabel(filter: 'media' | 'note' | 'place' | 'article'): string {
+  const labels = {
+    media: 'Bilder',
+    note: 'Notizen',
+    place: 'Plätze',
+    article: 'Artikel'
+  };
+  return labels[filter];
 }
 
 /**
