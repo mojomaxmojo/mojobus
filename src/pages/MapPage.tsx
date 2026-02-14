@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
+import { useNotes } from '@/hooks/useNotes';
 import { useNostr } from '@nostrify/react';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
@@ -14,7 +15,10 @@ import {
   MapPin,
   BarChart3,
   Map as MapIcon,
-  Maximize2,
+  FileText,
+  Home,
+  Image,
+  MessageCircle,
 } from 'lucide-react';
 
 // Use plain Leaflet (imported globally in main.tsx)
@@ -33,8 +37,10 @@ interface PlaceData {
   description?: string;
 }
 
+type FilterType = 'all' | 'articles' | 'places' | 'images' | 'notes';
+
 /**
- * Main Map Page - Clean & Modern Design
+ * Main Map Page - Hero + Stats with Filter + Full Width Map
  */
 function MapPage() {
   const { nostr } = useNostr();
@@ -49,12 +55,12 @@ function MapPage() {
   // State
   const [center, setCenter] = useState<[number, number]>([39.3999, -8.2245]);
   const [zoom, setZoom] = useState(6);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showStats, setShowStats] = useState(true);
   const [showRoute, setShowRoute] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
   // Fetch places
   const { data: places, isLoading } = usePlaces();
+  const { data: notes } = useNotes();
 
   // Extract GPS data from places
   const placeData = useMemo(() => {
@@ -86,25 +92,34 @@ function MapPage() {
     return data.sort((a, b) => a.date - b.date);
   }, [places]);
 
+  // Filter places based on active filter
+  const filteredPlaceData = useMemo(() => {
+    if (activeFilter === 'all') return placeData;
+
+    // For map, we show all places regardless of filter
+    // The filter controls what stats are shown
+    return placeData;
+  }, [placeData, activeFilter]);
+
   // Route points for polyline
   const routePoints = useMemo(() => {
-    return placeData.map(place => [place.lat, place.lng] as [number, number]);
-  }, [placeData]);
+    return filteredPlaceData.map(place => [place.lat, place.lng] as [number, number]);
+  }, [filteredPlaceData]);
 
   // Current location
   const currentLocation = useMemo(() => {
-    if (placeData.length === 0) return null;
-    return placeData[placeData.length - 1];
-  }, [placeData]);
+    if (filteredPlaceData.length === 0) return null;
+    return filteredPlaceData[filteredPlaceData.length - 1];
+  }, [filteredPlaceData]);
 
   // Statistics
   const stats = useMemo(() => {
     const countries = new Set<string>();
-    const totalDays = placeData.reduce((sum, p) => sum + (p.duration || 1), 0);
-    const totalPhotos = placeData.reduce((sum, p) => sum + (p.photoCount || 0), 0);
-    const totalArticles = placeData.reduce((sum, p) => sum + (p.articleCount || 0), 0);
+    const totalDays = filteredPlaceData.reduce((sum, p) => sum + (p.duration || 1), 0);
+    const totalPhotos = filteredPlaceData.reduce((sum, p) => sum + (p.photoCount || 0), 0);
+    const totalArticles = filteredPlaceData.reduce((sum, p) => sum + (p.articleCount || 0), 0);
 
-    placeData.forEach(p => {
+    filteredPlaceData.forEach(p => {
       if (p.country) countries.add(p.country);
     });
 
@@ -113,9 +128,10 @@ function MapPage() {
       totalDays,
       totalPhotos,
       totalArticles,
-      totalPlaces: placeData.length,
+      totalPlaces: filteredPlaceData.length,
+      totalNotes: notes?.length || 0,
     };
-  }, [placeData]);
+  }, [filteredPlaceData, notes]);
 
   // Initialize map
   useEffect(() => {
@@ -159,7 +175,7 @@ function MapPage() {
     markersRef.current = [];
 
     // Add new markers
-    placeData.forEach((place) => {
+    filteredPlaceData.forEach((place) => {
       const isCurrentLocation = currentLocation?.id === place.id;
 
       const marker = L.marker([place.lat, place.lng], {
@@ -241,12 +257,12 @@ function MapPage() {
     }
 
     // Fit bounds to show all markers
-    if (placeData.length > 0 && !isFullscreen) {
-      const bounds = L.latLngBounds(placeData.map(p => [p.lat, p.lng] as [number, number]));
+    if (filteredPlaceData.length > 0) {
+      const bounds = L.latLngBounds(filteredPlaceData.map(p => [p.lat, p.lng] as [number, number]));
       mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
     }
 
-  }, [placeData, currentLocation, showRoute, routePoints, isFullscreen]);
+  }, [filteredPlaceData, currentLocation, showRoute, routePoints]);
 
   // SEO Meta Tags
   useHead({
@@ -271,161 +287,138 @@ function MapPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <MapIcon className="h-5 w-5 text-primary" />
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative min-h-[auto] py-12 flex items-center justify-center overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="max-w-5xl mx-auto text-center space-y-6">
+            <div className="space-y-6">
+              <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-tight">
+                <span className="gradient-text">Reise-Karte</span>
+              </h1>
+              <h2 className="text-3xl md:text-5xl font-serif text-muted-foreground leading-relaxed">
+                Interaktive Route
+              </h2>
+              <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                Verfolge unsere Reise durch Europa auf der interaktiven Karte
+              </p>
+            </div>
+
+            {currentLocation && (
+              <div className="pt-6 flex justify-center">
+                <Badge variant="outline" className="text-base px-6 py-2 gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Aktuell: {currentLocation.name}
+                </Badge>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Reise-Karte</h1>
-                <p className="text-sm text-muted-foreground">Interaktive Route</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section with Filter */}
+      <section className="py-12 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              <Button
+                variant={activeFilter === 'all' ? 'default' : 'outline'}
+                size="lg"
+                onClick={() => setActiveFilter('all')}
+                className="gap-2"
+              >
+                <BarChart3 className="h-5 w-5" />
+                Alle ({stats.totalPlaces})
+              </Button>
+              <Button
+                variant={activeFilter === 'articles' ? 'default' : 'outline'}
+                size="lg"
+                onClick={() => setActiveFilter('articles')}
+                className="gap-2"
+              >
+                <FileText className="h-5 w-5" />
+                Artikel ({stats.totalArticles})
+              </Button>
+              <Button
+                variant={activeFilter === 'places' ? 'default' : 'outline'}
+                size="lg"
+                onClick={() => setActiveFilter('places')}
+                className="gap-2"
+              >
+                <Home className="h-5 w-5" />
+                Plätze ({stats.totalPlaces})
+              </Button>
+              <Button
+                variant={activeFilter === 'images' ? 'default' : 'outline'}
+                size="lg"
+                onClick={() => setActiveFilter('images')}
+                className="gap-2"
+              >
+                <Image className="h-5 w-5" />
+                Bilder ({stats.totalPhotos})
+              </Button>
+              <Button
+                variant={activeFilter === 'notes' ? 'default' : 'outline'}
+                size="lg"
+                onClick={() => setActiveFilter('notes')}
+                className="gap-2"
+              >
+                <MessageCircle className="h-5 w-5" />
+                Notes ({stats.totalNotes})
+              </Button>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
+                <div className="text-3xl font-bold text-primary">{stats.totalPlaces}</div>
+                <div className="text-sm text-muted-foreground mt-2">Orte</div>
+              </div>
+              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
+                <div className="text-3xl font-bold text-primary">{stats.countries}</div>
+                <div className="text-sm text-muted-foreground mt-2">Länder</div>
+              </div>
+              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
+                <div className="text-3xl font-bold text-primary">{stats.totalDays}</div>
+                <div className="text-sm text-muted-foreground mt-2">Tage</div>
+              </div>
+              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
+                <div className="text-3xl font-bold text-primary">{stats.totalPhotos}</div>
+                <div className="text-sm text-muted-foreground mt-2">Fotos</div>
+              </div>
+              <div className="text-center p-6 bg-primary/5 rounded-xl border border-primary/10">
+                <div className="text-3xl font-bold text-primary">{stats.totalArticles}</div>
+                <div className="text-sm text-muted-foreground mt-2">Artikel</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              {currentLocation && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {currentLocation.name}
-                  </Badge>
-                  <Badge variant="outline">
-                    {stats.totalPlaces} Orte
-                  </Badge>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowStats(!showStats)}
-                  title="Statistiken"
-                >
-                  <BarChart3 className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  title={isFullscreen ? "Verkleinern" : "Vollbild"}
-                >
-                  <Maximize2 className="h-5 w-5" />
-                </Button>
+            {/* Route Toggle */}
+            <div className="flex justify-center mt-6">
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <Switch
+                  id="show-route"
+                  checked={showRoute}
+                  onCheckedChange={setShowRoute}
+                />
+                <Label htmlFor="show-route" className="text-sm font-medium cursor-pointer">
+                  Route anzeigen
+                </Label>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Main Content */}
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Map */}
-        <div className={`flex-1 relative ${isFullscreen ? 'fixed inset-0 z-50 top-[80px]' : ''}`}>
-          <div ref={mapRef} className="h-full w-full" />
-        </div>
-
-        {/* Stats Panel */}
-        {showStats && (
-          <div className="w-80 border-l bg-background/95 backdrop-blur overflow-y-auto">
-            <div className="p-6 space-y-6">
-              {/* Statistics */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  Statistiken
-                </h3>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 text-center hover:bg-primary/10 transition-colors">
-                    <div className="text-2xl font-bold text-primary">{stats.totalPlaces}</div>
-                    <div className="text-xs text-muted-foreground mt-1">Orte</div>
-                  </div>
-                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 text-center hover:bg-primary/10 transition-colors">
-                    <div className="text-2xl font-bold text-primary">{stats.countries}</div>
-                    <div className="text-xs text-muted-foreground mt-1">Länder</div>
-                  </div>
-                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 text-center hover:bg-primary/10 transition-colors">
-                    <div className="text-2xl font-bold text-primary">{stats.totalDays}</div>
-                    <div className="text-xs text-muted-foreground mt-1">Tage</div>
-                  </div>
-                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 text-center hover:bg-primary/10 transition-colors">
-                    <div className="text-2xl font-bold text-primary">{stats.totalPhotos}</div>
-                    <div className="text-xs text-muted-foreground mt-1">Fotos</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Controls */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Einstellungen</h3>
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <Label htmlFor="show-route" className="text-sm font-medium">Route anzeigen</Label>
-                  <Switch id="show-route" checked={showRoute} onCheckedChange={setShowRoute} />
-                </div>
-              </div>
-
-              {/* Current Location */}
-              {currentLocation && (
-                <Card className="p-4 border-l-4 border-l-primary">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      Aktuelle Position
-                    </h4>
-                    <div>
-                      <div className="font-semibold">{currentLocation.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(currentLocation.date * 1000).toLocaleDateString('de-DE')}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {currentLocation.photoCount && (
-                        <Badge variant="secondary">📸 {currentLocation.photoCount}</Badge>
-                      )}
-                      {currentLocation.articleCount && (
-                        <Badge variant="secondary">📝 {currentLocation.articleCount}</Badge>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              {/* Recent Places */}
-              <div>
-                <h4 className="font-semibold mb-3">📍 Letzte Orte</h4>
-                <div className="space-y-2">
-                  {placeData.slice(-5).reverse().map(place => (
-                    <div
-                      key={place.id}
-                      className="p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors border border-transparent hover:border-border"
-                      onClick={() => {
-                        if (mapInstanceRef.current) {
-                          mapInstanceRef.current.setView([place.lat, place.lng], 12);
-                        }
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">{place.name}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(place.date * 1000).toLocaleDateString('de-DE')}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Full Width Map */}
+      <section className="h-[60vh] w-full">
+        <div ref={mapRef} className="h-full w-full" />
+      </section>
     </div>
   );
 }
