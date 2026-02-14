@@ -306,47 +306,62 @@ function MapPage() {
       <section className="py-8 bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
-            {/* Filter Tabs - Icons only */}
+            {/* Filter Tabs - Icons with badges */}
             <div className="flex flex-wrap justify-center gap-3 mb-4">
               <Button
                 variant={activeFilter === 'all' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('all')}
-                className="p-3"
+                className="relative p-3"
               >
                 <BarChart3 className="h-6 w-6" />
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalPlaces}
+                </Badge>
               </Button>
               <Button
                 variant={activeFilter === 'articles' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('articles')}
-                className="p-3"
+                className="relative p-3"
               >
                 <FileText className="h-6 w-6" />
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalArticles}
+                </Badge>
               </Button>
               <Button
                 variant={activeFilter === 'places' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('places')}
-                className="p-3"
+                className="relative p-3"
               >
                 <Home className="h-6 w-6" />
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalPlaces}
+                </Badge>
               </Button>
               <Button
                 variant={activeFilter === 'images' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('images')}
-                className="p-3"
+                className="relative p-3"
               >
                 <Image className="h-6 w-6" />
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalPhotos}
+                </Badge>
               </Button>
               <Button
                 variant={activeFilter === 'notes' ? 'default' : 'outline'}
                 size="lg"
                 onClick={() => setActiveFilter('notes')}
-                className="p-3"
+                className="relative p-3"
               >
                 <MessageCircle className="h-6 w-6" />
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {stats.totalNotes}
+                </Badge>
               </Button>
             </div>
 
