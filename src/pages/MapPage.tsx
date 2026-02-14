@@ -135,6 +135,7 @@ function MapPage() {
     }
   };
 
+  // Get attribution based on map type
   const getAttribution = () => {
     switch (mapType) {
       case 'satellite':
@@ -183,8 +184,12 @@ function MapPage() {
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
 
-    tileLayerRef.current.setUrl(getTileUrl());
-    tileLayerRef.current.setAttribution(getAttribution());
+    // Remove old tile layer and add new one
+    mapInstanceRef.current.removeLayer(tileLayerRef.current);
+    tileLayerRef.current = L.tileLayer(getTileUrl(), {
+      attribution: getAttribution(),
+      maxZoom: 19
+    }).addTo(mapInstanceRef.current);
   }, [mapType]);
 
   // Update markers
