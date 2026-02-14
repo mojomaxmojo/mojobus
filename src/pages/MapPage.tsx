@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -90,7 +89,7 @@ function MapPage() {
     };
   }, [filteredMarkers]);
 
-  // Initialize map immediately
+  // Initialize map
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
@@ -227,6 +226,8 @@ function MapPage() {
       console.log('ℹ️ Map: No markers to show, using default view');
     }
 
+    console.log('✅ Map: Markers updated');
+
   }, [mapMarkers, currentLocation, showRoute, routePoints]);
 
   // SEO Meta Tags
@@ -242,14 +243,6 @@ function MapPage() {
       { rel: 'canonical', href: 'https://mojobus.co/map' }
     ]
   });
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Lade Karte..." />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen">
@@ -352,7 +345,13 @@ function MapPage() {
 
       {/* Full Width Map */}
       <section className="h-[60vh] w-full">
-        <div ref={mapRef} className="h-full w-full" />
+        {isLoading ? (
+          <div className="h-full w-full flex items-center justify-center bg-muted/20">
+            <LoadingSpinner size="lg" text="Lade GPS-Daten..." />
+          </div>
+        ) : (
+          <div ref={mapRef} className="h-full w-full" />
+        )}
       </section>
     </div>
   );
