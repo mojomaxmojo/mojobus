@@ -477,6 +477,15 @@
   @apply max-w-full h-auto rounded-lg my-4;
 }
 
+/* Videos */
+.milkdown-editor video {
+  @apply max-w-full h-auto rounded-lg my-4;
+}
+
+.milkdown-editor iframe {
+  @apply max-w-full rounded-lg my-4;
+}
+
 /* Tables (GFM) */
 .milkdown-editor table {
   @apply w-full border-collapse my-4;

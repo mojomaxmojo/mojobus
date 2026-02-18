@@ -20,6 +20,7 @@ import {
   ListOrdered,
   Link as LinkIcon,
   Image as ImageIcon,
+  Video as VideoIcon,
   Undo,
   Redo,
   Code,
@@ -263,6 +264,56 @@ function MilkdownEditorInner({
     }
   };
 
+  const addVideo = () => {
+    // Ask for video type
+    const type = window.prompt('Video-Typ:\n1 = YouTube\n2 = Vimeo\n3 = Direkter Video-Link (MP4/WebM)\n\nZahl eingeben:', '1');
+    
+    if (!type) return;
+
+    if (type === '1') {
+      // YouTube
+      const url = window.prompt('YouTube URL eingeben:', 'https://www.youtube.com/watch?v=');
+      if (!url) return;
+      
+      // Extract video ID from various YouTube URL formats
+      let videoId = '';
+      if (url.includes('youtu.be/')) {
+        videoId = url.split('youtu.be/')[1]?.split('?')[0];
+      } else if (url.includes('v=')) {
+        videoId = url.split('v=')[1]?.split('&')[0];
+      } else if (url.includes('embed/')) {
+        videoId = url.split('embed/')[1]?.split('?')[0];
+      }
+      
+      if (videoId) {
+        const embedHtml = `\n<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>\n`;
+        onChange(content + embedHtml);
+      }
+    } else if (type === '2') {
+      // Vimeo
+      const url = window.prompt('Vimeo URL eingeben:', 'https://vimeo.com/');
+      if (!url) return;
+      
+      // Extract video ID
+      const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+      
+      if (videoId) {
+        const embedHtml = `\n<iframe width="560" height="315" src="https://player.vimeo.com/video/${videoId}" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>\n`;
+        onChange(content + embedHtml);
+      }
+    } else if (type === '3') {
+      // Direct video URL (MP4, WebM)
+      const url = window.prompt('Video URL eingeben (MP4, WebM, MOV):');
+      if (!url) return;
+      
+      const embedHtml = `\n<video controls style="max-width: 100%; height: auto; border-radius: 0.5rem;">
+  <source src="${url}" type="video/mp4">
+  Dein Browser unterstützt dieses Video nicht.
+</video>\n`;
+      onChange(content + embedHtml);
+    }
+  };
+
   // Calculate character and word count
   const characterCount = content.length;
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
@@ -384,7 +435,7 @@ function MilkdownEditorInner({
 
           <Separator orientation="vertical" className="h-6" />
 
-          {/* Links and Images */}
+          {/* Links, Images and Videos */}
           <div className="flex items-center gap-1 px-2">
             <Button
               variant="ghost"
@@ -418,6 +469,15 @@ function MilkdownEditorInner({
                 onChange={handleImageUpload}
               />
             </label>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={addVideo}
+              title="Video einfügen (YouTube, Vimeo, MP4)"
+            >
+              <VideoIcon className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
