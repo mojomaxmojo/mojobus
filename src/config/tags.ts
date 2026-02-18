@@ -10,8 +10,6 @@ export const TAG_GROUPS: TagGroup[] = [
       { id: 'italien', label: 'Italien', icon: '🇮🇹' },
       { id: 'frankreich', label: 'Frankreich', icon: '🇫🇷' },
       { id: 'deutschland', label: 'Deutschland', icon: '🇩🇪' },
-      { id: 'kroatien', label: 'Kroatien', icon: '🇭🇷' },
-      { id: 'griechenland', label: 'Griechenland', icon: '🇬🇷' },
       { id: 'belgien', label: 'Belgien', icon: '🇧🇪' },
       { id: 'luxemburg', label: 'Luxemburg', icon: '🇱🇺' }
     ]
@@ -90,7 +88,6 @@ export const TAG_GROUPS: TagGroup[] = [
       { id: 'camping', label: 'Camping', icon: '🏕️' },
       { id: 'wildcamping', label: 'Wildcamping', icon: '🌲' },
       { id: 'stellplatz', label: 'Stellplatz', icon: '🅿️' },
-      { id: '4x4', label: '4x4', icon: '🚙' },
       { id: 'digital-nomade', label: 'Digital Nomade', icon: '💻' },
       { id: 'vanlife', label: 'Vanlife', icon: '🚐' },
       { id: 'wohnmobil', label: 'Wohnmobil', icon: '🏠' },
@@ -119,7 +116,6 @@ export const TAG_GROUPS: TagGroup[] = [
       { id: 'fitness', label: 'Fitness', icon: '💪' },
       { id: 'freedom', label: 'Freedom', icon: '🕊️' },
       { id: 'community', label: 'Community', icon: '👥' },
-      { id: 'bitcoin', label: 'Bitcoin', icon: '₿' },
       { id: 'minimalismus', label: 'Minimalismus', icon: '🧘' },
       { id: 'sunset', label: 'Sunset', icon: '🌅' },
       { id: 'beachlife', label: 'Beachlife', icon: '🏖️' }

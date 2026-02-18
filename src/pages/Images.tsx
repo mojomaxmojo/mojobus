@@ -7,7 +7,7 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { Button } from '@/components/ui/button';
 import { SocialBar } from '@/components/SocialBar';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
-import { ExternalLink, Calendar, User, ArrowRight, Eye, Camera, Trash2 } from 'lucide-react';
+import { Calendar, User, Eye, Camera, Trash2 } from 'lucide-react';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { useAuthor } from '@/hooks/useAuthor';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
@@ -378,20 +378,6 @@ function Images() {
                 </Link>
               )}
             </div>
-            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-semibold">{filteredEvents.length}</span>
-                <span>Bilder{currentCountry ? ` aus ${currentCountry.name}` : ''}</span>
-              </span>
-              {currentCountry && (
-                <Link
-                  to="/bilder"
-                  className="text-ocean-600 hover:text-ocean-700 underline"
-                >
-                  Alle Bilder anzeigen
-                </Link>
-              )}
-            </div>
           </div>
 
           {filteredEvents.length > 0 ? (
@@ -572,29 +558,7 @@ function ImageCardComponent({
                    {metadata?.name || 'MojoBus Team'}
                  </span>
                </div>
-               <div className="flex items-center gap-1">
-                 {/* Quick view hint - nur für Bilder */}
-                 {!isVideoUrl(images[0]) && (
-                   <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
-                     <span>Klick</span>
-                     <ArrowRight className="h-3 w-3" />
-                   </div>
-                 )}
-                 {images.map((img, index) => (
-                   <Button
-                     key={index}
-                     variant="ghost"
-                     size="sm"
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       window.open(img, '_blank');
-                     }}
-                     className="h-8 w-8 p-0"
-                   >
-                     <ExternalLink className="h-4 w-4" />
-                   </Button>
-                 ))}
-               </div>
+
              </div>
            </CardContent>
          </div>
