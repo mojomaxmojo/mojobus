@@ -1,705 +1,407 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+/**
+ * Europa Reviews Map Page
+ *
+ * Displays all GPS-enabled posts from /veroeffentlichen on a Europe map
+ * Uses VanillaMap for Shakespeare-Build compatibility
+ */
+
+import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePlaces, extractArticleMetadata } from '@/hooks/useLongformArticles';
-import { useNotes } from '@/hooks/useNotes';
-import { useQuery } from '@tanstack/react-query';
-import { useNostr } from '@nostrify/react';
-import { NOSTR_CONFIG } from '@/config/nostr';
-import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
-import { nip19 } from 'nostr-tools';
-import { useHead } from '@unhead/react';
-import {
-  MapPin,
-  Camera,
-  Play,
-  Pause,
-  RefreshCw,
-  Layers,
-  BarChart3,
-  Map as MapIcon,
-  Globe,
-  Maximize2,
-  Minimize2,
-  Sun,
-} from 'lucide-react';
+import { VanillaMap, TILE_LAYERS, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
+import { useGpsContent, type MapMarker as GpsMapMarker } from '@/hooks/useGpsContent';
+import { MapPin, RefreshCw, Loader2, Map as MapIcon, BarChart3 } from 'lucide-react';
 
-// Lazy load Leaflet components to reduce initial bundle size
-// This ensures Leaflet is only loaded when the map page is actually visited
-const MapContainer = lazy(() => import('react-leaflet').then(mod => ({ default: mod.MapContainer })));
-const TileLayer = lazy(() => import('react-leaflet').then(mod => ({ default: mod.TileLayer })));
-const Marker = lazy(() => import('react-leaflet').then(mod => ({ default: mod.Marker })));
-const Popup = lazy(() => import('react-leaflet').then(mod => ({ default: mod.Popup })));
-const Polyline = lazy(() => import('react-leaflet').then(mod => ({ default: mod.Polyline })));
-const CircleMarker = lazy(() => import('react-leaflet').then(mod => ({ default: mod.CircleMarker })));
-const useMap = lazy(() => import('react-leaflet').then(mod => ({ default: mod.useMap })));
-
-// Dynamic import for Leaflet CSS
-const loadLeafletCSS = () => {
-  if (!document.getElementById('leaflet-css')) {
-    const link = document.createElement('link');
-    link.id = 'leaflet-css';
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-  }
+// World bounds - alle Marker anzeigen
+const WORLD_CENTER = {
+  lat: 20,
+  lng: 0,
 };
 
-// Dynamic import for Leaflet icons fix
-const fixLeafletIcons = async () => {
-  const L = await import('leaflet');
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  });
+const ZOOM_SETTINGS = {
+  default: 2,
+  min: 2,
+  max: 18,
 };
 
-// Fix für Leaflet Marker Icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-interface PlaceData {
-  id: string;
-  lat: number;
-  lng: number;
-  name: string;
-  country: string;
-  duration?: number; // in days
-  photoCount?: number;
-  articleCount?: number;
-  date: number;
-  description?: string;
-}
-
-interface RoutePoint {
-  lat: number;
-  lng: number;
-  placeId: string;
-  timestamp: number;
-  name: string;
-}
-
-const MapController = ({
-  center,
-  zoom,
-  routePoints,
-  currentPlaybackIndex,
-  onCenterChange,
-  onZoomChange
-}: {
-  center: [number, number];
-  zoom: number;
-  routePoints: RoutePoint[];
-  currentPlaybackIndex: number | null;
-  onCenterChange: (center: [number, number]) => void;
-  onZoomChange: (zoom: number) => void;
-}) => {
-  const map = (useMap as any)();
-
-  useEffect(() => {
-    map.setView(center, zoom);
-  }, [map, center, zoom]);
-
-  useEffect(() => {
-    map.on('moveend', () => {
-      const center = map.getCenter();
-      onCenterChange([center.lat, center.lng]);
-    });
-    map.on('zoomend', () => {
-      onZoomChange(map.getZoom());
-    });
-  }, [map, onCenterChange, onZoomChange]);
-
-  // Smooth zoom to current playback point
-  useEffect(() => {
-    if (currentPlaybackIndex !== null && currentPlaybackIndex >= 0 && currentPlaybackIndex < routePoints.length) {
-      const point = routePoints[currentPlaybackIndex];
-      map.flyTo([point.lat, point.lng], 10, {
-        duration: 1
-      });
-    }
-  }, [map, currentPlaybackIndex, routePoints]);
-
-  return null;
-};
-
-function MapPage() {
-  const { nostr } = useNostr();
-
-  // Load Leaflet CSS and fix icons only when component mounts
-  useEffect(() => {
-    loadLeafletCSS();
-    fixLeafletIcons();
-  }, []);
-
-  // State
-  const [center, setCenter] = useState<[number, number]>([39.3999, -8.2245]); // Portugal center
-  const [zoom, setZoom] = useState(6);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showLayers, setShowLayers] = useState(true);
+/**
+ * Main Map Page Component
+ */
+export default function MapPage() {
+  const { data: markers = [], isLoading, error, refetch } = useGpsContent();
+  const [activeFilter, setActiveFilter] = useState<'all' | 'media' | 'note' | 'place' | 'article'>('all');
+  const [showRoute, setShowRoute] = useState(true);
   const [showStats, setShowStats] = useState(true);
 
-  // Layers
-  const [showRoute, setShowRoute] = useState(true);
-  const [showDuration, setShowDuration] = useState(true);
-  const [showPhotoSpots, setShowPhotoSpots] = useState(true);
-  const [showCamping, setShowCamping] = useState(false);
-  const [showWater, setShowWater] = useState(false);
+  // Alle Marker (nicht mehr auf Europa beschränkt)
+  const allMarkers = markers;
 
-  // Map type
-  const [mapType, setMapType] = useState<'normal' | 'satellite' | 'terrain'>('normal');
+  // Filter markers by type
+  const filteredMarkers = useMemo(() => {
+    if (activeFilter === 'all') return allMarkers;
+    return allMarkers.filter(m => m.type === activeFilter);
+  }, [allMarkers, activeFilter]);
 
-  // Playback
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [currentPlaybackIndex, setCurrentPlaybackIndex] = useState<number | null>(null);
+  // Sort markers chronologically for route
+  const sortedMarkers = useMemo(() => {
+    return [...filteredMarkers].sort((a, b) => a.createdAt - b.createdAt);
+  }, [filteredMarkers]);
+  
+  // Count markers by type (alle Marker)
+  const counts = useMemo(() => ({
+    media: allMarkers.filter(m => m.type === 'media').length,
+    note: allMarkers.filter(m => m.type === 'note').length,
+    place: allMarkers.filter(m => m.type === 'place').length,
+    article: allMarkers.filter(m => m.type === 'article').length,
+    total: allMarkers.length,
+  }), [allMarkers]);
 
-  // Fetch places
-  const { data: places, isLoading: placesLoading } = usePlaces();
-
-  // Fetch media events for GPS data
-  const { data: mediaEvents = [] } = useQuery({
-    queryKey: ['map-media', NOSTR_CONFIG.authorPubkeys],
-    queryFn: async ({ signal }) => {
-      const events = await nostr.query([
-        {
-          kinds: [1, 30023],
-          authors: NOSTR_CONFIG.authorPubkeys,
-          '#t': ['medien', 'media', 'bilder', 'images'],
-          limit: 100,
-        }
-      ], { signal: AbortSignal.any([signal!, AbortSignal.timeout(DEFAULT_PERFORMANCE_CONFIG.relay.queryTimeout)]) });
-
-      return events;
-    },
-    staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
-  });
-
-  // Extract GPS data from places and media
-  const placeData = useMemo(() => {
-    const data: PlaceData[] = [];
-
-    places?.forEach((place) => {
-      const metadata = extractArticleMetadata(place);
-      const locationTag = place.tags?.find(tag => tag[0] === 'location');
-      const publishedAtTag = place.tags?.find(tag => tag[0] === 'published_at');
-
-      if (locationTag && locationTag[1]) {
-        // Try to extract coordinates from location tag
-        const coords = locationTag[1].match(/lat=([0-9.-]+),lon=([0-9.-]+)/);
-
-        if (coords) {
-          data.push({
-            id: place.id,
-            lat: parseFloat(coords[1]),
-            lng: parseFloat(coords[2]),
-            name: metadata.title || locationTag[1],
-            country: locationTag[1],
-            date: publishedAtTag ? parseInt(publishedAtTag[1]) : place.created_at,
-            description: metadata.summary,
-            articleCount: 1,
-          });
-        }
-      }
+  // Calculate bounds to fit all markers
+  const mapBounds = useMemo(() => {
+    if (allMarkers.length === 0) return null;
+    
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+    
+    allMarkers.forEach(m => {
+      if (m.lat < minLat) minLat = m.lat;
+      if (m.lat > maxLat) maxLat = m.lat;
+      if (m.lon < minLng) minLng = m.lon;
+      if (m.lon > maxLng) maxLng = m.lon;
     });
+    
+    return { minLat, maxLat, minLng, maxLng };
+  }, [allMarkers]);
 
-    return data.sort((a, b) => a.date - b.date);
-  }, [places]);
+  // Calculate center from bounds
+  const mapCenter: [number, number] = useMemo(() => {
+    if (!mapBounds) return [WORLD_CENTER.lat, WORLD_CENTER.lng];
+    return [
+      (mapBounds.minLat + mapBounds.maxLat) / 2,
+      (mapBounds.minLng + mapBounds.maxLng) / 2
+    ];
+  }, [mapBounds]);
 
-  // Extract route points chronologically
-  const routePoints = useMemo(() => {
-    return placeData.map(place => ({
-      lat: place.lat,
-      lng: place.lng,
-      placeId: place.id,
-      timestamp: place.date,
-      name: place.name,
+  // Convert GPS markers to VanillaMap markers
+  const mapMarkers: MapMarker[] = useMemo(() => {
+    return sortedMarkers.map((m) => ({
+      id: m.id,
+      lat: m.lat,
+      lng: m.lon,
+      title: m.title,
+      description: m.location || undefined,
+      isCurrent: false,
+      type: m.type, // Content-Typ für Pin-Farbe
     }));
-  }, [placeData]);
+  }, [sortedMarkers]);
 
-  // Current location (most recent place)
-  const currentLocation = useMemo(() => {
-    if (placeData.length === 0) return null;
-    return placeData[placeData.length - 1];
-  }, [placeData]);
+  // Create route polyline
+  const routePolylines: MapPolyline[] = useMemo(() => {
+    if (!showRoute || sortedMarkers.length < 2) return [];
+    
+    return [{
+      points: sortedMarkers.map(m => [m.lat, m.lon] as [number, number]),
+      color: '#0891B2',
+      weight: 3,
+      opacity: 0.8,
+    }];
+  }, [sortedMarkers, showRoute]);
 
-  // Statistics
-  const stats = useMemo(() => {
-    const countries = new Set<string>();
-    const totalDays = placeData.reduce((sum, p) => sum + (p.duration || 1), 0);
-    const totalPhotos = placeData.reduce((sum, p) => sum + (p.photoCount || 0), 0);
-    const totalArticles = placeData.reduce((sum, p) => sum + (p.articleCount || 0), 0);
-
-    placeData.forEach(p => {
-      if (p.country) countries.add(p.country);
-    });
-
-    return {
-      countries: countries.size,
-      totalDays,
-      totalPhotos,
-      totalArticles,
-      totalPlaces: placeData.length,
-    };
-  }, [placeData]);
-
-  // Playback logic
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const interval = setInterval(() => {
-      setCurrentPlaybackIndex(prev => {
-        if (prev === null) return 0;
-        if (prev >= routePoints.length - 1) return 0;
-        return prev + 1;
-      });
-    }, 1000 / playbackSpeed);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, playbackSpeed, routePoints.length]);
-
-  // Custom map tile layer based on type
-  const getTileUrl = () => {
-    switch (mapType) {
-      case 'satellite':
-        return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-      case 'terrain':
-        return 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
-      default:
-        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  // Calculate route statistics
+  const routeStats = useMemo(() => {
+    if (sortedMarkers.length < 2) {
+      return { totalDistance: 0, firstDate: null, lastDate: null, daysBetween: 0 };
     }
-  };
 
-  const getAttribution = () => {
-    switch (mapType) {
-      case 'satellite':
-        return '&copy; Esri';
-      case 'terrain':
-        return '&copy; OpenTopoMap';
-      default:
-        return '&copy; OpenStreetMap';
+    // Calculate total distance using Haversine formula
+    let totalDistance = 0;
+    for (let i = 1; i < sortedMarkers.length; i++) {
+      const from = sortedMarkers[i - 1];
+      const to = sortedMarkers[i];
+      const distance = calculateDistance(from.lat, from.lon, to.lat, to.lon);
+      totalDistance += distance;
     }
-  };
 
-  // SEO Meta Tags
-  useHead({
-    title: 'Reise-Karte - MojoBus',
-    meta: [
-      { name: 'description', content: 'Interaktive Karte unserer Reiseroute durch Europa. Live-Tracking, Routen-Animation und Reisestatistiken.' },
-      { property: 'og:title', content: 'Reise-Karte - MojoBus' },
-      { property: 'og:description', content: 'Folge unserer Reise auf der interaktiven Karte!' },
-      { property: 'og:type', content: 'website' }
-    ],
-    link: [
-      { rel: 'canonical', href: 'https://mojobus.co/map' }
-    ]
-  });
+    const firstDate = new Date(sortedMarkers[0].createdAt * 1000);
+    const lastDate = new Date(sortedMarkers[sortedMarkers.length - 1].createdAt * 1000);
+    const daysBetween = Math.floor((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
 
-  if (placesLoading) {
+    return { totalDistance, firstDate, lastDate, daysBetween };
+  }, [sortedMarkers]);
+
+  // Calculate distance between two coordinates (Haversine formula)
+  function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // Handle loading state
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Lade Karte..." />
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MapPin className="w-5 h-5" />
+            <span className="text-lg font-semibold">🗺️ Europa Map</span>
+          </div>
+          <Skeleton className="w-full h-[600px] rounded-lg" />
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="border-dashed p-8">
+          <div className="max-w-sm mx-auto text-center space-y-6">
+            <MapPin className="w-12 h-12 text-gray-400 mx-auto" />
+            <div>
+              <h3 className="text-lg font-medium mb-2">Karte konnte nicht geladen werden</h3>
+              <p className="text-muted-foreground">Bitte versuche es erneut.</p>
+            </div>
+            <Button onClick={() => refetch()}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Neu laden
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle empty state
+  if (allMarkers.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="border-dashed p-8">
+          <div className="max-w-sm mx-auto text-center space-y-6">
+            <MapPin className="w-12 h-12 text-gray-400 mx-auto" />
+            <div>
+              <h3 className="text-lg font-medium mb-2">Noch keine Beiträge mit GPS</h3>
+              <p className="text-muted-foreground">
+                Veröffentliche Beiträge mit Standortinformationen, um sie auf der Karte anzuzeigen.
+              </p>
+            </div>
+          </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <MapIcon className="h-6 w-6 text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold">Reise-Karte</h1>
-                <p className="text-sm text-muted-foreground">Interaktive Route & Statistiken</p>
+    <>
+      {/* Page Header */}
+      <section className="relative py-3 overflow-hidden">
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-bold">
+              <span className="gradient-text">🗺️ Reise-Karte</span>
+            </h1>
+          </div>
+        </div>
+      </section>
+
+      <div className="container mx-auto px-4 pb-4">
+        {/* Map Card mit integrierter Filter-Bar */}
+        <Card className="overflow-hidden relative z-0">
+          {/* Filter Bar */}
+          <div className="px-3 py-2 bg-muted/50 border-b flex items-center justify-between relative z-0">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm text-muted-foreground">
+                  <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
+                </span>
+              </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <FilterButton
+                    emoji="📷"
+                    count={counts.media}
+                    isActive={activeFilter === 'media'}
+                    onClick={() => setActiveFilter(activeFilter === 'media' ? 'all' : 'media')}
+                  />
+                  <FilterButton
+                    emoji="📝"
+                    count={counts.note}
+                    isActive={activeFilter === 'note'}
+                    onClick={() => setActiveFilter(activeFilter === 'note' ? 'all' : 'note')}
+                  />
+                  <FilterButton
+                    emoji="📍"
+                    count={counts.place}
+                    isActive={activeFilter === 'place'}
+                    onClick={() => setActiveFilter(activeFilter === 'place' ? 'all' : 'place')}
+                  />
+                  <FilterButton
+                    emoji="📄"
+                    count={counts.article}
+                    isActive={activeFilter === 'article'}
+                    onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
+                  />
+                </div>
               </div>
             </div>
-
-            {currentLocation && (
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {currentLocation.name}
-                </Badge>
-                <Badge variant="secondary" className="gap-1">
-                  <Camera className="h-3 w-3" />
-                  {stats.totalPlaces} Orte
-                </Badge>
-              </div>
-            )}
-
             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mr-2">
+                <Label htmlFor="show-route" className="text-sm cursor-pointer">Route</Label>
+                <Switch id="show-route" checked={showRoute} onCheckedChange={setShowRoute} />
+              </div>
               <Button
                 variant="outline"
-                size="icon"
+                size="sm"
                 onClick={() => setShowStats(!showStats)}
-                title="Statistiken"
               >
-                <BarChart3 className="h-5 w-5" />
+                <BarChart3 className="w-4 h-4" />
               </Button>
               <Button
                 variant="outline"
-                size="icon"
-                onClick={() => setShowLayers(!showLayers)}
-                title="Layer"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isLoading}
               >
-                <Layers className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                title={isFullscreen ? "Verkleinern" : "Vollbild"}
-              >
-                {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                Neu laden
               </Button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Layer Control */}
-        {showLayers && (
-          <div className="w-72 border-r bg-background overflow-y-auto">
-            <div className="p-4 space-y-6">
-              {/* Map Type */}
-              <div>
-                <Label className="text-sm font-semibold mb-3 block">Kartentyp</Label>
-                <div className="flex flex-col gap-2">
-                  {[
-                    { value: 'normal', label: 'Normal', icon: MapIcon },
-                    { value: 'satellite', label: 'Satellit', icon: Globe },
-                    { value: 'terrain', label: 'Gelände', icon: Sun },
-                  ].map((type) => (
-                    <Button
-                      key={type.value}
-                      variant={mapType === type.value ? 'default' : 'outline'}
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => setMapType(type.value as any)}
-                    >
-                      <type.icon className="h-4 w-4 mr-2" />
-                      {type.label}
-                    </Button>
-                  ))}
-                </div>
+          {/* Map */}
+          <div style={{ height: '600px', width: '100%', position: 'relative', zIndex: 0 }}>
+            <VanillaMap
+              center={mapCenter}
+              zoom={ZOOM_SETTINGS.default}
+              minZoom={ZOOM_SETTINGS.min}
+              maxZoom={ZOOM_SETTINGS.max}
+              markers={mapMarkers}
+              polylines={routePolylines}
+              height="600px"
+              className="rounded-none"
+              tileUrl={TILE_LAYERS.default.url}
+              tileAttribution={TILE_LAYERS.default.attribution}
+              fitToMarkers={true}
+            />
+          </div>
+
+          {/* Pin-Farben Legende */}
+          <div className="p-3 border-t bg-muted/30">
+            <div className="flex items-center justify-center gap-6 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }}></div>
+                <span>📷 Bilder</span>
               </div>
-
-              {/* Layers */}
-              <div>
-                <Label className="text-sm font-semibold mb-3 block">Layer anzeigen</Label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-route" className="text-sm">Route</Label>
-                    <Switch id="show-route" checked={showRoute} onCheckedChange={setShowRoute} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-duration" className="text-sm">Aufenthaltsdauer</Label>
-                    <Switch id="show-duration" checked={showDuration} onCheckedChange={setShowDuration} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-photos" className="text-sm">Foto-Hotspots</Label>
-                    <Switch id="show-photos" checked={showPhotoSpots} onCheckedChange={setShowPhotoSpots} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-camping" className="text-sm">Campingplätze</Label>
-                    <Switch id="show-camping" checked={showCamping} onCheckedChange={setShowCamping} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="show-water" className="text-sm">Wasser-Points</Label>
-                    <Switch id="show-water" checked={showWater} onCheckedChange={setShowWater} />
-                  </div>
-                </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }}></div>
+                <span>📝 Notizen</span>
               </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }}></div>
+                <span>📍 Orte</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8b5cf6' }}></div>
+                <span>📄 Artikel</span>
+              </div>
+            </div>
+          </div>
 
-              {/* Animation Controls */}
-              <div>
-                <Label className="text-sm font-semibold mb-3 block">Route-Replay</Label>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={isPlaying ? "default" : "outline"}
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      className="flex-1"
-                    >
-                      {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                      {isPlaying ? 'Pause' : 'Play'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setCurrentPlaybackIndex(null)}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
+          {/* Route Statistics Panel */}
+          {showStats && routeStats.totalDistance > 0 && (
+            <div className="p-4 border-t bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapIcon className="w-5 h-5 text-primary" />
+                  <span className="font-semibold">Route-Statistiken</span>
+                </div>
+                <div className="flex gap-6 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Gesamtdistanz:</span>
+                    <span className="ml-2 font-semibold text-primary">
+                      {routeStats.totalDistance.toFixed(0)} km
+                    </span>
                   </div>
-
-                  <div className="flex gap-2">
-                    {[1, 2, 4, 8].map(speed => (
-                      <Button
-                        key={speed}
-                        size="sm"
-                        variant={playbackSpeed === speed ? 'default' : 'outline'}
-                        onClick={() => setPlaybackSpeed(speed)}
-                        className="flex-1"
-                      >
-                        {speed}x
-                      </Button>
-                    ))}
-                  </div>
-
-                  {currentPlaybackIndex !== null && (
-                    <div className="text-center text-sm text-muted-foreground">
-                      {currentPlaybackIndex + 1} / {routePoints.length}
+                  {routeStats.daysBetween > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Zeitraum:</span>
+                      <span className="ml-2 font-semibold">
+                        {routeStats.daysBetween} Tage
+                      </span>
+                    </div>
+                  )}
+                  {routeStats.firstDate && (
+                    <div>
+                      <span className="text-muted-foreground">Erster Ort:</span>
+                      <span className="ml-2">
+                        {routeStats.firstDate.toLocaleDateString('de-DE')}
+                      </span>
+                    </div>
+                  )}
+                  {routeStats.lastDate && (
+                    <div>
+                      <span className="text-muted-foreground">Letzter Ort:</span>
+                      <span className="ml-2">
+                        {routeStats.lastDate.toLocaleDateString('de-DE')}
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Map */}
-        <div className="flex-1 relative">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-full">
-              <LoadingSpinner text="Lade Karte..." />
-            </div>
-          }>
-            <MapContainer
-              center={center}
-              zoom={zoom}
-              style={{ height: '100%', width: '100%' }}
-            >
-              <Suspense fallback={null}>
-                <MapController
-                  center={center}
-                  zoom={zoom}
-                  routePoints={routePoints}
-                  currentPlaybackIndex={currentPlaybackIndex}
-                  onCenterChange={setCenter}
-                  onZoomChange={setZoom}
-                />
-
-                <TileLayer
-                  url={getTileUrl()}
-                  attribution={getAttribution()}
-                />
-
-                {/* Route Line */}
-                {showRoute && routePoints.length > 1 && (
-                  <Polyline
-                    positions={routePoints.map(p => [p.lat, p.lng])}
-                    color="#0891B2"
-                    weight={3}
-                    opacity={0.8}
-                    lineCap="round"
-                    lineJoin="round"
-                  />
-                )}
-
-                {/* Place Markers with Duration Circles */}
-                {placeData.map((place, index) => {
-                  const isCurrentLocation = currentLocation?.id === place.id;
-                  const isPlaybackPoint = currentPlaybackIndex === index;
-
-                  return (
-                    <React.Fragment key={place.id}>
-                      {/* Duration Circle */}
-                      {showDuration && (place.duration || 1) > 1 && (
-                        <CircleMarker
-                          center={[place.lat, place.lng]}
-                          radius={Math.min((place.duration || 1) * 2, 50)}
-                          pathOptions={{
-                            color: isCurrentLocation ? '#ef4444' : '#0891B2',
-                            fillColor: isCurrentLocation ? '#ef4444' : '#0891B2',
-                            fillOpacity: 0.2,
-                            weight: 1,
-                          }}
-                        />
-                      )}
-
-                      {/* Photo Spot Marker */}
-                      {showPhotoSpots && (place.photoCount || 0) > 0 && (
-                        <CircleMarker
-                          center={[place.lat, place.lng]}
-                          radius={8 + Math.min(place.photoCount!, 20)}
-                          pathOptions={{
-                            color: '#f59e0b',
-                            fillColor: '#f59e0b',
-                            fillOpacity: 0.4,
-                            weight: 1,
-                          }}
-                        >
-                          <Popup>
-                            <div className="space-y-2">
-                              <h3 className="font-semibold">{place.name}</h3>
-                              {place.description && <p className="text-sm">{place.description}</p>}
-                              <div className="flex gap-2 text-sm">
-                                <Badge variant="secondary">📸 {place.photoCount}</Badge>
-                                <Badge variant="secondary">📝 {place.articleCount || 1}</Badge>
-                              </div>
-                            </div>
-                          </Popup>
-                        </CircleMarker>
-                      )}
-
-                      {/* Main Marker */}
-                      <Marker
-                        position={[place.lat, place.lng]}
-                        icon={(window as any).L?.icon({
-                          iconUrl: isCurrentLocation || isPlaybackPoint
-                            ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
-                            : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-                          iconSize: [25, 41],
-                          iconAnchor: [12, 41],
-                          popupAnchor: [1, -34],
-                          shadowSize: [41, 41]
-                        })}
-                      >
-                        <Popup>
-                          <div className="space-y-2 min-w-[200px]">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold">{place.name}</h3>
-                              {isCurrentLocation && (
-                                <Badge variant="destructive" className="gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  AKTUELL
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(place.date * 1000).toLocaleDateString('de-DE')}
-                            </p>
-                            {place.description && (
-                              <p className="text-sm">{place.description}</p>
-                            )}
-                            <div className="flex gap-2">
-                              {(place.duration || 1) > 1 && (
-                                <Badge variant="secondary">
-                                  ⏱️ {place.duration} Tage
-                                </Badge>
-                              )}
-                              {(place.photoCount || 0) > 0 && (
-                                <Badge variant="secondary">
-                                  📸 {place.photoCount}
-                                </Badge>
-                              )}
-                              {(place.articleCount || 0) > 0 && (
-                                <Badge variant="secondary">
-                                  📝 {place.articleCount}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    </React.Fragment>
-                  );
-                })}
-              </Suspense>
-            </MapContainer>
-          </Suspense>
-        </div>
-
-        {/* Stats Panel */}
-        {showStats && (
-          <div className="w-80 border-l bg-background overflow-y-auto">
-            <div className="p-4 space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">📊 Statistiken</h3>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalPlaces}</div>
-                    <div className="text-xs text-muted-foreground">Orte</div>
-                  </div>
-                  <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.countries}</div>
-                    <div className="text-xs text-muted-foreground">Länder</div>
-                  </div>
-                  <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalDays}</div>
-                    <div className="text-xs text-muted-foreground">Gesamttage</div>
-                  </div>
-                  <div className="bg-primary/10 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalPhotos}</div>
-                    <div className="text-xs text-muted-foreground">Fotos</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Current Location Card */}
-              {currentLocation && (
-                <Card className="p-4">
-                  <div className="space-y-3">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      Aktuelle Position
-                    </h4>
-                    <div>
-                      <div className="font-semibold">{currentLocation.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(currentLocation.date * 1000).toLocaleDateString('de-DE')}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {currentLocation.photoCount && (
-                        <Badge variant="secondary">📸 {currentLocation.photoCount}</Badge>
-                      )}
-                      {currentLocation.articleCount && (
-                        <Badge variant="secondary">📝 {currentLocation.articleCount}</Badge>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              {/* Recent Places */}
-              <div>
-                <h4 className="font-semibold mb-3">📍 Letzte Orte</h4>
-                <div className="space-y-2">
-                  {placeData.slice(-5).reverse().map(place => (
-                    <div
-                      key={place.id}
-                      className="p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
-                      onClick={() => setCenter([place.lat, place.lng])}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">{place.name}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(place.date * 1000).toLocaleDateString('de-DE')}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </Card>
       </div>
-    </div>
+    </>
   );
 }
 
-export default MapPage;
+/**
+ * Get filter label in German
+ */
+function getFilterLabel(filter: 'media' | 'note' | 'place' | 'article'): string {
+  const labels = {
+    media: 'Bilder',
+    note: 'Notizen',
+    place: 'Plätze',
+    article: 'Artikel'
+  };
+  return labels[filter];
+}
+
+/**
+ * Filter Button Component
+ */
+function FilterButton({ emoji, count, isActive, onClick }: { emoji: string; count: number; isActive: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+        isActive
+          ? 'bg-primary text-primary-foreground font-medium'
+          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+      }`}
+    >
+      <span>{emoji}</span>
+      <span>{count}</span>
+    </button>
+  );
+}
