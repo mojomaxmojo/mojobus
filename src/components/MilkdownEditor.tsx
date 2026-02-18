@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, Component, ReactNode } from 'react';
+import React, { useEffect, useRef, useState, useCallback, Component, ReactNode } from 'react';
 import { Editor, rootCtx, defaultValueCtx, editorViewCtx } from '@milkdown/core';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
 import { commonmark, toggleStrongCommand, toggleEmphasisCommand, wrapInBlockquoteCommand, insertHrCommand, turnIntoTextCommand, wrapInHeadingCommand, toggleInlineCodeCommand, wrapInBulletListCommand, wrapInOrderedListCommand } from '@milkdown/preset-commonmark';
@@ -38,21 +38,25 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
+  error: Error | null;
 }
 
 class EditorErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
   }
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback;
+      // Pass error to fallback
+      return React.cloneElement(this.props.fallback as React.ReactElement, {
+        error: this.state.error
+      });
     }
     return this.props.children;
   }
@@ -88,18 +92,14 @@ function MilkdownEditorInner({
   }, [onImageUpload]);
 
   const { get, loading } = useEditor((root) => {
-    console.log('[MilkdownEditor] Starting editor initialization...');
     try {
       const editor = Editor.make()
         .config((ctx) => {
-          console.log('[MilkdownEditor] Configuring context...');
           ctx.set(rootCtx, root);
           ctx.set(defaultValueCtx, initialValueRef.current || '');
-          console.log('[MilkdownEditor] Set default value:', initialValueRef.current?.substring(0, 50));
 
           // ✅ Markdown direkt - keine Konvertierung!
           ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-            console.log('[MilkdownEditor] Markdown updated:', markdown?.substring(0, 50));
             lastExternalValue.current = markdown;
             onChange(markdown || '');
           });
@@ -163,13 +163,12 @@ function MilkdownEditorInner({
         .use(listener)
         .use(upload);
 
-      console.log('[MilkdownEditor] Editor created successfully');
       setEditorReady(true);
       return editor;
     } catch (error) {
-      console.error('[MilkdownEditor] FAILED to create editor:', error);
       setEditorReady(false);
-      return null;
+      // Re-throw the error so the error boundary can catch it
+      throw error;
     }
   }, []);
 
@@ -473,15 +472,27 @@ function MilkdownEditorInner({
 }
 
 // Fallback Textarea Component
-function FallbackEditor({ content, onChange, placeholder, minHeight }: MilkdownEditorProps) {
-  console.log('[FallbackEditor] Rendering fallback editor');
+interface FallbackEditorProps extends MilkdownEditorProps {
+  error?: Error | null;
+}
+
+function FallbackEditor({ content, onChange, placeholder, minHeight, error }: FallbackEditorProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
-      <div className="border-b bg-gray-50 dark:bg-gray-900 p-2">
-        <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+      <div className="border-b bg-red-50 dark:bg-red-900/20 p-2">
+        <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 mb-2">
           <AlertCircle className="h-4 w-4" />
-          <span>Markdown-Editor (Fallback) - Editor konnte nicht geladen werden</span>
+          <span className="font-semibold">Markdown-Editor (Fallback)</span>
         </div>
+        {error && (
+          <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs font-mono text-red-700 dark:text-red-300 overflow-auto max-h-32">
+            <div className="font-bold mb-1">Error:</div>
+            <div>{error.message}</div>
+            {error.stack && (
+              <div className="mt-1 opacity-70">{error.stack.split('\n').slice(0, 3).join('\n')}</div>
+            )}
+          </div>
+        )}
       </div>
       <Textarea
         value={content}
@@ -495,7 +506,6 @@ function FallbackEditor({ content, onChange, placeholder, minHeight }: MilkdownE
 }
 
 export function MilkdownEditor(props: MilkdownEditorProps) {
-  console.log('[MilkdownEditor] Component rendering');
   return (
     <EditorErrorBoundary fallback={<FallbackEditor {...props} />}>
       <MilkdownEditorInner {...props} />
