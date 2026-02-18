@@ -131,13 +131,8 @@ restore_map_for_production() {
     mkdir -p "$PROJECT_DIR/.deployment-backup"
     cp "$PROJECT_DIR/src/AppRouter.tsx" "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
     
-    # Map-Datei wiederherstellen
-    if [ -f "$PROJECT_DIR/src/pages/MapPage.production.tsx" ]; then
-        mv "$PROJECT_DIR/src/pages/MapPage.production.tsx" "$PROJECT_DIR/src/pages/MapPage.tsx" 2>&1 | tee -a "$LOG_FILE"
-        success_msg "MapPage.tsx wiederhergestellt"
-    else
-        warn_msg "MapPage.production.tsx nicht gefunden"
-    fi
+    # MapPage.tsx wird jetzt direkt verwendet (keine .production.tsx mehr nötig)
+    # Die neue MapPage.tsx mit VanillaMap funktioniert für Production
     
     # AppRouter.tsx aktualisieren
     info_msg "Aktualisiere AppRouter.tsx..."
@@ -150,11 +145,7 @@ restore_map_for_production() {
 restore_dev_config() {
     info_msg "Stelle Development-Konfiguration wieder her..."
     
-    # Map-Datei zurück zu .production.tsx
-    if [ -f "$PROJECT_DIR/src/pages/MapPage.tsx" ]; then
-        mv "$PROJECT_DIR/src/pages/MapPage.tsx" "$PROJECT_DIR/src/pages/MapPage.production.tsx" 2>&1 | tee -a "$LOG_FILE"
-        success_msg "MapPage.tsx → MapPage.production.tsx"
-    fi
+    # MapPage.tsx bleibt wie sie ist (keine .production.tsx mehr)
     
     # AppRouter.tsx wiederherstellen
     if [ -f "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" ]; then
