@@ -182,8 +182,9 @@ export function VanillaMap({
   const leafletMapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const polylinesLayerRef = useRef<L.LayerGroup | null>(null);
-  const hasFitToMarkersRef = useRef(false); // Track ob bereits zu Markern gezoomt wurde
+  const hasFitToMarkersRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load Leaflet
@@ -257,6 +258,9 @@ export function VanillaMap({
       }
 
       setTimeout(() => map.invalidateSize(), 100);
+      
+      // Map ist jetzt bereit
+      setMapReady(true);
 
     } catch (err) {
       console.error('Error initializing map:', err);
@@ -282,7 +286,12 @@ export function VanillaMap({
 
   // Update markers
   useEffect(() => {
-    if (!leafletMapRef.current || !markersLayerRef.current || !window.L) return;
+    if (!mapReady || !leafletMapRef.current || !markersLayerRef.current || !window.L) {
+      console.log('🗺️ VanillaMap - marker update skipped, mapReady:', mapReady);
+      return;
+    }
+    
+    console.log('🗺️ VanillaMap - updating markers:', markers.length);
 
     const L = window.L;
     const layer = markersLayerRef.current;
@@ -309,11 +318,13 @@ export function VanillaMap({
 
       layer.addLayer(marker);
     });
-  }, [markers]);
+    
+    console.log('🗺️ VanillaMap - markers added to layer:', markers.length);
+  }, [mapReady, markers]);
 
   // Update polylines
   useEffect(() => {
-    if (!leafletMapRef.current || !polylinesLayerRef.current || !window.L) return;
+    if (!mapReady || !leafletMapRef.current || !polylinesLayerRef.current || !window.L) return;
 
     const L = window.L;
     const layer = polylinesLayerRef.current;
@@ -329,7 +340,7 @@ export function VanillaMap({
       });
       layer.addLayer(polyline);
     });
-  }, [polylines]);
+  }, [mapReady, polylines]);
 
   // Handle resize
   useEffect(() => {
@@ -342,7 +353,7 @@ export function VanillaMap({
 
   // Auto-zoom zu allen Markern beim ersten Laden (nur einmal)
   useEffect(() => {
-    if (!leafletMapRef.current || !fitToMarkers || hasFitToMarkersRef.current) return;
+    if (!mapReady || !leafletMapRef.current || !fitToMarkers || hasFitToMarkersRef.current) return;
     if (markers.length === 0) return;
     
     hasFitToMarkersRef.current = true;
@@ -359,7 +370,7 @@ export function VanillaMap({
         ], { padding: [30, 30], maxZoom: 14 });
       }, 300);
     }
-  }, [markers, fitToMarkers]);
+  }, [mapReady, markers, fitToMarkers]);
 
   if (error) {
     return (
