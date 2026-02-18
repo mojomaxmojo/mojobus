@@ -22,6 +22,7 @@ export interface MapMarker {
   title: string;
   description?: string;
   isCurrent?: boolean;
+  type?: 'media' | 'note' | 'place' | 'article'; // Content-Typ für Farbe
   onClick?: () => void;
 }
 
@@ -69,14 +70,34 @@ const calculateMarkersBounds = (markers: MapMarker[]) => {
   return { minLat, maxLat, minLng, maxLng };
 };
 
-// Create marker icon
-const createMarkerIcon = (isCurrent: boolean = false): L.Icon | null => {
+// Marker colors by content type
+const MARKER_COLORS: Record<string, string> = {
+  media: '#22c55e',    // Grün für Bilder/Media
+  note: '#f59e0b',     // Orange für Notes
+  place: '#3b82f6',    // Blau für Places
+  article: '#8b5cf6',  // Lila für Articles
+  default: '#6b7280',  // Grau als Fallback
+};
+
+// Create marker icon with type-based color
+const createMarkerIcon = (isCurrent: boolean = false, type?: string): L.Icon | null => {
   if (!window.L) return null;
   
+  // Farbe basierend auf Typ wählen
+  const color = type ? (MARKER_COLORS[type] || MARKER_COLORS.default) : MARKER_COLORS.default;
+  
+  // SVG Marker mit Farbe erstellen
+  const svgIcon = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="25" height="41">
+      <path fill="${color}" d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+      <circle cx="12" cy="8" r="3" fill="white" opacity="0.9"/>
+    </svg>
+  `;
+  
+  const encodedSvg = btoa(svgIcon);
+  
   return window.L.icon({
-    iconUrl: isCurrent
-      ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
-      : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+    iconUrl: `data:image/svg+xml;base64,${encodedSvg}`,
     iconSize: [25, 41],
     iconAnchor: [12, 41],
     popupAnchor: [1, -34],
@@ -293,7 +314,7 @@ export function VanillaMap({
     layer.clearLayers();
 
     markers.forEach((m) => {
-      const icon = createMarkerIcon(m.isCurrent);
+      const icon = createMarkerIcon(m.isCurrent, m.type);
       const marker = L.marker([m.lat, m.lng], {
         icon: icon || new L.Icon.Default(),
       });

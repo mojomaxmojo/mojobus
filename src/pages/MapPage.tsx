@@ -93,6 +93,7 @@ export default function MapPage() {
       title: m.title,
       description: m.location || undefined,
       isCurrent: false,
+      type: m.type, // Content-Typ für Pin-Farbe
     }));
   }, [sortedMarkers]);
 
@@ -304,6 +305,28 @@ export default function MapPage() {
               tileAttribution={TILE_LAYERS.default.attribution}
               fitToMarkers={true}
             />
+          </div>
+
+          {/* Pin-Farben Legende */}
+          <div className="p-3 border-t bg-muted/30">
+            <div className="flex items-center justify-center gap-6 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }}></div>
+                <span>📷 Bilder</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }}></div>
+                <span>📝 Notizen</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }}></div>
+                <span>📍 Orte</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8b5cf6' }}></div>
+                <span>📄 Artikel</span>
+              </div>
+            </div>
           </div>
 
           {/* Route Statistics Panel */}
