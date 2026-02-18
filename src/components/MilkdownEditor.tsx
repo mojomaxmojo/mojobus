@@ -268,7 +268,7 @@ function MilkdownEditorInner({
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="milkdown-editor border rounded-lg overflow-hidden">
       {/* Toolbar */}
       <div className="border-b bg-gray-50 dark:bg-gray-900 p-2 sticky top-0 z-10">
         <div className="flex flex-wrap items-center gap-1">
