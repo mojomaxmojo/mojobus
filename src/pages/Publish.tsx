@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Route } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,7 @@ import MAIN_MENU from '@/config/menu';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { MilkdownEditor } from '@/components/MilkdownEditor';
+import { TripPublishForm } from '@/components/TripPublishForm';
 import { Progress } from '@/components/ui/progress';
 import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
 
@@ -3744,10 +3745,14 @@ export function Publish() {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="media" className="gap-2">
               <Upload className="h-4 w-4" />
               Medien
+            </TabsTrigger>
+            <TabsTrigger value="trip" className="gap-2">
+              <Route className="h-4 w-4" />
+              Trips
             </TabsTrigger>
             <TabsTrigger value="article" className="gap-2">
               <FileText className="h-4 w-4" />
@@ -3765,6 +3770,10 @@ export function Publish() {
 
           <TabsContent value="media">
             <MediaUploadForm editEvent={editType === 'media' ? editEvent : undefined} />
+          </TabsContent>
+
+          <TabsContent value="trip">
+            <TripPublishForm />
           </TabsContent>
 
           <TabsContent value="article">
