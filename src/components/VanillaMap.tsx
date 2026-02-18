@@ -1,22 +1,17 @@
 /**
- * VanillaMap - Eine CDN-basierte Leaflet-Komponente für Shakespeare-Build-Kompatibilität
+ * VanillaMap - Eine robuste Leaflet-Komponente für Shakespeare-Build-Kompatibilität
  * 
- * Diese Komponente nutzt Leaflet über CDN (window.L) statt react-leaflet zu importieren.
- * Das ist notwendig, weil das Shakespeare-Build-System (esbuild-wasm + esm.sh) Probleme
- * mit react-leaflet/@react-leaflet/core hat.
- * 
- * Verwendung:
- * 1. Leaflet CSS/JS muss in index.html über CDN geladen werden
- * 2. Diese Komponente wartet auf window.L und initialisiert dann die Karte
+ * Lädt Leaflet dynamisch bei Bedarf - keine Änderungen an index.html nötig.
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { createRoot } from 'react-dom/client';
 
 // Type declarations for global Leaflet
 declare global {
   interface Window {
     L: typeof import('leaflet');
+    __leafletLoading?: boolean;
+    __leafletLoaded?: boolean;
   }
 }
 
@@ -49,18 +44,16 @@ export interface VanillaMapProps {
   onZoomChange?: (zoom: number) => void;
   tileUrl?: string;
   tileAttribution?: string;
+  minZoom?: number;
+  maxZoom?: number;
 }
 
-// Default tile layer (OpenStreetMap)
+// Tile layers
 const DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const DEFAULT_TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-// Satellite tile layer
-const SATELLITE_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-const SATELLITE_TILE_ATTRIBUTION = '&copy; Esri';
-
-// Custom marker icons
-const createMarkerIcon = (isCurrent: boolean = false) => {
+// Create marker icon
+const createMarkerIcon = (isCurrent: boolean = false): L.Icon | null => {
   if (!window.L) return null;
   
   return window.L.icon({
@@ -72,6 +65,83 @@ const createMarkerIcon = (isCurrent: boolean = false) => {
     popupAnchor: [1, -34],
     shadowSize: [41, 41],
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  });
+};
+
+// Load Leaflet CSS and JS dynamically
+const loadLeaflet = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    // Already loaded
+    if (window.L && window.__leafletLoaded) {
+      resolve();
+      return;
+    }
+
+    // Already loading - wait for it
+    if (window.__leafletLoading) {
+      const checkInterval = setInterval(() => {
+        if (window.L && window.__leafletLoaded) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 50);
+      return;
+    }
+
+    window.__leafletLoading = true;
+
+    // Load CSS first
+    const cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    
+    // Load JS
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.async = true;
+
+    let cssLoaded = false;
+    let jsLoaded = false;
+
+    const checkComplete = () => {
+      if (cssLoaded && jsLoaded && window.L) {
+        window.__leafletLoaded = true;
+        window.__leafletLoading = false;
+        resolve();
+      }
+    };
+
+    cssLink.onload = () => {
+      cssLoaded = true;
+      checkComplete();
+    };
+    
+    cssLink.onerror = () => {
+      cssLoaded = true; // Continue anyway
+      checkComplete();
+    };
+
+    script.onload = () => {
+      jsLoaded = true;
+      checkComplete();
+    };
+
+    script.onerror = () => {
+      window.__leafletLoading = false;
+      reject(new Error('Failed to load Leaflet JS'));
+    };
+
+    // Add to document
+    document.head.appendChild(cssLink);
+    document.head.appendChild(script);
+
+    // Timeout after 15 seconds
+    setTimeout(() => {
+      if (!window.L) {
+        window.__leafletLoading = false;
+        reject(new Error('Leaflet loading timeout'));
+      }
+    }, 15000);
   });
 };
 
@@ -87,45 +157,37 @@ export function VanillaMap({
   onZoomChange,
   tileUrl = DEFAULT_TILE_URL,
   tileAttribution = DEFAULT_TILE_ATTRIBUTION,
+  minZoom = 2,
+  maxZoom = 18,
 }: VanillaMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const polylinesLayerRef = useRef<L.LayerGroup | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if Leaflet is loaded
+  // Load Leaflet
   useEffect(() => {
-    const checkLeaflet = () => {
-      if (window.L) {
-        setIsLoaded(true);
-        setError(null);
-        return true;
-      }
-      return false;
+    let mounted = true;
+
+    loadLeaflet()
+      .then(() => {
+        if (mounted) {
+          setIsLoaded(true);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load Leaflet:', err);
+        if (mounted) {
+          setError('Karte konnte nicht geladen werden. Bitte Internetverbindung prüfen und Seite neu laden.');
+        }
+      });
+
+    return () => {
+      mounted = false;
     };
-
-    if (!checkLeaflet()) {
-      // Wait for Leaflet to load (it's loaded via CDN in index.html)
-      const interval = setInterval(() => {
-        if (checkLeaflet()) {
-          clearInterval(interval);
-        }
-      }, 100);
-
-      // Timeout after 10 seconds
-      const timeout = setTimeout(() => {
-        clearInterval(interval);
-        if (!window.L) {
-          setError('Leaflet konnte nicht geladen werden. Bitte Seite neu laden.');
-        }
-      }, 10000);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
-    }
   }, []);
 
   // Initialize map
@@ -135,26 +197,27 @@ export function VanillaMap({
     try {
       const L = window.L;
 
-      // Create map
       const map = L.map(mapRef.current, {
         center: center,
         zoom: zoom,
         zoomControl: true,
         scrollWheelZoom: true,
+        minZoom: minZoom,
+        maxZoom: maxZoom,
       });
 
-      // Add tile layer
       L.tileLayer(tileUrl, {
         attribution: tileAttribution,
-        maxZoom: 19,
+        maxZoom: maxZoom,
       }).addTo(map);
 
-      // Create markers layer group
       const markersLayer = L.layerGroup().addTo(map);
+      const polylinesLayer = L.layerGroup().addTo(map);
+      
       markersLayerRef.current = markersLayer;
+      polylinesLayerRef.current = polylinesLayer;
       leafletMapRef.current = map;
 
-      // Event handlers
       if (onMapClick) {
         map.on('click', (e: L.LeafletMouseEvent) => {
           onMapClick(e.latlng.lat, e.latlng.lng);
@@ -174,10 +237,7 @@ export function VanillaMap({
         });
       }
 
-      // Fix map size after container is visible
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 100);
+      setTimeout(() => map.invalidateSize(), 100);
 
     } catch (err) {
       console.error('Error initializing map:', err);
@@ -188,6 +248,8 @@ export function VanillaMap({
       if (leafletMapRef.current) {
         leafletMapRef.current.remove();
         leafletMapRef.current = null;
+        markersLayerRef.current = null;
+        polylinesLayerRef.current = null;
       }
     };
   }, [isLoaded]);
@@ -195,7 +257,7 @@ export function VanillaMap({
   // Update center/zoom
   useEffect(() => {
     if (leafletMapRef.current) {
-      leafletMapRef.current.setView(center, zoom);
+      leafletMapRef.current.setView(center, zoom, { animate: true });
     }
   }, [center, zoom]);
 
@@ -204,81 +266,76 @@ export function VanillaMap({
     if (!leafletMapRef.current || !markersLayerRef.current || !window.L) return;
 
     const L = window.L;
-    const markersLayer = markersLayerRef.current;
+    const layer = markersLayerRef.current;
+    layer.clearLayers();
 
-    // Clear existing markers
-    markersLayer.clearLayers();
-
-    // Add new markers
-    markers.forEach((markerData) => {
-      const icon = createMarkerIcon(markerData.isCurrent);
-      
-      const marker = L.marker([markerData.lat, markerData.lng], {
+    markers.forEach((m) => {
+      const icon = createMarkerIcon(m.isCurrent);
+      const marker = L.marker([m.lat, m.lng], {
         icon: icon || new L.Icon.Default(),
       });
 
-      if (markerData.title || markerData.description) {
-        const popupContent = `
-          <div style="min-width: 150px;">
-            ${markerData.title ? `<h3 style="font-weight: bold; margin-bottom: 4px;">${markerData.title}</h3>` : ''}
-            ${markerData.description ? `<p style="font-size: 14px; color: #666;">${markerData.description}</p>` : ''}
+      if (m.title || m.description) {
+        marker.bindPopup(`
+          <div style="min-width: 150px; font-family: system-ui, sans-serif;">
+            ${m.title ? `<h3 style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">${m.title}</h3>` : ''}
+            ${m.description ? `<p style="font-size: 12px; color: #666; margin: 0;">${m.description}</p>` : ''}
           </div>
-        `;
-        marker.bindPopup(popupContent);
+        `);
       }
 
-      if (markerData.onClick) {
-        marker.on('click', markerData.onClick);
+      if (m.onClick) {
+        marker.on('click', () => m.onClick?.());
       }
 
-      markersLayer.addLayer(marker);
+      layer.addLayer(marker);
     });
   }, [markers]);
 
   // Update polylines
   useEffect(() => {
-    if (!leafletMapRef.current || !window.L) return;
+    if (!leafletMapRef.current || !polylinesLayerRef.current || !window.L) return;
 
     const L = window.L;
-    const map = leafletMapRef.current;
+    const layer = polylinesLayerRef.current;
+    layer.clearLayers();
 
-    // Remove existing polylines (we'll re-add them)
-    map.eachLayer((layer) => {
-      if (layer instanceof L.Polyline && !(layer instanceof L.TileLayer)) {
-        map.removeLayer(layer);
-      }
-    });
-
-    // Add new polylines
-    polylines.forEach((polylineData) => {
-      const polyline = L.polyline(polylineData.points, {
-        color: polylineData.color || '#0891B2',
-        weight: polylineData.weight || 3,
-        opacity: polylineData.opacity || 0.8,
+    polylines.forEach((p) => {
+      const polyline = L.polyline(p.points, {
+        color: p.color || '#0891B2',
+        weight: p.weight || 3,
+        opacity: p.opacity || 0.8,
         lineCap: 'round',
         lineJoin: 'round',
       });
-      polyline.addTo(map);
+      layer.addLayer(polyline);
     });
   }, [polylines]);
 
   // Handle resize
   useEffect(() => {
     const handleResize = () => {
-      if (leafletMapRef.current) {
-        leafletMapRef.current.invalidateSize();
-      }
+      leafletMapRef.current?.invalidateSize();
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg ${className}`} style={{ height }}>
+      <div 
+        className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg ${className}`} 
+        style={{ height }}
+      >
         <div className="text-center p-4">
-          <p className="text-red-500">{error}</p>
+          <div className="text-4xl mb-2">🗺️</div>
+          <p className="text-red-500 text-sm">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-2 text-sm text-blue-500 underline"
+          >
+            Seite neu laden
+          </button>
         </div>
       </div>
     );
@@ -286,10 +343,13 @@ export function VanillaMap({
 
   if (!isLoaded) {
     return (
-      <div className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg ${className}`} style={{ height }}>
+      <div 
+        className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg ${className}`} 
+        style={{ height }}
+      >
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Lade Karte...</p>
+          <p className="mt-2 text-muted-foreground text-sm">Lade Karte...</p>
         </div>
       </div>
     );
@@ -304,10 +364,13 @@ export function VanillaMap({
   );
 }
 
-// Export tile layer configs for convenience
+// Tile layer configs
 export const TILE_LAYERS = {
   default: { url: DEFAULT_TILE_URL, attribution: DEFAULT_TILE_ATTRIBUTION },
-  satellite: { url: SATELLITE_TILE_URL, attribution: SATELLITE_TILE_ATTRIBUTION },
+  satellite: { 
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
+    attribution: '&copy; Esri' 
+  },
   terrain: { 
     url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', 
     attribution: '&copy; OpenTopoMap' 
