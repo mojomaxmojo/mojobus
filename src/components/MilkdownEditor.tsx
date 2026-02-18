@@ -88,14 +88,18 @@ function MilkdownEditorInner({
   }, [onImageUpload]);
 
   const { get, loading } = useEditor((root) => {
+    console.log('[MilkdownEditor] Starting editor initialization...');
     try {
       const editor = Editor.make()
         .config((ctx) => {
+          console.log('[MilkdownEditor] Configuring context...');
           ctx.set(rootCtx, root);
           ctx.set(defaultValueCtx, initialValueRef.current || '');
+          console.log('[MilkdownEditor] Set default value:', initialValueRef.current?.substring(0, 50));
 
           // ✅ Markdown direkt - keine Konvertierung!
           ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
+            console.log('[MilkdownEditor] Markdown updated:', markdown?.substring(0, 50));
             lastExternalValue.current = markdown;
             onChange(markdown || '');
           });
@@ -159,10 +163,11 @@ function MilkdownEditorInner({
         .use(listener)
         .use(upload);
 
+      console.log('[MilkdownEditor] Editor created successfully');
       setEditorReady(true);
       return editor;
     } catch (error) {
-      console.error('Failed to create editor:', error);
+      console.error('[MilkdownEditor] FAILED to create editor:', error);
       setEditorReady(false);
       return null;
     }
@@ -469,12 +474,13 @@ function MilkdownEditorInner({
 
 // Fallback Textarea Component
 function FallbackEditor({ content, onChange, placeholder, minHeight }: MilkdownEditorProps) {
+  console.log('[FallbackEditor] Rendering fallback editor');
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="border-b bg-gray-50 dark:bg-gray-900 p-2">
         <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
           <AlertCircle className="h-4 w-4" />
-          <span>Markdown-Editor (Fallback)</span>
+          <span>Markdown-Editor (Fallback) - Editor konnte nicht geladen werden</span>
         </div>
       </div>
       <Textarea
@@ -489,6 +495,7 @@ function FallbackEditor({ content, onChange, placeholder, minHeight }: MilkdownE
 }
 
 export function MilkdownEditor(props: MilkdownEditorProps) {
+  console.log('[MilkdownEditor] Component rendering');
   return (
     <EditorErrorBoundary fallback={<FallbackEditor {...props} />}>
       <MilkdownEditorInner {...props} />
