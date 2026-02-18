@@ -220,8 +220,8 @@ export default function MapPage() {
       <div className="container mx-auto px-4 pb-4">
         {/* Map Card mit integrierter Filter-Bar */}
         <Card className="overflow-hidden">
-          {/* Filter Bar - Teil der Map-Card */}
-          <div className="p-3 bg-muted/50 border-b flex items-center justify-between">
+          {/* Filter Bar */}
+          <div className="px-3 py-2 bg-muted/50 border-b flex items-center justify-between">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
@@ -229,10 +229,9 @@ export default function MapPage() {
                   <strong>{filteredMarkers.length}</strong> {activeFilter === 'all' ? 'Beiträge' : getFilterLabel(activeFilter)}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Filter:</span>
-                <div className="flex items-center gap-1">
-                  <FilterButton
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <FilterButton
                     emoji="📷"
                     count={counts.media}
                     isActive={activeFilter === 'media'}
