@@ -49,7 +49,7 @@ export interface VanillaMapProps {
   fitToMarkers?: boolean; // Auto-zoom um alle Marker anzuzeigen
 }
 
-// Tile layers
+// Tile layers - OpenStreetMap als Standard
 const DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const DEFAULT_TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
@@ -286,12 +286,7 @@ export function VanillaMap({
 
   // Update markers
   useEffect(() => {
-    if (!mapReady || !leafletMapRef.current || !markersLayerRef.current || !window.L) {
-      console.log('🗺️ VanillaMap - marker update skipped, mapReady:', mapReady);
-      return;
-    }
-    
-    console.log('🗺️ VanillaMap - updating markers:', markers.length);
+    if (!mapReady || !leafletMapRef.current || !markersLayerRef.current || !window.L) return;
 
     const L = window.L;
     const layer = markersLayerRef.current;
@@ -318,8 +313,6 @@ export function VanillaMap({
 
       layer.addLayer(marker);
     });
-    
-    console.log('🗺️ VanillaMap - markers added to layer:', markers.length);
   }, [mapReady, markers]);
 
   // Update polylines
@@ -425,9 +418,5 @@ export const TILE_LAYERS = {
   terrain: { 
     url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', 
     attribution: '&copy; OpenTopoMap' 
-  },
-  cartoVoyager: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
   },
 };

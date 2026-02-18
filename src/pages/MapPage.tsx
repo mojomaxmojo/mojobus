@@ -38,8 +38,6 @@ export default function MapPage() {
 
   // Alle Marker (nicht mehr auf Europa beschränkt)
   const allMarkers = markers;
-  
-  console.log('🗺️ MapPage - allMarkers:', allMarkers.length);
 
   // Filter markers by type
   const filteredMarkers = useMemo(() => {
@@ -51,8 +49,6 @@ export default function MapPage() {
   const sortedMarkers = useMemo(() => {
     return [...filteredMarkers].sort((a, b) => a.createdAt - b.createdAt);
   }, [filteredMarkers]);
-  
-  console.log('🗺️ MapPage - sortedMarkers:', sortedMarkers.length);
   
   // Count markers by type (alle Marker)
   const counts = useMemo(() => ({
@@ -90,7 +86,7 @@ export default function MapPage() {
 
   // Convert GPS markers to VanillaMap markers
   const mapMarkers: MapMarker[] = useMemo(() => {
-    const result = sortedMarkers.map((m) => ({
+    return sortedMarkers.map((m) => ({
       id: m.id,
       lat: m.lat,
       lng: m.lon,
@@ -98,8 +94,6 @@ export default function MapPage() {
       description: m.location || undefined,
       isCurrent: false,
     }));
-    console.log('🗺️ MapPage - mapMarkers:', result.length, result.slice(0, 2));
-    return result;
   }, [sortedMarkers]);
 
   // Create route polyline
@@ -306,8 +300,8 @@ export default function MapPage() {
               polylines={routePolylines}
               height="600px"
               className="rounded-none"
-              tileUrl={TILE_LAYERS.cartoVoyager.url}
-              tileAttribution={TILE_LAYERS.cartoVoyager.attribution}
+              tileUrl={TILE_LAYERS.default.url}
+              tileAttribution={TILE_LAYERS.default.attribution}
               fitToMarkers={true}
             />
           </div>
