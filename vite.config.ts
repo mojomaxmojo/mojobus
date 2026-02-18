@@ -105,9 +105,9 @@ export default defineConfig(() => ({
           }
 
           // === VENDOR CHUNKS (Nur bei Bedarf) ===
-          // Tiptap Editor (nur bei Bedarf laden)
-          if (id.includes('node_modules/@tiptap/') || id.includes('node_modules/prosemirror/')) {
-            return 'tiptap-vendor';
+          // Milkdown Editor (nur bei Bedarf laden)
+          if (id.includes('node_modules/@milkdown/') || id.includes('node_modules/prosemirror/')) {
+            return 'milkdown-vendor';
           }
 
           // QR Code (nur bei Bedarf)
