@@ -450,9 +450,7 @@ function MilkdownEditorInner({
         className="milkdown-content min-h-[400px] max-h-[800px] overflow-y-auto bg-white dark:bg-gray-950"
         style={{ minHeight }}
       >
-        <MilkdownProvider>
-          <Milkdown />
-        </MilkdownProvider>
+        <Milkdown />
       </div>
 
       {/* Footer with character count */}
@@ -505,10 +503,17 @@ function FallbackEditor({ content, onChange, placeholder, minHeight, error }: Fa
   );
 }
 
-export function MilkdownEditor(props: MilkdownEditorProps) {
+// Main wrapper component with Provider
+function MilkdownEditorWrapper(props: MilkdownEditorProps) {
   return (
     <EditorErrorBoundary fallback={<FallbackEditor {...props} />}>
-      <MilkdownEditorInner {...props} />
+      <MilkdownProvider>
+        <MilkdownEditorInner {...props} />
+      </MilkdownProvider>
     </EditorErrorBoundary>
   );
+}
+
+export function MilkdownEditor(props: MilkdownEditorProps) {
+  return <MilkdownEditorWrapper {...props} />;
 }
