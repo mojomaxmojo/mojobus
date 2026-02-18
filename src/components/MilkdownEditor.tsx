@@ -134,7 +134,7 @@ function MilkdownEditorInner({
                   onImageUploadRef.current(url);
                 }
               } catch (error) {
-                console.error('Failed to upload image:', error);
+                // Silently fail - upload errors are handled by useUploadFile
               } finally {
                 setIsUploadingImage(false);
               }
@@ -223,8 +223,8 @@ function MilkdownEditorInner({
       }
 
       view?.focus();
-    } catch (error) {
-      console.error('Command failed:', error);
+    } catch {
+      // Silently fail - command may not be available
     }
   }, [get]);
 
@@ -243,8 +243,8 @@ function MilkdownEditorInner({
       if (onImageUpload) {
         onImageUpload(url);
       }
-    } catch (error) {
-      console.error('Image upload failed:', error);
+    } catch {
+      // Silently fail - upload errors are handled by useUploadFile
     } finally {
       setIsUploadingImage(false);
     }
@@ -520,12 +520,8 @@ function FallbackEditor({ content, onChange, placeholder, minHeight, error }: Fa
           <span className="font-semibold">Markdown-Editor (Fallback)</span>
         </div>
         {error && (
-          <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs font-mono text-red-700 dark:text-red-300 overflow-auto max-h-32">
-            <div className="font-bold mb-1">Error:</div>
-            <div>{error.message}</div>
-            {error.stack && (
-              <div className="mt-1 opacity-70">{error.stack.split('\n').slice(0, 3).join('\n')}</div>
-            )}
+          <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300">
+            {error.message || 'Ein Fehler ist aufgetreten. Bitte lade die Seite neu.'}
           </div>
         )}
       </div>
