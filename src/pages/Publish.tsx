@@ -28,7 +28,7 @@ import { ARTICLE_CATEGORIES, DIY_CATEGORIES, DIY_TAGS, NATURE_CATEGORIES, NATURE
 import MAIN_MENU from '@/config/menu';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
-import { WysiwygEditor, htmlToMarkdown, markdownToHtml } from '@/components/WysiwygEditor';
+import { MilkdownEditor } from '@/components/MilkdownEditor';
 import { Progress } from '@/components/ui/progress';
 import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
 
@@ -2732,7 +2732,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
             WYSIWYG Editor - Beschreibe den Ort mit Formatierung, Bildern und Links
           </div>
-          <WysiwygEditor
+          <MilkdownEditor
             content={description}
             onChange={setDescription}
             placeholder={`# Erlebnis-Bericht
@@ -2915,16 +2915,8 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       setTitle(editEvent.tags?.find((tag: any) => tag[0] === 'title')?.[1] || '');
       setSummary(editEvent.tags?.find((tag: any) => tag[0] === 'summary')?.[1] || '');
 
-      // Prüfe, ob der Content bereits HTML enthält (vom WysiwygEditor)
-      // Wenn HTML-Tags vorhanden sind, Content direkt verwenden, sonst Markdown zu HTML konvertieren
-      const hasHtmlTags = /<[a-z][\s\S]*>/i.test(editEvent.content || '');
-      if (hasHtmlTags) {
-        // Content ist bereits HTML - direkt verwenden
-        setContent(editEvent.content || '');
-      } else {
-        // Content ist Markdown - zu HTML konvertieren
-        setContent(markdownToHtml(editEvent.content || ''));
-      }
+      // Content ist bereits Markdown (vom MilkdownEditor)
+      setContent(editEvent.content || '');
 
       setImage(editEvent.tags?.find((tag: any) => tag[0] === 'image')?.[1] || '');
       setCategory(editEvent.tags?.find((tag: any) => tag[0] === 'category')?.[1] || '');
@@ -3416,7 +3408,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
             WYSIWYG Editor - Schreibe deinen Artikel mit Formatierung, Bildern und Links
           </div>
-          <WysiwygEditor
+          <MilkdownEditor
             content={content}
             onChange={setContent}
             placeholder={`# Überschrift
