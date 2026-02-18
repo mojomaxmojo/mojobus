@@ -123,11 +123,15 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
         const latRef = (rawExif.GPSLatitudeRef as 'N' | 'S') || 'N';
         const lonRef = (rawExif.GPSLongitudeRef as 'E' | 'W') || 'E';
 
-        const latitude = convertDMSToDD(dmsLat, latRef);
-        const longitude = convertDMSToDD(dmsLon, lonRef);
+        try {
+          const latitude = convertDMSToDD(dmsLat, latRef);
+          const longitude = convertDMSToDD(dmsLon, lonRef);
 
-        console.log('[GPS Extraction] Valid GPS from raw EXIF:', { latitude, longitude });
-        return createGpsResult(latitude, longitude, rawExif.GPSAltitude, file.name);
+          console.log('[GPS Extraction] Valid GPS from raw EXIF:', { latitude, longitude });
+          return createGpsResult(latitude, longitude, rawExif.GPSAltitude, file.name);
+        } catch (convertError) {
+          console.warn('[GPS Extraction] DMS conversion failed, continuing with other methods:', convertError);
+        }
       }
     }
 
@@ -227,14 +231,26 @@ function convertDMSToDD(dms: any, ref: 'N' | 'S' | 'E' | 'W'): number {
     dmsLength: dms.length
   });
 
-  const degrees = parseFloat(dms[0]);
-  const minutes = parseFloat(dms[1] || 0);
-  const seconds = parseFloat(dms[2] || 0);
+  // Handle different DMS formats
+  // Some EXIF data has [degrees, minutes, seconds] as numbers
+  // Others have [[degrees, 1], [minutes, 1], [seconds, 1]] as rationals
+  const parseValue = (val: any): number => {
+    if (typeof val === 'number') return val;
+    if (Array.isArray(val) && val.length >= 2) {
+      // Rational format: [numerator, denominator]
+      return parseFloat(val[0]) / parseFloat(val[1] || 1);
+    }
+    return parseFloat(val) || 0;
+  };
+
+  const degrees = parseValue(dms[0]);
+  const minutes = parseValue(dms[1] || 0);
+  const seconds = parseValue(dms[2] || 0);
 
   // Validate values
-  if (isNaN(degrees)) {
-    console.error('[GPS] Degrees is NaN:', dms[0]);
-    throw new Error('Degrees is NaN');
+  if (isNaN(degrees) || degrees === 0) {
+    console.error('[GPS] Degrees is NaN or zero:', dms[0], '->', degrees);
+    throw new Error('Degrees is NaN or zero');
   }
 
   console.log('[GPS] Parsed DMS:', { degrees, minutes, seconds });
