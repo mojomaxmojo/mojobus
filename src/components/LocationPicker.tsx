@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,16 +6,13 @@ import { MapPin, Maximize2, Minimize2, Check, Map as MapIcon, Crosshair } from '
 import { cn } from '@/lib/utils';
 import type { GpsData } from '@/lib/gpsExtraction';
 import { reverseGeocode, mapCountryCode } from '@/lib/gpsExtraction';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
-// Fix for Leaflet default markers in bundled applications
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// Type declarations for global Leaflet
+declare global {
+  interface Window {
+    L: typeof import('leaflet');
+  }
+}
 
 /**
  * Props for LocationPicker Component
@@ -39,44 +35,10 @@ export interface LocationPickerProps {
 }
 
 /**
- * Component to handle map clicks
- */
-function MapClickHandler({ onMapClick }: { onMapClick: (e: any) => void }) {
-  const map = useMap();
-
-  return (
-    <div
-      onClick={(e) => {
-        const { lat, lng } = map.mouseEventToLatLng(e.nativeEvent);
-        onMapClick({ lat, lng });
-      }}
-      style={{ cursor: 'crosshair' }}
-      className="absolute inset-0"
-    />
-  );
-}
-
-/**
  * LocationPicker Component
  *
  * Interactive map component for picking GPS coordinates
- * Features:
- * - Drag & Drop marker to pick location
- * - Click on map to move marker
- * - Manual coordinate input
- * - Zoom controls
- * - Auto-center on GPS data
- *
- * @example
- * ```tsx
- * <LocationPicker
- *   gps={currentGps}
- *   onSave={(gps) => setGps(gps)}
- *   onCancel={() => setIsEditing(false)}
- *   initialZoom={13}
- *   height="400px"
- * />
- * ```
+ * Uses Leaflet via CDN for Shakespeare-Build compatibility
  */
 export function LocationPicker({
   gps,
@@ -101,7 +63,110 @@ export function LocationPicker({
   const [manualLon, setManualLon] = useState(position[1].toFixed(6));
   const [manualAlt, setManualAlt] = useState(gps?.altitude?.toFixed(1) || '0');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const mapRef = useRef<L.Map>(null);
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const mapRef = useRef<HTMLDivElement>(null);
+  const leafletMapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+
+  // Check if Leaflet is loaded
+  useEffect(() => {
+    const checkLeaflet = () => {
+      if (window.L) {
+        setLeafletLoaded(true);
+        setError(null);
+        return true;
+      }
+      return false;
+    };
+
+    if (!checkLeaflet()) {
+      const interval = setInterval(() => {
+        if (checkLeaflet()) {
+          clearInterval(interval);
+        }
+      }, 100);
+
+      const timeout = setTimeout(() => {
+        clearInterval(interval);
+        if (!window.L) {
+          setError('Leaflet konnte nicht geladen werden. Bitte Seite neu laden.');
+        }
+      }, 10000);
+
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
+  }, []);
+
+  // Initialize map
+  useEffect(() => {
+    if (!leafletLoaded || !mapRef.current || !window.L || leafletMapRef.current) return;
+
+    try {
+      const L = window.L;
+
+      // Create map
+      const map = L.map(mapRef.current, {
+        center: position,
+        zoom: zoom,
+        zoomControl: false,
+      });
+
+      // Add tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Create draggable marker
+      const marker = L.marker(position, {
+        draggable: true,
+      }).addTo(map);
+
+      marker.on('dragend', () => {
+        const latlng = marker.getLatLng();
+        setPosition([latlng.lat, latlng.lng]);
+      });
+
+      // Handle map clicks
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        setPosition([e.latlng.lat, e.latlng.lng]);
+        marker.setLatLng(e.latlng);
+      });
+
+      leafletMapRef.current = map;
+      markerRef.current = marker;
+
+      // Fix map size
+      setTimeout(() => map.invalidateSize(), 100);
+
+    } catch (err) {
+      console.error('Error initializing map:', err);
+      setError('Fehler beim Initialisieren der Karte.');
+    }
+
+    return () => {
+      if (leafletMapRef.current) {
+        leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+        markerRef.current = null;
+      }
+    };
+  }, [leafletLoaded]);
+
+  // Update marker position when position changes
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setLatLng(position);
+    }
+    if (leafletMapRef.current) {
+      leafletMapRef.current.setView(position, zoom);
+    }
+  }, [position, zoom]);
 
   // Sync manual inputs with marker position
   useEffect(() => {
@@ -111,21 +176,15 @@ export function LocationPicker({
 
   // Update map size when fullscreen toggles
   useEffect(() => {
-    if (mapRef.current) {
-      // Small delay to ensure DOM has updated
+    if (leafletMapRef.current) {
       setTimeout(() => {
-        mapRef.current?.invalidateSize();
+        leafletMapRef.current?.invalidateSize();
       }, 100);
     }
   }, [isFullscreen]);
 
-  // Handle map click to move marker
-  const handleMapClick = ({ lat, lng }: { lat: number; lng: number }) => {
-    setPosition([lat, lng]);
-  };
-
   // Get current location from browser/smartphone
-  const getCurrentLocation = () => {
+  const getCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       alert('Geolocation wird von diesem Browser nicht unterstützt.');
       return;
@@ -134,10 +193,9 @@ export function LocationPicker({
     setIsLoadingLocation(true);
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude, altitude } = position.coords;
+      (pos) => {
+        const { latitude, longitude, altitude } = pos.coords;
 
-        // Validate coordinates (should not be 0,0)
         if (latitude === 0 && longitude === 0) {
           alert('Ungültige Position erhalten. Bitte versuchen Sie es erneut.');
           setIsLoadingLocation(false);
@@ -149,24 +207,16 @@ export function LocationPicker({
         setManualLat(latitude.toFixed(6));
         setManualLon(longitude.toFixed(6));
         setManualAlt(altitude ? altitude.toFixed(1) : '0');
-
-        // Zoom in and pan to current location
-        if (mapRef.current) {
-          mapRef.current.setView(newPosition, 16);
-        }
+        setZoom(16);
 
         // Reverse geocode to get location and country
         reverseGeocode(latitude, longitude).then(locationData => {
           if (locationData) {
-            console.log('[LocationPicker] Reverse geocoding result:', locationData);
-
-            // Extract country and map to internal country code
             const internalCountry = mapCountryCode(locationData);
             if (internalCountry && onCountryDetected) {
               onCountryDetected(internalCountry);
             }
 
-            // Extract location text (city + region if available)
             const locationParts = [
               locationData.city,
               locationData.neighbourhood,
@@ -183,17 +233,17 @@ export function LocationPicker({
 
         setIsLoadingLocation(false);
       },
-      (error) => {
-        console.error('Geolocation error:', error);
+      (err) => {
+        console.error('Geolocation error:', err);
         let errorMessage = 'Standort konnte nicht abgerufen werden.';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
             errorMessage = 'Standort-Zugriff verweigert. Bitte erlaube den Zugriff in den Browsereinstellungen.';
             break;
-          case error.POSITION_UNAVAILABLE:
+          case err.POSITION_UNAVAILABLE:
             errorMessage = 'Standortinformationen sind nicht verfügbar.';
             break;
-          case error.TIMEOUT:
+          case err.TIMEOUT:
             errorMessage = 'Timeout beim Abrufen des Standorts.';
             break;
         }
@@ -206,21 +256,19 @@ export function LocationPicker({
         maximumAge: 0,
       }
     );
-  };
+  }, [onCountryDetected, onLocationDetected]);
 
   // Save handler
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     const latitude = parseFloat(manualLat);
     const longitude = parseFloat(manualLon);
     const altitude = parseFloat(manualAlt) || undefined;
 
-    // Validate coordinates (should not be 0,0)
     if (latitude === 0 && longitude === 0) {
       alert('Bitte gib GPS-Koordinaten ein oder nutze den Position-Button (🎯).');
       return;
     }
 
-    // Validate coordinate ranges
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
       alert('Ungültige GPS-Koordinaten. Bitte prüfe deine Eingabe.');
       return;
@@ -230,24 +278,55 @@ export function LocationPicker({
       latitude,
       longitude,
       altitude,
-      precision: 'medium', // Manual entries get medium precision
+      precision: 'medium',
     });
-  };
+  }, [manualLat, manualLon, manualAlt, onSave]);
 
   // Reset to initial GPS
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     if (gps) {
       setPosition([gps.latitude, gps.longitude]);
       setManualLat(gps.latitude.toFixed(6));
       setManualLon(gps.longitude.toFixed(6));
       setManualAlt(gps.altitude?.toFixed(1) || '0');
     }
-  };
+  }, [gps]);
 
   // Toggle fullscreen
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => !prev);
+  }, []);
+
+  // Render loading state
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg p-8" style={{ height }}>
+          <div className="text-center">
+            <p className="text-red-500">{error}</p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button onClick={onCancel} variant="outline" className="flex-1" size="lg">
+            Abbrechen
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!leafletLoaded) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg" style={{ height }}>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Lade Karte...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -281,42 +360,15 @@ export function LocationPicker({
           </Button>
         )}
 
-        <MapContainer
-          center={position}
-          zoom={zoom}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-          ref={mapRef}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maxZoom={19}
-          />
-          <Marker
-            position={position}
-            draggable={true}
-            eventHandlers={{
-              dragend: (e) => {
-                const marker = e.target;
-                const { lat, lng } = marker.getLatLng();
-                setPosition([lat, lng]);
-              },
-            }}
-          />
-          <MapClickHandler onMapClick={handleMapClick} />
-        </MapContainer>
+        <div 
+          ref={mapRef} 
+          className="absolute inset-0"
+        />
 
         {/* Zoom Controls */}
         <div className="absolute top-4 left-4 flex flex-col gap-1 z-[1000]">
           <Button
-            onClick={() => {
-              const newZoom = Math.min(zoom + 1, 19);
-              setZoom(newZoom);
-              if (mapRef.current) {
-                mapRef.current.setZoom(newZoom);
-              }
-            }}
+            onClick={() => setZoom(Math.min(zoom + 1, 19))}
             variant="outline"
             size="sm"
             className="w-8 h-8 p-0 bg-white dark:bg-gray-800"
@@ -325,13 +377,7 @@ export function LocationPicker({
             <Maximize2 className="h-4 w-4" />
           </Button>
           <Button
-            onClick={() => {
-              const newZoom = Math.max(zoom - 1, 1);
-              setZoom(newZoom);
-              if (mapRef.current) {
-                mapRef.current.setZoom(newZoom);
-              }
-            }}
+            onClick={() => setZoom(Math.max(zoom - 1, 1))}
             variant="outline"
             size="sm"
             className="w-8 h-8 p-0 bg-white dark:bg-gray-800"

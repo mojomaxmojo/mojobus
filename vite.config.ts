@@ -26,13 +26,10 @@ export default defineConfig(() => ({
       '@nostrify/react',
       '@nostrify/nostrify',
       'dijkstrajs',
-      'leaflet',
       'ngeohash',
     ],
-    exclude: [
-      '@react-leaflet/core',
-      'react-leaflet',
-    ],
+    // Leaflet wird über CDN geladen (window.L), nicht mehr über npm imports
+    // Das vermeidet Probleme mit dem Shakespeare-Build-System (esm.sh)
     force: true,
   },
   build: {

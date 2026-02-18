@@ -7,10 +7,32 @@
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getContentTypeEmoji, getContentTypeLabel } from '@/lib/markerIcons';
 import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { nip19 } from 'nostr-tools';
 import type { MapMarker } from '@/hooks/useGpsContent';
+
+// Content type definitions (moved from markerIcons.ts to avoid leaflet dependency)
+type ContentType = 'media' | 'note' | 'place' | 'article';
+
+function getContentTypeEmoji(type: ContentType): string {
+  const emojis: Record<ContentType, string> = {
+    media: '📷',
+    note: '📝',
+    place: '📍',
+    article: '📄',
+  };
+  return emojis[type];
+}
+
+function getContentTypeLabel(type: ContentType): string {
+  const labels: Record<ContentType, string> = {
+    media: 'Bilder/Videos',
+    note: 'Note',
+    place: 'Ort',
+    article: 'Artikel',
+  };
+  return labels[type];
+}
 
 interface MapMarkerPopupProps {
   marker: MapMarker;
