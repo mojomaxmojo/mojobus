@@ -91,7 +91,7 @@ function MilkdownEditorInner({
     onImageUploadRef.current = onImageUpload;
   }, [onImageUpload]);
 
-  const { get, loading } = useEditor((root) => {
+  const { get } = useEditor((root) => {
     try {
       const editor = Editor.make()
         .config((ctx) => {
@@ -172,6 +172,27 @@ function MilkdownEditorInner({
     }
   }, []);
 
+  // Loading state - check if editor is ready
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check if editor is ready
+  useEffect(() => {
+    const checkEditor = () => {
+      const editor = get();
+      if (editor) {
+        setIsLoading(false);
+      }
+    };
+    
+    // Check immediately
+    checkEditor();
+    
+    // Also check after a short delay (editor might need time to initialize)
+    const timeout = setTimeout(checkEditor, 100);
+    
+    return () => clearTimeout(timeout);
+  }, [get]);
+
   // Handle external value changes (e.g., loading a draft)
   useEffect(() => {
     try {
@@ -181,7 +202,7 @@ function MilkdownEditorInner({
         lastExternalValue.current = content;
       }
     } catch (error) {
-      console.error('Failed to update editor content:', error);
+      // Ignore errors during content update
     }
   }, [content, get]);
 
@@ -279,11 +300,11 @@ function MilkdownEditorInner({
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
 
   // Loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="border rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <span className="text-muted-foreground">Editor wird geladen...</span>
         </div>
       </div>
