@@ -12,6 +12,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -566,10 +567,15 @@ export function TripPublishForm() {
                 {/* GPS Status */}
                 <div className="p-2 space-y-1">
                   {station.gps ? (
-                    <div className="flex items-center gap-1 text-xs text-green-600">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{station.location || 'GPS erkannt'}</span>
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full h-7 text-xs text-green-600"
+                      onClick={() => setEditingStation(station.id)}
+                    >
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {station.location || 'GPS erkannt'}
+                    </Button>
                   ) : (
                     <Button
                       size="sm"
@@ -592,53 +598,87 @@ export function TripPublishForm() {
                 >
                   <X className="h-3 w-3" />
                 </Button>
-                
-                {/* GPS Editor */}
-                {editingStation === station.id && (
-                  <div className="absolute inset-0 bg-white dark:bg-gray-900 z-30 p-2 overflow-auto">
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant={!showMapPicker ? 'default' : 'outline'}
-                          className="flex-1 h-7 text-xs"
-                          onClick={() => setShowMapPicker(false)}
-                        >
-                          ✏️ Einfach
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={showMapPicker ? 'default' : 'outline'}
-                          className="flex-1 h-7 text-xs"
-                          onClick={() => setShowMapPicker(true)}
-                        >
-                          🗺️ Karte
-                        </Button>
-                      </div>
-                      
-                      {showMapPicker ? (
-                        <LocationPicker
-                          gps={station.gps}
-                          onSave={(gps) => saveGps(station.id, gps)}
-                          onCancel={() => { setEditingStation(null); setShowMapPicker(false); }}
-                          height="200px"
-                        />
-                      ) : (
-                        <GpsEditor
-                          gps={station.gps}
-                          onSave={(gps) => saveGps(station.id, gps)}
-                          onCancel={() => { setEditingStation(null); setShowMapPicker(false); }}
-                          onRemove={() => removeGps(station.id)}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* GPS Editor Dialog */}
+      <Dialog open={editingStation !== null} onOpenChange={(open) => { if (!open) { setEditingStation(null); setShowMapPicker(false); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              GPS-Standort bearbeiten
+            </DialogTitle>
+            <DialogDescription>
+              Wähle zwischen Koordinaten-Eingabe oder Karte
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingStation && (() => {
+            const station = stations.find(s => s.id === editingStation);
+            if (!station) return null;
+            
+            return (
+              <div className="space-y-4">
+                {/* Preview Image */}
+                <div className="flex gap-4 items-start">
+                  <img
+                    src={station.preview}
+                    alt=""
+                    className="w-24 h-24 object-cover rounded"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium">{station.title || `Station ${stations.findIndex(s => s.id === editingStation) + 1}`}</p>
+                    {station.gps && (
+                      <p className="text-sm text-muted-foreground">
+                        Aktuell: {formatCoordinatesSimple(station.gps.latitude, station.gps.longitude)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Toggle Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    variant={!showMapPicker ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setShowMapPicker(false)}
+                  >
+                    ✏️ Koordinaten eingeben
+                  </Button>
+                  <Button
+                    variant={showMapPicker ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setShowMapPicker(true)}
+                  >
+                    🗺️ Auf Karte wählen
+                  </Button>
+                </div>
+                
+                {/* Editor Content */}
+                {showMapPicker ? (
+                  <LocationPicker
+                    gps={station.gps}
+                    onSave={(gps) => saveGps(station.id, gps)}
+                    onCancel={() => { setEditingStation(null); setShowMapPicker(false); }}
+                    height="350px"
+                  />
+                ) : (
+                  <GpsEditor
+                    gps={station.gps}
+                    onSave={(gps) => saveGps(station.id, gps)}
+                    onCancel={() => { setEditingStation(null); setShowMapPicker(false); }}
+                    onRemove={() => removeGps(station.id)}
+                  />
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Navigation */}
       <div className="flex justify-end">
@@ -777,46 +817,6 @@ export function TripPublishForm() {
                     onChange={(e) => updateStation(station.id, 'date', e.target.value)}
                     className="max-w-[200px]"
                   />
-                  
-                  {/* GPS Editor (when editing) */}
-                  {editingStation === station.id && (
-                    <div className="border rounded-lg p-3 bg-muted/50 space-y-2">
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant={!showMapPicker ? 'default' : 'outline'}
-                          className="flex-1 h-7 text-xs"
-                          onClick={() => setShowMapPicker(false)}
-                        >
-                          ✏️ Koordinaten
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={showMapPicker ? 'default' : 'outline'}
-                          className="flex-1 h-7 text-xs"
-                          onClick={() => setShowMapPicker(true)}
-                        >
-                          🗺️ Karte
-                        </Button>
-                      </div>
-                      
-                      {showMapPicker ? (
-                        <LocationPicker
-                          gps={station.gps}
-                          onSave={(gps) => saveGps(station.id, gps)}
-                          onCancel={() => { setEditingStation(null); setShowMapPicker(false); }}
-                          height="250px"
-                        />
-                      ) : (
-                        <GpsEditor
-                          gps={station.gps}
-                          onSave={(gps) => saveGps(station.id, gps)}
-                          onCancel={() => { setEditingStation(null); setShowMapPicker(false); }}
-                          onRemove={() => removeGps(station.id)}
-                        />
-                      )}
-                    </div>
-                  )}
                 </div>
                 
                 <div className="flex-shrink-0">
