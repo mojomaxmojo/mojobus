@@ -47,8 +47,8 @@ interface TripStation {
   gps?: GpsData;
   gpsStatus: GpsStatus;
   
-  // Location info (auto-filled from GPS)
-  location?: string;
+  // Location info (auto-filled from GPS, but manually editable)
+  location: string;
   
   // User content
   title: string;
@@ -150,6 +150,7 @@ export function TripPublishForm() {
         file,
         preview: URL.createObjectURL(file),
         gpsStatus: 'not_found',
+        location: '', // Will be filled by reverse geocoding
         title: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
@@ -162,6 +163,23 @@ export function TripPublishForm() {
           station.gps = gpsData;
           station.gpsStatus = 'detected';
           console.log(`[Trip GPS] Extracted from ${file.name}:`, gpsData);
+          
+          // Get location name via reverse geocoding
+          const locationData = await reverseGeocode(gpsData.latitude, gpsData.longitude);
+          if (locationData) {
+            const locationParts = [
+              locationData.city,
+              locationData.neighbourhood,
+              locationData.suburb
+            ].filter(Boolean);
+            station.location = locationParts.join(', ');
+            console.log(`[Trip Location] Found for ${file.name}:`, station.location);
+            
+            // Auto-fill title if empty
+            if (!station.title && station.location) {
+              station.title = station.location;
+            }
+          }
         }
       } catch (error) {
         console.error(`[Trip GPS] Failed to extract from ${file.name}:`, error);
@@ -239,7 +257,7 @@ export function TripPublishForm() {
         
         setStations(prev => prev.map(s => 
           s.id === stationId 
-            ? { ...s, location: loc }
+            ? { ...s, location: loc, title: s.title || loc }
             : s
         ));
         
@@ -678,7 +696,7 @@ export function TripPublishForm() {
         <CardHeader>
           <CardTitle className="text-lg">Stationen beschreiben</CardTitle>
           <CardDescription>
-            Füge jeder Station einen Titel und eine Beschreibung hinzu
+            Füge jeder Station einen Titel, Standort und eine Beschreibung hinzu
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -692,25 +710,59 @@ export function TripPublishForm() {
                 </div>
                 
                 <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
+                  {/* GPS & Location Status */}
+                  <div className="flex items-center gap-2 flex-wrap">
                     {station.gps ? (
-                      <Badge variant="outline" className="text-green-600 border-green-300">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {station.location || 'GPS erkannt'}
-                      </Badge>
+                      <>
+                        <Badge variant="outline" className="text-green-600 border-green-300">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          GPS: {formatCoordinatesSimple(station.gps.latitude, station.gps.longitude)}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-xs"
+                          onClick={() => setEditingStation(station.id)}
+                        >
+                          ✏️ GPS ändern
+                        </Button>
+                      </>
                     ) : (
-                      <Badge variant="outline" className="text-orange-600 border-orange-300">
-                        Kein GPS
-                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        onClick={() => setEditingStation(station.id)}
+                      >
+                        <MapPin className="h-3 w-3 mr-1" />
+                        GPS hinzufügen
+                      </Button>
                     )}
                   </div>
                   
+                  {/* Title */}
                   <Input
                     value={station.title}
                     onChange={(e) => updateStation(station.id, 'title', e.target.value)}
                     placeholder={`Station ${index + 1} Titel (z.B. Ankunft in Porto)`}
                   />
                   
+                  {/* Location - Manually Editable */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Standort (manuell änderbar)</Label>
+                    <Input
+                      value={station.location}
+                      onChange={(e) => updateStation(station.id, 'location', e.target.value)}
+                      placeholder="z.B. Porto, Portugal"
+                    />
+                    {station.gps && !station.location && (
+                      <p className="text-xs text-orange-600">
+                        ⏳ Standort wird ermittelt...
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Description */}
                   <Textarea
                     value={station.description}
                     onChange={(e) => updateStation(station.id, 'description', e.target.value)}
@@ -718,12 +770,53 @@ export function TripPublishForm() {
                     rows={2}
                   />
                   
+                  {/* Date */}
                   <Input
                     type="date"
                     value={station.date}
                     onChange={(e) => updateStation(station.id, 'date', e.target.value)}
                     className="max-w-[200px]"
                   />
+                  
+                  {/* GPS Editor (when editing) */}
+                  {editingStation === station.id && (
+                    <div className="border rounded-lg p-3 bg-muted/50 space-y-2">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant={!showMapPicker ? 'default' : 'outline'}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowMapPicker(false)}
+                        >
+                          ✏️ Koordinaten
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={showMapPicker ? 'default' : 'outline'}
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowMapPicker(true)}
+                        >
+                          🗺️ Karte
+                        </Button>
+                      </div>
+                      
+                      {showMapPicker ? (
+                        <LocationPicker
+                          gps={station.gps}
+                          onSave={(gps) => saveGps(station.id, gps)}
+                          onCancel={() => { setEditingStation(null); setShowMapPicker(false); }}
+                          height="250px"
+                        />
+                      ) : (
+                        <GpsEditor
+                          gps={station.gps}
+                          onSave={(gps) => saveGps(station.id, gps)}
+                          onCancel={() => { setEditingStation(null); setShowMapPicker(false); }}
+                          onRemove={() => removeGps(station.id)}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex-shrink-0">
