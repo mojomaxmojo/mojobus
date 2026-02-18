@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, Component, ReactNode } from 'react';
 import { Editor, rootCtx, defaultValueCtx, editorViewCtx } from '@milkdown/core';
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react';
 import { commonmark, toggleStrongCommand, toggleEmphasisCommand, wrapInBlockquoteCommand, insertHrCommand, turnIntoTextCommand, wrapInHeadingCommand, toggleInlineCodeCommand, wrapInBulletListCommand, wrapInOrderedListCommand } from '@milkdown/preset-commonmark';
@@ -18,16 +18,45 @@ import {
   Heading3,
   List,
   ListOrdered,
-  CheckSquare,
   Link as LinkIcon,
   Image as ImageIcon,
   Undo,
   Redo,
   Code,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { useUploadFile } from '@/hooks/useUploadFile';
+
+// Error Boundary Component
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class EditorErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 interface MilkdownEditorProps {
   content: string;
@@ -50,111 +79,114 @@ function MilkdownEditorInner({
   const initialValueRef = useRef(content);
   const lastExternalValue = useRef(content);
   const onImageUploadRef = useRef(onImageUpload);
-  const editorRef = useRef<Editor | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
 
   // Keep refs updated
   useEffect(() => {
     onImageUploadRef.current = onImageUpload;
   }, [onImageUpload]);
 
-  const { get } = useEditor((root) => {
-    const editor = Editor.make()
-      .config((ctx) => {
-        ctx.set(rootCtx, root);
-        ctx.set(defaultValueCtx, initialValueRef.current);
+  const { get, loading } = useEditor((root) => {
+    try {
+      const editor = Editor.make()
+        .config((ctx) => {
+          ctx.set(rootCtx, root);
+          ctx.set(defaultValueCtx, initialValueRef.current || '');
 
-        // ✅ Markdown direkt - keine Konvertierung!
-        ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-          lastExternalValue.current = markdown;
-          onChange(markdown);
-        });
+          // ✅ Markdown direkt - keine Konvertierung!
+          ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
+            lastExternalValue.current = markdown;
+            onChange(markdown || '');
+          });
 
-        // Configure upload plugin
-        ctx.set(uploadConfig.key, {
-          uploader: async (files, schema) => {
-            const images: File[] = [];
+          // Configure upload plugin
+          ctx.set(uploadConfig.key, {
+            uploader: async (files, schema) => {
+              const images: File[] = [];
 
-            for (let i = 0; i < files.length; i++) {
-              const file = files.item(i);
-              if (!file) continue;
+              for (let i = 0; i < files.length; i++) {
+                const file = files.item(i);
+                if (!file) continue;
 
-              // Only handle images
-              if (!file.type.includes('image')) continue;
+                // Only handle images
+                if (!file.type.includes('image')) continue;
 
-              images.push(file);
-            }
-
-            const nodes: ReturnType<typeof schema.nodes.image.createAndFill>[] = [];
-
-            for (const image of images) {
-              try {
-                setIsUploadingImage(true);
-                // Use the upload handler
-                const [[_, url]] = await uploadFile(image);
-
-                const node = schema.nodes.image.createAndFill({
-                  src: url,
-                  alt: image.name,
-                });
-                if (node) nodes.push(node);
-
-                if (onImageUploadRef.current) {
-                  onImageUploadRef.current(url);
-                }
-              } catch (error) {
-                console.error('Failed to upload image:', error);
-              } finally {
-                setIsUploadingImage(false);
+                images.push(file);
               }
-            }
 
-            return nodes.filter((node): node is NonNullable<typeof node> => node !== null);
-          },
-          enableHtmlFileUploader: true,
-          uploadWidgetFactory: (pos, spec) => {
-            // Create a placeholder widget while uploading
-            const widgetEl = document.createElement('div');
-            widgetEl.className = 'milkdown-upload-placeholder flex items-center gap-2 p-2 bg-muted rounded';
-            widgetEl.innerHTML = `
-              <div class="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-              <span>Uploading...</span>
-            `;
-            return Decoration.widget(pos, widgetEl, spec);
-          },
-        });
-      })
-      .use(commonmark)
-      .use(gfm)
-      .use(history)
-      .use(clipboard)
-      .use(listener)
-      .use(upload);
+              const nodes: any[] = [];
 
-    return editor;
-  });
+              for (const image of images) {
+                try {
+                  setIsUploadingImage(true);
+                  const [[_, url]] = await uploadFile(image);
 
-  // Store editor reference
-  useEffect(() => {
-    editorRef.current = get() ?? null;
-  }, [get]);
+                  const node = schema.nodes.image.createAndFill({
+                    src: url,
+                    alt: image.name,
+                  });
+                  if (node) nodes.push(node);
+
+                  if (onImageUploadRef.current) {
+                    onImageUploadRef.current(url);
+                  }
+                } catch (error) {
+                  console.error('Failed to upload image:', error);
+                } finally {
+                  setIsUploadingImage(false);
+                }
+              }
+
+              return nodes.filter(Boolean);
+            },
+            enableHtmlFileUploader: true,
+            uploadWidgetFactory: (pos, spec) => {
+              const widgetEl = document.createElement('div');
+              widgetEl.className = 'milkdown-upload-placeholder flex items-center gap-2 p-2 bg-muted rounded';
+              widgetEl.innerHTML = `
+                <div class="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                <span>Uploading...</span>
+              `;
+              return Decoration.widget(pos, widgetEl, spec);
+            },
+          });
+        })
+        .use(commonmark)
+        .use(gfm)
+        .use(history)
+        .use(clipboard)
+        .use(listener)
+        .use(upload);
+
+      setEditorReady(true);
+      return editor;
+    } catch (error) {
+      console.error('Failed to create editor:', error);
+      setEditorReady(false);
+      return null;
+    }
+  }, []);
 
   // Handle external value changes (e.g., loading a draft)
   useEffect(() => {
-    const editor = get();
-    if (editor && content !== lastExternalValue.current) {
-      // Only update if the value changed externally (not from user typing)
-      editor.action(replaceAll(content));
-      lastExternalValue.current = content;
+    try {
+      const editor = get();
+      if (editor && content !== lastExternalValue.current) {
+        editor.action(replaceAll(content || ''));
+        lastExternalValue.current = content;
+      }
+    } catch (error) {
+      console.error('Failed to update editor content:', error);
     }
   }, [content, get]);
 
   // Handle toolbar commands
   const handleCommand = useCallback((command: string) => {
-    const editor = get();
-    if (!editor) return;
-
     try {
+      const editor = get();
+      if (!editor) return;
+
       const view = editor.ctx.get(editorViewCtx);
 
       switch (command) {
@@ -194,16 +226,9 @@ function MilkdownEditorInner({
         case 'paragraph':
           editor.action(callCommand(turnIntoTextCommand.key));
           break;
-        case 'undo':
-          editor.action(callCommand('Undo'));
-          break;
-        case 'redo':
-          editor.action(callCommand('Redo'));
-          break;
       }
 
-      // Refocus the editor
-      view.focus();
+      view?.focus();
     } catch (error) {
       console.error('Command failed:', error);
     }
@@ -217,7 +242,6 @@ function MilkdownEditorInner({
     try {
       const [[_, url]] = await uploadFile(file);
       
-      // Insert image markdown at cursor position
       const imageMarkdown = `![${file.name}](${url})`;
       const newContent = content + '\n' + imageMarkdown + '\n';
       onChange(newContent);
@@ -231,7 +255,6 @@ function MilkdownEditorInner({
       setIsUploadingImage(false);
     }
 
-    // Reset input so the same file can be selected again
     e.target.value = '';
   };
 
@@ -250,6 +273,18 @@ function MilkdownEditorInner({
   // Calculate character and word count
   const characterCount = content.length;
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="border rounded-lg p-4 min-h-[400px] flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <span className="text-muted-foreground">Editor wird geladen...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -432,6 +467,31 @@ function MilkdownEditorInner({
   );
 }
 
+// Fallback Textarea Component
+function FallbackEditor({ content, onChange, placeholder, minHeight }: MilkdownEditorProps) {
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="border-b bg-gray-50 dark:bg-gray-900 p-2">
+        <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+          <AlertCircle className="h-4 w-4" />
+          <span>Markdown-Editor (Fallback)</span>
+        </div>
+      </div>
+      <Textarea
+        value={content}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="min-h-[400px] border-0 rounded-none focus:ring-0"
+        style={{ minHeight }}
+      />
+    </div>
+  );
+}
+
 export function MilkdownEditor(props: MilkdownEditorProps) {
-  return <MilkdownEditorInner {...props} />;
+  return (
+    <EditorErrorBoundary fallback={<FallbackEditor {...props} />}>
+      <MilkdownEditorInner {...props} />
+    </EditorErrorBoundary>
+  );
 }
