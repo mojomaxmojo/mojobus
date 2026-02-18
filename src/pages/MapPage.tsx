@@ -15,21 +15,14 @@ import { VanillaMap, TILE_LAYERS, type MapMarker, type MapPolyline } from '@/com
 import { useGpsContent, type MapMarker as GpsMapMarker } from '@/hooks/useGpsContent';
 import { MapPin, RefreshCw, Loader2, Map as MapIcon, BarChart3 } from 'lucide-react';
 
-// Europe bounds configuration
-const EUROPA_BOUNDS = {
-  south: 35,
-  north: 72,
-  west: -25,
-  east: 45,
-};
-
-const EUROPA_CENTER = {
-  lat: 50,
-  lng: 10,
+// World bounds - alle Marker anzeigen
+const WORLD_CENTER = {
+  lat: 20,
+  lng: 0,
 };
 
 const ZOOM_SETTINGS = {
-  default: 4,
+  default: 2,
   min: 2,
   max: 18,
 };
@@ -43,37 +36,53 @@ export default function MapPage() {
   const [showRoute, setShowRoute] = useState(true);
   const [showStats, setShowStats] = useState(true);
 
-  // Filter markers to Europe only
-  const europeMarkers = useMemo(() => {
-    return markers.filter(marker => {
-      return (
-        marker.lat >= EUROPA_BOUNDS.south &&
-        marker.lat <= EUROPA_BOUNDS.north &&
-        marker.lon >= EUROPA_BOUNDS.west &&
-        marker.lon <= EUROPA_BOUNDS.east
-      );
-    });
-  }, [markers]);
+  // Alle Marker (nicht mehr auf Europa beschränkt)
+  const allMarkers = markers;
 
   // Filter markers by type
   const filteredMarkers = useMemo(() => {
-    if (activeFilter === 'all') return europeMarkers;
-    return europeMarkers.filter(m => m.type === activeFilter);
-  }, [europeMarkers, activeFilter]);
+    if (activeFilter === 'all') return allMarkers;
+    return allMarkers.filter(m => m.type === activeFilter);
+  }, [allMarkers, activeFilter]);
 
   // Sort markers chronologically for route
   const sortedMarkers = useMemo(() => {
     return [...filteredMarkers].sort((a, b) => a.createdAt - b.createdAt);
   }, [filteredMarkers]);
-
-  // Count markers by type
+  
+  // Count markers by type (alle Marker)
   const counts = useMemo(() => ({
-    media: europeMarkers.filter(m => m.type === 'media').length,
-    note: europeMarkers.filter(m => m.type === 'note').length,
-    place: europeMarkers.filter(m => m.type === 'place').length,
-    article: europeMarkers.filter(m => m.type === 'article').length,
-    total: europeMarkers.length,
-  }), [europeMarkers]);
+    media: allMarkers.filter(m => m.type === 'media').length,
+    note: allMarkers.filter(m => m.type === 'note').length,
+    place: allMarkers.filter(m => m.type === 'place').length,
+    article: allMarkers.filter(m => m.type === 'article').length,
+    total: allMarkers.length,
+  }), [allMarkers]);
+
+  // Calculate bounds to fit all markers
+  const mapBounds = useMemo(() => {
+    if (allMarkers.length === 0) return null;
+    
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+    
+    allMarkers.forEach(m => {
+      if (m.lat < minLat) minLat = m.lat;
+      if (m.lat > maxLat) maxLat = m.lat;
+      if (m.lon < minLng) minLng = m.lon;
+      if (m.lon > maxLng) maxLng = m.lon;
+    });
+    
+    return { minLat, maxLat, minLng, maxLng };
+  }, [allMarkers]);
+
+  // Calculate center from bounds
+  const mapCenter: [number, number] = useMemo(() => {
+    if (!mapBounds) return [WORLD_CENTER.lat, WORLD_CENTER.lng];
+    return [
+      (mapBounds.minLat + mapBounds.maxLat) / 2,
+      (mapBounds.minLng + mapBounds.maxLng) / 2
+    ];
+  }, [mapBounds]);
 
   // Convert GPS markers to VanillaMap markers
   const mapMarkers: MapMarker[] = useMemo(() => {
@@ -171,7 +180,7 @@ export default function MapPage() {
   }
 
   // Handle empty state
-  if (europeMarkers.length === 0) {
+  if (allMarkers.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="border-dashed p-8">
@@ -201,10 +210,10 @@ export default function MapPage() {
         <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-2">
             <h1 className="text-4xl md:text-6xl font-bold">
-              <span className="gradient-text">🗺️ Europa Map</span>
+              <span className="gradient-text">🗺️ Reise-Karte</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              GPS-aktivierte Beiträge auf einer interaktiven Karte
+              GPS-aktivierte Beiträge auf einer interaktiven Weltkarte
             </p>
           </div>
         </div>
@@ -283,7 +292,7 @@ export default function MapPage() {
           {/* Map */}
           <div style={{ height: '600px', width: '100%' }}>
             <VanillaMap
-              center={[EUROPA_CENTER.lat, EUROPA_CENTER.lng]}
+              center={mapCenter}
               zoom={ZOOM_SETTINGS.default}
               minZoom={ZOOM_SETTINGS.min}
               maxZoom={ZOOM_SETTINGS.max}
@@ -293,6 +302,7 @@ export default function MapPage() {
               className="rounded-none"
               tileUrl={TILE_LAYERS.cartoVoyager.url}
               tileAttribution={TILE_LAYERS.cartoVoyager.attribution}
+              fitToMarkers={true}
             />
           </div>
 

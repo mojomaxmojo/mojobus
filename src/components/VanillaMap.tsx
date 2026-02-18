@@ -46,11 +46,28 @@ export interface VanillaMapProps {
   tileAttribution?: string;
   minZoom?: number;
   maxZoom?: number;
+  fitToMarkers?: boolean; // Auto-zoom um alle Marker anzuzeigen
 }
 
 // Tile layers
 const DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const DEFAULT_TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+// Calculate bounds from markers
+const calculateMarkersBounds = (markers: MapMarker[]) => {
+  if (markers.length === 0) return null;
+  
+  let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+  
+  markers.forEach(m => {
+    if (m.lat < minLat) minLat = m.lat;
+    if (m.lat > maxLat) maxLat = m.lat;
+    if (m.lng < minLng) minLng = m.lng;
+    if (m.lng > maxLng) maxLng = m.lng;
+  });
+  
+  return { minLat, maxLat, minLng, maxLng };
+};
 
 // Create marker icon
 const createMarkerIcon = (isCurrent: boolean = false): L.Icon | null => {
@@ -159,11 +176,13 @@ export function VanillaMap({
   tileAttribution = DEFAULT_TILE_ATTRIBUTION,
   minZoom = 2,
   maxZoom = 18,
+  fitToMarkers = true, // Standardmäßig auf alle Marker zoomen
 }: VanillaMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const polylinesLayerRef = useRef<L.LayerGroup | null>(null);
+  const hasFitToMarkersRef = useRef(false); // Track ob bereits zu Markern gezoomt wurde
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -320,6 +339,27 @@ export function VanillaMap({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Auto-zoom zu allen Markern beim ersten Laden (nur einmal)
+  useEffect(() => {
+    if (!leafletMapRef.current || !fitToMarkers || hasFitToMarkersRef.current) return;
+    if (markers.length === 0) return;
+    
+    hasFitToMarkersRef.current = true;
+    
+    const map = leafletMapRef.current;
+    const bounds = calculateMarkersBounds(markers);
+    
+    if (bounds) {
+      // Kleiner Delay um sicherzustellen dass die Karte fertig gerendert ist
+      setTimeout(() => {
+        map.fitBounds([
+          [bounds.minLat, bounds.minLng],
+          [bounds.maxLat, bounds.maxLng]
+        ], { padding: [30, 30], maxZoom: 14 });
+      }, 300);
+    }
+  }, [markers, fitToMarkers]);
 
   if (error) {
     return (
