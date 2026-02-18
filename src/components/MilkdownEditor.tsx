@@ -53,7 +53,6 @@ class EditorErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
 
   render() {
     if (this.state.hasError) {
-      // Pass error to fallback
       return React.cloneElement(this.props.fallback as React.ReactElement, {
         error: this.state.error
       });
@@ -84,7 +83,6 @@ function MilkdownEditorInner({
   const lastExternalValue = useRef(content);
   const onImageUploadRef = useRef(onImageUpload);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [editorReady, setEditorReady] = useState(false);
 
   // Keep refs updated
   useEffect(() => {
@@ -92,106 +90,76 @@ function MilkdownEditorInner({
   }, [onImageUpload]);
 
   const { get } = useEditor((root) => {
-    try {
-      const editor = Editor.make()
-        .config((ctx) => {
-          ctx.set(rootCtx, root);
-          ctx.set(defaultValueCtx, initialValueRef.current || '');
+    return Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, root);
+        ctx.set(defaultValueCtx, initialValueRef.current || '');
 
-          // ✅ Markdown direkt - keine Konvertierung!
-          ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
-            lastExternalValue.current = markdown;
-            onChange(markdown || '');
-          });
+        // ✅ Markdown direkt - keine Konvertierung!
+        ctx.get(listenerCtx).markdownUpdated((_, markdown) => {
+          lastExternalValue.current = markdown;
+          onChange(markdown || '');
+        });
 
-          // Configure upload plugin
-          ctx.set(uploadConfig.key, {
-            uploader: async (files, schema) => {
-              const images: File[] = [];
+        // Configure upload plugin
+        ctx.set(uploadConfig.key, {
+          uploader: async (files, schema) => {
+            const images: File[] = [];
 
-              for (let i = 0; i < files.length; i++) {
-                const file = files.item(i);
-                if (!file) continue;
+            for (let i = 0; i < files.length; i++) {
+              const file = files.item(i);
+              if (!file) continue;
 
-                // Only handle images
-                if (!file.type.includes('image')) continue;
+              // Only handle images
+              if (!file.type.includes('image')) continue;
 
-                images.push(file);
-              }
+              images.push(file);
+            }
 
-              const nodes: any[] = [];
+            const nodes: any[] = [];
 
-              for (const image of images) {
-                try {
-                  setIsUploadingImage(true);
-                  const [[_, url]] = await uploadFile(image);
+            for (const image of images) {
+              try {
+                setIsUploadingImage(true);
+                const [[_, url]] = await uploadFile(image);
 
-                  const node = schema.nodes.image.createAndFill({
-                    src: url,
-                    alt: image.name,
-                  });
-                  if (node) nodes.push(node);
+                const node = schema.nodes.image.createAndFill({
+                  src: url,
+                  alt: image.name,
+                });
+                if (node) nodes.push(node);
 
-                  if (onImageUploadRef.current) {
-                    onImageUploadRef.current(url);
-                  }
-                } catch (error) {
-                  console.error('Failed to upload image:', error);
-                } finally {
-                  setIsUploadingImage(false);
+                if (onImageUploadRef.current) {
+                  onImageUploadRef.current(url);
                 }
+              } catch (error) {
+                console.error('Failed to upload image:', error);
+              } finally {
+                setIsUploadingImage(false);
               }
+            }
 
-              return nodes.filter(Boolean);
-            },
-            enableHtmlFileUploader: true,
-            uploadWidgetFactory: (pos, spec) => {
-              const widgetEl = document.createElement('div');
-              widgetEl.className = 'milkdown-upload-placeholder flex items-center gap-2 p-2 bg-muted rounded';
-              widgetEl.innerHTML = `
-                <div class="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                <span>Uploading...</span>
-              `;
-              return Decoration.widget(pos, widgetEl, spec);
-            },
-          });
-        })
-        .use(commonmark)
-        .use(gfm)
-        .use(history)
-        .use(clipboard)
-        .use(listener)
-        .use(upload);
-
-      setEditorReady(true);
-      return editor;
-    } catch (error) {
-      setEditorReady(false);
-      // Re-throw the error so the error boundary can catch it
-      throw error;
-    }
+            return nodes.filter(Boolean);
+          },
+          enableHtmlFileUploader: true,
+          uploadWidgetFactory: (pos, spec) => {
+            const widgetEl = document.createElement('div');
+            widgetEl.className = 'milkdown-upload-placeholder flex items-center gap-2 p-2 bg-muted rounded';
+            widgetEl.innerHTML = `
+              <div class="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+              <span>Uploading...</span>
+            `;
+            return Decoration.widget(pos, widgetEl, spec);
+          },
+        });
+      })
+      .use(commonmark)
+      .use(gfm)
+      .use(history)
+      .use(clipboard)
+      .use(listener)
+      .use(upload);
   }, []);
-
-  // Loading state - check if editor is ready
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Check if editor is ready
-  useEffect(() => {
-    const checkEditor = () => {
-      const editor = get();
-      if (editor) {
-        setIsLoading(false);
-      }
-    };
-    
-    // Check immediately
-    checkEditor();
-    
-    // Also check after a short delay (editor might need time to initialize)
-    const timeout = setTimeout(checkEditor, 100);
-    
-    return () => clearTimeout(timeout);
-  }, [get]);
 
   // Handle external value changes (e.g., loading a draft)
   useEffect(() => {
@@ -298,18 +266,6 @@ function MilkdownEditorInner({
   // Calculate character and word count
   const characterCount = content.length;
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="border rounded-lg p-4 min-h-[400px] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="text-muted-foreground">Editor wird geladen...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -466,7 +422,7 @@ function MilkdownEditorInner({
         </div>
       </div>
 
-      {/* Editor Content */}
+      {/* Editor Content - NO loading state, render directly like Inkwell */}
       <div 
         className="milkdown-content min-h-[400px] max-h-[800px] overflow-y-auto bg-white dark:bg-gray-950"
         style={{ minHeight }}
