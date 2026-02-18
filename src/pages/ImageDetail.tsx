@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RelaySelector } from '@/components/RelaySelector';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ExternalLink, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { ArrowLeft, Calendar, Download, Share2, Heart, MessageSquare, X, ZoomIn, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import { useAuthor } from '@/hooks/useAuthor';
 
 import { CommentsSection } from '@/components/comments/CommentsSection';
@@ -468,17 +468,17 @@ export function ImageDetail() {
                </Card>
              )}
 
-              {/* Content and Description */}
-               <Card>
-                  <CardContent>
-                    <div className="prose prose-gray dark:prose-invert max-w-none mb-4 [&_a]:hidden">
-                      <Suspense fallback={<Skeleton className="h-20 w-full" />}>
-                        <NoteContent event={events} className="text-base" />
-                      </Suspense>
-                    </div>
-                    <SocialBar event={events} />
-                  </CardContent>
-                </Card>
+             {/* Content and Description */}
+                <Card>
+                   <CardContent>
+                     <div className="mb-4">
+                       <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+                         <NoteContent event={events} className="text-base" hideImageLinks={true} />
+                       </Suspense>
+                     </div>
+                     <SocialBar event={events} />
+                   </CardContent>
+                 </Card>
 
               {/* Tags and Comments */}
               <Card>
@@ -518,19 +518,6 @@ export function ImageDetail() {
           <div className="absolute top-4 left-4 z-50 text-white bg-black/50 px-3 py-1 rounded-md">
             {currentImageIndex + 1} / {images.length}
           </div>
-
-          {/* Download button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-16 z-50 text-white hover:bg-white/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(images[currentImageIndex], '_blank');
-            }}
-          >
-            <ExternalLink className="h-6 w-6" />
-          </Button>
 
           {/* Previous button */}
           {images.length > 1 && !isVideoUrl(images[currentImageIndex]) && (

@@ -3033,7 +3033,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
   // Get available tags from config (excluding DIY & Leon tags which are shown separately)
   const availableTags = TAG_GROUPS
-    .filter(group => !['Technik', 'Pets', 'RV Life', 'Küche & Essen', 'Ausstattung', 'Freeliving'].includes(group.name)) // DIY, Leon & RV Life tags are shown separately
+    .filter(group => !['Technik', 'Pets', 'RV Life', 'Küche & Essen', 'Ausstattung', 'Freeliving', 'Länder'].includes(group.name)) // DIY, Leon & RV Life tags are shown separately
     .flatMap(group => group.tags)
     .filter(tag => !DIY_TAGS.includes(tag.id))
     .map(tag => tag.id); // Remove # - it will be added in JSX

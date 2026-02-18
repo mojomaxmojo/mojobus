@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthor } from '@/hooks/useAuthor';
 import { AUTHORS } from '@/config/nostr';
-import { Mail, Globe, Zap, Key, Waves, Sun, Compass } from 'lucide-react';
+import { Mail, Globe, Zap, Key, Sun, Compass } from 'lucide-react';
 import { getValidAuthors } from '@/lib/authors';
 import { useHead } from '@unhead/react';
 
@@ -30,7 +30,7 @@ export function About() {
   return (
     <>
       {/* Page Header mit Gradient Background */}
-      <section className="relative py-12 overflow-hidden">
+      <section className="relative py-8 overflow-hidden">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
@@ -38,9 +38,6 @@ export function About() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-4">
-            <div className="flex justify-center mb-6">
-              <Waves className="h-16 w-16 text-primary wave-animation" />
-            </div>
             <h1 className="text-4xl md:text-6xl font-bold"><span className="gradient-text">Über Uns</span></h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Perpetual Travelers – Leben zwischen Sand und Horizont
