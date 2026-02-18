@@ -245,6 +245,7 @@ export function VanillaMap({
         scrollWheelZoom: true,
         minZoom: minZoom,
         maxZoom: maxZoom,
+        zIndex: 0, // Niedriger z-index damit Dialoge über der Karte liegen
       });
 
       L.tileLayer(tileUrl, {
@@ -420,11 +421,11 @@ export function VanillaMap({
     );
   }
 
-  return (
+    return (
     <div 
       ref={mapRef} 
       className={`rounded-lg overflow-hidden ${className}`} 
-      style={{ height }}
+      style={{ height, position: 'relative', zIndex: 0 }}
     />
   );
 }

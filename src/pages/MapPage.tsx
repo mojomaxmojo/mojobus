@@ -219,9 +219,9 @@ export default function MapPage() {
 
       <div className="container mx-auto px-4 pb-4">
         {/* Map Card mit integrierter Filter-Bar */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden relative z-0">
           {/* Filter Bar */}
-          <div className="px-3 py-2 bg-muted/50 border-b flex items-center justify-between">
+          <div className="px-3 py-2 bg-muted/50 border-b flex items-center justify-between relative z-0">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
@@ -287,7 +287,7 @@ export default function MapPage() {
           </div>
 
           {/* Map */}
-          <div style={{ height: '600px', width: '100%' }}>
+          <div style={{ height: '600px', width: '100%', position: 'relative', zIndex: 0 }}>
             <VanillaMap
               center={mapCenter}
               zoom={ZOOM_SETTINGS.default}
