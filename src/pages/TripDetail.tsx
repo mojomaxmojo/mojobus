@@ -6,20 +6,40 @@
  * - Route map with numbered markers
  * - Photo gallery with descriptions
  * - Share buttons
+ * - Edit/Delete (for trip author only)
+ *
+ * Note: Trips are Kind 30025 (Parameterized Replaceable Events)
+ * - Editable: Publish new version with same d-tag
+ * - Replaceable: Newer version replaces older
+ * - Deletable: Via NIP-09 delete event
  */
 
 import { useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useTrip, calculateTripDistance } from '@/hooks/useTrips';
 import { useAuthor } from '@/hooks/useAuthor';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { useToast } from '@/hooks/useToast';
 import { VanillaMap, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
 import { 
-  ArrowLeft, MapPin, Camera, Calendar, Navigation, Info, Share2
+  ArrowLeft, MapPin, Camera, Calendar, Navigation, Info, Pencil, Trash2
 } from '@/lib/icons';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -166,12 +186,50 @@ function PhotoWithDescription({
  */
 export default function TripDetail() {
   const { naddr } = useParams<{ naddr: string }>();
+  const navigate = useNavigate();
   const { data: trip, isLoading } = useTrip(naddr || '');
   const { data: authorData } = useAuthor(trip?.author || '');
   const metadata = authorData?.metadata;
+  const { user } = useCurrentUser();
+  const { mutate: publishEvent } = useNostrPublish();
+  const { toast } = useToast();
   
   const displayName = metadata?.name || genUserName(trip?.author || '');
   const profileImage = metadata?.picture;
+  
+  // Check if current user is the trip author
+  const isAuthor = user && trip && user.pubkey === trip.author;
+  
+  // Delete trip handler
+  const handleDelete = () => {
+    if (!trip || !user) return;
+    
+    // Publish NIP-09 delete event
+    publishEvent({
+      kind: 5, // Delete event
+      content: 'Trip gelöscht',
+      tags: [
+        ['e', trip.id], // Delete this event
+        ['k', '30025'], // Event kind
+      ],
+    }, {
+      onSuccess: () => {
+        toast({
+          title: 'Trip gelöscht',
+          description: 'Der Trip wurde erfolgreich gelöscht.',
+        });
+        navigate('/map/trips');
+      },
+      onError: (error) => {
+        console.error('Delete error:', error);
+        toast({
+          title: 'Fehler',
+          description: 'Der Trip konnte nicht gelöscht werden.',
+          variant: 'destructive',
+        });
+      },
+    });
+  };
   
   // Prepare map data
   const mapMarkers: MapMarker[] = useMemo(() => {
@@ -218,14 +276,55 @@ export default function TripDetail() {
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
-          {/* Back Button */}
-          <div className="mb-6">
+          {/* Back Button and Actions */}
+          <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <Link to="/map/trips">
               <Button variant="outline">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Zurück zu Trips
               </Button>
             </Link>
+            
+            {/* Edit/Delete Buttons (only for author) */}
+            {isAuthor && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate(`/veroeffentlichen?type=trip&edit=${naddr}`)}
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Bearbeiten
+                </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Löschen
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Trip löschen</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Bist du sicher, dass du diesen Trip löschen möchtest?
+                        Diese Aktion kann nicht rückgängig gemacht werden.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Löschen
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
           </div>
           
           {/* Trip Header */}

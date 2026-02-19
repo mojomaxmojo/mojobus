@@ -24,7 +24,7 @@ function genUserName(pubkey: string): string {
 import { VanillaMap, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
 import { 
   MapPin, RefreshCw, Map as MapIcon, Route, Camera, 
-  Calendar, Plus, Navigation, Globe
+  Calendar, Globe
 } from '@/lib/icons';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -244,24 +244,16 @@ export default function TripsPage() {
         <section className="relative py-6 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
           <div className="relative z-10 container mx-auto px-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
-                  <MapPin className="w-8 h-8 text-yellow-600" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold">🛣️ Trips</h1>
-                  <p className="text-muted-foreground">
-                    Reise-Abenteuer mit Photos und GPS-Routen
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+                <MapPin className="w-8 h-8 text-yellow-600" />
               </div>
-              <Button asChild>
-                <Link to="/veroeffentlichen">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Trip erstellen
-                </Link>
-              </Button>
+              <div>
+                <h1 className="text-3xl font-bold">🛣️ Trips</h1>
+                <p className="text-muted-foreground">
+                  Reise-Abenteuer mit Photos und GPS-Routen
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -273,15 +265,9 @@ export default function TripsPage() {
               <div>
                 <h3 className="text-lg font-medium mb-2">Noch keine Trips vorhanden</h3>
                 <p className="text-muted-foreground">
-                  Erstelle deinen ersten Trip unter "Veröffentlichen" → "Trips"
+                  Es wurden noch keine Trips veröffentlicht.
                 </p>
               </div>
-              <Button asChild>
-                <Link to="/veroeffentlichen">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Trip erstellen
-                </Link>
-              </Button>
             </div>
           </Card>
         </div>
@@ -297,8 +283,7 @@ export default function TripsPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
         
         <div className="relative z-10 container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
                 <MapPin className="w-8 h-8 text-yellow-600" />
               </div>
@@ -309,13 +294,6 @@ export default function TripsPage() {
                 </p>
               </div>
             </div>
-            <Button asChild>
-              <Link to="/veroeffentlichen">
-                <Plus className="w-4 h-4 mr-2" />
-                Trip erstellen
-              </Link>
-            </Button>
-          </div>
         </div>
       </section>
       
