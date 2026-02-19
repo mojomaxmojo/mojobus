@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/useToast';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
@@ -27,6 +28,7 @@ import { GpsStatusIndicator } from '@/components/GpsStatusIndicator';
 import { LocationPicker } from '@/components/LocationPicker';
 import { CountrySelector, getCountryTag } from '@/components/CountrySelector';
 import { VanillaMap, TILE_LAYERS, type MapMarker } from '@/components/VanillaMap';
+import { TRIP_TYPES, type TripType } from '@/config/tags';
 import { 
   Camera, Upload, MapPin, Loader2, CheckCircle, GripVertical, X, 
   ChevronLeft, ChevronRight, Route, Clock, Map as MapIcon, Trash2, Edit3
@@ -62,6 +64,7 @@ interface TripData {
   title: string;
   summary: string;
   country: string;
+  tripType: TripType | '';
 }
 
 // Step wizard state
@@ -74,6 +77,7 @@ export function TripPublishForm() {
     title: '',
     summary: '',
     country: '',
+    tripType: '',
   });
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
   const [editingStation, setEditingStation] = useState<string | null>(null);
@@ -430,6 +434,12 @@ export function TripPublishForm() {
       ...waypointTags,
     ];
     
+    // Add trip type tag
+    if (tripData.tripType) {
+      tags.push(['t', tripData.tripType]);
+      tags.push(['trip_type', tripData.tripType]);
+    }
+    
     // Add country tags
     if (tripData.country) {
       const countryTags = getCountryTag(tripData.country);
@@ -456,7 +466,7 @@ export function TripPublishForm() {
         
         // Reset and redirect
         setStations([]);
-        setTripData({ title: '', summary: '', country: '' });
+        setTripData({ title: '', summary: '', country: '', tripType: '' });
         setCurrentStep('upload');
         
         setTimeout(() => {
@@ -721,6 +731,34 @@ export function TripPublishForm() {
               placeholder="Eine kurze Beschreibung deiner Reise..."
               rows={2}
             />
+          </div>
+          
+          {/* Trip Type Select */}
+          <div className="space-y-2">
+            <Label htmlFor="trip-type">Art der Reise</Label>
+            <Select
+              value={tripData.tripType}
+              onValueChange={(value) => setTripData(prev => ({ ...prev, tripType: value as TripType }))}
+            >
+              <SelectTrigger id="trip-type">
+                <SelectValue placeholder="Wähle die Art deiner Reise..." />
+              </SelectTrigger>
+              <SelectContent>
+                {TRIP_TYPES.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <span className="flex items-center gap-2">
+                      <span>{type.icon}</span>
+                      <span>{type.label}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {tripData.tripType && (
+              <p className="text-xs text-muted-foreground">
+                Ausgewählt: {TRIP_TYPES.find(t => t.id === tripData.tripType)?.icon} {TRIP_TYPES.find(t => t.id === tripData.tripType)?.label}
+              </p>
+            )}
           </div>
           
           <CountrySelector
