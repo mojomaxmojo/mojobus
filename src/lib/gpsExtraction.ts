@@ -53,16 +53,26 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     console.log('[GPS Extraction] File size:', file.size, 'bytes');
 
     // Check if file is an image type that supports EXIF
-    if (!file.type.match(/^image\/(jpeg|jpg|tiff)$/i)) {
-      console.log('[GPS Extraction] File type not supported:', file.type);
-      return null;
+    if (!file.type.match(/^image\/(jpeg|jpg|tiff|heic|heif)$/i)) {
+      // Try anyway - some browsers might not detect HEIC correctly
+      console.log('[GPS Extraction] File type might not support EXIF:', file.type, '- trying anyway...');
     }
 
     console.log('[GPS Extraction] File type supported, extracting EXIF...');
 
     // === METHOD 1: Try exifr.gps() (standard EXIF GPS) ===
-    const exifData = await exifr.gps(file);
-    console.log('[GPS Extraction] Method 1 - exifr.gps() result:', exifData);
+    let exifData;
+    try {
+      exifData = await exifr.gps(file, {
+        // Wichtig: Alle GPS-Quellen aktivieren
+        exif: true,
+        xmp: true,
+        iptc: true,
+      });
+      console.log('[GPS Extraction] Method 1 - exifr.gps() result:', exifData);
+    } catch (e1) {
+      console.warn('[GPS Extraction] Method 1 failed:', e1);
+    }
 
     // Check for valid GPS data from method 1
     if (exifData && exifData.latitude && exifData.longitude) {
@@ -76,16 +86,22 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
       }
     }
 
-    // === METHOD 2: Try XMP GPS data (used by GCam/Google Photos) ===
-    console.log('[GPS Extraction] Method 1 failed, trying XMP GPS...');
-    const xmpData = await exifr.parse(file, {
-      xmp: true,
-      gps: true,
-      mergeOutput: false,
-    });
+    // === METHOD 2: Try full EXIF parse ===
+    console.log('[GPS Extraction] Method 1 failed or no GPS, trying full EXIF parse...');
+    let xmpData;
+    try {
+      xmpData = await exifr.parse(file, {
+        xmp: true,
+        exif: true,
+        gps: true,
+        iptc: true,
+        mergeOutput: false,
+      });
+    } catch (e2) {
+      console.warn('[GPS Extraction] Full parse failed:', e2);
+    }
 
-    console.log('[GPS Extraction] Method 2 - XMP data keys:', Object.keys(xmpData || {}));
-    console.log('[GPS Extraction] Method 2 - Full XMP data:', JSON.stringify(xmpData, null, 2));
+    console.log('[GPS Extraction] Method 2 - Full EXIF keys:', Object.keys(xmpData || {}));
 
     // XMP GPS tags (various formats used by different apps)
     const xmpLat = xmpData?.GPSLatitude ||

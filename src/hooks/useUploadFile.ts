@@ -12,22 +12,24 @@ import {
 
 /**
  * Korrigiert die Bildorientierung basierend auf EXIF-Daten
- * Smartphone-Fotos haben oft EXIF-Orientierungs-Tags, die beim WebP-Export verloren gehen
+ * Berücksichtigt auch die Bildabmessungen für Pixel-Smartphones
  */
 async function correctImageOrientation(file: File): Promise<File> {
   try {
-    // EXIF-Orientierung lesen
-    const exif = await exifr.parse(file, { pick: ['Orientation'] });
+    console.log(`📷 [Orientation] Checking ${file.name}...`);
+    
+    // EXIF-Daten lesen
+    const exif = await exifr.parse(file);
     const orientation = exif?.Orientation || 1;
     
-    console.log(`📷 EXIF Orientation: ${orientation}`);
+    // EXIF-Bildabmessungen
+    const exifWidth = exif?.ImageWidth || exif?.ExifImageWidth || exif?.PixelXDimension;
+    const exifHeight = exif?.ImageHeight || exif?.ExifImageHeight || exif?.PixelYDimension;
     
-    if (orientation === 1) {
-      // Keine Korrektur nötig
-      return file;
-    }
+    console.log(`📷 [Orientation] ${file.name}: Orientation = ${orientation}`);
+    console.log(`📷 [Orientation] ${file.name}: EXIF dimensions = ${exifWidth}x${exifHeight}`);
     
-    // Bild laden
+    // Bild laden um tatsächliche Abmessungen zu prüfen
     const img = new Image();
     const url = URL.createObjectURL(file);
     
@@ -37,7 +39,40 @@ async function correctImageOrientation(file: File): Promise<File> {
       img.src = url;
     });
     
-    // Canvas erstellen
+    const actualWidth = img.naturalWidth;
+    const actualHeight = img.naturalHeight;
+    
+    console.log(`📷 [Orientation] ${file.name}: Actual dimensions = ${actualWidth}x${actualHeight}`);
+    
+    // Prüfen ob Rotation nötig ist
+    // Fall 1: EXIF Orientation ist nicht 1 (Standard EXIF-Rotation)
+    // Fall 2: EXIF sagt Querformat, Bild ist Hochformat (Pixel-Problem)
+    let rotationDegrees = 0;
+    
+    if (orientation !== 1) {
+      // EXIF-Orientation basierte Rotation
+      switch (orientation) {
+        case 3: rotationDegrees = 180; break;
+        case 6: rotationDegrees = 90; break;
+        case 8: rotationDegrees = -90; break;
+      }
+    } else if (exifWidth && exifHeight && actualWidth && actualHeight) {
+      // Pixel-Smartphone Problem: EXIF sagt Querformat, Bild ist Hochformat
+      if (exifWidth > exifHeight && actualHeight > actualWidth) {
+        rotationDegrees = 90; // 90° CW
+        console.log(`🔄 [Orientation] ${file.name}: Detected Pixel rotation (EXIF landscape, actual portrait)`);
+      }
+    }
+    
+    if (rotationDegrees === 0) {
+      console.log(`✅ [Orientation] ${file.name}: No correction needed`);
+      URL.revokeObjectURL(url);
+      return file;
+    }
+    
+    console.log(`🔄 [Orientation] ${file.name}: Rotating by ${rotationDegrees}°`);
+    
+    // Canvas erstellen und rotieren
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
@@ -46,60 +81,28 @@ async function correctImageOrientation(file: File): Promise<File> {
       return file;
     }
     
-    // Canvas-Größe und Transformation basierend auf Orientierung
-    let drawWidth = img.width;
-    let drawHeight = img.height;
-    
-    // Bei 90° oder 270° Drehung: Breite und Höhe tauschen
-    const needsSwap = orientation >= 5 && orientation <= 8;
+    // Canvas-Größe (bei 90° oder -90° getauscht)
+    const needsSwap = rotationDegrees === 90 || rotationDegrees === -90;
     
     if (needsSwap) {
-      canvas.width = img.height;
-      canvas.height = img.width;
+      canvas.width = actualHeight;
+      canvas.height = actualWidth;
     } else {
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = actualWidth;
+      canvas.height = actualHeight;
     }
     
-    // In die Mitte des Canvas verschieben
+    // In die Mitte verschieben
     ctx.translate(canvas.width / 2, canvas.height / 2);
     
-    // Transformation basierend auf Orientierung
-    // EXIF Orientation sagt, wie das Bild GEDREHT IST, nicht wie es korrigiert werden muss
-    // Also müssen wir es in die GEGENTEILIGE Richtung drehen
-    switch (orientation) {
-      case 2: // Horizontal flip
-        ctx.scale(-1, 1);
-        break;
-      case 3: // 180° rotation - korrigieren mit 180°
-        ctx.rotate(Math.PI);
-        break;
-      case 4: // Vertical flip
-        ctx.scale(1, -1);
-        break;
-      case 5: // 90° CCW + horizontal flip - korrigieren mit 90° CW + flip
-        ctx.rotate(Math.PI / 2);  // 90° CW
-        ctx.scale(-1, 1);
-        break;
-      case 6: // 90° CCW - korrigieren mit 90° CW
-        ctx.rotate(Math.PI / 2);  // 90° im Uhrzeigersinn
-        break;
-      case 7: // 90° CW + horizontal flip - korrigieren mit 90° CCW + flip
-        ctx.rotate(-Math.PI / 2);  // 90° CCW
-        ctx.scale(-1, 1);
-        break;
-      case 8: // 90° CW - korrigieren mit 90° CCW
-        ctx.rotate(-Math.PI / 2);  // 90° gegen den Uhrzeigersinn
-        break;
-    }
+    // Rotation anwenden
+    ctx.rotate((rotationDegrees * Math.PI) / 180);
     
     // Zurück verschieben und zeichnen
-    ctx.translate(-img.width / 2, -img.height / 2);
+    ctx.translate(-actualWidth / 2, -actualHeight / 2);
     ctx.drawImage(img, 0, 0);
     
     URL.revokeObjectURL(url);
-    
-    console.log(`✅ Orientation corrected from ${orientation} to normal`);
     
     // Canvas zurück zu File
     return new Promise((resolve) => {
@@ -112,12 +115,13 @@ async function correctImageOrientation(file: File): Promise<File> {
           type: file.type,
           lastModified: file.lastModified,
         });
+        console.log(`✅ [Orientation] ${file.name}: Corrected successfully`);
         resolve(correctedFile);
       }, file.type, 0.95);
     });
     
   } catch (error) {
-    console.warn('⚠️ Failed to correct orientation:', error);
+    console.warn('⚠️ [Orientation] Failed to correct:', error);
     return file;
   }
 }

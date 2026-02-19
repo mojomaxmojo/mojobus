@@ -40,6 +40,89 @@ import {
   type GpsData, type GpsStatus
 } from '@/lib/gpsExtraction';
 
+/**
+ * Erstellt eine korrigierte Vorschau basierend auf EXIF-Daten
+ * Berücksichtigt die EXIF-Orientierung, die Browser oft ignorieren
+ */
+async function createCorrectedPreview(file: File, exifWidth?: number, exifHeight?: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      // Prüfen ob Bild gedreht werden muss
+      // Wenn EXIF-Breite != tatsächliche Breite, dann wurde das Bild gedreht
+      const actualWidth = img.naturalWidth;
+      const actualHeight = img.naturalHeight;
+      
+      console.log(`[Preview] ${file.name}: Actual dimensions ${actualWidth}x${actualHeight}`);
+      
+      // Prüfen ob Rotation nötig ist
+      // Wenn EXIF sagt "Querformat" (width > height), aber Bild ist "Hochformat" (height > width)
+      // Dann wurde es um 90° CCW gedreht -> wir müssen 90° CW drehen
+      let needsRotation = false;
+      let rotation = 0;
+      
+      if (exifWidth && exifHeight) {
+        if (exifWidth > exifHeight && actualHeight > actualWidth) {
+          // EXIF sagt Querformat, Bild ist Hochformat -> 90° CW drehen
+          needsRotation = true;
+          rotation = 90;
+          console.log(`[Preview] ${file.name}: Detected 90° CCW rotation, correcting...`);
+        } else if (exifHeight > exifWidth && actualWidth > actualHeight) {
+          // EXIF sagt Hochformat, Bild ist Querformat -> 90° CCW drehen
+          needsRotation = true;
+          rotation = -90;
+          console.log(`[Preview] ${file.name}: Detected 90° CW rotation, correcting...`);
+        }
+      }
+      
+      // Canvas erstellen
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        resolve(url);
+        return;
+      }
+      
+      // Canvas-Größe
+      if (rotation === 90 || rotation === -90) {
+        canvas.width = actualHeight;
+        canvas.height = actualWidth;
+      } else {
+        canvas.width = actualWidth;
+        canvas.height = actualHeight;
+      }
+      
+      // In die Mitte verschieben
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      
+      // Rotation anwenden
+      if (rotation !== 0) {
+        ctx.rotate((rotation * Math.PI) / 180);
+      }
+      
+      // Zurück verschieben und zeichnen
+      ctx.translate(-actualWidth / 2, -actualHeight / 2);
+      ctx.drawImage(img, 0, 0);
+      
+      URL.revokeObjectURL(url);
+      
+      // Data URL zurückgeben
+      resolve(canvas.toDataURL('image/jpeg', 0.9));
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(URL.createObjectURL(file));
+    };
+    
+    img.src = url;
+  });
+}
+
 // Calculate distance between two coordinates using Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Earth's radius in km
@@ -225,60 +308,99 @@ export function TripPublishForm() {
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue;
       
-      // EXIF-Datum lesen für Sortierung
+      // EXIF-Daten lesen (Datum, GPS, Orientierung, Bildabmessungen)
       let fileDate = new Date().toISOString().split('T')[0];
       let timestamp = Date.now();
+      let needsRotation = false;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      
       try {
-        const exif = await exifr.parse(file, { pick: ['DateTimeOriginal', 'CreateDate'] });
+        const exif = await exifr.parse(file);
+        
+        // Datum lesen
         const exifDate = exif?.DateTimeOriginal || exif?.CreateDate;
         if (exifDate) {
           timestamp = new Date(exifDate).getTime();
           fileDate = new Date(exifDate).toISOString().split('T')[0];
           console.log(`[Trip EXIF] Date from ${file.name}:`, fileDate);
         }
+        
+        // Bildabmessungen aus EXIF lesen
+        exifWidth = exif?.ImageWidth || exif?.ExifImageWidth || exif?.PixelXDimension;
+        exifHeight = exif?.ImageHeight || exif?.ExifImageHeight || exif?.PixelYDimension;
+        
+        // Prüfen ob Bild gedreht werden muss
+        // Wenn EXIF sagt Breite > Höhe, aber das tatsächliche Bild Höhe > Breite hat,
+        // dann wurde es vom Smartphone gedreht gespeichert
+        if (exifWidth && exifHeight) {
+          console.log(`[Trip EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+        }
+        
+        // Software prüfen (Pixel-Kameras)
+        const software = exif?.Software || '';
+        const make = exif?.Make || '';
+        console.log(`[Trip EXIF] ${file.name}: Make="${make}", Software="${software}"`);
+        
       } catch (e) {
-        console.warn(`[Trip EXIF] No date in ${file.name}`);
+        console.warn(`[Trip EXIF] No EXIF in ${file.name}`);
+      }
+      
+      // Bild laden um tatsächliche Abmessungen zu prüfen
+      let previewUrl: string;
+      try {
+        previewUrl = await createCorrectedPreview(file, exifWidth, exifHeight);
+      } catch (previewError) {
+        console.warn(`[Trip Preview] Failed to create preview for ${file.name}:`, previewError);
+        previewUrl = URL.createObjectURL(file);
       }
       
       const station: TripStation = {
         id: Math.random().toString(36).substr(2, 9),
         file,
-        preview: URL.createObjectURL(file),
+        preview: previewUrl,
         gpsStatus: 'not_found',
-        location: '', // Will be filled by reverse geocoding
+        location: '',
         title: '',
         description: '',
         date: fileDate,
-        timestamp, // Für Sortierung
+        timestamp,
       };
       
-      // Extract GPS from image
+      // Extract GPS from image (with better error handling for mobile)
       try {
+        console.log(`[Trip GPS] Starting extraction for ${file.name}...`);
         const gpsData = await extractGpsFromImage(file);
         if (gpsData) {
           station.gps = gpsData;
           station.gpsStatus = 'detected';
-          console.log(`[Trip GPS] Extracted from ${file.name}:`, gpsData);
+          console.log(`[Trip GPS] ✓ Extracted from ${file.name}:`, gpsData);
           
           // Get location name via reverse geocoding
-          const locationData = await reverseGeocode(gpsData.latitude, gpsData.longitude);
-          if (locationData) {
-            const locationParts = [
-              locationData.city,
-              locationData.neighbourhood,
-              locationData.suburb
-            ].filter(Boolean);
-            station.location = locationParts.join(', ');
-            console.log(`[Trip Location] Found for ${file.name}:`, station.location);
-            
-            // Auto-fill title if empty
-            if (!station.title && station.location) {
-              station.title = station.location;
+          try {
+            const locationData = await reverseGeocode(gpsData.latitude, gpsData.longitude);
+            if (locationData) {
+              const locationParts = [
+                locationData.city,
+                locationData.neighbourhood,
+                locationData.suburb
+              ].filter(Boolean);
+              station.location = locationParts.join(', ');
+              console.log(`[Trip Location] Found for ${file.name}:`, station.location);
+              
+              // Auto-fill title if empty
+              if (!station.title && station.location) {
+                station.title = station.location;
+              }
             }
+          } catch (geoError) {
+            console.warn(`[Trip Location] Reverse geocoding failed for ${file.name}:`, geoError);
           }
+        } else {
+          console.log(`[Trip GPS] ✗ No GPS found in ${file.name}`);
         }
-      } catch (error) {
-        console.error(`[Trip GPS] Failed to extract from ${file.name}:`, error);
+      } catch (error: any) {
+        console.error(`[Trip GPS] ✗ Failed to extract from ${file.name}:`, error?.message || error);
         station.gpsStatus = 'error';
       }
       
