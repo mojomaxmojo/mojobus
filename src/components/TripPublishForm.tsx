@@ -339,24 +339,16 @@ export function TripPublishForm() {
   const canProceedToPreview = stations.length >= 2 && tripData.title.trim() !== '';
   const canPublish = stations.filter(s => s.gps).length >= 2 && tripData.title.trim() !== '';
 
-  // Upload all images to Blossom
-  const uploadImages = async () => {
+  // Upload all images to Blossom and return updated stations
+  const uploadImages = async (): Promise<TripStation[]> => {
     setIsUploading(true);
     setUploadProgress({ current: 0, total: stations.length, status: 'Upload gestartet...' });
+    
+    const updatedStations: TripStation[] = [];
     
     try {
       for (let i = 0; i < stations.length; i++) {
         const station = stations[i];
-        
-        if (station.uploaded && station.uploadedUrl) {
-          // Already uploaded
-          setUploadProgress({ 
-            current: i + 1, 
-            total: stations.length, 
-            status: `Überspringe ${station.file.name} (bereits hochgeladen)` 
-          });
-          continue;
-        }
         
         setUploadProgress({ 
           current: i + 1, 
@@ -364,20 +356,34 @@ export function TripPublishForm() {
           status: `Lade ${station.file.name} hoch...` 
         });
         
-        const uploadResult = await uploadFile(station.file);
-        
-        if (Array.isArray(uploadResult)) {
-          const urlTag = uploadResult.find(tag => 
-            Array.isArray(tag) && tag.length >= 2 && tag[0] === 'url'
-          );
+        try {
+          const uploadResult = await uploadFile(station.file);
           
-          if (urlTag) {
-            setStations(prev => prev.map(s => 
-              s.id === station.id 
-                ? { ...s, uploaded: true, uploadedUrl: urlTag[1] }
-                : s
-            ));
+          let uploadedUrl: string | undefined;
+          if (Array.isArray(uploadResult)) {
+            const urlTag = uploadResult.find(tag => 
+              Array.isArray(tag) && tag.length >= 2 && tag[0] === 'url'
+            );
+            if (urlTag) {
+              uploadedUrl = urlTag[1];
+            }
           }
+          
+          updatedStations.push({
+            ...station,
+            uploaded: true,
+            uploadedUrl,
+          });
+          
+          console.log(`[Trip Upload] Station ${i + 1} uploaded:`, uploadedUrl);
+        } catch (uploadError) {
+          console.error(`[Trip Upload] Failed to upload station ${i + 1}:`, uploadError);
+          toast({
+            title: 'Fehler beim Upload',
+            description: `Bild ${i + 1} konnte nicht hochgeladen werden: ${uploadError.message}`,
+            variant: 'destructive'
+          });
+          return []; // Abort on error
         }
       }
       
@@ -386,7 +392,10 @@ export function TripPublishForm() {
         description: `${stations.length} Bilder wurden hochgeladen.`,
       });
       
-      return true;
+      // Update state with uploaded stations
+      setStations(updatedStations);
+      
+      return updatedStations;
     } catch (error) {
       console.error('[Trip Upload] Error:', error);
       toast({
@@ -394,7 +403,7 @@ export function TripPublishForm() {
         description: 'Einige Bilder konnten nicht hochgeladen werden.',
         variant: 'destructive'
       });
-      return false;
+      return [];
     } finally {
       setIsUploading(false);
       setUploadProgress({ current: 0, total: 0, status: '' });
@@ -403,30 +412,46 @@ export function TripPublishForm() {
 
   // Publish trip
   const handlePublish = async () => {
-    // First upload all images
-    const uploadSuccess = await uploadImages();
-    if (!uploadSuccess) return;
+    // First upload all images and get updated stations
+    const uploadedStations = await uploadImages();
+    
+    if (uploadedStations.length === 0) {
+      console.error('[Trip Publish] No stations uploaded');
+      return;
+    }
+    
+    // Check for GPS stations
+    const gpsStations = uploadedStations.filter(s => s.gps && s.uploadedUrl);
+    if (gpsStations.length < 2) {
+      toast({
+        title: 'Nicht genug GPS-Daten',
+        description: 'Mindestens 2 Stationen mit GPS erforderlich.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     // Create trip event (Kind 30025 - compatible with mojotravel)
     const dTag = `trip-${Date.now()}`;
     
+    console.log('[Trip Publish] Publishing with', uploadedStations.length, 'stations');
+    console.log('[Trip Publish] GPS stations:', gpsStations.length);
+    
     // Build waypoint tags (for route visualization)
     // Format: ['waypoint', index, lat, lon, name, date, image, description]
-    const waypointTags = stations
-      .filter(s => s.gps && s.uploadedUrl)
-      .map((s, index) => [
-        'waypoint',
-        (index + 1).toString(),
-        s.gps!.latitude.toString(),
-        s.gps!.longitude.toString(),
-        s.title || s.location || `Station ${index + 1}`,
-        s.date || '',
-        s.uploadedUrl!,
-        s.description || ''
-      ]);
+    const waypointTags = gpsStations.map((s, index) => [
+      'waypoint',
+      (index + 1).toString(),
+      s.gps!.latitude.toString(),
+      s.gps!.longitude.toString(),
+      s.title || s.location || `Station ${index + 1}`,
+      s.date || '',
+      s.uploadedUrl!,
+      s.description || ''
+    ]);
     
     // Build image tags (with GPS for map display) - mojotravel format
-    const imageTags = stations
+    const imageTags = uploadedStations
       .filter(s => s.uploadedUrl)
       .map((s, index) => {
         if (s.gps) {
@@ -437,10 +462,9 @@ export function TripPublishForm() {
     
     // Calculate total distance
     let totalDistance = 0;
-    const stationsWithGps = stations.filter(s => s.gps);
-    for (let i = 1; i < stationsWithGps.length; i++) {
-      const prev = stationsWithGps[i - 1];
-      const curr = stationsWithGps[i];
+    for (let i = 1; i < gpsStations.length; i++) {
+      const prev = gpsStations[i - 1];
+      const curr = gpsStations[i];
       totalDistance += calculateDistance(
         prev.gps!.latitude, prev.gps!.longitude,
         curr.gps!.latitude, curr.gps!.longitude
@@ -448,7 +472,7 @@ export function TripPublishForm() {
     }
     
     // Build station content
-    const stationContent = stations
+    const stationContent = uploadedStations
       .filter(s => s.uploadedUrl)
       .map((s, index) => {
         let content = `## Station ${index + 1}: ${s.title || s.location || 'Unbenannt'}\n\n`;
@@ -459,6 +483,9 @@ export function TripPublishForm() {
       .join('\n---\n\n');
     
     const content = `# ${tripData.title}\n\n${tripData.summary}\n\n${stationContent}`;
+    
+    console.log('[Trip Publish] Waypoint tags:', waypointTags.length);
+    console.log('[Trip Publish] Image tags:', imageTags.length);
     
     // Build tags
     const tags: string[][] = [
