@@ -16,16 +16,21 @@ import {
  */
 async function correctImageOrientation(file: File): Promise<File> {
   try {
+    console.log(`📷 [Orientation] Checking ${file.name}...`);
+    
     // EXIF-Orientierung lesen
-    const exif = await exifr.parse(file, { pick: ['Orientation'] });
+    const exif = await exifr.parse(file);
     const orientation = exif?.Orientation || 1;
     
-    console.log(`📷 EXIF Orientation for ${file.name}: ${orientation}`);
+    console.log(`📷 [Orientation] ${file.name}: Orientation = ${orientation}`);
+    console.log(`📷 [Orientation] ${file.name}: All EXIF keys =`, exif ? Object.keys(exif) : 'none');
     
     if (orientation === 1) {
-      console.log(`✅ No orientation correction needed`);
+      console.log(`✅ [Orientation] ${file.name}: No correction needed (orientation = 1)`);
       return file;
     }
+    
+    console.log(`🔄 [Orientation] ${file.name}: NEEDS CORRECTION from orientation ${orientation}`);
     
     // Bild laden
     const img = new Image();
