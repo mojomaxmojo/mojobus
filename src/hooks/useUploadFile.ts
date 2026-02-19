@@ -16,21 +16,16 @@ import {
  */
 async function correctImageOrientation(file: File): Promise<File> {
   try {
-    console.log(`📷 [Orientation] Checking ${file.name}...`);
-    
     // EXIF-Orientierung lesen
-    const exif = await exifr.parse(file);
+    const exif = await exifr.parse(file, { pick: ['Orientation'] });
     const orientation = exif?.Orientation || 1;
     
-    console.log(`📷 [Orientation] ${file.name}: Orientation = ${orientation}`);
-    console.log(`📷 [Orientation] ${file.name}: All EXIF keys =`, exif ? Object.keys(exif) : 'none');
+    console.log(`📷 EXIF Orientation: ${orientation}`);
     
     if (orientation === 1) {
-      console.log(`✅ [Orientation] ${file.name}: No correction needed (orientation = 1)`);
+      // Keine Korrektur nötig
       return file;
     }
-    
-    console.log(`🔄 [Orientation] ${file.name}: NEEDS CORRECTION from orientation ${orientation}`);
     
     // Bild laden
     const img = new Image();
@@ -51,7 +46,10 @@ async function correctImageOrientation(file: File): Promise<File> {
       return file;
     }
     
-    // Canvas-Größe basierend auf Orientierung
+    // Canvas-Größe und Transformation basierend auf Orientierung
+    let drawWidth = img.width;
+    let drawHeight = img.height;
+    
     // Bei 90° oder 270° Drehung: Breite und Höhe tauschen
     const needsSwap = orientation >= 5 && orientation <= 8;
     
@@ -67,56 +65,41 @@ async function correctImageOrientation(file: File): Promise<File> {
     ctx.translate(canvas.width / 2, canvas.height / 2);
     
     // Transformation basierend auf Orientierung
-    // EXIF Orientation beschreibt, wie das Bild GESPEICHERT ist (in welchem Winkel es gedreht wurde)
-    // Um es zu korrigieren, müssen wir es in die GEGENTEILIGE Richtung drehen
-    // 
-    // In Canvas: Positive Rotation = Uhrzeigersinn (CW), Negative = Gegen-Uhrzeigersinn (CCW)
-    // 
-    // Orientation 6 = Bild wurde 90° CCW gespeichert → korrigieren mit 90° CW (+π/2)
-    // Orientation 8 = Bild wurde 90° CW gespeichert → korrigieren mit 90° CCW (-π/2)
-    
-    let rotationDegrees = 0;
-    
+    // EXIF Orientation sagt, wie das Bild GEDREHT IST, nicht wie es korrigiert werden muss
+    // Also müssen wir es in die GEGENTEILIGE Richtung drehen
     switch (orientation) {
       case 2: // Horizontal flip
         ctx.scale(-1, 1);
-        rotationDegrees = 0;
         break;
-      case 3: // 180° rotation
-        ctx.rotate(Math.PI);  // 180°
-        rotationDegrees = 180;
+      case 3: // 180° rotation - korrigieren mit 180°
+        ctx.rotate(Math.PI);
         break;
       case 4: // Vertical flip
         ctx.scale(1, -1);
-        rotationDegrees = 0;
         break;
-      case 5: // 90° CCW + horizontal flip
-        ctx.rotate(Math.PI / 2);  // +90° CW
+      case 5: // 90° CCW + horizontal flip - korrigieren mit 90° CW + flip
+        ctx.rotate(Math.PI / 2);  // 90° CW
         ctx.scale(-1, 1);
-        rotationDegrees = 90;
         break;
-      case 6: // 90° CCW gespeichert → +90° CW korrigieren
-        ctx.rotate(Math.PI / 2);  // +90° im Uhrzeigersinn
-        rotationDegrees = 90;
+      case 6: // 90° CCW - korrigieren mit 90° CW
+        ctx.rotate(Math.PI / 2);  // 90° im Uhrzeigersinn
         break;
-      case 7: // 90° CW + horizontal flip
-        ctx.rotate(-Math.PI / 2);  // -90° CCW
+      case 7: // 90° CW + horizontal flip - korrigieren mit 90° CCW + flip
+        ctx.rotate(-Math.PI / 2);  // 90° CCW
         ctx.scale(-1, 1);
-        rotationDegrees = -90;
         break;
-      case 8: // 90° CW gespeichert → -90° CCW korrigieren
-        ctx.rotate(-Math.PI / 2);  // -90° gegen den Uhrzeigersinn
-        rotationDegrees = -90;
+      case 8: // 90° CW - korrigieren mit 90° CCW
+        ctx.rotate(-Math.PI / 2);  // 90° gegen den Uhrzeigersinn
         break;
     }
-    
-    console.log(`🔄 Rotating ${file.name} by ${rotationDegrees}° to correct orientation ${orientation}`);
     
     // Zurück verschieben und zeichnen
     ctx.translate(-img.width / 2, -img.height / 2);
     ctx.drawImage(img, 0, 0);
     
     URL.revokeObjectURL(url);
+    
+    console.log(`✅ Orientation corrected from ${orientation} to normal`);
     
     // Canvas zurück zu File
     return new Promise((resolve) => {
@@ -129,7 +112,6 @@ async function correctImageOrientation(file: File): Promise<File> {
           type: file.type,
           lastModified: file.lastModified,
         });
-        console.log(`✅ Orientation corrected for ${file.name}`);
         resolve(correctedFile);
       }, file.type, 0.95);
     });

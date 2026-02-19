@@ -40,84 +40,6 @@ import {
   type GpsData, type GpsStatus
 } from '@/lib/gpsExtraction';
 
-/**
- * Erstellt eine korrigierte Vorschau mit richtiger Orientierung
- */
-async function createOrientedPreview(file: File, orientation: number): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) {
-        URL.revokeObjectURL(url);
-        resolve(url);
-        return;
-      }
-      
-      // Canvas-Größe basierend auf Orientierung
-      const needsSwap = orientation >= 5 && orientation <= 8;
-      
-      if (needsSwap) {
-        canvas.width = img.height;
-        canvas.height = img.width;
-      } else {
-        canvas.width = img.width;
-        canvas.height = img.height;
-      }
-      
-      // In die Mitte verschieben
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      
-      // Rotation basierend auf Orientierung
-      switch (orientation) {
-        case 2: // Horizontal flip
-          ctx.scale(-1, 1);
-          break;
-        case 3: // 180°
-          ctx.rotate(Math.PI);
-          break;
-        case 4: // Vertical flip
-          ctx.scale(1, -1);
-          break;
-        case 5: // 90° CW + horizontal flip
-          ctx.rotate(Math.PI / 2);
-          ctx.scale(-1, 1);
-          break;
-        case 6: // 90° CCW gespeichert → 90° CW korrigieren
-          ctx.rotate(Math.PI / 2);
-          break;
-        case 7: // 90° CCW + horizontal flip
-          ctx.rotate(-Math.PI / 2);
-          ctx.scale(-1, 1);
-          break;
-        case 8: // 90° CW gespeichert → 90° CCW korrigieren
-          ctx.rotate(-Math.PI / 2);
-          break;
-      }
-      
-      // Zurück verschieben und zeichnen
-      ctx.translate(-img.width / 2, -img.height / 2);
-      ctx.drawImage(img, 0, 0);
-      
-      URL.revokeObjectURL(url);
-      
-      // Data URL zurückgeben
-      resolve(canvas.toDataURL('image/jpeg', 0.9));
-    };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(URL.createObjectURL(file));
-    };
-    
-    img.src = url;
-  });
-}
-
 // Calculate distance between two coordinates using Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Earth's radius in km
@@ -306,35 +228,22 @@ export function TripPublishForm() {
       // EXIF-Datum lesen für Sortierung
       let fileDate = new Date().toISOString().split('T')[0];
       let timestamp = Date.now();
-      let orientation = 1;
-      
       try {
-        const exif = await exifr.parse(file);
+        const exif = await exifr.parse(file, { pick: ['DateTimeOriginal', 'CreateDate'] });
         const exifDate = exif?.DateTimeOriginal || exif?.CreateDate;
         if (exifDate) {
           timestamp = new Date(exifDate).getTime();
           fileDate = new Date(exifDate).toISOString().split('T')[0];
           console.log(`[Trip EXIF] Date from ${file.name}:`, fileDate);
         }
-        orientation = exif?.Orientation || 1;
-        console.log(`[Trip EXIF] Orientation from ${file.name}:`, orientation);
       } catch (e) {
-        console.warn(`[Trip EXIF] No EXIF in ${file.name}`);
-      }
-      
-      // Preview erstellen mit Orientierungskorrektur
-      let previewUrl: string;
-      if (orientation !== 1) {
-        console.log(`[Trip Preview] Correcting orientation ${orientation} for ${file.name}`);
-        previewUrl = await createOrientedPreview(file, orientation);
-      } else {
-        previewUrl = URL.createObjectURL(file);
+        console.warn(`[Trip EXIF] No date in ${file.name}`);
       }
       
       const station: TripStation = {
         id: Math.random().toString(36).substr(2, 9),
         file,
-        preview: previewUrl,
+        preview: URL.createObjectURL(file),
         gpsStatus: 'not_found',
         location: '', // Will be filled by reverse geocoding
         title: '',
