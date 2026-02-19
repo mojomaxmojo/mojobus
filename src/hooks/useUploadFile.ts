@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { BlossomUploader } from '@nostrify/nostrify/uploaders';
 import imageCompression from 'browser-image-compression';
+import exifr from 'exifr';
 
 import { useCurrentUser } from "./useCurrentUser";
 import { getBlossomConfigByPubkey, BACKUP_BLOSSOM_SERVER } from '@/config/blossom';
@@ -8,6 +9,109 @@ import {
   imageOptimizationConfig,
   shouldOptimizeImage,
 } from '@/config/imageOptimization';
+
+/**
+ * Korrigiert die Bildorientierung basierend auf EXIF-Daten
+ * Smartphone-Fotos haben oft EXIF-Orientierungs-Tags, die beim WebP-Export verloren gehen
+ */
+async function correctImageOrientation(file: File): Promise<File> {
+  try {
+    // EXIF-Orientierung lesen
+    const exif = await exifr.parse(file, { pick: ['Orientation'] });
+    const orientation = exif?.Orientation || 1;
+    
+    if (orientation === 1) {
+      // Keine Korrektur nötig
+      return file;
+    }
+    
+    console.log(`🔄 Correcting EXIF orientation: ${orientation}`);
+    
+    // Bild laden
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = url;
+    });
+    
+    // Canvas erstellen und korrekt drehen/spiegeln
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      URL.revokeObjectURL(url);
+      return file;
+    }
+    
+    // Canvas-Größe basierend auf Orientierung
+    let width = img.width;
+    let height = img.height;
+    
+    // Bei 90° oder 270° Drehung: Breite und Höhe tauschen
+    if (orientation >= 5 && orientation <= 8) {
+      canvas.width = height;
+      canvas.height = width;
+    } else {
+      canvas.width = width;
+      canvas.height = height;
+    }
+    
+    // Transformation basierend auf Orientierung
+    switch (orientation) {
+      case 2: // Horizontal flip
+        ctx.transform(-1, 0, 0, 1, width, 0);
+        break;
+      case 3: // 180° rotation
+        ctx.transform(-1, 0, 0, -1, width, height);
+        break;
+      case 4: // Vertical flip
+        ctx.transform(1, 0, 0, -1, 0, height);
+        break;
+      case 5: // 90° CW + horizontal flip
+        ctx.transform(0, 1, 1, 0, 0, 0);
+        break;
+      case 6: // 90° CCW (270° CW)
+        ctx.transform(0, 1, -1, 0, height, 0);
+        break;
+      case 7: // 90° CCW + horizontal flip
+        ctx.transform(0, -1, -1, 0, height, width);
+        break;
+      case 8: // 90° CW (270° CCW)
+        ctx.transform(0, -1, 1, 0, 0, width);
+        break;
+      default:
+        // Normale Orientierung (1)
+        break;
+    }
+    
+    // Bild zeichnen
+    ctx.drawImage(img, 0, 0);
+    
+    URL.revokeObjectURL(url);
+    
+    // Canvas zurück zu File
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(file);
+          return;
+        }
+        const correctedFile = new File([blob], file.name, {
+          type: file.type,
+          lastModified: file.lastModified,
+        });
+        resolve(correctedFile);
+      }, file.type, 0.95);
+    });
+    
+  } catch (error) {
+    console.warn('⚠️ Failed to correct orientation:', error);
+    return file;
+  }
+}
 
 export function useUploadFile() {
   const { user, users } = useCurrentUser();
@@ -27,33 +131,42 @@ export function useUploadFile() {
 
       let fileToUpload = file;
 
+      // Zuerst: EXIF-Orientierung korrigieren (bevor Komprimierung)
+      // WICHTIG für Smartphone-Fotos!
+      try {
+        fileToUpload = await correctImageOrientation(file);
+        console.log('✅ EXIF orientation checked/corrected');
+      } catch (orientationError) {
+        console.warn('⚠️ Orientation correction failed:', orientationError);
+      }
+
       // Prüfe, ob Bildoptimierung aktiviert ist und das Bild optimiert werden soll
       const enableOptimization = localStorage.getItem('image-optimization-enabled');
-      const shouldOptimize = enableOptimization !== 'false' && shouldOptimizeImage(file);
+      const shouldOptimize = enableOptimization !== 'false' && shouldOptimizeImage(fileToUpload);
 
       if (shouldOptimize) {
+        const originalSize = fileToUpload.size;
         console.log('🖼️ Image optimization enabled, processing file...');
         console.log('Original file:', {
-          name: file.name,
-          size: `${(file.size / 1024).toFixed(2)} KB`,
-          type: file.type,
+          name: fileToUpload.name,
+          size: `${(originalSize / 1024).toFixed(2)} KB`,
+          type: fileToUpload.type,
         });
 
         try {
           // Optimiere das Bild mit browser-image-compression
-          fileToUpload = await imageCompression(file, imageOptimizationConfig);
+          fileToUpload = await imageCompression(fileToUpload, imageOptimizationConfig);
 
           console.log('✅ Image optimization completed:', {
             name: fileToUpload.name,
-            originalSize: `${(file.size / 1024).toFixed(2)} KB`,
+            originalSize: `${(originalSize / 1024).toFixed(2)} KB`,
             optimizedSize: `${(fileToUpload.size / 1024).toFixed(2)} KB`,
-            compressionRatio: `${((1 - fileToUpload.size / file.size) * 100).toFixed(1)}%`,
+            compressionRatio: `${((1 - fileToUpload.size / originalSize) * 100).toFixed(1)}%`,
             format: fileToUpload.type,
           });
         } catch (optimizationError) {
-          console.warn('⚠️ Image optimization failed, uploading original file:', optimizationError);
-          // Bei Fehler das Original hochladen
-          fileToUpload = file;
+          console.warn('⚠️ Image optimization failed, using orientation-corrected file:', optimizationError);
+          // Behalte das orientierungskorrigierte Bild (nicht das Original)
         }
       } else {
         console.log('📤 Skipping image optimization (disabled or not applicable)');
