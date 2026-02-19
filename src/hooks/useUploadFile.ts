@@ -20,12 +20,12 @@ async function correctImageOrientation(file: File): Promise<File> {
     const exif = await exifr.parse(file, { pick: ['Orientation'] });
     const orientation = exif?.Orientation || 1;
     
+    console.log(`📷 EXIF Orientation: ${orientation}`);
+    
     if (orientation === 1) {
       // Keine Korrektur nötig
       return file;
     }
-    
-    console.log(`🔄 Correcting EXIF orientation: ${orientation}`);
     
     // Bild laden
     const img = new Image();
@@ -37,7 +37,7 @@ async function correctImageOrientation(file: File): Promise<File> {
       img.src = url;
     });
     
-    // Canvas erstellen und korrekt drehen/spiegeln
+    // Canvas erstellen
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
@@ -46,51 +46,60 @@ async function correctImageOrientation(file: File): Promise<File> {
       return file;
     }
     
-    // Canvas-Größe basierend auf Orientierung
-    let width = img.width;
-    let height = img.height;
+    // Canvas-Größe und Transformation basierend auf Orientierung
+    let drawWidth = img.width;
+    let drawHeight = img.height;
     
     // Bei 90° oder 270° Drehung: Breite und Höhe tauschen
-    if (orientation >= 5 && orientation <= 8) {
-      canvas.width = height;
-      canvas.height = width;
+    const needsSwap = orientation >= 5 && orientation <= 8;
+    
+    if (needsSwap) {
+      canvas.width = img.height;
+      canvas.height = img.width;
     } else {
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = img.width;
+      canvas.height = img.height;
     }
+    
+    // In die Mitte des Canvas verschieben
+    ctx.translate(canvas.width / 2, canvas.height / 2);
     
     // Transformation basierend auf Orientierung
+    // EXIF Orientation sagt, wie das Bild GEDREHT IST, nicht wie es korrigiert werden muss
+    // Also müssen wir es in die GEGENTEILIGE Richtung drehen
     switch (orientation) {
       case 2: // Horizontal flip
-        ctx.transform(-1, 0, 0, 1, width, 0);
+        ctx.scale(-1, 1);
         break;
-      case 3: // 180° rotation
-        ctx.transform(-1, 0, 0, -1, width, height);
+      case 3: // 180° rotation - korrigieren mit 180°
+        ctx.rotate(Math.PI);
         break;
       case 4: // Vertical flip
-        ctx.transform(1, 0, 0, -1, 0, height);
+        ctx.scale(1, -1);
         break;
-      case 5: // 90° CW + horizontal flip
-        ctx.transform(0, 1, 1, 0, 0, 0);
+      case 5: // 90° CCW + horizontal flip - korrigieren mit 90° CW + flip
+        ctx.rotate(Math.PI / 2);  // 90° CW
+        ctx.scale(-1, 1);
         break;
-      case 6: // 90° CCW (270° CW)
-        ctx.transform(0, 1, -1, 0, height, 0);
+      case 6: // 90° CCW - korrigieren mit 90° CW
+        ctx.rotate(Math.PI / 2);  // 90° im Uhrzeigersinn
         break;
-      case 7: // 90° CCW + horizontal flip
-        ctx.transform(0, -1, -1, 0, height, width);
+      case 7: // 90° CW + horizontal flip - korrigieren mit 90° CCW + flip
+        ctx.rotate(-Math.PI / 2);  // 90° CCW
+        ctx.scale(-1, 1);
         break;
-      case 8: // 90° CW (270° CCW)
-        ctx.transform(0, -1, 1, 0, 0, width);
-        break;
-      default:
-        // Normale Orientierung (1)
+      case 8: // 90° CW - korrigieren mit 90° CCW
+        ctx.rotate(-Math.PI / 2);  // 90° gegen den Uhrzeigersinn
         break;
     }
     
-    // Bild zeichnen
+    // Zurück verschieben und zeichnen
+    ctx.translate(-img.width / 2, -img.height / 2);
     ctx.drawImage(img, 0, 0);
     
     URL.revokeObjectURL(url);
+    
+    console.log(`✅ Orientation corrected from ${orientation} to normal`);
     
     // Canvas zurück zu File
     return new Promise((resolve) => {

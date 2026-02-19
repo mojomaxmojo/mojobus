@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import exifr from 'exifr';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,9 @@ interface TripStation {
   title: string;
   description: string;
   date: string;
+  
+  // EXIF timestamp for sorting
+  timestamp?: number;
 }
 
 // Trip metadata
@@ -221,6 +225,21 @@ export function TripPublishForm() {
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue;
       
+      // EXIF-Datum lesen für Sortierung
+      let fileDate = new Date().toISOString().split('T')[0];
+      let timestamp = Date.now();
+      try {
+        const exif = await exifr.parse(file, { pick: ['DateTimeOriginal', 'CreateDate'] });
+        const exifDate = exif?.DateTimeOriginal || exif?.CreateDate;
+        if (exifDate) {
+          timestamp = new Date(exifDate).getTime();
+          fileDate = new Date(exifDate).toISOString().split('T')[0];
+          console.log(`[Trip EXIF] Date from ${file.name}:`, fileDate);
+        }
+      } catch (e) {
+        console.warn(`[Trip EXIF] No date in ${file.name}`);
+      }
+      
       const station: TripStation = {
         id: Math.random().toString(36).substr(2, 9),
         file,
@@ -229,7 +248,8 @@ export function TripPublishForm() {
         location: '', // Will be filled by reverse geocoding
         title: '',
         description: '',
-        date: new Date().toISOString().split('T')[0],
+        date: fileDate,
+        timestamp, // Für Sortierung
       };
       
       // Extract GPS from image
@@ -264,6 +284,10 @@ export function TripPublishForm() {
       
       newStations.push(station);
     }
+    
+    // Sortieren nach EXIF-Timestamp
+    newStations.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    console.log('[Trip] Stations sorted by timestamp');
     
     setStations(prev => [...prev, ...newStations]);
   };
@@ -394,8 +418,8 @@ export function TripPublishForm() {
 
   // Validate for each step
   const canProceedToDetails = stations.length >= 2;
-  const canProceedToPreview = stations.length >= 2 && tripData.title.trim() !== '';
-  const canPublish = stations.filter(s => s.gps).length >= 2 && tripData.title.trim() !== '';
+  const canProceedToPreview = stations.length >= 2 && tripData.title.trim() !== '' && tripData.tripType !== '';
+  const canPublish = stations.filter(s => s.gps).length >= 2 && tripData.title.trim() !== '' && tripData.tripType !== '';
 
   // Upload all images to Blossom and return updated stations
   const uploadImages = async (): Promise<TripStation[]> => {
@@ -882,15 +906,17 @@ export function TripPublishForm() {
             />
           </div>
           
-          {/* Trip Type Select */}
+          {/* Trip Type Select - Pflichtfeld */}
           <div className="space-y-2">
-            <Label htmlFor="trip-type">Art der Reise</Label>
+            <Label htmlFor="trip-type" className={!tripData.tripType ? 'text-destructive' : ''}>
+              Art der Reise *
+            </Label>
             <Select
               value={tripData.tripType}
               onValueChange={(value) => setTripData(prev => ({ ...prev, tripType: value as TripType }))}
             >
-              <SelectTrigger id="trip-type">
-                <SelectValue placeholder="Wähle die Art deiner Reise..." />
+              <SelectTrigger id="trip-type" className={!tripData.tripType ? 'border-destructive' : ''}>
+                <SelectValue placeholder="Wähle die Art deiner Reise... (Pflichtfeld)" />
               </SelectTrigger>
               <SelectContent>
                 {TRIP_TYPES.map((type) => (
@@ -903,6 +929,11 @@ export function TripPublishForm() {
                 ))}
               </SelectContent>
             </Select>
+            {!tripData.tripType && (
+              <p className="text-xs text-destructive">
+                Bitte wähle die Art deiner Reise aus
+              </p>
+            )}
             {tripData.tripType && (
               <p className="text-xs text-muted-foreground">
                 Ausgewählt: {TRIP_TYPES.find(t => t.id === tripData.tripType)?.icon} {TRIP_TYPES.find(t => t.id === tripData.tripType)?.label}
