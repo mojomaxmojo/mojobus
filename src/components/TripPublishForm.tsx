@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/useToast';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { useTrip } from '@/hooks/useTrips';
 import { GpsEditor } from '@/components/GpsEditor';
 import { GpsStatusIndicator } from '@/components/GpsStatusIndicator';
 import { LocationPicker } from '@/components/LocationPicker';
@@ -84,6 +85,14 @@ interface TripData {
 type WizardStep = 'upload' | 'details' | 'preview' | 'publish';
 
 export function TripPublishForm() {
+  // URL params for edit mode
+  const [searchParams] = useSearchParams();
+  const editNaddr = searchParams.get('edit');
+  const isEditMode = !!editNaddr;
+  
+  // Load existing trip for editing
+  const { data: existingTrip, isLoading: isLoadingExisting } = useTrip(editNaddr || '');
+  
   // State
   const [stations, setStations] = useState<TripStation[]>([]);
   const [tripData, setTripData] = useState<TripData>({
@@ -97,6 +106,7 @@ export function TripPublishForm() {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [editDtag, setEditDtag] = useState<string | null>(null); // Store d-tag for updates
   
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
@@ -107,6 +117,54 @@ export function TripPublishForm() {
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
+  
+  // Populate form when editing existing trip
+  useEffect(() => {
+    if (isEditMode && existingTrip && !isLoadingExisting) {
+      console.log('[Trip Edit] Loading existing trip:', existingTrip.title);
+      
+      // Store d-tag for update
+      setEditDtag(existingTrip.identifier || null);
+      
+      // Set trip metadata
+      setTripData({
+        title: existingTrip.title || '',
+        summary: existingTrip.summary || '',
+        country: existingTrip.country || '',
+        tripType: (existingTrip.category as TripType) || '',
+      });
+      
+      // Create stations from waypoints
+      const existingStations: TripStation[] = existingTrip.waypoints.map((wp, index) => ({
+        id: `existing-${index}`,
+        file: null as unknown as File, // No file needed for existing images
+        preview: wp.image || '',
+        uploaded: true,
+        uploadedUrl: wp.image || '',
+        gps: {
+          latitude: wp.lat,
+          longitude: wp.lon,
+          precision: 'medium' as const,
+        },
+        gpsStatus: 'detected' as GpsStatus,
+        location: wp.name || '',
+        title: wp.name || '',
+        description: wp.description || '',
+        date: wp.date || new Date().toISOString().split('T')[0],
+      }));
+      
+      setStations(existingStations);
+      
+      // Skip to details step since we have stations
+      setCurrentStep('details');
+      
+      toast({
+        title: 'Trip geladen',
+        description: `"${existingTrip.title}" wird bearbeitet.`,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, existingTrip, isLoadingExisting]);
 
   // Auto-fill trip metadata from first station
   useEffect(() => {
@@ -350,6 +408,24 @@ export function TripPublishForm() {
       for (let i = 0; i < stations.length; i++) {
         const station = stations[i];
         
+        // Skip stations that are already uploaded (edit mode)
+        if (station.uploaded && station.uploadedUrl) {
+          console.log(`[Trip Upload] Station ${i + 1} already uploaded, skipping`);
+          updatedStations.push(station);
+          setUploadProgress({ 
+            current: i + 1, 
+            total: stations.length, 
+            status: `Überspringe Station ${i + 1} (bereits vorhanden)` 
+          });
+          continue;
+        }
+        
+        // Skip stations without file (should not happen)
+        if (!station.file) {
+          console.warn(`[Trip Upload] Station ${i + 1} has no file, skipping`);
+          continue;
+        }
+        
         setUploadProgress({ 
           current: i + 1, 
           total: stations.length, 
@@ -376,7 +452,7 @@ export function TripPublishForm() {
           });
           
           console.log(`[Trip Upload] Station ${i + 1} uploaded:`, uploadedUrl);
-        } catch (uploadError) {
+        } catch (uploadError: any) {
           console.error(`[Trip Upload] Failed to upload station ${i + 1}:`, uploadError);
           toast({
             title: 'Fehler beim Upload',
@@ -432,10 +508,13 @@ export function TripPublishForm() {
     }
     
     // Create trip event (Kind 30025 - compatible with mojotravel)
-    const dTag = `trip-${Date.now()}`;
+    // Use existing d-tag for updates, or create new one
+    const dTag = editDtag || `trip-${Date.now()}`;
     
     console.log('[Trip Publish] Publishing with', uploadedStations.length, 'stations');
     console.log('[Trip Publish] GPS stations:', gpsStations.length);
+    console.log('[Trip Publish] Mode:', isEditMode ? 'UPDATE' : 'CREATE');
+    console.log('[Trip Publish] d-tag:', dTag);
     
     // Build waypoint tags (for route visualization)
     // Format: ['waypoint', index, lat, lon, name, date, image, description]
@@ -521,19 +600,22 @@ export function TripPublishForm() {
     
     // Publish
     publishEvent({
-      kind: 30025, // Trip events (Kind 30025)
+      kind: 30025, // Trip events (Kind 30025 - Parameterized Replaceable)
       content,
       tags
     }, {
       onSuccess: () => {
         toast({
-          title: 'Trip veröffentlicht!',
-          description: 'Dein Trip wurde erfolgreich veröffentlicht.',
+          title: isEditMode ? 'Trip aktualisiert!' : 'Trip veröffentlicht!',
+          description: isEditMode 
+            ? 'Dein Trip wurde erfolgreich aktualisiert.' 
+            : 'Dein Trip wurde erfolgreich veröffentlicht.',
         });
         
         // Reset and redirect
         setStations([]);
         setTripData({ title: '', summary: '', country: '', tripType: '' });
+        setEditDtag(null);
         setCurrentStep('upload');
         
         setTimeout(() => {
@@ -1075,7 +1157,7 @@ export function TripPublishForm() {
           ) : (
             <>
               <Upload className="h-4 w-4 mr-2" />
-              Trip veröffentlichen
+              {isEditMode ? 'Trip aktualisieren' : 'Trip veröffentlichen'}
             </>
           )}
         </Button>
@@ -1104,15 +1186,24 @@ export function TripPublishForm() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Route className="h-5 w-5" />
-          Trip erstellen
+          {isEditMode ? 'Trip bearbeiten' : 'Trip erstellen'}
         </CardTitle>
         <CardDescription>
-          Erstelle einen Trip aus mehreren Bildern mit GPS-Daten. 
-          Das erste Bild ist das Titelbild und bestimmt den Startort.
+          {isEditMode 
+            ? 'Bearbeite deinen Trip. Änderungen überschreiben die bestehende Version.'
+            : 'Erstelle einen Trip aus mehreren Bildern mit GPS-Daten. Das erste Bild ist das Titelbild und bestimmt den Startort.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Step Indicator */}
+        {/* Loading state for edit mode */}
+        {isEditMode && isLoadingExisting ? (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Trip wird geladen...</p>
+          </div>
+        ) : (
+          <>
+            {/* Step Indicator */}
         <div className="flex items-center justify-center gap-2 mb-8">
           {[
             { step: 'upload', label: 'Bilder', icon: Camera },
@@ -1148,6 +1239,8 @@ export function TripPublishForm() {
 
         {/* Step Content */}
         {renderStepContent()}
+          </>
+        )}
       </CardContent>
     </Card>
   );
