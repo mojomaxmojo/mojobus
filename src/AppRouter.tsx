@@ -20,6 +20,7 @@ const Places = lazy(() => import("./pages/Places").then(m => ({ default: m.defau
 const Images = lazy(() => import("./pages/Images").then(m => ({ default: m.default })));
 const MapPage = lazy(() => import("./pages/MapPage").then(m => ({ default: m.default })));
 const TripsPage = lazy(() => import("./pages/TripsPage").then(m => ({ default: m.default })));
+const TripDetail = lazy(() => import("./pages/TripDetail").then(m => ({ default: m.default })));
 const ImageDetail = lazy(() => import("./pages/ImageDetail").then(m => ({ default: m.ImageDetail })));
 const Publish = lazy(() => import("./pages/Publish").then(m => ({ default: m.Publish })));
 const ContentEditorMinimal = lazy(() => import("./components/ContentEditorMinimal").then(m => ({ default: m.ContentEditorMinimal })));
@@ -50,6 +51,7 @@ function App() {
               <Route path="/plaetze/:country" element={<Places />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/map/trips" element={<TripsPage />} />
+              <Route path="/trip/:naddr" element={<TripDetail />} />
               <Route path="/bilder" element={<Images />} />
               <Route path="/bilder/:country" element={<Images />} />
               <Route path="/bilder/natur/:category" element={<Images />} />

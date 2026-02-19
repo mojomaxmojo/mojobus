@@ -38,6 +38,19 @@ import {
   type GpsData, type GpsStatus
 } from '@/lib/gpsExtraction';
 
+// Calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 // Trip Station - represents one image with GPS and description
 interface TripStation {
   id: string;
@@ -394,10 +407,11 @@ export function TripPublishForm() {
     const uploadSuccess = await uploadImages();
     if (!uploadSuccess) return;
     
-    // Create trip event (Kind 30303)
+    // Create trip event (Kind 30025 - compatible with mojotravel)
     const dTag = `trip-${Date.now()}`;
     
-    // Build waypoint tags
+    // Build waypoint tags (for route visualization)
+    // Format: ['waypoint', index, lat, lon, name, date, image, description]
     const waypointTags = stations
       .filter(s => s.gps && s.uploadedUrl)
       .map((s, index) => [
@@ -406,9 +420,32 @@ export function TripPublishForm() {
         s.gps!.latitude.toString(),
         s.gps!.longitude.toString(),
         s.title || s.location || `Station ${index + 1}`,
-        s.date,
-        s.uploadedUrl!
+        s.date || '',
+        s.uploadedUrl!,
+        s.description || ''
       ]);
+    
+    // Build image tags (with GPS for map display) - mojotravel format
+    const imageTags = stations
+      .filter(s => s.uploadedUrl)
+      .map((s, index) => {
+        if (s.gps) {
+          return ['image', s.uploadedUrl!, s.gps.latitude.toString(), s.gps.longitude.toString(), s.date || ''];
+        }
+        return ['image', s.uploadedUrl!];
+      });
+    
+    // Calculate total distance
+    let totalDistance = 0;
+    const stationsWithGps = stations.filter(s => s.gps);
+    for (let i = 1; i < stationsWithGps.length; i++) {
+      const prev = stationsWithGps[i - 1];
+      const curr = stationsWithGps[i];
+      totalDistance += calculateDistance(
+        prev.gps!.latitude, prev.gps!.longitude,
+        curr.gps!.latitude, curr.gps!.longitude
+      );
+    }
     
     // Build station content
     const stationContent = stations
@@ -432,29 +469,32 @@ export function TripPublishForm() {
       ['t', 'trip'],
       ['t', 'mojobus'],
       ...waypointTags,
+      ...imageTags,
     ];
+    
+    // Add distance
+    if (totalDistance > 0) {
+      tags.push(['distance', Math.round(totalDistance).toString()]);
+      tags.push(['distance_unit', 'km']);
+    }
     
     // Add trip type tag
     if (tripData.tripType) {
       tags.push(['t', tripData.tripType]);
       tags.push(['trip_type', tripData.tripType]);
+      tags.push(['category', tripData.tripType]);
     }
     
     // Add country tags
     if (tripData.country) {
       const countryTags = getCountryTag(tripData.country);
       countryTags.forEach(tag => tags.push(['t', tag]));
-    }
-    
-    // Add first image as cover
-    const firstUploaded = stations.find(s => s.uploadedUrl);
-    if (firstUploaded?.uploadedUrl) {
-      tags.push(['image', firstUploaded.uploadedUrl]);
+      tags.push(['country', tripData.country]);
     }
     
     // Publish
     publishEvent({
-      kind: 30303, // Addressable event for trips
+      kind: 30025, // Trip events (Kind 30025)
       content,
       tags
     }, {
@@ -470,7 +510,7 @@ export function TripPublishForm() {
         setCurrentStep('upload');
         
         setTimeout(() => {
-          navigate('/map');
+          navigate('/map/trips');
         }, 1500);
       },
       onError: (error) => {

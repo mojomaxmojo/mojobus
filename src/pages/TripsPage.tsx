@@ -2,106 +2,143 @@
  * Trips Page
  *
  * Displays all published trips with route visualization
- * Shows trip cards with preview images, route stats, and links to details
+ * - World map at top showing all trip markers
+ * - Trip cards grid below
+ * - Hover highlights trip on map
  */
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTrips, calculateTripDistance, type Trip } from '@/hooks/useTrips';
-import { VanillaMap, TILE_LAYERS, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
-import { 
-  MapPin, RefreshCw, Loader2, Map as MapIcon, Route, Clock, 
-  Calendar, ChevronRight, Plus, Camera 
-} from '@/lib/icons';
+import { useAuthor } from '@/hooks/useAuthor';
 
-// Default center (Europe)
-const DEFAULT_CENTER: [number, number] = [39.5, -8.0];
-const DEFAULT_ZOOM = 5;
+// Generate a user name from pubkey
+function genUserName(pubkey: string): string {
+  return `user_${pubkey.slice(0, 8)}`;
+}
+import { VanillaMap, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
+import { 
+  MapPin, RefreshCw, Map as MapIcon, Route, Camera, 
+  Calendar, Plus, Navigation, Globe
+} from '@/lib/icons';
+import { formatDistanceToNow } from 'date-fns';
 
 /**
  * Trip Card Component
  */
-function TripCard({ trip }: { trip: Trip }) {
-  const distance = calculateTripDistance(trip.waypoints);
-  const firstDate = trip.waypoints[0]?.date;
-  const lastDate = trip.waypoints[trip.waypoints.length - 1]?.date;
+function TripCard({ trip, onHover }: { trip: Trip; onHover?: (id: string | null) => void }) {
+  const { data: authorData } = useAuthor(trip.author);
+  const metadata = authorData?.metadata;
+  
+  const displayName = metadata?.name || genUserName(trip.author);
+  const profileImage = metadata?.picture;
+  
+  const distance = trip.distance || calculateTripDistance(trip.waypoints);
+  const gpsPoints = trip.waypoints.filter(w => w.lat && w.lon).length;
   
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      {/* Cover Image */}
-      {trip.image ? (
-        <img
-          src={trip.image}
-          alt={trip.title}
-          className="w-full h-48 object-cover"
-        />
-      ) : (
-        <div className="w-full h-48 bg-muted flex items-center justify-center">
-          <Camera className="h-12 w-12 text-muted-foreground" />
-        </div>
-      )}
-      
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg line-clamp-1">{trip.title}</CardTitle>
-        {trip.summary && (
-          <CardDescription className="line-clamp-2">{trip.summary}</CardDescription>
-        )}
-      </CardHeader>
-      
-      <CardContent className="space-y-3">
-        {/* Stats */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Route className="h-4 w-4" />
-            <span>{distance} km</span>
+    <Link 
+      to={`/trip/${trip.naddr}`}
+      onMouseEnter={() => onHover?.(trip.id)}
+      onMouseLeave={() => onHover?.(null)}
+      className="block"
+    >
+      <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group h-full">
+        {/* Thumbnail */}
+        {trip.image ? (
+          <div className="relative aspect-video overflow-hidden">
+            <img
+              src={trip.image}
+              alt={trip.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
+              <Camera className="w-3 h-3 text-white" />
+              <span className="text-xs text-white font-medium">{trip.photos.length}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <MapPin className="h-4 w-4" />
-            <span>{trip.waypoints.length} Stationen</span>
-          </div>
-        </div>
-        
-        {/* Date Range */}
-        {(firstDate || lastDate) && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span>
-              {firstDate ? new Date(firstDate).toLocaleDateString('de-DE') : '?'}
-              {' - '}
-              {lastDate ? new Date(lastDate).toLocaleDateString('de-DE') : '?'}
-            </span>
+        ) : (
+          <div className="aspect-video bg-muted flex items-center justify-center">
+            <Camera className="h-12 w-12 text-muted-foreground" />
           </div>
         )}
         
-        {/* Country Badge */}
-        {trip.country && (
-          <Badge variant="outline">{trip.country}</Badge>
-        )}
-        
-        {/* Waypoints Preview */}
-        <div className="flex items-center gap-1 text-xs text-muted-foreground overflow-hidden">
-          {trip.waypoints.slice(0, 4).map((wp, idx) => (
-            <span key={idx} className="flex items-center gap-1">
-              {idx > 0 && <ChevronRight className="h-3 w-3" />}
-              <span className="truncate max-w-[80px]">{wp.name}</span>
-            </span>
-          ))}
-          {trip.waypoints.length > 4 && (
-            <span className="text-primary">+{trip.waypoints.length - 4}</span>
+        <CardContent className="p-4 space-y-3">
+          {/* Author */}
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={profileImage} alt={displayName} />
+              <AvatarFallback>
+                {displayName[0]?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium text-sm">{displayName}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {formatDistanceToNow(new Date(trip.createdAt * 1000), { addSuffix: true })}
+              </p>
+            </div>
+          </div>
+          
+          {/* Title */}
+          <h3 className="font-semibold line-clamp-1">{trip.title}</h3>
+          
+          {/* Summary */}
+          {trip.summary && (
+            <p className="text-sm text-muted-foreground line-clamp-2">{trip.summary}</p>
           )}
+          
+          {/* Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge 
+              variant="outline" 
+              className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 text-yellow-800 dark:text-yellow-200"
+            >
+              {trip.categoryEmoji} {trip.category?.charAt(0).toUpperCase() + trip.category?.slice(1)}
+            </Badge>
+            {distance > 0 && (
+              <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 border-blue-300">
+                <Navigation className="w-3 h-3 mr-1" />
+                {distance} km
+              </Badge>
+            )}
+            {gpsPoints > 0 && (
+              <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 border-green-300">
+                <MapPin className="w-3 h-3 mr-1" />
+                GPS
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function TripSkeleton() {
+  return (
+    <Card className="overflow-hidden">
+      <Skeleton className="aspect-video w-full" />
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
+          </div>
         </div>
-        
-        {/* View Button */}
-        <Button variant="outline" className="w-full" asChild>
-          <Link to={`/trip/${trip.id}`}>
-            <MapIcon className="h-4 w-4 mr-2" />
-            Trip ansehen
-          </Link>
-        </Button>
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+        <div className="flex gap-2">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-6 w-24" />
+        </div>
       </CardContent>
     </Card>
   );
@@ -112,13 +149,7 @@ function TripCard({ trip }: { trip: Trip }) {
  */
 export default function TripsPage() {
   const { data: trips = [], isLoading, error, refetch } = useTrips();
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
-  
-  // Selected trip for map highlight
-  const selectedTrip = useMemo(() => 
-    trips.find(t => t.id === selectedTripId),
-    [trips, selectedTripId]
-  );
+  const [hoveredTripId, setHoveredTripId] = useState<string | null>(null);
   
   // Map markers from all trips
   const mapMarkers: MapMarker[] = useMemo(() => {
@@ -139,31 +170,45 @@ export default function TripsPage() {
   const mapPolylines: MapPolyline[] = useMemo(() => {
     const colors = ['#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'];
     
-    return trips.map((trip, idx) => ({
-      points: trip.waypoints.map(wp => [wp.lat, wp.lon] as [number, number]),
-      color: selectedTripId && selectedTripId !== trip.id 
-        ? '#9ca3af' // Gray for non-selected
-        : colors[idx % colors.length],
-      weight: selectedTripId && selectedTripId === trip.id ? 5 : 3,
-      opacity: selectedTripId && selectedTripId !== trip.id ? 0.4 : 0.9,
-    }));
-  }, [trips, selectedTripId]);
+    return trips.map((trip, idx) => {
+      const isHovered = hoveredTripId === trip.id;
+      const isDimmed = hoveredTripId && hoveredTripId !== trip.id;
+      
+      return {
+        points: trip.waypoints.map(wp => [wp.lat, wp.lon] as [number, number]),
+        color: isDimmed ? '#d1d5db' : colors[idx % colors.length],
+        weight: isHovered ? 5 : 3,
+        opacity: isDimmed ? 0.3 : 0.9,
+      };
+    });
+  }, [trips, hoveredTripId]);
+  
+  // Stats
+  const stats = useMemo(() => {
+    const totalPhotos = trips.reduce((sum, t) => sum + t.photos.length, 0);
+    const totalGpsPoints = trips.reduce((sum, t) => sum + t.waypoints.length, 0);
+    const totalDistance = trips.reduce((sum, t) => sum + (t.distance ? parseInt(t.distance) : calculateTripDistance(t.waypoints)), 0);
+    return { totalPhotos, totalGpsPoints, totalDistance };
+  }, [trips]);
   
   // Handle loading state
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Route className="w-5 h-5" />
-            <span className="text-lg font-semibold">🛣️ Trips</span>
+      <div className="min-h-screen py-8">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-8">
+              <Skeleton className="h-12 w-48 mb-2" />
+              <Skeleton className="h-6 w-64" />
+            </div>
+            <Skeleton className="h-[400px] w-full rounded-lg mb-8" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <TripSkeleton key={i} />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-              <Skeleton key={i} className="h-64 rounded-lg" />
-            ))}
-          </div>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -171,20 +216,22 @@ export default function TripsPage() {
   // Handle error state
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="border-dashed p-8">
-          <div className="max-w-sm mx-auto text-center space-y-6">
-            <Route className="w-12 h-12 text-gray-400 mx-auto" />
-            <div>
-              <h3 className="text-lg font-medium mb-2">Trips konnten nicht geladen werden</h3>
-              <p className="text-muted-foreground">Bitte versuche es erneut.</p>
+      <div className="min-h-screen py-8">
+        <div className="container mx-auto px-4">
+          <Card className="border-dashed p-8 max-w-md mx-auto">
+            <div className="text-center space-y-6">
+              <MapPin className="w-16 h-16 mx-auto text-muted-foreground" />
+              <div>
+                <h3 className="text-lg font-medium mb-2">Trips konnten nicht geladen werden</h3>
+                <p className="text-muted-foreground">Bitte versuche es erneut.</p>
+              </div>
+              <Button onClick={() => refetch()}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Neu laden
+              </Button>
             </div>
-            <Button onClick={() => refetch()}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Neu laden
-            </Button>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -192,28 +239,75 @@ export default function TripsPage() {
   // Handle empty state
   if (trips.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <>
         {/* Page Header */}
-        <section className="relative py-3 overflow-hidden mb-6">
+        <section className="relative py-6 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
-          <div className="relative z-10 text-center">
-            <h1 className="text-4xl md:text-6xl font-bold">
-              <span className="gradient-text">🛣️ Trips</span>
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Entdecke Reise-Routen und Abenteuer
-            </p>
+          <div className="relative z-10 container mx-auto px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+                  <MapPin className="w-8 h-8 text-yellow-600" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">🛣️ Trips</h1>
+                  <p className="text-muted-foreground">
+                    Reise-Abenteuer mit Photos und GPS-Routen
+                  </p>
+                </div>
+              </div>
+              <Button asChild>
+                <Link to="/veroeffentlichen">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Trip erstellen
+                </Link>
+              </Button>
+            </div>
           </div>
         </section>
-      
-        <Card className="border-dashed p-8">
-          <div className="max-w-sm mx-auto text-center space-y-6">
-            <Route className="w-12 h-12 text-gray-400 mx-auto" />
-            <div>
-              <h3 className="text-lg font-medium mb-2">Noch keine Trips vorhanden</h3>
-              <p className="text-muted-foreground">
-                Erstelle deinen ersten Trip unter "Veröffentlichen" → "Trips"
-              </p>
+        
+        <div className="container mx-auto px-4 py-8">
+          <Card className="border-dashed p-8 max-w-md mx-auto">
+            <div className="text-center space-y-6">
+              <Route className="w-16 h-16 mx-auto text-muted-foreground" />
+              <div>
+                <h3 className="text-lg font-medium mb-2">Noch keine Trips vorhanden</h3>
+                <p className="text-muted-foreground">
+                  Erstelle deinen ersten Trip unter "Veröffentlichen" → "Trips"
+                </p>
+              </div>
+              <Button asChild>
+                <Link to="/veroeffentlichen">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Trip erstellen
+                </Link>
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </>
+    );
+  }
+  
+  return (
+    <>
+      {/* Page Header */}
+      <section className="relative py-6 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
+        
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+                <MapPin className="w-8 h-8 text-yellow-600" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">🛣️ Trips</h1>
+                <p className="text-muted-foreground">
+                  {trips.length} Reise-Abenteuer entdecken
+                </p>
+              </div>
             </div>
             <Button asChild>
               <Link to="/veroeffentlichen">
@@ -222,89 +316,77 @@ export default function TripsPage() {
               </Link>
             </Button>
           </div>
-        </Card>
-      </div>
-    );
-  }
-  
-  return (
-    <>
-      {/* Page Header */}
-      <section className="relative py-3 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
-        
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold">
-              <span className="gradient-text">🛣️ Trips</span>
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {trips.length} Reise-Routen entdecken
-            </p>
-          </div>
         </div>
       </section>
       
       <div className="container mx-auto px-4 pb-8 space-y-6">
-        {/* Map Overview */}
+        {/* World Map */}
         <Card className="overflow-hidden">
-          <div className="p-3 bg-muted/50 border-b flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MapIcon className="w-4 h-4" />
-              <span className="text-sm font-medium">Kartenübersicht</span>
+          <div className="p-4 bg-muted/50 border-b flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Globe className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Travelers Around the World</h2>
+                <p className="text-sm text-muted-foreground">
+                  {stats.totalGpsPoints} GPS-Punkte in {trips.length} Trips
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {selectedTrip && (
-                <Badge variant="outline">
-                  {selectedTrip.title}
-                </Badge>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedTripId(null)}
-                disabled={!selectedTripId}
-              >
-                Alle anzeigen
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-              >
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
           </div>
           
           <div style={{ height: '400px' }}>
             <VanillaMap
-              center={DEFAULT_CENTER}
-              zoom={DEFAULT_ZOOM}
-              minZoom={2}
+              center={[20, 0]}
+              zoom={2}
+              minZoom={1}
               maxZoom={18}
               markers={mapMarkers}
               polylines={mapPolylines}
               height="400px"
-              tileUrl={TILE_LAYERS.default.url}
-              tileAttribution={TILE_LAYERS.default.attribution}
-              fitToMarkers={true}
+              fitToMarkers={mapMarkers.length > 0}
             />
           </div>
         </Card>
         
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4">
+          <Card className="p-4 text-center">
+            <p className="text-2xl font-bold text-primary">{trips.length}</p>
+            <p className="text-sm text-muted-foreground">Trips</p>
+          </Card>
+          <Card className="p-4 text-center">
+            <p className="text-2xl font-bold text-primary">{stats.totalPhotos}</p>
+            <p className="text-sm text-muted-foreground">Photos</p>
+          </Card>
+          <Card className="p-4 text-center">
+            <p className="text-2xl font-bold text-primary">{stats.totalDistance.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">km gereist</p>
+          </Card>
+        </div>
+        
+        {/* Section Title */}
+        <div>
+          <h2 className="text-2xl font-bold">All Trips</h2>
+          <p className="text-muted-foreground">Durchsuche Reise-Abenteuer der Community</p>
+        </div>
+        
         {/* Trip Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {trips.map(trip => (
-            <div
-              key={trip.id}
-              onMouseEnter={() => setSelectedTripId(trip.id)}
-              onMouseLeave={() => setSelectedTripId(null)}
-              className="transition-transform hover:scale-[1.02]"
-            >
-              <TripCard trip={trip} />
-            </div>
+            <TripCard 
+              key={trip.id} 
+              trip={trip} 
+              onHover={setHoveredTripId}
+            />
           ))}
         </div>
       </div>
