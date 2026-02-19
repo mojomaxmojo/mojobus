@@ -24,7 +24,7 @@ function genUserName(pubkey: string): string {
 import { VanillaMap, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
 import { 
   MapPin, RefreshCw, Map as MapIcon, Route, Camera, 
-  Calendar, Globe
+  Calendar, Globe, Navigation
 } from '@/lib/icons';
 import { formatDistanceToNow } from 'date-fns';
 
