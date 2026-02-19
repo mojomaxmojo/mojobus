@@ -15,7 +15,14 @@ export function useUploadFile() {
   return useMutation({
     mutationFn: async (file: File) => {
       if (!user || users.length === 0) {
-        throw new Error('Must be logged in to upload files');
+        throw new Error('Du musst angemeldet sein, um Dateien hochzuladen.');
+      }
+
+      // Prüfe ob User autorisiert ist (mojo oder susanne)
+      const blossomConfig = getBlossomConfigByPubkey(user.pubkey);
+      
+      if (!blossomConfig) {
+        throw new Error('Upload nicht erlaubt. Nur autorisierte Benutzer können Dateien hochladen.');
       }
 
       let fileToUpload = file;
@@ -52,17 +59,9 @@ export function useUploadFile() {
         console.log('📤 Skipping image optimization (disabled or not applicable)');
       }
 
-      // Hole autor-spezifische Blossom-Server-Konfiguration
-      const blossomConfig = getBlossomConfigByPubkey(user.pubkey);
-
-      // Verwende autor-spezifische Server oder Default (primal für nicht-autorisierte)
-      // WICHTIG: Private Relays (relay.mojobus.co) nur für autorisierte User!
-      const primaryServers = blossomConfig?.servers || [
-        'https://blossom.primal.net/',
-      ];
-
-      // Backup-Server (immer primal.net)
-      const backupServer = blossomConfig?.backupServer || BACKUP_BLOSSOM_SERVER;
+      // Autorisierte Server verwenden (wurde oben geprüft)
+      const primaryServers = blossomConfig.servers;
+      const backupServer = blossomConfig.backupServer || BACKUP_BLOSSOM_SERVER;
 
       console.log('Starting upload with BlossomUploader...');
       console.log('File details:', {
@@ -74,7 +73,7 @@ export function useUploadFile() {
       });
       console.log('Primary blossom servers:', primaryServers);
       console.log('Backup blossom server:', backupServer);
-      console.log('Using blossom servers:', blossomConfig ? `Author-specific (${blossomConfig.authorId})` : 'Default');
+      console.log('Using author-specific blossom servers:', blossomConfig.authorId);
 
       // Uploade auf primäre Server
       const primaryUploader = new BlossomUploader({
