@@ -55,7 +55,8 @@ export function useUploadFile() {
       // Hole autor-spezifische Blossom-Server-Konfiguration
       const blossomConfig = getBlossomConfigByPubkey(user.pubkey);
 
-      // Verwende autor-spezifische Server oder Default
+      // Verwende autor-spezifische Server oder Default (primal für nicht-autorisierte)
+      // WICHTIG: Private Relays (relay.mojobus.co) nur für autorisierte User!
       const primaryServers = blossomConfig?.servers || [
         'https://blossom.primal.net/',
       ];

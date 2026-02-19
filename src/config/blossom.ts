@@ -105,8 +105,10 @@ export const getBlossomConfigByPubkey = (pubkey: string): BlossomServerConfig | 
 
 /**
  * Default Blossom-Server-Konfiguration (wenn kein Autor erkannt wird)
+ * WICHTIG: Nicht-autorisierte User nutzen primal.net, da private Relays
+ * (relay.mojobus.co) nur Uploads von mojo/susanne erlauben!
  */
-export const DEFAULT_BLOSSOM_SERVERS = ['https://relay.mojobus.co'];
+export const DEFAULT_BLOSSOM_SERVERS = ['https://blossom.primal.net'];
 
 /**
  * Globaler Backup-Blossom-Server (immer zusätzlich hochladen)
