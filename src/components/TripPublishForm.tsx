@@ -530,11 +530,19 @@ export function TripPublishForm() {
       newStations.push(station);
     }
     
-    // Sortieren nach EXIF-Timestamp
+    // Sortieren nach EXIF-Timestamp (ältestes zuerst = Station 1)
+    // a - b = aufsteigend = ältestes Bild (kleinster timestamp) zuerst
     newStations.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-    console.log('[Trip] Stations sorted by timestamp');
+    console.log('[Trip] New stations sorted by timestamp');
     
-    setStations(prev => [...prev, ...newStations]);
+    // Merge with existing stations and sort entire list
+    setStations(prev => {
+      const allStations = [...prev, ...newStations];
+      // Sort all stations by timestamp (oldest first)
+      allStations.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      console.log('[Trip] All stations re-sorted by timestamp');
+      return allStations;
+    });
   };
 
   const handleDrop = (e: React.DragEvent) => {
