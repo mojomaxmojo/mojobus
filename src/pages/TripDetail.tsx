@@ -38,6 +38,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useToast } from '@/hooks/useToast';
 import { VanillaMap, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
+import { generateImageUrl } from '@/config/imageService';
 import { 
   ArrowLeft, MapPin, Camera, Calendar, Navigation, Info, Pencil, Trash2
 } from '@/lib/icons';
@@ -152,13 +153,17 @@ function PhotoWithDescription({
   description?: string;
   hasGps?: boolean;
 }) {
+  // Optimize image URL via images.weserv.nl
+  const optimizedUrl = generateImageUrl(url, 600, 600, 85);
+  
   return (
     <div className="space-y-2">
       <div className="relative aspect-square overflow-hidden rounded-lg group">
         <img
-          src={url}
+          src={optimizedUrl}
           alt={name || `Photo ${index + 1}`}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
         />
         {hasGps && (
           <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded-full flex items-center gap-1 text-xs font-medium">

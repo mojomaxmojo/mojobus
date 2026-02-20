@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTrips, calculateTripDistance, type Trip } from '@/hooks/useTrips';
 import { useAuthor } from '@/hooks/useAuthor';
+import { generateImageUrl } from '@/config/imageService';
 
 // Generate a user name from pubkey
 function genUserName(pubkey: string): string {
@@ -41,6 +42,9 @@ function TripCard({ trip, onHover }: { trip: Trip; onHover?: (id: string | null)
   const distance = trip.distance || calculateTripDistance(trip.waypoints);
   const gpsPoints = trip.waypoints.filter(w => w.lat && w.lon).length;
   
+  // Optimize thumbnail URL via images.weserv.nl
+  const optimizedThumbnail = trip.image ? generateImageUrl(trip.image, 400, 225, 85) : null;
+  
   return (
     <Link 
       to={`/trip/${trip.naddr}`}
@@ -50,12 +54,13 @@ function TripCard({ trip, onHover }: { trip: Trip; onHover?: (id: string | null)
     >
       <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer group h-full">
         {/* Thumbnail */}
-        {trip.image ? (
+        {optimizedThumbnail ? (
           <div className="relative aspect-video overflow-hidden">
             <img
-              src={trip.image}
+              src={optimizedThumbnail}
               alt={trip.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
             />
             <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
               <Camera className="w-3 h-3 text-white" />
