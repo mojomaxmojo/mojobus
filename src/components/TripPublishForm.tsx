@@ -62,15 +62,6 @@ async function createCorrectedPreview(
       console.log(`[Preview] ${file.name}: EXIF Orientation = ${exifOrientation || 'not set'}`);
       
       // Rotation basierend auf EXIF Orientation (1-8)
-      // 1 = 0° (normal)
-      // 2 = 0° gespiegelt horizontal
-      // 3 = 180°
-      // 4 = 180° gespiegelt horizontal
-      // 5 = 90° CCW + gespiegelt horizontal
-      // 6 = 90° CCW (Bild nach links gedreht, muss 90° CW korrigiert werden)
-      // 7 = 90° CW + gespiegelt horizontal
-      // 8 = 90° CW (Bild nach rechts gedreht, muss 90° CCW korrigiert werden)
-      
       let rotation = 0;
       let flipH = false;
       
@@ -91,7 +82,6 @@ async function createCorrectedPreview(
         // Fallback: Versuche basierend auf EXIF-Dimensionen zu erkennen
         if (exifWidth && exifHeight) {
           if (exifWidth > exifHeight && actualHeight > actualWidth) {
-            // EXIF sagt Querformat, Bild ist Hochformat -> 90° CW
             rotation = 90;
             console.log(`[Preview] ${file.name}: Detected dimension mismatch, applying 90° CW`);
           } else if (exifHeight > exifWidth && actualWidth > actualHeight) {
@@ -147,6 +137,103 @@ async function createCorrectedPreview(
   });
 }
 
+/**
+ * Create a corrected File with proper orientation (for upload)
+ * Returns a new File with the image rotated correctly
+ */
+async function createCorrectedFile(
+  file: File, 
+  exifOrientation?: number
+): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      const actualWidth = img.naturalWidth;
+      const actualHeight = img.naturalHeight;
+      
+      // Rotation basierend auf EXIF Orientation (1-8)
+      let rotation = 0;
+      let flipH = false;
+      
+      if (exifOrientation && exifOrientation !== 1) {
+        switch (exifOrientation) {
+          case 2: flipH = true; break;
+          case 3: rotation = 180; break;
+          case 4: rotation = 180; flipH = true; break;
+          case 5: rotation = -90; flipH = true; break;
+          case 6: rotation = 90; break;
+          case 7: rotation = 90; flipH = true; break;
+          case 8: rotation = -90; break;
+        }
+        console.log(`[Corrected File] ${file.name}: Orientation=${exifOrientation}, applying rotation=${rotation}°`);
+      }
+      
+      // Wenn keine Korrektur nötig, Original zurückgeben
+      if (rotation === 0 && !flipH) {
+        URL.revokeObjectURL(url);
+        resolve(file);
+        return;
+      }
+      
+      // Canvas erstellen
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        resolve(file);
+        return;
+      }
+      
+      // Canvas-Größe basierend auf Rotation
+      if (rotation === 90 || rotation === -90) {
+        canvas.width = actualHeight;
+        canvas.height = actualWidth;
+      } else {
+        canvas.width = actualWidth;
+        canvas.height = actualHeight;
+      }
+      
+      // Transformation anwenden
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      if (rotation !== 0) {
+        ctx.rotate((rotation * Math.PI) / 180);
+      }
+      if (flipH) {
+        ctx.scale(-1, 1);
+      }
+      
+      // Zeichnen
+      ctx.drawImage(img, -actualWidth / 2, -actualHeight / 2);
+      
+      URL.revokeObjectURL(url);
+      
+      // Canvas to Blob, dann zu File
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(file);
+          return;
+        }
+        const correctedFile = new File([blob], file.name, {
+          type: 'image/jpeg',
+          lastModified: file.lastModified
+        });
+        console.log(`[Corrected File] ${file.name}: Created corrected file, size=${correctedFile.size}`);
+        resolve(correctedFile);
+      }, 'image/jpeg', 0.9);
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    
+    img.src = url;
+  });
+}
+
 // Calculate distance between two coordinates using Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Earth's radius in km
@@ -182,6 +269,9 @@ interface TripStation {
   
   // EXIF timestamp for sorting
   timestamp?: number;
+  
+  // EXIF orientation for upload correction
+  exifOrientation?: number;
 }
 
 // Trip metadata
@@ -396,6 +486,7 @@ export function TripPublishForm() {
         description: '',
         date: fileDate,
         timestamp,
+        exifOrientation,
       };
       
       // Extract GPS from image (with better error handling for mobile)
@@ -610,7 +701,10 @@ export function TripPublishForm() {
         });
         
         try {
-          const uploadResult = await uploadFile(station.file);
+          // Create corrected file with proper orientation before upload
+          const correctedFile = await createCorrectedFile(station.file, station.exifOrientation);
+          
+          const uploadResult = await uploadFile(correctedFile);
           
           let uploadedUrl: string | undefined;
           if (Array.isArray(uploadResult)) {
