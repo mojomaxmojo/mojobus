@@ -312,6 +312,7 @@ export function TripPublishForm() {
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
+  const [isPublishing, setIsPublishing] = useState(false);
   
   // Hooks
   const { toast } = useToast();
@@ -870,38 +871,66 @@ export function TripPublishForm() {
     }
     
     // Publish
-    publishEvent({
-      kind: 30025, // Trip events (Kind 30025 - Parameterized Replaceable)
-      content,
-      tags
-    }, {
-      onSuccess: () => {
-        toast({
-          title: isEditMode ? 'Trip aktualisiert!' : 'Trip veröffentlicht!',
-          description: isEditMode 
-            ? 'Dein Trip wurde erfolgreich aktualisiert.' 
-            : 'Dein Trip wurde erfolgreich veröffentlicht.',
+    setIsPublishing(true);
+    
+    const doPublish = async (retryCount = 0) => {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          publishEvent({
+            kind: 30025, // Trip events (Kind 30025 - Parameterized Replaceable)
+            content,
+            tags
+          }, {
+            onSuccess: () => {
+              toast({
+                title: isEditMode ? 'Trip aktualisiert!' : 'Trip veröffentlicht!',
+                description: isEditMode 
+                  ? 'Dein Trip wurde erfolgreich aktualisiert.' 
+                  : 'Dein Trip wurde erfolgreich veröffentlicht.',
+              });
+              
+              // Reset and redirect
+              setStations([]);
+              setTripData({ title: '', summary: '', country: '', tripType: '' });
+              setEditDtag(null);
+              setCurrentStep('upload');
+              
+              setTimeout(() => {
+                navigate('/map/trips');
+              }, 1500);
+              
+              resolve();
+            },
+            onError: (error) => {
+              reject(error);
+            }
+          });
         });
-        
-        // Reset and redirect
-        setStations([]);
-        setTripData({ title: '', summary: '', country: '', tripType: '' });
-        setEditDtag(null);
-        setCurrentStep('upload');
-        
-        setTimeout(() => {
-          navigate('/map/trips');
-        }, 1500);
-      },
-      onError: (error) => {
+      } catch (error: any) {
         console.error('[Trip Publish] Error:', error);
+        
+        // Retry up to 3 times
+        if (retryCount < 3) {
+          console.log(`[Trip Publish] Retrying... (${retryCount + 1}/3)`);
+          toast({
+            title: 'Veröffentlichung wird erneut versucht...',
+            description: `Versuch ${retryCount + 1} von 3`,
+          });
+          await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds
+          return doPublish(retryCount + 1);
+        }
+        
         toast({
           title: 'Fehler beim Veröffentlichen',
-          description: 'Der Trip konnte nicht veröffentlicht werden.',
+          description: `Der Trip konnte nicht veröffentlicht werden: ${error?.message || 'Unbekannter Fehler'}. Bitte versuche es später erneut.`,
           variant: 'destructive'
         });
+      } finally {
+        setIsPublishing(false);
       }
-    });
+    };
+    
+    await doPublish();
   };
 
   // Render step content
@@ -1425,12 +1454,17 @@ export function TripPublishForm() {
         </Button>
         <Button
           onClick={handlePublish}
-          disabled={!canPublish || isUploading}
+          disabled={!canPublish || isUploading || isPublishing}
         >
           {isUploading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {uploadProgress.status}
+              {uploadProgress.status || `Lade hoch... (${uploadProgress.current}/${uploadProgress.total})`}
+            </>
+          ) : isPublishing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Veröffentliche...
             </>
           ) : (
             <>
@@ -1440,6 +1474,19 @@ export function TripPublishForm() {
           )}
         </Button>
       </div>
+      
+      {/* Progress Bar during Upload */}
+      {isUploading && uploadProgress.total > 0 && (
+        <div className="mt-4 space-y-2">
+          <Progress 
+            value={(uploadProgress.current / uploadProgress.total) * 100}
+            className="h-2"
+          />
+          <p className="text-sm text-center text-muted-foreground">
+            {uploadProgress.status} ({uploadProgress.current} von {uploadProgress.total} Bildern)
+          </p>
+        </div>
+      )}
     </div>
   );
 
