@@ -548,12 +548,11 @@ export function TripPublishForm() {
           try {
             const locationData = await reverseGeocode(gpsData.latitude, gpsData.longitude);
             if (locationData) {
-              const locationParts = [
-                locationData.city,
-                locationData.neighbourhood,
-                locationData.suburb
-              ].filter(Boolean);
-              station.location = locationParts.join(', ');
+              // Use specificLocation (first 3 parts of address) for more precision
+              // Example: "Rocha Baixinha Beach, Avenida Comendador André Jordan, Vilamoura"
+              station.location = locationData.specificLocation || 
+                                 locationData.display_name?.split(',').slice(0, 3).join(', ') ||
+                                 [locationData.city, locationData.suburb].filter(Boolean).join(', ');
               console.log(`[Trip Location] Found for ${file.name}:`, station.location);
               
               // Auto-fill title if empty
@@ -663,12 +662,10 @@ export function TripPublishForm() {
     try {
       const locationData = await reverseGeocode(gps.latitude, gps.longitude);
       if (locationData) {
-        const locationParts = [
-          locationData.city,
-          locationData.neighbourhood,
-          locationData.suburb
-        ].filter(Boolean);
-        const loc = locationParts.join(', ');
+        // Use specificLocation (first 3 parts of address) for more precision
+        const loc = locationData.specificLocation || 
+                    locationData.display_name?.split(',').slice(0, 3).join(', ') ||
+                    [locationData.city, locationData.suburb].filter(Boolean).join(', ');
         
         setStations(prev => prev.map(s => 
           s.id === stationId 

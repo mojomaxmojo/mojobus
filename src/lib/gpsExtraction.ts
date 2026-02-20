@@ -411,6 +411,8 @@ export interface LocationData {
   county?: string;
   /** Postal code */
   postcode?: string;
+  /** First 3 parts of address (e.g., "Beach Name, Street Name, Suburb") */
+  specificLocation?: string;
 }
 
 // Geocoding cache for performance optimization
@@ -470,6 +472,18 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
 
     // Extract relevant location information
     const address = data.address || {};
+    const display_name = data.display_name || '';
+    
+    // Extract first 3 parts of the address (most specific location)
+    // Example: "Rocha Baixinha Beach, Avenida Comendador André Jordan, Vilamoura, Quarteira, ..."
+    // -> "Rocha Baixinha Beach, Avenida Comendador André Jordan, Vilamoura"
+    let specificLocation = '';
+    if (display_name) {
+      const parts = display_name.split(',').map((p: string) => p.trim()).filter(Boolean);
+      specificLocation = parts.slice(0, 3).join(', ');
+      console.log('[Reverse Geocoding] Specific location (first 3 parts):', specificLocation);
+    }
+    
     const locationData: LocationData = {
       // Try to get most specific locality name
       city: address.city ||
@@ -484,8 +498,9 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
       suburb: address.suburb,
       neighbourhood: address.neighbourhood,
       postcode: address.postcode,
-      fullAddress: data.display_name,
-      display_name: data.display_name
+      fullAddress: display_name,
+      display_name: display_name,
+      specificLocation
     };
 
     console.log('[Reverse Geocoding] Location found:', locationData);
