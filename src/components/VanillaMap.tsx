@@ -22,7 +22,7 @@ export interface MapMarker {
   title: string;
   description?: string;
   isCurrent?: boolean;
-  type?: 'media' | 'note' | 'place' | 'article'; // Content-Typ für Farbe
+  type?: 'media' | 'note' | 'place' | 'article' | 'trip'; // Content-Typ für Farbe
   onClick?: () => void;
 }
 
@@ -76,6 +76,7 @@ const MARKER_COLORS: Record<string, string> = {
   note: '#f59e0b',     // Orange für Notes
   place: '#3b82f6',    // Blau für Places
   article: '#8b5cf6',  // Lila für Articles
+  trip: '#ef4444',     // Rot für Trips
   default: '#6b7280',  // Grau als Fallback
 };
 

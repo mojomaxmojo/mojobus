@@ -11,8 +11,95 @@ import { reverseGeocode, mapCountryCode } from '@/lib/gpsExtraction';
 declare global {
   interface Window {
     L: typeof import('leaflet');
+    __leafletLoading?: boolean;
+    __leafletLoaded?: boolean;
   }
 }
+
+// Load Leaflet CSS and JS dynamically (shared with VanillaMap)
+const loadLeaflet = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    // Already loaded
+    if (window.L && window.__leafletLoaded) {
+      resolve();
+      return;
+    }
+
+    // Already loading - wait for it
+    if (window.__leafletLoading) {
+      const checkInterval = setInterval(() => {
+        if (window.L && window.__leafletLoaded) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 50);
+      
+      // Timeout after 15 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!window.L) {
+          reject(new Error('Leaflet loading timeout'));
+        }
+      }, 15000);
+      return;
+    }
+
+    window.__leafletLoading = true;
+
+    // Load CSS first
+    const cssLink = document.createElement('link');
+    cssLink.rel = 'stylesheet';
+    cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    
+    // Load JS
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.async = true;
+
+    let cssLoaded = false;
+    let jsLoaded = false;
+
+    const checkComplete = () => {
+      if (cssLoaded && jsLoaded && window.L) {
+        window.__leafletLoaded = true;
+        window.__leafletLoading = false;
+        resolve();
+      }
+    };
+
+    cssLink.onload = () => {
+      cssLoaded = true;
+      checkComplete();
+    };
+    
+    cssLink.onerror = () => {
+      cssLoaded = true; // Continue anyway
+      checkComplete();
+    };
+
+    script.onload = () => {
+      jsLoaded = true;
+      checkComplete();
+    };
+
+    script.onerror = () => {
+      window.__leafletLoading = false;
+      reject(new Error('Failed to load Leaflet JS'));
+    };
+
+    // Add to document
+    document.head.appendChild(cssLink);
+    document.head.appendChild(script);
+
+    // Timeout after 15 seconds
+    setTimeout(() => {
+      if (!window.L) {
+        window.__leafletLoading = false;
+        reject(new Error('Leaflet loading timeout'));
+      }
+    }, 15000);
+  });
+};
 
 /**
  * Props for LocationPicker Component
@@ -70,36 +157,27 @@ export function LocationPicker({
   const leafletMapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
 
-  // Check if Leaflet is loaded
+  // Load Leaflet dynamically
   useEffect(() => {
-    const checkLeaflet = () => {
-      if (window.L) {
-        setLeafletLoaded(true);
-        setError(null);
-        return true;
-      }
-      return false;
+    let mounted = true;
+
+    loadLeaflet()
+      .then(() => {
+        if (mounted) {
+          setLeafletLoaded(true);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load Leaflet:', err);
+        if (mounted) {
+          setError('Karte konnte nicht geladen werden. Bitte Internetverbindung prüfen und Seite neu laden.');
+        }
+      });
+
+    return () => {
+      mounted = false;
     };
-
-    if (!checkLeaflet()) {
-      const interval = setInterval(() => {
-        if (checkLeaflet()) {
-          clearInterval(interval);
-        }
-      }, 100);
-
-      const timeout = setTimeout(() => {
-        clearInterval(interval);
-        if (!window.L) {
-          setError('Leaflet konnte nicht geladen werden. Bitte Seite neu laden.');
-        }
-      }, 10000);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
-    }
   }, []);
 
   // Initialize map
@@ -141,8 +219,14 @@ export function LocationPicker({
       leafletMapRef.current = map;
       markerRef.current = marker;
 
-      // Fix map size
-      setTimeout(() => map.invalidateSize(), 100);
+      // Fix map size - important for dialogs!
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+      // Also fix after a longer delay for animations
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 300);
 
     } catch (err) {
       console.error('Error initializing map:', err);

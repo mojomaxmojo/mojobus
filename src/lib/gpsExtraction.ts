@@ -51,116 +51,164 @@ export async function extractGpsFromImage(file: File): Promise<GpsData | null> {
     console.log('[GPS Extraction] Starting extraction for:', file.name);
     console.log('[GPS Extraction] File type:', file.type);
     console.log('[GPS Extraction] File size:', file.size, 'bytes');
+    
+    // Mobile Detection
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    console.log('[GPS Extraction] Device type:', isMobile ? 'Mobile' : 'Desktop');
 
     // Check if file is an image type that supports EXIF
-    if (!file.type.match(/^image\/(jpeg|jpg|tiff)$/i)) {
-      console.log('[GPS Extraction] File type not supported:', file.type);
-      return null;
+    if (!file.type.match(/^image\/(jpeg|jpg|tiff|heic|heif)$/i)) {
+      console.log('[GPS Extraction] File type might not support EXIF:', file.type, '- trying anyway...');
     }
 
     console.log('[GPS Extraction] File type supported, extracting EXIF...');
 
     // === METHOD 1: Try exifr.gps() (standard EXIF GPS) ===
-    const exifData = await exifr.gps(file);
-    console.log('[GPS Extraction] Method 1 - exifr.gps() result:', exifData);
+    let exifData;
+    try {
+      exifData = await exifr.gps(file, {
+        exif: true,
+        xmp: true,
+        iptc: true,
+      });
+      console.log('[GPS Extraction] Method 1 - exifr.gps() result:', exifData);
+    } catch (e1) {
+      console.warn('[GPS Extraction] Method 1 failed:', e1);
+    }
 
     // Check for valid GPS data from method 1
     if (exifData && exifData.latitude && exifData.longitude) {
       const latitude = exifData.latitude;
       const longitude = exifData.longitude;
 
-      // Skip 0,0 coordinates
       if (latitude !== 0 || longitude !== 0) {
-        console.log('[GPS Extraction] Valid GPS from exifr.gps():', { latitude, longitude });
+        console.log('[GPS Extraction] ✓ Valid GPS from exifr.gps():', { latitude, longitude });
         return createGpsResult(latitude, longitude, exifData.altitude, file.name);
       }
     }
 
-    // === METHOD 2: Try XMP GPS data (used by GCam/Google Photos) ===
-    console.log('[GPS Extraction] Method 1 failed, trying XMP GPS...');
-    const xmpData = await exifr.parse(file, {
-      xmp: true,
-      gps: true,
-      mergeOutput: false,
-    });
+    // === METHOD 2: Try full EXIF parse with all options ===
+    console.log('[GPS Extraction] Method 1 no GPS, trying full EXIF parse...');
+    let fullExif;
+    try {
+      fullExif = await exifr.parse(file, {
+        xmp: true,
+        exif: true,
+        gps: true,
+        iptc: true,
+        mergeOutput: false,
+        chunked: true,  // Better for large files
+      });
+    } catch (e2) {
+      console.warn('[GPS Extraction] Full parse failed:', e2);
+    }
 
-    console.log('[GPS Extraction] Method 2 - XMP data keys:', Object.keys(xmpData || {}));
-    console.log('[GPS Extraction] Method 2 - Full XMP data:', JSON.stringify(xmpData, null, 2));
+    console.log('[GPS Extraction] Method 2 - Full EXIF keys:', Object.keys(fullExif || {}));
 
-    // XMP GPS tags (various formats used by different apps)
-    const xmpLat = xmpData?.GPSLatitude ||
-                   xmpData?.['GPS:Latitude'] ||
-                   xmpData?.latitude ||
-                   xmpData?.Latitude;
-    const xmpLon = xmpData?.GPSLongitude ||
-                   xmpData?.['GPS:Longitude'] ||
-                   xmpData?.longitude ||
-                   xmpData?.Longitude;
+    // Check exif sub-object if exists
+    const exifBlock = fullExif?.exif || fullExif;
+    const gpsBlock = fullExif?.gps || fullExif?.GPS;
+
+    // XMP GPS tags
+    const xmpLat = fullExif?.GPSLatitude ||
+                   fullExif?.['GPS:Latitude'] ||
+                   fullExif?.latitude ||
+                   fullExif?.Latitude ||
+                   exifBlock?.GPSLatitude;
+                   
+    const xmpLon = fullExif?.GPSLongitude ||
+                   fullExif?.['GPS:Longitude'] ||
+                   fullExif?.longitude ||
+                   fullExif?.Longitude ||
+                   exifBlock?.GPSLongitude;
 
     if (xmpLat && xmpLon && (xmpLat !== 0 || xmpLon !== 0)) {
-      console.log('[GPS Extraction] Valid GPS from XMP:', { xmpLat, xmpLon });
-      return createGpsResult(xmpLat, xmpLon, xmpData?.GPSAltitude, file.name);
+      console.log('[GPS Extraction] ✓ Valid GPS from XMP/EXIF block:', { xmpLat, xmpLon });
+      return createGpsResult(xmpLat, xmpLon, exifBlock?.GPSAltitude, file.name);
     }
 
-    // === METHOD 3: Try raw EXIF with all GPS tags ===
-    console.log('[GPS Extraction] Method 2 failed, trying raw EXIF...');
-    const rawExif = await exifr.parse(file, {
-      gps: ['GPSLatitude', 'GPSLongitude', 'GPSAltitude', 'GPSLatitudeRef', 'GPSLongitudeRef'],
-      mergeOutput: true,
-    });
+    // === METHOD 3: Try raw EXIF with DMS conversion ===
+    console.log('[GPS Extraction] Method 2 failed, trying raw GPS tags...');
+    
+    // GPS might be in different places
+    const gpsLat = gpsBlock?.GPSLatitude || exifBlock?.GPSLatitude;
+    const gpsLon = gpsBlock?.GPSLongitude || exifBlock?.GPSLongitude;
+    const gpsLatRef = gpsBlock?.GPSLatitudeRef || exifBlock?.GPSLatitudeRef || 'N';
+    const gpsLonRef = gpsBlock?.GPSLongitudeRef || exifBlock?.GPSLongitudeRef || 'E';
 
-    console.log('[GPS Extraction] Method 3 - Raw EXIF:', JSON.stringify(rawExif, null, 2));
+    console.log('[GPS Extraction] Raw GPS:', { gpsLat, gpsLon, gpsLatRef, gpsLonRef });
 
-    if (rawExif && rawExif.GPSLatitude && rawExif.GPSLongitude) {
-      const dmsLat = rawExif.GPSLatitude;
-      const dmsLon = rawExif.GPSLongitude;
+    if (gpsLat && gpsLon) {
+      // Check if array (DMS format) or number (decimal)
+      if (Array.isArray(gpsLat) && Array.isArray(gpsLon)) {
+        const isLatZero = gpsLat.every((v: any) => v === 0);
+        const isLonZero = gpsLon.every((v: any) => v === 0);
 
-      // Check if not all zeros
-      const isLatZero = dmsLat.every((v: any) => v === 0);
-      const isLonZero = dmsLon.every((v: any) => v === 0);
+        if (!isLatZero || !isLonZero) {
+          try {
+            const latitude = convertDMSToDD(gpsLat, gpsLatRef);
+            const longitude = convertDMSToDD(gpsLon, gpsLonRef);
 
-      if (!isLatZero || !isLonZero) {
-        const latRef = (rawExif.GPSLatitudeRef as 'N' | 'S') || 'N';
-        const lonRef = (rawExif.GPSLongitudeRef as 'E' | 'W') || 'E';
-
-        const latitude = convertDMSToDD(dmsLat, latRef);
-        const longitude = convertDMSToDD(dmsLon, lonRef);
-
-        console.log('[GPS Extraction] Valid GPS from raw EXIF:', { latitude, longitude });
-        return createGpsResult(latitude, longitude, rawExif.GPSAltitude, file.name);
-      }
-    }
-
-    // === METHOD 4: Try full parse with all GPS-related tags ===
-    console.log('[GPS Extraction] Method 3 failed, trying comprehensive parse...');
-    const fullParse = await exifr.parse(file, {
-      pickTags: true,
-      mergeOutput: false,
-    });
-
-    console.log('[GPS Extraction] Method 4 - All available tags:', Object.keys(fullParse || {}).filter(k => k.toLowerCase().includes('gps') || k.toLowerCase().includes('lat') || k.toLowerCase().includes('lon')));
-
-    // Check for any GPS-related keys that might contain coordinates
-    const gpsKeys = Object.keys(fullParse || {}).filter(k =>
-      k.match(/gps/i) || k.match(/latitude/i) || k.match(/longitude/i) || k.match(/location/i)
-    );
-
-    for (const key of gpsKeys) {
-      const value = fullParse![key];
-      if (value && typeof value === 'number' && value !== 0) {
-        // Try to pair latitude/longitude
-        if (key.toLowerCase().includes('lat')) {
-          const lonKey = key.replace(/lat/i, 'lon');
-          const lonValue = fullParse![lonKey];
-          if (lonValue && typeof lonValue === 'number' && lonValue !== 0) {
-            console.log('[GPS Extraction] GPS from tag pair:', { key, lat: value, lon: lonValue });
-            return createGpsResult(value, lonValue, fullParse!.GPSAltitude, file.name);
+            console.log('[GPS Extraction] ✓ Valid GPS from DMS:', { latitude, longitude });
+            return createGpsResult(latitude, longitude, gpsBlock?.GPSAltitude || exifBlock?.GPSAltitude, file.name);
+          } catch (convertError) {
+            console.warn('[GPS Extraction] DMS conversion failed:', convertError);
           }
+        }
+      } else if (typeof gpsLat === 'number' && typeof gpsLon === 'number') {
+        if (gpsLat !== 0 || gpsLon !== 0) {
+          console.log('[GPS Extraction] ✓ Valid GPS from decimal:', { gpsLat, gpsLon });
+          return createGpsResult(gpsLat, gpsLon, gpsBlock?.GPSAltitude || exifBlock?.GPSAltitude, file.name);
         }
       }
     }
 
-    console.log('[GPS Extraction] No valid GPS found in any method');
+    // === METHOD 4: ArrayBuffer fallback (better for mobile) ===
+    console.log('[GPS Extraction] Method 3 failed, trying ArrayBuffer fallback...');
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const exifFromArray = await exifr.parse(arrayBuffer, {
+        xmp: true,
+        exif: true,
+        gps: true,
+      });
+      
+      console.log('[GPS Extraction] ArrayBuffer EXIF keys:', Object.keys(exifFromArray || {}));
+      
+      if (exifFromArray?.latitude && exifFromArray?.longitude) {
+        if (exifFromArray.latitude !== 0 || exifFromArray.longitude !== 0) {
+          console.log('[GPS Extraction] ✓ Valid GPS from ArrayBuffer:', exifFromArray);
+          return createGpsResult(exifFromArray.latitude, exifFromArray.longitude, exifFromArray.altitude, file.name);
+        }
+      }
+    } catch (arrayError) {
+      console.warn('[GPS Extraction] ArrayBuffer method failed:', arrayError);
+    }
+
+    // === METHOD 5: Try with chunked reading for large files ===
+    if (file.size > 5 * 1024 * 1024) { // > 5MB
+      console.log('[GPS Extraction] Large file detected, trying chunked read...');
+      try {
+        // Read first 128KB which usually contains EXIF
+        const chunk = file.slice(0, 128 * 1024);
+        const chunkExif = await exifr.parse(chunk, {
+          xmp: true,
+          exif: true,
+          gps: true,
+        });
+        
+        if (chunkExif?.latitude && chunkExif?.longitude) {
+          if (chunkExif.latitude !== 0 || chunkExif.longitude !== 0) {
+            console.log('[GPS Extraction] ✓ Valid GPS from chunk:', chunkExif);
+            return createGpsResult(chunkExif.latitude, chunkExif.longitude, chunkExif.altitude, file.name);
+          }
+        }
+      } catch (chunkError) {
+        console.warn('[GPS Extraction] Chunked read failed:', chunkError);
+      }
+    }
+
+    console.log('[GPS Extraction] ✗ No valid GPS found in any method');
     return null;
 
   } catch (error) {
@@ -227,14 +275,26 @@ function convertDMSToDD(dms: any, ref: 'N' | 'S' | 'E' | 'W'): number {
     dmsLength: dms.length
   });
 
-  const degrees = parseFloat(dms[0]);
-  const minutes = parseFloat(dms[1] || 0);
-  const seconds = parseFloat(dms[2] || 0);
+  // Handle different DMS formats
+  // Some EXIF data has [degrees, minutes, seconds] as numbers
+  // Others have [[degrees, 1], [minutes, 1], [seconds, 1]] as rationals
+  const parseValue = (val: any): number => {
+    if (typeof val === 'number') return val;
+    if (Array.isArray(val) && val.length >= 2) {
+      // Rational format: [numerator, denominator]
+      return parseFloat(val[0]) / parseFloat(val[1] || 1);
+    }
+    return parseFloat(val) || 0;
+  };
+
+  const degrees = parseValue(dms[0]);
+  const minutes = parseValue(dms[1] || 0);
+  const seconds = parseValue(dms[2] || 0);
 
   // Validate values
-  if (isNaN(degrees)) {
-    console.error('[GPS] Degrees is NaN:', dms[0]);
-    throw new Error('Degrees is NaN');
+  if (isNaN(degrees) || degrees === 0) {
+    console.error('[GPS] Degrees is NaN or zero:', dms[0], '->', degrees);
+    throw new Error('Degrees is NaN or zero');
   }
 
   console.log('[GPS] Parsed DMS:', { degrees, minutes, seconds });
@@ -351,6 +411,8 @@ export interface LocationData {
   county?: string;
   /** Postal code */
   postcode?: string;
+  /** First 3 parts of address (e.g., "Beach Name, Street Name, Suburb") */
+  specificLocation?: string;
 }
 
 // Geocoding cache for performance optimization
@@ -410,6 +472,18 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
 
     // Extract relevant location information
     const address = data.address || {};
+    const display_name = data.display_name || '';
+    
+    // Extract first 3 parts of the address (most specific location)
+    // Example: "Rocha Baixinha Beach, Avenida Comendador André Jordan, Vilamoura, Quarteira, ..."
+    // -> "Rocha Baixinha Beach, Avenida Comendador André Jordan, Vilamoura"
+    let specificLocation = '';
+    if (display_name) {
+      const parts = display_name.split(',').map((p: string) => p.trim()).filter(Boolean);
+      specificLocation = parts.slice(0, 3).join(', ');
+      console.log('[Reverse Geocoding] Specific location (first 3 parts):', specificLocation);
+    }
+    
     const locationData: LocationData = {
       // Try to get most specific locality name
       city: address.city ||
@@ -424,8 +498,9 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
       suburb: address.suburb,
       neighbourhood: address.neighbourhood,
       postcode: address.postcode,
-      fullAddress: data.display_name,
-      display_name: data.display_name
+      fullAddress: display_name,
+      display_name: display_name,
+      specificLocation
     };
 
     console.log('[Reverse Geocoding] Location found:', locationData);

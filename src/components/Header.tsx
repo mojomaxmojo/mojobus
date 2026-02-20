@@ -259,13 +259,31 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-             <Link
-               to="/map"
-               className="flex items-center gap-2 text-foreground hover:text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-primary/10 hover:shadow-md"
-             >
-               <Map className="h-4 w-4" />
-               <span>Map</span>
-             </Link>
+              {/* Map mit Sub-Menü */}
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                 <button className="flex items-center gap-2 text-foreground hover:text-primary px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-primary/10 hover:shadow-md">
+                   <Map className="h-4 w-4" />
+                   Map
+                   <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:rotate-180" />
+                 </button>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent align="start" className="w-56 shadow-xl border-primary/20">
+                 <DropdownMenuItem asChild>
+                   <Link to="/map" className="flex items-center gap-2">
+                     <Map className="h-4 w-4" />
+                     Alle Karten
+                   </Link>
+                 </DropdownMenuItem>
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem asChild>
+                   <Link to="/map/trips" className="flex items-center gap-2">
+                     <span className="text-lg">🛣️</span>
+                     Trips
+                   </Link>
+                 </DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
 
             {/* Bilder */}
             <DropdownMenu>
@@ -463,14 +481,27 @@ export function Header() {
               </div>
 
               {/* Mobile Map */}
-              <Link
-                to="/map"
-                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                onClick={handleMobileMenuClick}
-              >
-                <Map className="h-5 w-5 text-gray-600" />
-                <span className="text-gray-900 dark:text-gray-100">Map</span>
-              </Link>
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">
+                  Map
+                </div>
+                <Link
+                  to="/map"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <Map className="h-5 w-5 text-gray-600" />
+                  <span className="text-gray-900 dark:text-gray-100">Alle Karten</span>
+                </Link>
+                <Link
+                  to="/map/trips"
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={handleMobileMenuClick}
+                >
+                  <span className="text-lg">🛣️</span>
+                  <span className="text-gray-900 dark:text-gray-100">Trips</span>
+                </Link>
+              </div>
 
               {/* Mobile Bilder */}
               <div className="space-y-1">

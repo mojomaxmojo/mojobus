@@ -162,9 +162,39 @@ export const TAG_GROUPS: TagGroup[] = [
       { id: 'abenteuer', label: 'Abenteuer', icon: '⛰️' },
       { id: 'tierfreundlich', label: 'Tierfreundlich', icon: '🏨' }
     ]
+  },
+  {
+    name: 'Trip-Typen',
+    description: 'Verschiedene Arten von Reisen und Aktivitäten',
+    tags: [
+      { id: 'spaziergang', label: 'Spaziergang', icon: '🚶' },
+      { id: 'radfahren', label: 'Radfahren', icon: '🚴' },
+      { id: 'roadtrip', label: 'Roadtrip', icon: '🚗' },
+      { id: 'eisenbahn', label: 'Eisenbahn', icon: '🚂' },
+      { id: 'boot', label: 'Boot', icon: '⛵' },
+      { id: 'flug', label: 'Flug', icon: '✈️' },
+      { id: 'laufen', label: 'Laufen', icon: '🏃' },
+      { id: 'wandern', label: 'Wandern', icon: '🥾' },
+      { id: 'klettern', label: 'Klettern', icon: '🧗' }
+    ]
   }
 ];
 
 export const ALL_TAGS = TAG_GROUPS.flatMap(group => group.tags);
+
+// Trip Types for TripPublishForm
+export const TRIP_TYPES = [
+  { id: 'spaziergang', label: 'Spaziergang', icon: '🚶' },
+  { id: 'radfahren', label: 'Radfahren', icon: '🚴' },
+  { id: 'roadtrip', label: 'Roadtrip', icon: '🚗' },
+  { id: 'eisenbahn', label: 'Eisenbahn', icon: '🚂' },
+  { id: 'boot', label: 'Boot', icon: '⛵' },
+  { id: 'flug', label: 'Flug', icon: '✈️' },
+  { id: 'laufen', label: 'Laufen', icon: '🏃' },
+  { id: 'wandern', label: 'Wandern', icon: '🥾' },
+  { id: 'klettern', label: 'Klettern', icon: '🧗' }
+] as const;
+
+export type TripType = typeof TRIP_TYPES[number]['id'];
 
 export default TAG_GROUPS;

@@ -52,7 +52,7 @@ export { ChevronDown, ChevronRight, ChevronLeft, MoreHorizontal, Send, RefreshCw
 // CATEGORY ICONS
 // ============================================================================
 
-export { Mountain, Sun, Dog, Wrench, Wifi, WifiOff, CheckCircle2, Map, Tag, Battery, Hammer, Cpu, Trees, Droplets, Waves } from 'lucide-react';
+export { Mountain, Sun, Dog, Wrench, Wifi, WifiOff, CheckCircle2, Map, Tag, Battery, Hammer, Cpu, Trees, Droplets, Waves, Route, Clock, GripVertical, Edit3 } from 'lucide-react';
 
 // ============================================================================
 // COMMENT ICONS
@@ -64,7 +64,7 @@ export { MessageSquare } from 'lucide-react';
 // OTHER ICONS
 // ============================================================================
 
-export { Download, Database, Palette, Server, Users, Moon, Copy, Zap, Gauge, BarChart3 } from 'lucide-react';
+export { Download, Database, Palette, Server, Users, Moon, Copy, Zap, Gauge, BarChart3, Plus, Navigation, Pencil } from 'lucide-react';
 
 // ============================================================================
 // WALLET ICONS

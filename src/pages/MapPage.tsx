@@ -3,6 +3,7 @@
  *
  * Displays all GPS-enabled posts from /veroeffentlichen on a Europe map
  * Uses VanillaMap for Shakespeare-Build compatibility
+ * Also displays Trips with route visualization
  */
 
 import { useMemo, useState } from 'react';
@@ -11,9 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { VanillaMap, TILE_LAYERS, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
 import { useGpsContent, type MapMarker as GpsMapMarker } from '@/hooks/useGpsContent';
-import { MapPin, RefreshCw, Loader2, Map as MapIcon, BarChart3 } from 'lucide-react';
+import { useTrips, calculateTripDistance, type Trip } from '@/hooks/useTrips';
+import { MapPin, RefreshCw, Loader2, Map as MapIcon, BarChart3, Route } from 'lucide-react';
 
 // World bounds - alle Marker anzeigen
 const WORLD_CENTER = {
@@ -32,9 +35,11 @@ const ZOOM_SETTINGS = {
  */
 export default function MapPage() {
   const { data: markers = [], isLoading, error, refetch } = useGpsContent();
-  const [activeFilter, setActiveFilter] = useState<'all' | 'media' | 'note' | 'place' | 'article'>('all');
+  const { data: trips = [], isLoading: tripsLoading } = useTrips();
+  const [activeFilter, setActiveFilter] = useState<'all' | 'media' | 'note' | 'place' | 'article' | 'trip'>('all');
   const [showRoute, setShowRoute] = useState(true);
   const [showStats, setShowStats] = useState(true);
+  const [showTrips, setShowTrips] = useState(true);
 
   // Alle Marker (nicht mehr auf Europa beschränkt)
   const allMarkers = markers;
@@ -42,6 +47,7 @@ export default function MapPage() {
   // Filter markers by type
   const filteredMarkers = useMemo(() => {
     if (activeFilter === 'all') return allMarkers;
+    if (activeFilter === 'trip') return []; // Trips are shown as routes, not markers
     return allMarkers.filter(m => m.type === activeFilter);
   }, [allMarkers, activeFilter]);
 
@@ -56,8 +62,9 @@ export default function MapPage() {
     note: allMarkers.filter(m => m.type === 'note').length,
     place: allMarkers.filter(m => m.type === 'place').length,
     article: allMarkers.filter(m => m.type === 'article').length,
+    trip: trips.length,
     total: allMarkers.length,
-  }), [allMarkers]);
+  }), [allMarkers, trips]);
 
   // Calculate bounds to fit all markers
   const mapBounds = useMemo(() => {
@@ -97,7 +104,27 @@ export default function MapPage() {
     }));
   }, [sortedMarkers]);
 
-  // Create route polyline
+  // Convert trip waypoints to map markers
+  const tripMarkers: MapMarker[] = useMemo(() => {
+    if (!showTrips && activeFilter !== 'trip') return [];
+    
+    return trips.flatMap(trip => 
+      trip.waypoints.map((wp, idx) => ({
+        id: `${trip.id}-${idx}`,
+        lat: wp.lat,
+        lng: wp.lon,
+        title: wp.name,
+        description: trip.title,
+        isCurrent: false,
+        type: 'trip' as const,
+      }))
+    );
+  }, [trips, showTrips, activeFilter]);
+
+  // All markers combined
+  const allMapMarkers = [...mapMarkers, ...tripMarkers];
+
+  // Create route polyline for regular content
   const routePolylines: MapPolyline[] = useMemo(() => {
     if (!showRoute || sortedMarkers.length < 2) return [];
     
@@ -108,6 +135,24 @@ export default function MapPage() {
       opacity: 0.8,
     }];
   }, [sortedMarkers, showRoute]);
+
+  // Create route polylines for trips
+  const tripPolylines: MapPolyline[] = useMemo(() => {
+    if (!showTrips && activeFilter !== 'trip') return [];
+    
+    // Different colors for different trips
+    const colors = ['#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+    
+    return trips.map((trip, idx) => ({
+      points: trip.waypoints.map(wp => [wp.lat, wp.lon] as [number, number]),
+      color: colors[idx % colors.length],
+      weight: 4,
+      opacity: 0.9,
+    }));
+  }, [trips, showTrips, activeFilter]);
+
+  // All polylines combined
+  const allPolylines = [...routePolylines, ...tripPolylines];
 
   // Calculate route statistics
   const routeStats = useMemo(() => {
@@ -145,7 +190,7 @@ export default function MapPage() {
   }
 
   // Handle loading state
-  if (isLoading) {
+  if (isLoading || tripsLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="p-6">
@@ -230,8 +275,8 @@ export default function MapPage() {
                 </span>
               </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <FilterButton
+                <div className="flex items-center gap-1">
+                  <FilterButton
                     emoji="📷"
                     count={counts.media}
                     isActive={activeFilter === 'media'}
@@ -254,6 +299,12 @@ export default function MapPage() {
                     count={counts.article}
                     isActive={activeFilter === 'article'}
                     onClick={() => setActiveFilter(activeFilter === 'article' ? 'all' : 'article')}
+                  />
+                  <FilterButton
+                    emoji="🛣️"
+                    count={counts.trip}
+                    isActive={activeFilter === 'trip'}
+                    onClick={() => setActiveFilter(activeFilter === 'trip' ? 'all' : 'trip')}
                   />
                 </div>
               </div>
@@ -293,8 +344,8 @@ export default function MapPage() {
               zoom={ZOOM_SETTINGS.default}
               minZoom={ZOOM_SETTINGS.min}
               maxZoom={ZOOM_SETTINGS.max}
-              markers={mapMarkers}
-              polylines={routePolylines}
+              markers={allMapMarkers}
+              polylines={allPolylines}
               height="600px"
               className="rounded-none"
               tileUrl={TILE_LAYERS.default.url}
@@ -305,7 +356,7 @@ export default function MapPage() {
 
           {/* Pin-Farben Legende */}
           <div className="p-3 border-t bg-muted/30">
-            <div className="flex items-center justify-center gap-6 text-xs">
+            <div className="flex items-center justify-center gap-6 text-xs flex-wrap">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e' }}></div>
                 <span>📷 Bilder</span>
@@ -321,6 +372,10 @@ export default function MapPage() {
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8b5cf6' }}></div>
                 <span>📄 Artikel</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }}></div>
+                <span>🛣️ Trips</span>
               </div>
             </div>
           </div>
@@ -377,12 +432,13 @@ export default function MapPage() {
 /**
  * Get filter label in German
  */
-function getFilterLabel(filter: 'media' | 'note' | 'place' | 'article'): string {
+function getFilterLabel(filter: 'media' | 'note' | 'place' | 'article' | 'trip'): string {
   const labels = {
     media: 'Bilder',
     note: 'Notizen',
     place: 'Plätze',
-    article: 'Artikel'
+    article: 'Artikel',
+    trip: 'Trips'
   };
   return labels[filter];
 }

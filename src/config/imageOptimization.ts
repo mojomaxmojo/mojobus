@@ -80,6 +80,11 @@ export const imageOptimizationConfig = {
   useWebWorker: true, // Verwendet Web Worker für bessere Performance
   fileType: IMAGE_OPTIMIZATION_OUTPUT_FORMAT,
   quality: IMAGE_OPTIMIZATION_QUALITY,
+  // WICHTIG: EXIF-Orientierung beibehalten/korrigieren
+  // Smartphone-Fotos haben oft EXIF-Orientierungs-Tags
+  alwaysKeepResolution: false,
+  // Die Bibliothek liest automatisch EXIF und rotiert entsprechend
+  // wenn diese Option nicht gesetzt ist (Standard)
 };
 
 // ============================================================================
