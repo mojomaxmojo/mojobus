@@ -1096,11 +1096,11 @@ export function TripPublishForm() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="w-full h-7 text-xs text-green-600"
+                      className="w-full h-7 text-xs text-green-600 justify-start overflow-hidden"
                       onClick={() => setEditingStation(station.id)}
                     >
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {station.location || 'GPS erkannt'}
+                      <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                      <span className="truncate">{station.location || 'GPS erkannt'}</span>
                     </Button>
                   ) : (
                     <Button
@@ -1302,7 +1302,7 @@ export function TripPublishForm() {
         </CardHeader>
         <CardContent className="space-y-4">
           {stations.map((station, index) => (
-            <div key={station.id} className="border rounded-lg p-4 space-y-3">
+            <div key={station.id} className="border rounded-lg p-4 space-y-3 overflow-hidden">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
@@ -1310,7 +1310,7 @@ export function TripPublishForm() {
                   </div>
                 </div>
                 
-                <div className="flex-1 space-y-3">
+                <div className="flex-1 space-y-3 min-w-0">
                   {/* GPS & Location Status */}
                   <div className="flex items-center gap-2 flex-wrap">
                     {station.gps ? (
@@ -1492,20 +1492,20 @@ export function TripPublishForm() {
           {/* Station List */}
           <div className="space-y-2 mt-4">
             {stations.map((station, index) => (
-              <div key={station.id} className="flex items-center gap-3 p-2 bg-muted rounded">
-                <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+              <div key={station.id} className="flex items-center gap-3 p-2 bg-muted rounded overflow-hidden">
+                <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
                   {index + 1}
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium">{station.title || `Station ${index + 1}`}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{station.title || `Station ${index + 1}`}</p>
                   {station.location && (
-                    <p className="text-xs text-muted-foreground">{station.location}</p>
+                    <p className="text-xs text-muted-foreground truncate">{station.location}</p>
                   )}
                 </div>
                 {station.gps ? (
-                  <MapPin className="h-4 w-4 text-green-600" />
+                  <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />
                 ) : (
-                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
                 )}
               </div>
             ))}
