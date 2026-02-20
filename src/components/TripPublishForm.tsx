@@ -340,50 +340,44 @@ export function TripPublishForm() {
       let exifOrientation: number | undefined;
       
       try {
-        // Vollständiges EXIF lesen inkl. Orientation
-        const exif = await exifr.parse(file, {
-          exif: true,
-          gps: true,
-          xmp: true,
-          iptc: true,
-          mergeOutput: false,
-        });
-        
-        console.log(`[Trip EXIF] ${file.name}: All EXIF keys:`, Object.keys(exif || {}));
-        
-        // Datum lesen
-        const exifDate = exif?.DateTimeOriginal || exif?.CreateDate || exif?.exif?.DateTimeOriginal;
-        if (exifDate) {
-          timestamp = new Date(exifDate).getTime();
-          fileDate = new Date(exifDate).toISOString().split('T')[0];
-          console.log(`[Trip EXIF] Date from ${file.name}:`, fileDate);
+        // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+        try {
+          exifOrientation = await exifr.orientation(file);
+          console.log(`[Trip EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+        } catch (orientErr) {
+          console.warn(`[Trip EXIF] ${file.name}: Could not read orientation:`, orientErr);
         }
         
-        // Orientation direkt lesen (1-8)
-        // 1 = normal, 6 = 90° CCW, 8 = 90° CW, 3 = 180°
-        exifOrientation = exif?.Orientation || exif?.exif?.Orientation;
-        console.log(`[Trip EXIF] ${file.name}: Orientation = ${exifOrientation || 'not found'}`);
-        
-        // Bildabmessungen aus EXIF lesen
-        exifWidth = exif?.ImageWidth || exif?.ExifImageWidth || exif?.PixelXDimension || 
-                     exif?.exif?.ExifImageWidth || exif?.exif?.PixelXDimension;
-        exifHeight = exif?.ImageHeight || exif?.ExifImageHeight || exif?.PixelYDimension || 
-                      exif?.exif?.ExifImageHeight || exif?.exif?.PixelYDimension;
-        
-        if (exifWidth && exifHeight) {
-          console.log(`[Trip EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+        // Datum separat lesen
+        try {
+          const dateExif = await exifr.parse(file, { exif: true, pickTags: ['DateTimeOriginal', 'CreateDate'] });
+          const exifDate = dateExif?.DateTimeOriginal || dateExif?.CreateDate;
+          if (exifDate) {
+            timestamp = new Date(exifDate).getTime();
+            fileDate = new Date(exifDate).toISOString().split('T')[0];
+            console.log(`[Trip EXIF] Date from ${file.name}:`, fileDate);
+          }
+        } catch (dateErr) {
+          console.warn(`[Trip EXIF] ${file.name}: Could not read date:`, dateErr);
         }
         
-        // Software prüfen (Pixel-Kameras)
-        const software = exif?.Software || exif?.exif?.Software || '';
-        const make = exif?.Make || exif?.exif?.Make || '';
-        console.log(`[Trip EXIF] ${file.name}: Make="${make}", Software="${software}"`);
+        // Bildabmessungen versuchen zu lesen
+        try {
+          const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+          exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+          exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+          if (exifWidth && exifHeight) {
+            console.log(`[Trip EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+          }
+        } catch (dimErr) {
+          console.warn(`[Trip EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+        }
         
       } catch (e) {
-        console.warn(`[Trip EXIF] No EXIF in ${file.name}:`, e);
+        console.warn(`[Trip EXIF] Error in ${file.name}:`, e);
       }
       
-      // Bild laden um tatsächliche Abmessungen zu prüfen und Vorschau erstellen
+      // Bild laden um Vorschau zu erstellen
       let previewUrl: string;
       try {
         previewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
