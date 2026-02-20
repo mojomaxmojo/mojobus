@@ -44,36 +44,60 @@ import {
  * Erstellt eine korrigierte Vorschau basierend auf EXIF-Daten
  * Berücksichtigt die EXIF-Orientierung, die Browser oft ignorieren
  */
-async function createCorrectedPreview(file: File, exifWidth?: number, exifHeight?: number): Promise<string> {
+async function createCorrectedPreview(
+  file: File, 
+  exifWidth?: number, 
+  exifHeight?: number,
+  exifOrientation?: number
+): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     
     img.onload = () => {
-      // Prüfen ob Bild gedreht werden muss
-      // Wenn EXIF-Breite != tatsächliche Breite, dann wurde das Bild gedreht
       const actualWidth = img.naturalWidth;
       const actualHeight = img.naturalHeight;
       
       console.log(`[Preview] ${file.name}: Actual dimensions ${actualWidth}x${actualHeight}`);
+      console.log(`[Preview] ${file.name}: EXIF Orientation = ${exifOrientation || 'not set'}`);
       
-      // Prüfen ob Rotation nötig ist
-      // Wenn EXIF sagt "Querformat" (width > height), aber Bild ist "Hochformat" (height > width)
-      // Dann wurde es um 90° CCW gedreht -> wir müssen 90° CW drehen
-      let needsRotation = false;
+      // Rotation basierend auf EXIF Orientation (1-8)
+      // 1 = 0° (normal)
+      // 2 = 0° gespiegelt horizontal
+      // 3 = 180°
+      // 4 = 180° gespiegelt horizontal
+      // 5 = 90° CCW + gespiegelt horizontal
+      // 6 = 90° CCW (Bild nach links gedreht, muss 90° CW korrigiert werden)
+      // 7 = 90° CW + gespiegelt horizontal
+      // 8 = 90° CW (Bild nach rechts gedreht, muss 90° CCW korrigiert werden)
+      
       let rotation = 0;
+      let flipH = false;
       
-      if (exifWidth && exifHeight) {
-        if (exifWidth > exifHeight && actualHeight > actualWidth) {
-          // EXIF sagt Querformat, Bild ist Hochformat -> 90° CW drehen
-          needsRotation = true;
-          rotation = 90;
-          console.log(`[Preview] ${file.name}: Detected 90° CCW rotation, correcting...`);
-        } else if (exifHeight > exifWidth && actualWidth > actualHeight) {
-          // EXIF sagt Hochformat, Bild ist Querformat -> 90° CCW drehen
-          needsRotation = true;
-          rotation = -90;
-          console.log(`[Preview] ${file.name}: Detected 90° CW rotation, correcting...`);
+      if (exifOrientation) {
+        switch (exifOrientation) {
+          case 2: flipH = true; break;
+          case 3: rotation = 180; break;
+          case 4: rotation = 180; flipH = true; break;
+          case 5: rotation = -90; flipH = true; break;
+          case 6: rotation = 90; break;  // 90° CW korrigiert 90° CCW
+          case 7: rotation = 90; flipH = true; break;
+          case 8: rotation = -90; break;
+        }
+        if (rotation !== 0 || flipH) {
+          console.log(`[Preview] ${file.name}: Applying correction - rotation=${rotation}°, flipH=${flipH}`);
+        }
+      } else {
+        // Fallback: Versuche basierend auf EXIF-Dimensionen zu erkennen
+        if (exifWidth && exifHeight) {
+          if (exifWidth > exifHeight && actualHeight > actualWidth) {
+            // EXIF sagt Querformat, Bild ist Hochformat -> 90° CW
+            rotation = 90;
+            console.log(`[Preview] ${file.name}: Detected dimension mismatch, applying 90° CW`);
+          } else if (exifHeight > exifWidth && actualWidth > actualHeight) {
+            rotation = -90;
+            console.log(`[Preview] ${file.name}: Detected dimension mismatch, applying 90° CCW`);
+          }
         }
       }
       
@@ -87,7 +111,7 @@ async function createCorrectedPreview(file: File, exifWidth?: number, exifHeight
         return;
       }
       
-      // Canvas-Größe
+      // Canvas-Größe basierend auf Rotation
       if (rotation === 90 || rotation === -90) {
         canvas.width = actualHeight;
         canvas.height = actualWidth;
@@ -96,17 +120,17 @@ async function createCorrectedPreview(file: File, exifWidth?: number, exifHeight
         canvas.height = actualHeight;
       }
       
-      // In die Mitte verschieben
+      // Transformation anwenden
       ctx.translate(canvas.width / 2, canvas.height / 2);
-      
-      // Rotation anwenden
       if (rotation !== 0) {
         ctx.rotate((rotation * Math.PI) / 180);
       }
+      if (flipH) {
+        ctx.scale(-1, 1);
+      }
       
-      // Zurück verschieben und zeichnen
-      ctx.translate(-actualWidth / 2, -actualHeight / 2);
-      ctx.drawImage(img, 0, 0);
+      // Zeichnen
+      ctx.drawImage(img, -actualWidth / 2, -actualHeight / 2);
       
       URL.revokeObjectURL(url);
       
@@ -311,45 +335,58 @@ export function TripPublishForm() {
       // EXIF-Daten lesen (Datum, GPS, Orientierung, Bildabmessungen)
       let fileDate = new Date().toISOString().split('T')[0];
       let timestamp = Date.now();
-      let needsRotation = false;
       let exifWidth: number | undefined;
       let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
       
       try {
-        const exif = await exifr.parse(file);
+        // Vollständiges EXIF lesen inkl. Orientation
+        const exif = await exifr.parse(file, {
+          exif: true,
+          gps: true,
+          xmp: true,
+          iptc: true,
+          mergeOutput: false,
+        });
+        
+        console.log(`[Trip EXIF] ${file.name}: All EXIF keys:`, Object.keys(exif || {}));
         
         // Datum lesen
-        const exifDate = exif?.DateTimeOriginal || exif?.CreateDate;
+        const exifDate = exif?.DateTimeOriginal || exif?.CreateDate || exif?.exif?.DateTimeOriginal;
         if (exifDate) {
           timestamp = new Date(exifDate).getTime();
           fileDate = new Date(exifDate).toISOString().split('T')[0];
           console.log(`[Trip EXIF] Date from ${file.name}:`, fileDate);
         }
         
-        // Bildabmessungen aus EXIF lesen
-        exifWidth = exif?.ImageWidth || exif?.ExifImageWidth || exif?.PixelXDimension;
-        exifHeight = exif?.ImageHeight || exif?.ExifImageHeight || exif?.PixelYDimension;
+        // Orientation direkt lesen (1-8)
+        // 1 = normal, 6 = 90° CCW, 8 = 90° CW, 3 = 180°
+        exifOrientation = exif?.Orientation || exif?.exif?.Orientation;
+        console.log(`[Trip EXIF] ${file.name}: Orientation = ${exifOrientation || 'not found'}`);
         
-        // Prüfen ob Bild gedreht werden muss
-        // Wenn EXIF sagt Breite > Höhe, aber das tatsächliche Bild Höhe > Breite hat,
-        // dann wurde es vom Smartphone gedreht gespeichert
+        // Bildabmessungen aus EXIF lesen
+        exifWidth = exif?.ImageWidth || exif?.ExifImageWidth || exif?.PixelXDimension || 
+                     exif?.exif?.ExifImageWidth || exif?.exif?.PixelXDimension;
+        exifHeight = exif?.ImageHeight || exif?.ExifImageHeight || exif?.PixelYDimension || 
+                      exif?.exif?.ExifImageHeight || exif?.exif?.PixelYDimension;
+        
         if (exifWidth && exifHeight) {
           console.log(`[Trip EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
         }
         
         // Software prüfen (Pixel-Kameras)
-        const software = exif?.Software || '';
-        const make = exif?.Make || '';
+        const software = exif?.Software || exif?.exif?.Software || '';
+        const make = exif?.Make || exif?.exif?.Make || '';
         console.log(`[Trip EXIF] ${file.name}: Make="${make}", Software="${software}"`);
         
       } catch (e) {
-        console.warn(`[Trip EXIF] No EXIF in ${file.name}`);
+        console.warn(`[Trip EXIF] No EXIF in ${file.name}:`, e);
       }
       
-      // Bild laden um tatsächliche Abmessungen zu prüfen
+      // Bild laden um tatsächliche Abmessungen zu prüfen und Vorschau erstellen
       let previewUrl: string;
       try {
-        previewUrl = await createCorrectedPreview(file, exifWidth, exifHeight);
+        previewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
       } catch (previewError) {
         console.warn(`[Trip Preview] Failed to create preview for ${file.name}:`, previewError);
         previewUrl = URL.createObjectURL(file);
