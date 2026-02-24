@@ -27,7 +27,6 @@ export default defineConfig(() => ({
       '@nostrify/nostrify',
       'dijkstrajs',
       'ngeohash',
-      'axios',
     ],
     // Leaflet wird über CDN geladen (window.L), nicht mehr über npm imports
     // Das vermeidet Probleme mit dem Shakespeare-Build-System (esm.sh)

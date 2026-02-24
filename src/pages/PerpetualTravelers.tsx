@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import axios from 'axios'
 
 export function PerpetualTravelers() {
   const [images, setImages] = useState([])
@@ -27,8 +26,12 @@ export function PerpetualTravelers() {
       const formData = new FormData()
       images.forEach(img => formData.append('images', img))
       formData.append('text', text)
-      const response = await axios.post('/api/generate-article', formData)
-      setArticle(response.data.article)
+      const response = await fetch('/api/generate-article', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await response.json()
+      setArticle(data.article)
     } catch (error) {
       console.error(error)
     }
@@ -42,8 +45,13 @@ export function PerpetualTravelers() {
     }
     setLoading(true)
     try {
-      const response = await axios.post('/api/generate-video', { article, imageUrls: images.map(img => img.name) })
-      setVideoUrl(response.data.videoUrl)
+      const response = await fetch('/api/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ article, imageUrls: images.map(img => img.name) })
+      })
+      const data = await response.json()
+      setVideoUrl(data.videoUrl)
     } catch (error) {
       console.error(error)
     }
