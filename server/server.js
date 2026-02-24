@@ -1,9 +1,9 @@
-const express = require('express')
-const cors = require('cors')
-const multer = require('multer')
-const axios = require('axios')
-const path = require('path')
-const fs = require('fs')
+import express from 'express'
+import cors from 'cors'
+import multer from 'multer'
+import axios from 'axios'
+import path from 'path'
+import fs from 'fs'
 
 const app = express()
 const PORT = process.env.PORT || 3001
