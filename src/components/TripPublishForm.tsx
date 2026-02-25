@@ -314,10 +314,95 @@ export function TripPublishForm() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
   const [isPublishing, setIsPublishing] = useState(false);
   
+  // KI-Artikelgenerierung state
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [generatingProgress, setGeneratingProgress] = useState(0);
+  
   // Hooks
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
+  
+  // KI-Artikelgenerierung für Trips
+  const generateArticleWithAI = async () => {
+    if (stations.length === 0) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte lade mindestens ein Bild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingArticle(true);
+    setGeneratingProgress(0);
+    
+    try {
+      const formData = new FormData();
+      
+      // Alle Bilder hinzufügen
+      stations.forEach(station => {
+        if (station.file) {
+          formData.append('images', station.file);
+        }
+      });
+      
+      // Trip-Daten hinzufügen
+      formData.append('title', tripData.title || 'Meine Reise');
+      formData.append('description', tripData.summary || '');
+      formData.append('locations', JSON.stringify(stations.map(s => s.location || s.title)));
+      formData.append('startDate', stations[0]?.date || '');
+      formData.append('endDate', stations[stations.length - 1]?.date || '');
+
+      setGeneratingProgress(10);
+      
+      const response = await fetch('/api/generate-trip', {
+        method: 'POST',
+        body: formData
+      });
+
+      setGeneratingProgress(90);
+
+      const data = await response.json();
+      
+      if (data.article) {
+        // Artikel in Trip-Summary einfügen
+        setTripData(prev => ({
+          ...prev,
+          summary: data.article
+        }));
+        
+        // Hashtags hinzufügen
+        if (data.hashtags) {
+          const newTags = data.hashtags.split(' ').filter(Boolean);
+          console.log('[KI] Generated hashtags:', newTags);
+        }
+
+        setGeneratingProgress(100);
+        
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Artikel generiert! ${data.imageDescriptions?.length || 0} Stationen analysiert.`
+        });
+        
+        // Kurze Verzögerung für UI-Feedback
+        setTimeout(() => {
+          setGeneratingProgress(0);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('[KI] Generierung fehlgeschlagen:', error);
+      setGeneratingProgress(0);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen. Bitte versuche es erneut.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingArticle(false);
+    }
+  };
+  
   const navigate = useNavigate();
   
   // Populate form when editing existing trip
@@ -1247,6 +1332,43 @@ export function TripPublishForm() {
               placeholder="Eine kurze Beschreibung deiner Reise..."
               rows={2}
             />
+            
+            {/* KI-Artikel generieren Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={generateArticleWithAI}
+              disabled={isGeneratingArticle || stations.length === 0}
+              className="mt-2 w-full"
+            >
+              {isGeneratingArticle ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {generatingProgress < 100 
+                    ? `Generiere Artikel... ${Math.round(generatingProgress)}%`
+                    : 'Artikel wird eingefügt...'
+                  }
+                </>
+              ) : (
+                <>
+                  <span className="mr-2">🗺️</span>
+                  KI-Reisebericht generieren ({stations.length} Stationen)
+                </>
+              )}
+            </Button>
+            
+            {/* Fortschrittsanzeige */}
+            {isGeneratingArticle && generatingProgress > 0 && (
+              <div className="mt-2 space-y-2">
+                <Progress value={generatingProgress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center">
+                  {generatingProgress < 10 && 'Starte Generierung...'}
+                  {generatingProgress >= 10 && generatingProgress < 90 && `Analysiere ${stations.length} Bilder...`}
+                  {generatingProgress >= 90 && generatingProgress < 100 && 'Generiere Artikel...'}
+                  {generatingProgress >= 100 && 'Fertig! Artikel eingefügt.'}
+                </p>
+              </div>
+            )}
           </div>
           
           {/* Trip Type Select - Pflichtfeld */}

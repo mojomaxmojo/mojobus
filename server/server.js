@@ -218,6 +218,116 @@ WICHTIG:
   }
 })
 
+// API für Trip-Generierung (mit Schritt-für-Schritt-Bildanalyse)
+app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
+  if (!validateApiKey()) {
+    return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
+  }
+
+  const title = sanitizeInput(req.body.title) || 'Meine Reise'
+  const description = sanitizeInput(req.body.description) || ''
+  const locations = req.body.locations ? JSON.parse(req.body.locations) : []
+  const startDate = sanitizeInput(req.body.startDate) || ''
+  const endDate = sanitizeInput(req.body.endDate) || ''
+  const images = req.files
+
+  if (!images || images.length === 0) {
+    return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
+  }
+
+  console.log(`[KI] Generiere Trip-Artikel: "${title}", Bilder: ${images.length}, Stationen: ${locations.length}`)
+
+  try {
+    // SCHRITT 1: Für jedes Bild eine Kurzbeschreibung generieren
+    const imageDescriptions = await Promise.all(images.map(async (img, index) => {
+      const base64 = img.buffer.toString('base64')
+      console.log(`[KI] Analysiere Bild ${index + 1}/${images.length}, Größe: ${(img.size / 1024).toFixed(1)}KB`)
+      
+      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            { 
+              type: 'text', 
+              text: `Beschreibe diese Station für einen Reisebericht. Fokus auf: Atmosphäre, Besonderheiten. Schreibe in 2-3 Sätzen.` 
+            },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+          ]
+        }],
+        max_tokens: 150,
+        temperature: 0.7
+      }, {
+        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+        timeout: 30000
+      })
+      
+      const desc = visionResponse.data.choices[0].message.content
+      console.log(`[KI] Bild ${index + 1} analysiert: ${desc.substring(0, 50)}...`)
+      return desc
+    }))
+
+    // SCHRITT 2: Trip-Artikel aus allen Bildbeschreibungen generieren
+    const prompt = `Ahme den Stil eines erfahrenen Vanlifers nach. Schreibe einen Reisebericht über "${title}${description ? ' - ' + description : ''}".
+
+Reisezeit: ${startDate || 'unbestimmt'} bis ${endDate || 'unbestimmt'}
+Stationen: ${locations.length > 0 ? locations.join(', ') : images.length + ' Stationen'}
+
+Für jede Station habe ich eine Beschreibung:
+${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}
+
+Erstelle einen zusammenhängenden Reisebericht (300-500 Wörter) mit:
+- Einleitung: Motivation für die Reise
+- Chronologischer Ablauf der Stationen
+- Persönliche Eindrücke und Erlebnisse
+- Praktische Tipps für andere Reisende
+- Fazit: Empfehlung
+
+WICHTIG:
+- Sehr menschlich und authentisch
+- Keine perfekten Sätze
+- Wie im echten Gespräch
+- Füge 5-8 relevante Hashtags am Ende hinzu (z.B. #Vanlife #Reise #Abenteuer)`
+
+    // Artikel generieren
+    const articleResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 700, // Länger für Trip-Berichte
+      temperature: 0.85,
+      top_p: 0.9
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+      timeout: 45000
+    })
+
+    const article = articleResponse.data.choices[0].message.content
+    console.log(`[KI] Trip-Artikel generiert: ${article.length} Zeichen`)
+
+    // Hashtags extrahieren
+    const hashtags = article.match(/#\w+/g) || []
+    const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
+
+    res.json({ 
+      article, 
+      imageDescriptions,
+      hashtags: uniqueHashtags.join(' ')
+    })
+  } catch (error) {
+    console.error('[KI] Fehler bei Trip-Generierung:', error.response?.data || error.message)
+    
+    if (error.response?.status === 429) {
+      res.status(429).json({ error: 'API-Limit erreicht. Bitte warte einen Moment.' })
+    } else if (error.response?.status === 400) {
+      res.status(400).json({ error: 'Ungültige Anfrage. Prüfe deine Eingaben.' })
+    } else if (error.code === 'ECONNABORTED') {
+      res.status(408).json({ error: 'Zeitüberschreitung. Versuche es erneut.' })
+    } else {
+      res.status(500).json({ error: 'Fehler bei Generierung. Versuche es erneut.' })
+    }
+  }
+})
+
 // API für Video-Generierung (Platzhalter)
 app.post('/api/generate-video', (req, res) => {
   const { article, imageUrls } = req.body
