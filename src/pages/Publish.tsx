@@ -95,11 +95,59 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
-  const { mutate: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
+
+  // KI-Artikelgenerierung
+  const generateArticleWithAI = async () => {
+    if (files.length === 0) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte lade mindestens ein Bild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingArticle(true);
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('images', file.file));
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('text', customTags || 'Meer Abenteuer Strand');
+      formData.append('location', location);
+
+      const response = await fetch('/api/generate-media-article', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.article) {
+        setDescription(data.article);
+        if (data.hashtags) {
+          setCustomTags(prev => prev ? `${prev} ${data.hashtags}` : data.hashtags);
+        }
+        toast({
+          title: 'Erfolg!',
+          description: 'KI-Artikel generiert und in Felder eingefügt.'
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingArticle(false);
+    }
+  };
 
   // GPS editing state
   const [editingGpsFile, setEditingGpsFile] = useState<string | null>(null);
@@ -831,16 +879,34 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Beschreibung</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Beschreibe deine Bilder-Erlebnisse..."
-              rows={4}
-            />
-          </div>
+           <div className="space-y-2">
+             <Label htmlFor="description">Beschreibung</Label>
+             <Textarea
+               id="description"
+               value={description}
+               onChange={(e) => setDescription(e.target.value)}
+               placeholder="Beschreibe deine Bilder-Erlebnisse..."
+               rows={4}
+             />
+             <Button
+               type="button"
+               variant="outline"
+               onClick={generateArticleWithAI}
+               disabled={isGeneratingArticle || files.length === 0}
+               className="mt-2"
+             >
+               {isGeneratingArticle ? (
+                 <>
+                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                   KI-Artikel generieren...
+                 </>
+               ) : (
+                 <>
+                   🤖 KI-Artikel generieren
+                 </>
+               )}
+             </Button>
+           </div>
 
           {/* Categories */}
           <div className="space-y-4">
