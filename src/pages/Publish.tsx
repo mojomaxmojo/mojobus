@@ -96,6 +96,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -120,6 +121,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       formData.append('description', description);
       formData.append('text', customTags || 'Meer Abenteuer Strand');
       formData.append('location', location);
+      formData.append('model', selectedModel);
 
       const response = await fetch('/api/generate-media-article', {
         method: 'POST',
@@ -134,7 +136,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         }
         toast({
           title: 'Erfolg!',
-          description: 'KI-Artikel generiert und in Felder eingefügt.'
+          description: `KI-Artikel generiert mit ${data.model === 'gpt4' ? 'GPT-4 Turbo' : 'Llama 4 Scout'} und in Felder eingefügt.`
         });
       }
     } catch (error) {
@@ -887,26 +889,72 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                onChange={(e) => setDescription(e.target.value)}
                placeholder="Beschreibe deine Bilder-Erlebnisse..."
                rows={4}
-             />
-             <Button
-               type="button"
-               variant="outline"
-               onClick={generateArticleWithAI}
-               disabled={isGeneratingArticle || files.length === 0}
-               className="mt-2"
-             >
-               {isGeneratingArticle ? (
-                 <>
-                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                   KI-Artikel generieren...
-                 </>
-               ) : (
-                 <>
-                   🤖 KI-Artikel generieren
-                 </>
-               )}
-             </Button>
-           </div>
+              />
+              
+              {/* KI-Modell Auswahl */}
+              <div className="mt-4 space-y-3">
+                <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div 
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'llama4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                    onClick={() => setSelectedModel('llama4')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🚀</span>
+                      <div>
+                        <p className="font-medium text-sm">Llama 4 Scout</p>
+                        <p className="text-xs text-muted-foreground">Schnell & Günstig</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <p>✅ 1-2 Sekunden</p>
+                      <p>💰 ~$0.005 pro Artikel</p>
+                      <p>⭐ Gute Qualität</p>
+                    </div>
+                  </div>
+                  
+                  <div 
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'gpt4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                    onClick={() => setSelectedModel('gpt4')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">⭐</span>
+                      <div>
+                        <p className="font-medium text-sm">GPT-4 Turbo</p>
+                        <p className="text-xs text-muted-foreground">Premium Qualität</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <p>⏱️ 5-10 Sekunden</p>
+                      <p>💰 ~$0.03-0.05 pro Artikel</p>
+                      <p>⭐⭐⭐ Beste Qualität</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={generateArticleWithAI}
+                disabled={isGeneratingArticle || files.length === 0}
+                className="mt-2"
+              >
+                {isGeneratingArticle ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generiere mit {selectedModel === 'gpt4' ? 'GPT-4' : 'Llama 4'}...
+                  </>
+                ) : (
+                  <>
+                    🤖 KI-Artikel generieren
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({selectedModel === 'gpt4' ? 'GPT-4 Turbo' : 'Llama 4 Scout'})
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
 
           {/* Categories */}
           <div className="space-y-4">
