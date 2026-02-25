@@ -193,7 +193,8 @@ WICHTIG:
 
     // Hashtags extrahieren (verbessert)
     const hashtags = article.match(/#\w+/g) || []
-    const uniqueHashtags = [...new Set(hashtags)] // Duplikate entfernen
+    // Entferne # und Duplikate, füge mit Leerzeichen zusammen
+    const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
     
     console.log(`[KI] Hashtags gefunden: ${uniqueHashtags.length}`)
 
