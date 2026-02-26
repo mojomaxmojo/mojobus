@@ -274,10 +274,8 @@ Beginne direkt mit einer persönlichen Anekdote oder Frage. Keine Einleitung wie
     } else {
       res.status(500).json({ error: 'Fehler bei Generierung. Versuche es erneut.' })
     }
-  }
-})
-      return visionResponse.data.choices[0].message.content
-    }))
+   }
+ })
 
     console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
 
