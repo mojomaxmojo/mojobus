@@ -204,6 +204,12 @@ deploy_files() {
     if [ -d "$PROJECT_DIR/server" ]; then
         cp -r "$PROJECT_DIR/server" "$DEPLOY_DIR/" || error_exit "Kopieren des server/ Verzeichnisses fehlgeschlagen"
         info_msg "✓ server/ Verzeichnis deployed"
+
+        # Server Dependencies installieren
+        if [ -f "$DEPLOY_DIR/server/package.json" ]; then
+            info_msg "Installiere Server Dependencies..."
+            npm install --prefix "$DEPLOY_DIR/server" --silent || warn_msg "npm install für Server fehlgeschlagen"
+        fi
     fi
 
     # Prüfe ob assets Ordner existiert
