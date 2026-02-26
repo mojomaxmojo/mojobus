@@ -41,48 +41,30 @@ const generateWithModel = async (prompt, model = 'llama4') => {
   const startTime = Date.now()
 
   try {
-    if (model === 'gpt52') {
-      // GPT-5.2 (OpenAI - neuer Endpoint)
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error('OPENAI_API_KEY fehlt')
+    if (model === 'claude') {
+      // Claude 3.5 Sonnet (Anthropic)
+      if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error('ANTHROPIC_API_KEY fehlt')
       }
 
-      const response = await axios.post('https://api.openai.com/v1/responses', {
-        model: 'gpt-5.2',
-        input: prompt,
+      const response = await axios.post('https://api.anthropic.com/v1/messages', {
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 700,
-        temperature: 0.9
+        temperature: 0.9,
+        system: "Du bist ein erfahrener Vanlifer im Stil von Foster Huntington. Schreibe authentische, menschliche Geschichten.",
+        messages: [{ role: 'user', content: prompt }]
       }, {
         headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
           'Content-Type': 'application/json'
         },
         timeout: 60000
       })
 
       const duration = Date.now() - startTime
-      console.log(`[KI] GPT-5.2 generiert in ${duration}ms, Kosten: ~$1.75 pro 1M Tokens`)
-      return response.data.output_text || response.data.output
-
-    } else if (model === 'gpt4') {
-      // GPT-4o (OpenAI)
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error('OPENAI_API_KEY fehlt')
-      }
-
-      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 700,
-        temperature: 0.9
-      }, {
-        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
-        timeout: 60000
-      })
-
-      const duration = Date.now() - startTime
-      console.log(`[KI] GPT-4o generiert in ${duration}ms, Kosten: ~$0.03`)
-      return response.data.choices[0].message.content
+      console.log(`[KI] Claude 3.5 Sonnet generiert in ${duration}ms, Kosten: ~$0.015`)
+      return response.data.content[0].text
 
     } else {
       // Llama 4 Scout (Groq) - Standard
@@ -376,7 +358,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     groqApiKey: process.env.GROQ_API_KEY ? 'configured' : 'missing',
-    openaiApiKey: process.env.OPENAI_API_KEY ? 'configured' : 'missing',
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY ? 'configured' : 'missing',
     timestamp: new Date().toISOString()
   })
 })
@@ -384,5 +366,5 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`[Server] Backend läuft auf Port ${PORT}`)
   console.log(`[Server] GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
-  console.log(`[Server] OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
+  console.log(`[Server] ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
 })

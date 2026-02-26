@@ -136,7 +136,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         }
         toast({
           title: 'Erfolg!',
-          description: `KI-Artikel generiert mit ${data.model === 'gpt4' ? 'GPT-4 Turbo' : 'Llama 4 Scout'} und in Felder eingefügt.`
+          description: `KI-Artikel generiert mit ${data.model === 'claude' ? 'Claude 3.5 Sonnet' : 'Llama 4 Scout'} und in Felder eingefügt.`
         });
       }
     } catch (error) {
@@ -913,21 +913,21 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                     </div>
                   </div>
                   
-                  <div 
-                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'gpt4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
-                    onClick={() => setSelectedModel('gpt4')}
+                  <div
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'claude' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                    onClick={() => setSelectedModel('claude')}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">⭐</span>
+                      <span className="text-xl">🤖</span>
                       <div>
-                        <p className="font-medium text-sm">GPT-4 Turbo</p>
+                        <p className="font-medium text-sm">Claude 3.5 Sonnet</p>
                         <p className="text-xs text-muted-foreground">Premium Qualität</p>
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground">
-                      <p>⏱️ 5-10 Sekunden</p>
-                      <p>💰 ~$0.03-0.05 pro Artikel</p>
-                      <p>⭐⭐⭐ Beste Qualität</p>
+                      <p>⏱️ 3-6 Sekunden</p>
+                      <p>💰 ~$0.015 pro Artikel</p>
+                      <p>⭐⭐⭐ Beste menschliche Texte</p>
                     </div>
                   </div>
                 </div>
@@ -943,13 +943,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                 {isGeneratingArticle ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generiere mit {selectedModel === 'gpt4' ? 'GPT-4' : 'Llama 4'}...
+                    Generiere mit {selectedModel === 'claude' ? 'Claude' : 'Llama 4'}...
                   </>
                 ) : (
                   <>
                     🤖 KI-Artikel generieren
                     <span className="ml-2 text-xs text-muted-foreground">
-                      ({selectedModel === 'gpt4' ? 'GPT-4 Turbo' : 'Llama 4 Scout'})
+                      ({selectedModel === 'claude' ? 'Claude 3.5 Sonnet' : 'Llama 4 Scout'})
                     </span>
                   </>
                 )}
