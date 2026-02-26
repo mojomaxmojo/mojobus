@@ -48,7 +48,7 @@ const generateWithModel = async (prompt, model = 'llama4') => {
       }
 
       const response = await axios.post('https://api.anthropic.com/v1/messages', {
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-6',
         max_tokens: 700,
         temperature: 0.9,
         system: "Du bist ein erfahrener Vanlifer im Stil von Foster Huntington. Schreibe authentische, menschliche Geschichten.",

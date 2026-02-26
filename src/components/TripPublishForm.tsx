@@ -384,7 +384,7 @@ export function TripPublishForm() {
         
         toast({
           title: 'Erfolg!',
-          description: `KI-Artikel generiert mit ${data.model === 'claude' ? 'Claude 3.5 Sonnet' : 'Llama 4 Scout'}! ${data.imageDescriptions?.length || 0} Stationen analysiert.`
+          description: `KI-Artikel generiert mit ${data.model === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}! ${data.imageDescriptions?.length || 0} Stationen analysiert.`
         });
         
         // Kurze Verzögerung für UI-Feedback
@@ -1364,14 +1364,14 @@ export function TripPublishForm() {
                     <div className="flex items-center gap-2">
                       <span className="text-xl">🤖</span>
                       <div>
-                        <p className="font-medium text-sm">Claude 3.5 Sonnet</p>
-                        <p className="text-xs text-muted-foreground">Premium Qualität</p>
+                        <p className="font-medium text-sm">Claude Sonnet 4.6</p>
+                        <p className="text-xs text-muted-foreground">Neueste Premium Qualität</p>
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground">
                       <p>⏱️ 3-6 Sekunden</p>
                       <p>💰 ~$0.015 pro Artikel</p>
-                      <p>⭐⭐⭐ Beste menschliche Texte</p>
+                      <p>⭐⭐⭐⭐ Neueste menschliche Texte</p>
                     </div>
                   </div>
               </div>
@@ -1389,7 +1389,7 @@ export function TripPublishForm() {
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   {generatingProgress < 100 
-                    ? `Generiere Artikel (${selectedModel === 'claude' ? 'Claude' : 'Llama 4'})... ${Math.round(generatingProgress)}%`
+                    ? `Generiere Artikel (${selectedModel === 'claude' ? 'Claude 4.6' : 'Llama 4'})... ${Math.round(generatingProgress)}%`
                     : 'Artikel wird eingefügt...'
                   }
                 </>
@@ -1398,7 +1398,7 @@ export function TripPublishForm() {
                   <span className="mr-2">🗺️</span>
                   KI-Reisebericht generieren ({stations.length} Stationen)
                   <span className="ml-2 text-xs text-muted-foreground">
-                    mit {selectedModel === 'claude' ? 'Claude 3.5 Sonnet' : 'Llama 4 Scout'}
+                    mit {selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}
                   </span>
                 </>
               )}
