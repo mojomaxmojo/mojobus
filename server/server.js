@@ -39,16 +39,39 @@ const validateApiKey = () => {
 // Hilfsfunktion: Generiere Text mit ausgewähltem Modell
 const generateWithModel = async (prompt, model = 'llama4') => {
   const startTime = Date.now()
-  
+
   try {
-    if (model === 'gpt4') {
-      // GPT-4 Turbo (OpenAI)
+    if (model === 'gpt52') {
+      // GPT-5.2 (OpenAI - neuer Endpoint)
       if (!process.env.OPENAI_API_KEY) {
         throw new Error('OPENAI_API_KEY fehlt')
       }
-      
+
+      const response = await axios.post('https://api.openai.com/v1/responses', {
+        model: 'gpt-5.2',
+        input: prompt,
+        max_tokens: 700,
+        temperature: 0.9
+      }, {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 60000
+      })
+
+      const duration = Date.now() - startTime
+      console.log(`[KI] GPT-5.2 generiert in ${duration}ms, Kosten: ~$1.75 pro 1M Tokens`)
+      return response.data.output_text || response.data.output
+
+    } else if (model === 'gpt4') {
+      // GPT-4o (OpenAI)
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY fehlt')
+      }
+
       const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 700,
         temperature: 0.9
@@ -56,11 +79,11 @@ const generateWithModel = async (prompt, model = 'llama4') => {
         headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
         timeout: 60000
       })
-      
+
       const duration = Date.now() - startTime
-      console.log(`[KI] GPT-4 Turbo generiert in ${duration}ms, Kosten: ~$0.03`)
+      console.log(`[KI] GPT-4o generiert in ${duration}ms, Kosten: ~$0.03`)
       return response.data.choices[0].message.content
-      
+
     } else {
       // Llama 4 Scout (Groq) - Standard
       const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
@@ -73,7 +96,7 @@ const generateWithModel = async (prompt, model = 'llama4') => {
         headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
         timeout: 45000
       })
-      
+
       const duration = Date.now() - startTime
       console.log(`[KI] Llama 4 Scout generiert in ${duration}ms, Kosten: ~$0.005`)
       return response.data.choices[0].message.content
@@ -222,7 +245,7 @@ WICHTIG:
 - Keine perfekten Sätze - wie im echten Gespräch
 - Füge 5-8 relevante Hashtags am Ende hinzu (z.B. #Vanlife #Meer #Strand #Abenteuer)
 
-Beginne direkt mit einer persönlichen Anekdote oder Frage. Keine Einleitung wie "In diesem Artikel..."`
+Beginne direkt mit einer persönlichen Anekdote oder Frage. Keine Einleitung wie "In diesem Artikel...".`
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)
