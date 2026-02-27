@@ -389,27 +389,36 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       let exifHeight: number | undefined;
       let exifOrientation: number | undefined;
 
-      // Für Desktop-Bilder: EXIF-Korrektur anwenden
-      if (mediaType === 'image' && isDesktop) {
-        try {
-          // EXIF-Daten lesen
-          const exifData = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight', 'Orientation'] });
-          exifWidth = exifData?.ImageWidth || exifData?.ExifImageWidth;
-          exifHeight = exifData?.ImageHeight || exifData?.ExifImageHeight;
-          exifOrientation = exifData?.Orientation;
+       // Für Desktop-Bilder: EXIF-Korrektur anwenden
+       if (mediaType === 'image' && isDesktop) {
+         try {
+           // EXIF-Daten lesen (wie in TripPublishForm.tsx)
+           // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+           try {
+             exifOrientation = await exifr.orientation(file);
+             console.log(`[Media EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+           } catch (orientErr) {
+             console.warn(`[Media EXIF] ${file.name}: Could not read orientation:`, orientErr);
+           }
 
-          if (exifOrientation && exifOrientation !== 1) {
-            console.log(`[EXIF] ${file.name}: Orientation=${exifOrientation}, will correct rotation`);
-            // Korrigierte Preview erstellen
-            preview = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
-          } else {
-            // Keine Korrektur nötig
-            preview = URL.createObjectURL(file);
-          }
-        } catch (exifError) {
-          console.warn(`[EXIF] Failed to read EXIF from ${file.name}:`, exifError);
-          preview = URL.createObjectURL(file);
-        }
+           // Bildabmessungen lesen
+           try {
+             const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+             exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+             exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+             if (exifWidth && exifHeight) {
+               console.log(`[Media EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+             }
+           } catch (dimErr) {
+             console.warn(`[Media EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+           }
+
+           // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
+           preview = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+         } catch (exifError) {
+           console.warn(`[Media EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+           preview = URL.createObjectURL(file);
+         }
       } else {
         // Für Mobil oder Nicht-Bilder: Einfache Preview
         preview = mediaType === 'image' ? URL.createObjectURL(file) : undefined;
