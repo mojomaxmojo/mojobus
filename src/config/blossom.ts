@@ -41,8 +41,8 @@ export const BLOSSOM_SERVERS: AuthorBlossomConfig = {
   },
   susanne: {
     authorId: 'susanne',
-    servers: ['https://relays.mojobus.co'],
-    preferred: 'https://relays.mojobus.co',
+    servers: ['https://relay.mojobus.co'],
+    preferred: 'https://relay.mojobus.co',
     backupServer: 'https://blossom.primal.net',
     maxFileSize: 50, // 50 MB
   },

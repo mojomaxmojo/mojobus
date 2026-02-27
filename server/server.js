@@ -148,7 +148,9 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   }
 })
 
-// API für Media-Artikel-Generierung mit Bilder-Analyse (Verbessert)
+// ===== API FÜR MEDIEN ARTIKEL GENERIERUNG =====
+// Generiert authentische Vanlife-Artikel im Foster Huntington Stil
+// Verwendet in: Medien-Tab der Publish-Seite
 app.post('/api/generate-media-article', upload.array('images', 10), async (req, res) => {
   if (!validateApiKey()) {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
@@ -167,9 +169,11 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
 
   console.log(`[KI] Generiere Media-Artikel: "${title}", Bilder: ${images.length}, Standort: ${location}, Modell: ${model}`)
 
-  try {
-    // Bilder analysieren mit Grok Vision
-    const imageDescriptions = await Promise.all(images.map(async (img) => {
+    try {
+      // ===== BILD ANALYSE FÜR MEDIEN ARTIKEL =====
+      // Hier kannst du die Bild-Analyse-Prompts anpassen
+      // Für verschiedene Themen können spezifische Analyse-Anweisungen hinzugefügt werden
+      const imageDescriptions = await Promise.all(images.map(async (img) => {
       const base64 = img.buffer.toString('base64')
       console.log(`[KI] Analysiere Bild, Größe: ${(img.size / 1024).toFixed(1)}KB`)
 
@@ -178,7 +182,7 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: 'Beschreibe dieses Bild detailliert für einen Vanlife/Reise-Artikel. Fokus auf: Atmosphäre, Farben, Menschen, Aktivitäten, Besonderheiten. Schreibe in 2-3 Sätzen.' },
+             { type: 'text', text: 'Beschreibe dieses Bild für einen authentischen Vanlife-Artikel. Fokus auf: echte Atmosphäre (nicht Instagram), was wirklich passiert, besondere Details, Emotionen. Schreibe wie Foster Huntington - direkt, ehrlich, keine perfekten Beschreibungen.' },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -193,30 +197,50 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
 
     console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
 
-    // Verbesserter Prompt mit Beispielen
-    const prompt = `Ahme im gesamten Text den einfachen, authentischen Stil des Vanlifers Foster Huntington nach. Du schreibst wie ein erfahrener Vanlifer, der seine Erlebnisse teilt - direkt, ungeschönt und herzlich. Verwende die DU-Form.
+    // ===== FOSTER HUNTINGTON STIL PROMPT =====
+    // Diese Prompt ist optimiert für authentischen Vanlife-Stil
+    // Einfach anpassbar für verschiedene Themen
+    const prompt = `Du bist Foster Huntington und schreibst für deine Vanlife-Community. Dein Stil ist:
+- Ehrlich und ungeschönt (zeige die Realität, nicht Instagram)
+- Persönlich und konversationell (wie ein Gespräch mit einem alten Freund)
+- Direkt und relatable (verwende "Du", "Ich", keine perfekten Sätze)
+- Minimalistisch (kurze Sätze, echte Emotionen)
 
-BEISPIEL-STIL:
-"Du wachst morgens mit dem Geräusch der Wellen auf. Der Sand knirscht unter deinen Füßen, während du zum Kaffee gehst. Nicht immer perfekt, aber genau das macht's echt. Hast du das auch schon erlebt?"
+BEISPIEL DEINES STILS:
+"Du wachst morgens auf und der Van riecht nach letzter Nacht. Nicht glamourös, aber echt. Genau das macht Vanlife aus. Kennst du das Gefühl?"
 
-Erstelle einen Artikel über "${title}${description ? ' - ' + description : ''}" mit:
-- Persönlichen Anekdoten aus dem Vanlife (z.B. ein spezieller Morgen am Strand)
-- Praktischen Tipps für andere Reisende (z.B. "Park hier nie bei Flut")
-- Sensorischen Details: Was hörst du? Was riechst du? Wie fühlt es sich an?
-- Fragen an den Leser, um ihn einzubinden
-- Ehrlichen, unperfekten Momenten, die es echt machen
+"Parkst du auch immer am Arsch der Welt? Wo niemand hinfährt? Das sind die besten Plätze. Kein Wifi, aber echte Ruhe."
 
-Bilder-Beschreibungen (integriere diese natürlich): ${imageDescriptions.join('; ')}
+"Man sagt immer 'Freiheit', aber gestern musste ich 2 Stunden nach Wasser suchen. Trotzdem würde ich es nicht anders wollen."
+
+VERMEIDE:
+- "Der wunderschöne Sonnenaufgang tauchte die Landschaft in goldenes Licht"
+- "In diesem Artikel zeige ich dir..."
+- "Als Vanlifer musst du unbedingt..."
+- Perfekte, polierte Sätze
+
+SCHREIBE EINEN ARTIKEL ÜBER: "${title}${description ? ' - ' + description : ''}"
+
+STRUKTUR:
+1. Öffne mit einem konkreten, persönlichen Moment
+2. Erzähl eine kleine, echte Geschichte
+3. Gib einen praktischen Tipp aus der Erfahrung
+4. Stelle eine Frage, die den Leser einbindet
+5. Schließe ehrlich (mit den Schwierigkeiten)
+
+Bilder zeigen: ${imageDescriptions.join('; ')}
 Standort: ${location}
 Stichworte: ${text}
 
-WICHTIG:
-- Max 300 Wörter
-- Sehr menschlich und konversationell
-- Keine perfekten Sätze - wie im echten Gespräch
-- Füge 5-8 relevante Hashtags am Ende hinzu (z.B. #Vanlife #Meer #Strand #Abenteuer)
+SCHREIBSTIL:
+- Verwende Kontraktionen: du bist → du bist, ich habe → ich hab
+- Kurze Sätze mischen mit längeren
+- Rhetorische Fragen: "Kennst du das?"
+- Selbstironie und Humor
+- Direkte Ansprache: "Du", "Ich" statt "Man"
 
-Beginne direkt mit einer persönlichen Anekdote oder Frage. Keine Einleitung wie "In diesem Artikel...".`
+MAX 300 WÖRTER. Füge 5-8 echte Hashtags hinzu.
+Beginne direkt mit einem persönlichen Moment. Keine Einleitung wie "In diesem Artikel...".`
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)
@@ -248,7 +272,9 @@ Beginne direkt mit einer persönlichen Anekdote oder Frage. Keine Einleitung wie
   }
 })
 
-// API für Trip-Generierung (mit Schritt-für-Schritt-Bildanalyse)
+// ===== API FÜR TRIP ARTIKEL GENERIERUNG =====
+// Generiert zusammenhängende Reiseberichte im Foster Huntington Stil
+// Verwendet in: Trips-Tab der Publish-Seite
 app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
   if (!validateApiKey()) {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
@@ -268,9 +294,11 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
 
   console.log(`[KI] Generiere Trip-Artikel: "${title}", Bilder: ${images.length}, Stationen: ${locations.length}, Modell: ${model}`)
 
-  try {
-    // SCHRITT 1: Für jedes Bild eine Kurzbeschreibung generieren
-    const imageDescriptions = await Promise.all(images.map(async (img, index) => {
+    try {
+      // ===== BILD ANALYSE FÜR TRIP ARTIKEL =====
+      // Schritt 1: Für jedes Bild eine Kurzbeschreibung generieren
+      // Hier kannst du die Analyse-Prompts für Reisebilder anpassen
+      const imageDescriptions = await Promise.all(images.map(async (img, index) => {
       const base64 = img.buffer.toString('base64')
       console.log(`[KI] Analysiere Bild ${index + 1}/${images.length}, Größe: ${(img.size / 1024).toFixed(1)}KB`)
 
@@ -279,7 +307,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: `Beschreibe diese Station für einen Reisebericht. Fokus auf: Atmosphäre, Besonderheiten. Schreibe in 2-3 Sätzen.` },
+             { type: 'text', text: `Beschreibe diese Station ehrlich für einen Vanlife-Reisebericht. Was ist wirklich besonders? Atmosphäre? Herausforderungen? Menschen? Schreibe authentisch, nicht touristisch - wie für andere Reisende.` },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -295,27 +323,50 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       return desc
     }))
 
-    // SCHRITT 2: Trip-Artikel aus allen Bildbeschreibungen generieren
-    const prompt = `Ahme den Stil eines erfahrenen Vanlifers nach. Schreibe einen Reisebericht über "${title}${description ? ' - ' + description : ''}".
+    // ===== FOSTER HUNTINGTON TRIP PROMPT =====
+    // Speziell für Reiseberichte optimiert
+    // Kann für verschiedene Reisearten angepasst werden
+    const prompt = `Du bist Foster Huntington und schreibst einen Reisebericht für andere Vanlifer. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Urlaubsgeschichten, sondern echte Erlebnisse.
 
-Reisezeit: ${startDate || 'unbestimmt'} bis ${endDate || 'unbestimmt'}
-Stationen: ${locations.length > 0 ? locations.join(', ') : images.length + ' Stationen'}
+BEISPIEL DEINES STILS:
+"Die erste Nacht im Van war scheiße kalt. Regen prasselte aufs Dach, und ich fragte mich, ob das die richtige Entscheidung war. Am nächsten Morgen sah alles anders aus."
 
-Für jede Station habe ich eine Beschreibung:
+"Du denkst, Vanlife ist Freiheit? Manchmal ist es nur: Wo parke ich heute? Wo finde ich Strom? Aber genau das macht's echt."
+
+VERMEIDE IN REISEBERICHTEN:
+- "Wir genossen den wunderschönen Sonnenuntergang"
+- "Es war ein unvergessliches Erlebnis"
+- "Als Reisender musst du unbedingt..."
+- Zu positive, polierte Geschichten
+
+SCHREIBE EINEN REISEBERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
+
+REISE-DETAILS:
+Zeitraum: ${startDate || 'unbestimmt'} bis ${endDate || 'unbestimmt'}
+Stationen: ${locations.length > 0 ? locations.join(' → ') : images.length + ' Stationen'}
+
+STATIONEN-BESCHREIBUNGEN:
 ${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}
 
-Erstelle einen zusammenhängenden Reisebericht (300-500 Wörter) mit:
-- Einleitung: Motivation für die Reise
-- Chronologischer Ablauf der Stationen
-- Persönliche Eindrücke und Erlebnisse
-- Praktische Tipps für andere Reisende
-- Fazit: Empfehlung
+STRUKTUR DES BERICHTS:
+1. EINLEITUNG: Warum bist du losgefahren? Was war die Motivation?
+2. CHRONOLOGIE: Erzähl die Stationen in Reihenfolge - was war gut, was war scheiße
+3. PERSÖNLICHE MOMENTE: Teile echte Gefühle, nicht nur schöne Fotos
+4. PRAKTISCHE TIPPS: Was würden andere Reisende wissen wollen?
+5. FAZIT: Würdest du es wieder machen? Was hast du gelernt?
 
-WICHTIG:
-- Sehr menschlich und authentisch
-- Keine perfekten Sätze
-- Wie im echten Gespräch
-- Füge 5-8 relevante Hashtags am Ende hinzu (z.B. #Vanlife #Reise #Abenteuer)`
+SCHREIBSTIL:
+- Ehrlich über Schwierigkeiten (Wetter, Parkplatzsuche, Reparaturen)
+- Persönliche Anekdoten statt generischer Beschreibungen
+- Direkte Fragen an den Leser: "Kennst du das?"
+- Humor und Selbstironie
+- Verwende "Ich" statt "Man"
+
+LÄNGE: 300-500 Wörter
+HASHTAGS: 5-8 relevante Hashtags am Ende
+SPRACHE: Deutsch, authentisch, wie ein Gespräch
+
+Beginne direkt mit deiner Abreise oder einem konkreten Moment. Keine Einleitung wie "In diesem Reisebericht...".`
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)
