@@ -1580,12 +1580,59 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
     // Filter for image files only
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    setImageFiles(prev => [...prev, ...imageFiles]);
+    const newImageFiles: File[] = [];
+    const newImageUrls: string[] = [];
+
+    // Process each image file for EXIF correction
+    for (const file of imageFiles) {
+      let correctedPreviewUrl: string | undefined;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
+
+      try {
+        // EXIF-Daten lesen (wie in TripPublishForm.tsx)
+        // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+        try {
+          exifOrientation = await exifr.orientation(file);
+          console.log(`[Note EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+        } catch (orientErr) {
+          console.warn(`[Note EXIF] ${file.name}: Could not read orientation:`, orientErr);
+        }
+
+        // Bildabmessungen lesen
+        try {
+          const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+          exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+          exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+          if (exifWidth && exifHeight) {
+            console.log(`[Note EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+          }
+        } catch (dimErr) {
+          console.warn(`[Note EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+        }
+
+        // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
+        correctedPreviewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+      } catch (exifError) {
+        console.warn(`[Note EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+        // Fallback: Original file als Preview
+        correctedPreviewUrl = URL.createObjectURL(file);
+      }
+
+      newImageFiles.push(file);
+      if (correctedPreviewUrl) {
+        newImageUrls.push(correctedPreviewUrl);
+      }
+    }
+
+    setImageFiles(prev => [...prev, ...newImageFiles]);
+    setImageUrls(prev => [...prev, ...newImageUrls]);
 
     // Extract GPS from each image immediately upon selection
     const startIndex = imageUrls.length;
-    for (let i = 0; i < imageFiles.length; i++) {
-      const file = imageFiles[i];
+    for (let i = 0; i < newImageFiles.length; i++) {
+      const file = newImageFiles[i];
       const index = startIndex + i;
 
       try {
@@ -1632,7 +1679,13 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         setUploadProgress({ current: i + 1, total: imageFiles.length, status: 'Upload läuft...' });
       }
 
-      setImageUrls(prev => [...prev, ...uploadedUrls]);
+      // Ersetze die korrigierten Previews durch die hochgeladenen URLs
+      setImageUrls(prev => {
+        // Entferne die Preview-URLs für die hochgeladenen Bilder und füge die Upload-URLs hinzu
+        const existingUrls = prev.slice(0, prev.length - imageFiles.length);
+        return [...existingUrls, ...uploadedUrls];
+      });
+
       setImageFiles([]);
       setIsUploadingImages(false);
       setUploadProgress({ current: imageFiles.length, total: imageFiles.length, status: '' });
@@ -2497,11 +2550,52 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   };
 
   const handleImageFile = async (file: File) => {
-    setImageFile(file);
     setIsUploading(true);
     try {
+      // EXIF-Daten lesen und korrigierte Preview erstellen (wie in TripPublishForm.tsx)
+      let correctedPreviewUrl: string | undefined;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
+
+      try {
+        // EXIF-Daten lesen (wie in TripPublishForm.tsx)
+        // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+        try {
+          exifOrientation = await exifr.orientation(file);
+          console.log(`[Place EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+        } catch (orientErr) {
+          console.warn(`[Place EXIF] ${file.name}: Could not read orientation:`, orientErr);
+        }
+
+        // Bildabmessungen lesen
+        try {
+          const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+          exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+          exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+          if (exifWidth && exifHeight) {
+            console.log(`[Place EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+          }
+        } catch (dimErr) {
+          console.warn(`[Place EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+        }
+
+        // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
+        correctedPreviewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+      } catch (exifError) {
+        console.warn(`[Place EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+        // Fallback: Original file als Preview
+        correctedPreviewUrl = URL.createObjectURL(file);
+      }
+
+      // Setze die korrigierte Preview als Anzeige-URL
+      if (correctedPreviewUrl) {
+        setImage(correctedPreviewUrl);
+      }
+
+      // Upload des Original-Files (für Speicherung)
       const [urlTag] = await uploadFile(file);
-      setImage(urlTag[1]); // URL is in second position
+      // Speichere die Upload-URL für spätere Verwendung (aber zeige die korrigierte Preview)
 
       // Extract GPS from title image
       try {
@@ -3230,11 +3324,53 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const handleArticleImageUpload = async (file: File) => {
     setImageFile(file);
     setIsUploading(true);
-    
+
     try {
+      // EXIF-Daten lesen und korrigierte Preview erstellen (wie in TripPublishForm.tsx)
+      let correctedPreviewUrl: string | undefined;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
+
+      try {
+        // EXIF-Daten lesen (wie in TripPublishForm.tsx)
+        // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+        try {
+          exifOrientation = await exifr.orientation(file);
+          console.log(`[Article EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+        } catch (orientErr) {
+          console.warn(`[Article EXIF] ${file.name}: Could not read orientation:`, orientErr);
+        }
+
+        // Bildabmessungen lesen
+        try {
+          const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+          exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+          exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+          if (exifWidth && exifHeight) {
+            console.log(`[Article EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+          }
+        } catch (dimErr) {
+          console.warn(`[Article EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+        }
+
+        // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
+        correctedPreviewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+      } catch (exifError) {
+        console.warn(`[Article EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+        // Fallback: Original file als Preview
+        correctedPreviewUrl = URL.createObjectURL(file);
+      }
+
+      // Setze die korrigierte Preview als Anzeige-URL
+      if (correctedPreviewUrl) {
+        setImage(correctedPreviewUrl);
+      }
+
+      // Upload des Original-Files (für Speicherung)
       const [urlTag] = await uploadFile(file);
-      setImage(urlTag[1]);
-      
+      // Speichere die Upload-URL für spätere Verwendung (aber zeige die korrigierte Preview)
+
       // Extract GPS from title image
       try {
         const gpsData = await extractGpsFromImage(file);
