@@ -19,8 +19,11 @@ const About = lazy(() => import("./pages/About").then(m => ({ default: m.About }
 const Places = lazy(() => import("./pages/Places").then(m => ({ default: m.default })));
 const Images = lazy(() => import("./pages/Images").then(m => ({ default: m.default })));
 const MapPage = lazy(() => import("./pages/MapPage").then(m => ({ default: m.default })));
+const TripsPage = lazy(() => import("./pages/TripsPage").then(m => ({ default: m.default })));
+const TripDetail = lazy(() => import("./pages/TripDetail").then(m => ({ default: m.default })));
 const ImageDetail = lazy(() => import("./pages/ImageDetail").then(m => ({ default: m.ImageDetail })));
 const Publish = lazy(() => import("./pages/Publish").then(m => ({ default: m.Publish })));
+const PerpetualTravelers = lazy(() => import("./pages/PerpetualTravelers").then(m => ({ default: m.PerpetualTravelers })));
 const ContentEditorMinimal = lazy(() => import("./components/ContentEditorMinimal").then(m => ({ default: m.ContentEditorMinimal })));
 const Profile = lazy(() => import("./pages/Profile").then(m => ({ default: m.Profile })));
 const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.Settings })));
@@ -48,6 +51,8 @@ function App() {
               <Route path="/plaetze" element={<Places />} />
               <Route path="/plaetze/:country" element={<Places />} />
               <Route path="/map" element={<MapPage />} />
+              <Route path="/map/trips" element={<TripsPage />} />
+              <Route path="/trip/:naddr" element={<TripDetail />} />
               <Route path="/bilder" element={<Images />} />
               <Route path="/bilder/:country" element={<Images />} />
               <Route path="/bilder/natur/:category" element={<Images />} />
@@ -58,8 +63,9 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/service-worker" element={<ServiceWorkerSettings />} />
-              <Route path="/veroeffentlichen" element={<Publish />} />
-              <Route path="/veroeffentlichen/modern" element={<ContentEditorMinimal />} />
+               <Route path="/veroeffentlichen" element={<Publish />} />
+               <Route path="/veroeffentlichen/modern" element={<ContentEditorMinimal />} />
+               <Route path="/perpetual-travelers" element={<PerpetualTravelers />} />
               <Route path="/:nip19" element={<NIP19Page />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

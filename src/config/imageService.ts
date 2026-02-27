@@ -87,13 +87,30 @@ export function generateImageUrl(
   try {
     const url = new URL(imageUrl);
 
+    // 24242.io ist geblockt und wird NICHT optimiert
+    if (url.hostname.includes('24242.io')) {
+      console.log('[imageService] 24242.io - skipping optimization (blocked):', imageUrl.substring(0, 80) + '...');
+      return imageUrl;
+    }
+
     // Wenn die URL bereits eine Image-Service URL ist, direkt zurückgeben
     if (url.hostname.includes('images.weserv.nl') ||
         url.hostname.includes('imgproxy.mojobus.co') ||
-        url.hostname.includes('cloudflareimages.cloudflare.com') ||
-        url.hostname.includes('24242.io')) { // Blossom Server ausnehmen
-      console.log('[imageService] URL already optimized or from Blossom:', imageUrl.substring(0, 80) + '...');
+        url.hostname.includes('cloudflareimages.cloudflare.com')) {
+      console.log('[imageService] URL already optimized:', imageUrl.substring(0, 80) + '...');
       return imageUrl;
+    }
+    
+    // Alle anderen (relay.mojobus.co, relays.mojobus.co, blossom.primal.net etc.)
+    // werden durch images.weserv.nl optimiert
+    
+    // Blossom-Server:relay.mojobus.co, relays.mojobus.co, 24242.io
+    // Diese werden durch den imgproxy optimiert (nicht ausgenommen!)
+    if (url.hostname.includes('relay.mojobus.co') ||
+        url.hostname.includes('relays.mojobus.co') ||
+        url.hostname.includes('24242.io') ||
+        url.hostname.includes('blossom.primal.net')) {
+      // Fallthrough zur Optimierung
     }
   } catch (error) {
     // Bei Parse-Fehlern einfach weitermachen

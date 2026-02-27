@@ -7,7 +7,7 @@ import { RelaySelector } from '@/components/RelaySelector';
 import { Button } from '@/components/ui/button';
 import { SocialBar } from '@/components/SocialBar';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
-import { ExternalLink, Calendar, User, ArrowRight, Eye, Camera, Trash2 } from 'lucide-react';
+import { Calendar, User, Eye, Camera, Trash2 } from 'lucide-react';
 import { NOSTR_CONFIG } from '@/config/nostr';
 import { useAuthor } from '@/hooks/useAuthor';
 import { filterEventsByCountry, countries } from '@/lib/countryDetection';
@@ -85,6 +85,11 @@ function Images() {
                content.includes('.png') ||
                content.includes('.gif') ||
                content.includes('.webp') ||
+               content.includes('.mp4') ||
+               content.includes('.webm') ||
+               content.includes('.mov') ||
+               content.includes('.avi') ||
+               content.includes('.mkv') ||
                content.includes('imgur.com') ||
                content.includes('i.imgur.com') ||
                content.includes('cdn.blossom') ||
@@ -130,7 +135,7 @@ function Images() {
   });
 
   const extractImages = (content: string): string[] => {
-    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
+    const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|avi|mkv))/gi;
     const matches = content.match(urlRegex) || [];
     return matches;
   };
@@ -373,20 +378,6 @@ function Images() {
                 </Link>
               )}
             </div>
-            <div className="flex justify-center items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-semibold">{filteredEvents.length}</span>
-                <span>Bilder{currentCountry ? ` aus ${currentCountry.name}` : ''}</span>
-              </span>
-              {currentCountry && (
-                <Link
-                  to="/bilder"
-                  className="text-ocean-600 hover:text-ocean-700 underline"
-                >
-                  Alle Bilder anzeigen
-                </Link>
-              )}
-            </div>
           </div>
 
           {filteredEvents.length > 0 ? (
@@ -459,6 +450,16 @@ function ImageCardComponent({
   // Check if current user is author
   const isAuthor = user?.pubkey === event.pubkey;
 
+  // Determine if a URL is a video
+  const isVideoUrl = (url: string) => {
+    const lower = url.toLowerCase();
+    return lower.includes('.mp4') ||
+           lower.includes('.webm') ||
+           lower.includes('.mov') ||
+           lower.includes('.avi') ||
+           lower.includes('.mkv');
+  };
+
   const handleImageClick = () => {
     // Create note19 identifier for detail view
     const noteId = nip19.noteEncode(event.id);
@@ -488,90 +489,81 @@ function ImageCardComponent({
     }
   };
 
-  return (
-    <div className="relative w-full">
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow group w-full rounded-b-none border-b-0">
-        <div onClick={handleImageClick} className="cursor-pointer">
-           {images.length > 0 && (
-              <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
-                <img
-                  src={getGalleryThumbnailUrl(images[0])}
-                  srcSet={generateSrcset(images[0], 'gallery')}
-                  sizes={generateSizes('card')}
-                  alt="Reisebild"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
+   return (
+     <div className="relative w-full">
+       <Card className="overflow-hidden hover:shadow-lg transition-shadow group w-full rounded-b-none border-b-0">
+         <div onClick={handleImageClick} className="cursor-pointer">
+            {images.length > 0 && (
+               <div className="w-full bg-gray-100 dark:bg-gray-800 relative min-h-[300px] md:min-h-[500px]">
+                 {isVideoUrl(images[0]) ? (
+                   <video
+                     src={images[0]}
+                     className="w-full h-full object-cover"
+                     controls
+                     loading="lazy"
+                   />
+                 ) : (
+                   <>
+                     <img
+                       src={getGalleryThumbnailUrl(images[0])}
+                       srcSet={generateSrcset(images[0], 'gallery')}
+                       sizes={generateSizes('card')}
+                       alt="Reisebild"
+                       className="w-full h-full object-cover"
+                       loading="lazy"
+                       decoding="async"
+                     />
 
-               {/* Hover overlay with eye icon */}
-               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                 <div className="bg-white/90 rounded-full p-4">
-                   <Eye className="h-8 w-8 text-gray-800" />
-                 </div>
-               </div>
-           </div>
-         )}
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl md:text-2xl line-clamp-2 group-hover:text-ocean-600 transition-colors">
-              {event.content.slice(0, 150).replace(/https?:\/\/[^\s]+/g, '').trim() || 'Bild ohne Titel'}
-            </CardTitle>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Calendar className="h-4 w-4" />
-              {new Date(event.created_at * 1000).toLocaleDateString('de-DE', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {metadata?.picture ? (
-                  <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                    <img
-                      src={getGalleryThumbnailUrl(metadata.picture)}
-                      alt={metadata.name || 'Autor'}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                    <User className="h-4 w-4 text-gray-500" />
-                  </div>
+                    {/* Hover overlay with eye icon - nur für Bilder */}
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <div className="bg-white/90 rounded-full p-4">
+                        <Eye className="h-8 w-8 text-gray-800" />
+                      </div>
+                    </div>
+                  </>
                 )}
-                <span className="text-sm text-gray-600 dark:text-gray-400 flex-1 truncate">
-                  {metadata?.name || 'MojoBus Team'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                {/* Quick view hint */}
-                <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center hidden md:flex">
-                  <span>Klick</span>
-                  <ArrowRight className="h-3 w-3" />
-                </div>
-                {images.map((img, index) => (
-                  <Button
-                    key={index}
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(img, '_blank');
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                ))}
-              </div>
             </div>
-          </CardContent>
-        </div>
-      </Card>
-      <SocialBar event={event} compact={true} className="rounded-b-lg border-x border-b bg-card" />
+          )}
+           <CardHeader className="pb-3">
+             <CardTitle className="text-xl md:text-2xl line-clamp-2 group-hover:text-ocean-600 transition-colors">
+               {event.content.slice(0, 150).replace(/https?:\/\/[^\s]+/g, '').trim() || 'Bild ohne Titel'}
+             </CardTitle>
+             <div className="flex items-center gap-2 text-sm text-gray-500">
+               <Calendar className="h-4 w-4" />
+               {new Date(event.created_at * 1000).toLocaleDateString('de-DE', {
+                 year: 'numeric',
+                 month: 'long',
+                 day: 'numeric',
+               })}
+             </div>
+           </CardHeader>
+           <CardContent className="pt-0">
+             <div className="flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                 {metadata?.picture ? (
+                   <div className="w-8 h-8 flex-shrink-0 relative overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                     <img
+                       src={getGalleryThumbnailUrl(metadata.picture)}
+                       alt={metadata.name || 'Autor'}
+                       className="w-full h-full object-cover"
+                       loading="lazy"
+                     />
+                   </div>
+                 ) : (
+                   <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                     <User className="h-4 w-4 text-gray-500" />
+                   </div>
+                 )}
+                 <span className="text-sm text-gray-600 dark:text-gray-400 flex-1 truncate">
+                   {metadata?.name || 'MojoBus Team'}
+                 </span>
+               </div>
+
+             </div>
+           </CardContent>
+         </div>
+       </Card>
+       <SocialBar event={event} compact={true} className="rounded-b-lg border-x border-b bg-card" />
 
       {/* Delete Button - nur für den Autor sichtbar */}
       {isAuthor && (

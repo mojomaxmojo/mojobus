@@ -5,11 +5,6 @@
 # Deploy auf Testseite: test.mojobus.co
 # Nur deployen: Git pull → Build → Deploy
 # Voraussetzung: Nginx, SSL, Directory sind bereit
-# 
-# OPTIONAL: COMMIT-RESET
-# Wenn du ein bestimmtes Deploy (Commit, Rollback) willst:
-# Setze environment variable DEPLOY_COMMIT_HASH vor dem Aufruf
-# Beispiel: DEPLOY_COMMIT_HASH=6647829 ./deploy-test.sh --force
 # ============================================
 
 # Farben für Ausgabe
@@ -80,28 +75,28 @@ git_pull() {
     # Stash lokale Änderungen
     git -C "$PROJECT_DIR" stash push -m "Stash before deploy" 2>/dev/null || true
 
-  # Fetch origin
-  git -C "$PROJECT_DIR" fetch origin
+    # Fetch origin
+    git -C "$PROJECT_DIR" fetch origin
 
-  # Reset zu origin/test (WICHTIG: Test-Branch für Testseite!)
-  git -C "$PROJECT_DIR" reset --hard origin/test
+    # Reset zu origin/test (WICHTIG: Test-Branch für Testseite!)
+    git -C "$PROJECT_DIR" reset --hard origin/test
 
-  success_msg "Git reset zu origin/test erfolgreich"
+    success_msg "Git reset zu origin/test erfolgreich"
 
     # Prüfe ob --force oder -force in den Argumenten
     FORCE_DEPLOY=0
     for arg in "$@"; do
-      if [ "$arg" = "--force" ] || [ "$arg" = "-force" ]; then
-        FORCE_DEPLOY=1
-        break
-      fi
+        if [ "$arg" = "--force" ] || [ "$arg" = "-force" ]; then
+            FORCE_DEPLOY=1
+            break
+        fi
     done
 
     if [ $FORCE_DEPLOY -eq 1 ]; then
-      info_msg "Force deployment erkannt..."
+        info_msg "Force deployment erkannt..."
     else
-      info_msg "Deployment ohne force - übersprungen."
-      exit 0
+        info_msg "Deployment ohne force - übersprungen."
+        exit 0
     fi
 }
 
@@ -123,39 +118,33 @@ install_dependencies() {
     success_msg "Dependencies installiert (npm install)"
 }
 
-# Map-Dateien für Production wiederherstellen
-restore_map_for_production() {
-    info_msg "Stelle Map-Dateien für Production wieder her..."
-    
-    # Backup erstellen
-    mkdir -p "$PROJECT_DIR/.deployment-backup"
-    cp "$PROJECT_DIR/src/AppRouter.tsx" "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
-    
-    # MapPage.tsx wird jetzt direkt verwendet (keine .production.tsx mehr nötig)
-    # Die neue MapPage.tsx mit VanillaMap funktioniert für Production
-    
-    # AppRouter.tsx aktualisieren
-    info_msg "Aktualisiere AppRouter.tsx..."
+# VPS-Deploy: Map-Dateien für Production
+deploy_map_production() {
+    info_msg "Map-Dateien für Production bereit..."
+
+    # 1. MapPage wiederherstellen
+    if [ -f "$PROJECT_DIR/src/pages/MapPage.production.tsx" ]; then
+        mv "$PROJECT_DIR/src/pages/MapPage.production.tsx" "$PROJECT_DIR/src/pages/MapPage.tsx" 2>&1 | tee -a "$LOG_FILE"
+        success_msg "MapPage.tsx wiederhergestellt"
+    else
+        warn_msg "MapPage.production.tsx nicht gefunden"
+    fi
+
+    # 2. AppRouter aktualisieren
     sed -i 's/import("\.\/pages\/MapPagePlaceholder")/import("\.\/pages\/MapPage")/g' "$PROJECT_DIR/src/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
-    
-    success_msg "Map-Dateien für Production bereit"
+    success_msg "AppRouter.tsx aktualisiert"
 }
 
-# Development-Konfiguration nach Build wiederherstellen  
+# VPS-Deploy: Development-Konfiguration wiederherstellen
 restore_dev_config() {
-    info_msg "Stelle Development-Konfiguration wieder her..."
-    
-    # MapPage.tsx bleibt wie sie ist (keine .production.tsx mehr)
-    
-    # AppRouter.tsx wiederherstellen
-    if [ -f "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" ]; then
-        cp "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" "$PROJECT_DIR/src/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
-        success_msg "AppRouter.tsx wiederhergestellt"
+    info_msg "Development-Konfiguration wiederherstellen..."
+
+    # MapPage sichern
+    if [ -f "$PROJECT_DIR/src/pages/MapPage.tsx" ]; then
+        mv "$PROJECT_DIR/src/pages/MapPage.tsx" "$PROJECT_DIR/src/pages/MapPage.production.tsx" 2>&1 | tee -a "$LOG_FILE"
+        success_msg "MapPage.tsx → MapPage.production.tsx"
     fi
-    
-    # Backup löschen
-    rm -rf "$PROJECT_DIR/.deployment-backup" 2>&1 | tee -a "$LOG_FILE"
-    
+
     success_msg "Development-Konfiguration wiederhergestellt"
 }
 
@@ -173,20 +162,20 @@ build_project() {
         error_exit "index.html nicht in dist/ gefunden!"
     fi
 
-    # Prüfe ob devlop im Build enthalten ist
+    # Prüfe ob develop im Build enthalten ist
     BUILD_JS=$(find "$PROJECT_DIR/dist" -name "*.js" -type f | head -1)
     if [ -n "$BUILD_JS" ]; then
-        if grep -q "devlop" "$BUILD_JS"; then
-            info_msg "✓ devlop im Build gefunden"
+        if grep -q "develop" "$BUILD_JS"; then
+            info_msg "✓ develop im Build gefunden"
         else
-            warn_msg "⚠ devlop NICHT im Build gefunden - möglicherweise Build-Fehler"
+            warn_msg "⚠ develop NICHT im Build gefunden - möglicherweise Build-Fehler"
         fi
     fi
 
     success_msg "Build erfolgreich"
 }
 
-# Deploy: dist/ nach /home/nginx/domains/mojobus.co/public
+# Deploy: dist/ nach /home/nginx/domains/test.mojobus.co/public
 deploy_files() {
     info_msg "Deploye Files nach $DEPLOY_DIR..."
 
@@ -199,18 +188,6 @@ deploy_files() {
 
     # Inhalt von dist/ nach DEPLOY_DIR kopieren
     cp -r "$PROJECT_DIR/dist/"* "$DEPLOY_DIR/" || error_exit "Kopieren fehlgeschlagen"
-
-    # Server-Verzeichnis kopieren
-    if [ -d "$PROJECT_DIR/server" ]; then
-        cp -r "$PROJECT_DIR/server" "$DEPLOY_DIR/" || error_exit "Kopieren des server/ Verzeichnisses fehlgeschlagen"
-        info_msg "✓ server/ Verzeichnis deployed"
-
-        # Server Dependencies installieren
-        if [ -f "$DEPLOY_DIR/server/package.json" ]; then
-            info_msg "Installiere Server Dependencies..."
-            npm install --prefix "$DEPLOY_DIR/server" --silent || warn_msg "npm install für Server fehlgeschlagen"
-        fi
-    fi
 
     # Prüfe ob assets Ordner existiert
     if [ ! -d "$DEPLOY_DIR/assets" ]; then
@@ -229,13 +206,6 @@ deploy_files() {
         error_exit "Nur $JS_FILES JS-Chunks gefunden - Code-Splitting funktioniert nicht!"
     else
         info_msg "✓ $JS_FILES JS-Chunks deployed"
-    fi
-
-    # Emergency SW deployen wenn --emergency flag
-    if [ "$1" == "--emergency" ] || [ "$2" == "--emergency" ]; then
-        warn_msg "Deploye Emergency Service Worker zum Cache-Leeren..."
-        cp "$PROJECT_DIR/public/sw-emergency.js" "$DEPLOY_DIR/sw.js"
-        info_msg "✓ Emergency SW deployed"
     fi
 
     # Permissions setzen
@@ -296,7 +266,7 @@ main() {
     check_deploy_dir
 
     # Wenn --clean-flag, lösche node_modules
-    if [ "$1" == "--clean" ] || [ "$2" == "--clean" ]; then
+    if [ "$1" = "--clean" ] || [ "$2" = "--clean" ]; then
         warn_msg "Lösche node_modules für sauberen Build..."
         rm -rf "$PROJECT_DIR/node_modules"
         info_msg "node_modules gelöscht"
@@ -304,7 +274,7 @@ main() {
 
     git_pull "$@"
     install_dependencies
-    restore_map_for_production
+    deploy_map_production
     build_project
     deploy_files "$1" "$2"
     restore_dev_config

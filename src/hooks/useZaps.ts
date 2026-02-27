@@ -163,6 +163,17 @@ export function useZaps(
       return;
     }
 
+    // Verify author data exists
+    if (!author.data) {
+      console.error('❌ NO AUTHOR DATA');
+      toast({
+        title: 'Author not found',
+        description: 'Could not find author data.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!author.data?.metadata) {
       console.error('❌ NO AUTHOR METADATA');
       toast({
@@ -185,6 +196,22 @@ export function useZaps(
     }
 
     console.log('⚡ ZAP ENDPOINT RETRIEVAL');
+    console.log('   author.data:', author.data);
+    console.log('   author.data.event:', author.data.event);
+
+    // Verify we have a valid event before calling getZapEndpoint
+    if (!author.data.event || typeof author.data.event.kind !== 'number') {
+      console.error('❌ INVALID AUTHOR EVENT');
+      console.error('   Event:', author.data.event);
+      console.error('   Event kind:', author.data.event?.kind);
+      toast({
+        title: 'Author event not found',
+        description: 'Could not find a valid author event for zapping.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const zapEndpoint = await nip57.getZapEndpoint(author.data.event);
     console.log('   Zap endpoint:', zapEndpoint);
 

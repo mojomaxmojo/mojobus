@@ -10,13 +10,39 @@ import ReactMarkdown from 'react-markdown';
 interface NoteContentProps {
   event: NostrEvent;
   className?: string;
+  hideImageLinks?: boolean;
 }
+
+// Helper to check if URL is an image/media URL
+const isMediaUrl = (url: string): boolean => {
+  const lower = url.toLowerCase();
+  return lower.match(/\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|avi|mkv)$/i) !== null ||
+         lower.includes('blossom') ||
+         lower.includes('nostr.build') ||
+         lower.includes('imgur.com') ||
+         lower.includes('mojobus.co') ||
+         lower.includes('cdn.blossom');
+};
 
 /** Parses content of text note events with Markdown support. */
 export function NoteContent({
   event,
   className,
+  hideImageLinks = false,
 }: NoteContentProps) {
+  // Filter out media URLs from content if hideImageLinks is true
+  let content = event.content;
+  if (hideImageLinks) {
+    // Remove all image/video URLs from content
+    content = content.replace(/https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|avi|mkv)/gi, '');
+    // Remove blossom, mojobus and other media hosting URLs
+    content = content.replace(/https?:\/\/[^\s]*(blossom|nostr\.build|imgur\.com|mojobus\.co|cdn\.blossom)[^\s]*/gi, '');
+    // Clean up multiple spaces but preserve line breaks
+    content = content.replace(/[^\S\n]+/g, ' ').trim();
+    // Remove empty lines
+    content = content.replace(/\n{3,}/g, '\n\n').trim();
+  }
+
   return (
     <div className={cn("prose prose-gray dark:prose-invert max-w-none", className)}>
       <ReactMarkdown
@@ -26,6 +52,10 @@ export function NoteContent({
           h3: ({ children }) => <h3 className="text-lg font-bold mt-4 mb-2">{children}</h3>,
           p: ({ children }) => <p className="my-3">{children}</p>,
           a: ({ href, children }) => {
+            // Hide media URLs if hideImageLinks is true
+            if (hideImageLinks && href && isMediaUrl(href)) {
+              return null;
+            }
             // Check if it's a video URL
             if (href && isVideoContent(href)) {
               return (
@@ -83,7 +113,7 @@ export function NoteContent({
           li: ({ children }) => <li>{children}</li>,
         }}
       >
-        {event.content}
+        {content}
       </ReactMarkdown>
     </div>
   );

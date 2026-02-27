@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # ============================================
-# MojoBus VPS TEST Deploy Script
-# Deploy auf Testseite: test.mojobus.co
+# MojoBus VPS Production Deploy Script
+# Deploy auf Production: mojobus.co
 # Nur deployen: Git pull → Build → Deploy
 # Voraussetzung: Nginx, SSL, Directory sind bereit
 # 
 # OPTIONAL: COMMIT-RESET
 # Wenn du ein bestimmtes Deploy (Commit, Rollback) willst:
 # Setze environment variable DEPLOY_COMMIT_HASH vor dem Aufruf
-# Beispiel: DEPLOY_COMMIT_HASH=6647829 ./deploy-test.sh --force
+# Beispiel: DEPLOY_COMMIT_HASH=6647829 ./deploy-simple.sh --force
 # ============================================
 
 # Farben für Ausgabe
@@ -21,10 +21,10 @@ NC='\033[0m' # No Color
 
 # Konfiguration
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEPLOY_DIR="/home/nginx/domains/test.mojobus.co/public"
+DEPLOY_DIR="/home/nginx/domains/mojobus.co/public"
 LOG_DIR="$PROJECT_DIR/logs"
-LOG_FILE="$LOG_DIR/deploy-test-$(date +%Y%m%d-%H%M%S).log"
-LATEST_LOG="$LOG_DIR/deploy-test-latest.log"
+LOG_FILE="$LOG_DIR/deploy-production-$(date +%Y%m%d-%H%M%S).log"
+LATEST_LOG="$LOG_DIR/deploy-production-latest.log"
 
 # ============================================
 # FUNCTIONS
@@ -83,10 +83,10 @@ git_pull() {
   # Fetch origin
   git -C "$PROJECT_DIR" fetch origin
 
-  # Reset zu origin/test (WICHTIG: Test-Branch für Testseite!)
-  git -C "$PROJECT_DIR" reset --hard origin/test
+  # Reset zu origin/main (WICHTIG: Main-Branch für Production!)
+  git -C "$PROJECT_DIR" reset --hard origin/main
 
-  success_msg "Git reset zu origin/test erfolgreich"
+  success_msg "Git reset zu origin/main erfolgreich"
 
     # Prüfe ob --force oder -force in den Argumenten
     FORCE_DEPLOY=0
@@ -200,18 +200,6 @@ deploy_files() {
     # Inhalt von dist/ nach DEPLOY_DIR kopieren
     cp -r "$PROJECT_DIR/dist/"* "$DEPLOY_DIR/" || error_exit "Kopieren fehlgeschlagen"
 
-    # Server-Verzeichnis kopieren
-    if [ -d "$PROJECT_DIR/server" ]; then
-        cp -r "$PROJECT_DIR/server" "$DEPLOY_DIR/" || error_exit "Kopieren des server/ Verzeichnisses fehlgeschlagen"
-        info_msg "✓ server/ Verzeichnis deployed"
-
-        # Server Dependencies installieren
-        if [ -f "$DEPLOY_DIR/server/package.json" ]; then
-            info_msg "Installiere Server Dependencies..."
-            npm install --prefix "$DEPLOY_DIR/server" --silent || warn_msg "npm install für Server fehlgeschlagen"
-        fi
-    fi
-
     # Prüfe ob assets Ordner existiert
     if [ ! -d "$DEPLOY_DIR/assets" ]; then
         error_exit "assets Ordner nicht im Deployment gefunden! Build hat nicht funktioniert."
@@ -277,7 +265,7 @@ summary() {
     echo "   Owner: nginx:nginx"
     echo "   Log: $LOG_FILE"
     echo ""
-    info_msg "Teste: https://test.mojobus.co"
+    info_msg "Teste: https://mojobus.co"
     echo ""
 }
 
@@ -288,7 +276,7 @@ summary() {
 main() {
     echo ""
     echo "=========================================="
-    echo "🧪 MojoBus VPS TEST Deploy"
+    echo "🚀 MojoBus VPS Production Deploy"
     echo "=========================================="
     echo ""
 

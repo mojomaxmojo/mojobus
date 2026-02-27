@@ -369,3 +369,162 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Milkdown Editor Styles */
+.milkdown-editor .milkdown {
+  @apply w-full;
+}
+
+.milkdown-editor .editor {
+  @apply w-full outline-none;
+}
+
+.milkdown-editor .ProseMirror {
+  @apply outline-none;
+  min-height: 350px;
+}
+
+.milkdown-editor .ProseMirror:focus {
+  @apply outline-none;
+}
+
+.milkdown-editor h1 {
+  @apply text-3xl font-bold mb-4 mt-6;
+}
+
+.milkdown-editor h2 {
+  @apply text-2xl font-bold mb-3 mt-5;
+}
+
+.milkdown-editor h3 {
+  @apply text-xl font-bold mb-2 mt-4;
+}
+
+.milkdown-editor h4 {
+  @apply text-lg font-bold mb-2 mt-3;
+}
+
+.milkdown-editor strong {
+  @apply font-bold;
+}
+
+.milkdown-editor em {
+  @apply italic;
+}
+
+.milkdown-editor del {
+  @apply line-through;
+}
+
+.milkdown-editor code {
+  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+.milkdown-editor p {
+  @apply mb-4 leading-relaxed;
+}
+
+.milkdown-editor blockquote {
+  @apply border-l-4 border-primary/40 pl-4 italic my-4 text-muted-foreground;
+}
+
+.milkdown-editor pre {
+  @apply bg-muted p-4 rounded-lg my-4 overflow-x-auto;
+}
+
+.milkdown-editor pre code {
+  @apply bg-transparent p-0;
+}
+
+.milkdown-editor ul {
+  @apply list-disc list-inside mb-4 space-y-1;
+}
+
+.milkdown-editor ol {
+  @apply list-decimal list-inside mb-4 space-y-1;
+}
+
+.milkdown-editor li {
+  @apply leading-relaxed;
+}
+
+.milkdown-editor li p {
+  @apply mb-0;
+}
+
+.milkdown-editor ul.task-list {
+  @apply list-none;
+}
+
+.milkdown-editor li.task-list-item {
+  @apply flex items-start gap-2;
+}
+
+.milkdown-editor li.task-list-item input[type="checkbox"] {
+  @apply mt-1.5 w-4 h-4 rounded border-border;
+}
+
+.milkdown-editor a {
+  @apply text-primary underline underline-offset-4 hover:text-primary/80 transition-colors;
+}
+
+.milkdown-editor hr {
+  @apply my-6 border-border;
+}
+
+/* Images - THIS IS THE KEY FIX */
+.milkdown-editor img {
+  @apply max-w-full h-auto rounded-lg my-4;
+}
+
+/* Videos */
+.milkdown-editor video {
+  @apply max-w-full h-auto rounded-lg my-4;
+}
+
+.milkdown-editor iframe {
+  @apply max-w-full rounded-lg my-4;
+}
+
+/* Tables (GFM) */
+.milkdown-editor table {
+  @apply w-full border-collapse my-4;
+}
+
+.milkdown-editor th,
+.milkdown-editor td {
+  @apply border border-border px-3 py-2 text-left;
+}
+
+.milkdown-editor th {
+  @apply bg-muted font-semibold;
+}
+
+.milkdown-editor tr:nth-child(even) {
+  @apply bg-muted/30;
+}
+
+/* Placeholder */
+.milkdown-editor .ProseMirror p.is-editor-empty:first-child::before {
+  @apply text-muted-foreground pointer-events-none float-left h-0;
+  content: attr(data-placeholder);
+}
+
+/* Upload placeholder */
+.milkdown-upload-placeholder {
+  @apply inline-flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-md text-sm text-muted-foreground;
+}
+
+.milkdown-upload-placeholder::before {
+  content: '';
+  @apply w-4 h-4 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin;
+}
+
+/* Milkdown content area */
+.milkdown-editor .milkdown-content {
+  @apply p-4;
+}
+
+.milkdown-editor .milkdown-content .ProseMirror {
+  @apply min-h-[350px];
+}

@@ -1,9 +1,15 @@
 #!/bin/bash
 
 # ============================================
-# MojoBus VPS Simple Deploy Script
+# MojoBus VPS Production Deploy Script
+# Deploy auf Production: mojobus.co
 # Nur deployen: Git pull → Build → Deploy
 # Voraussetzung: Nginx, SSL, Directory sind bereit
+# 
+# OPTIONAL: COMMIT-RESET
+# Wenn du ein bestimmtes Deploy (Commit, Rollback) willst:
+# Setze environment variable DEPLOY_COMMIT_HASH vor dem Aufruf
+# Beispiel: DEPLOY_COMMIT_HASH=6647829 ./deploy-simple.sh --force
 # ============================================
 
 # Farben für Ausgabe
@@ -17,8 +23,8 @@ NC='\033[0m' # No Color
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_DIR="/home/nginx/domains/mojobus.co/public"
 LOG_DIR="$PROJECT_DIR/logs"
-LOG_FILE="$LOG_DIR/deploy-$(date +%Y%m%d-%H%M%S).log"
-LATEST_LOG="$LOG_DIR/deploy-latest.log"
+LOG_FILE="$LOG_DIR/deploy-production-$(date +%Y%m%d-%H%M%S).log"
+LATEST_LOG="$LOG_DIR/deploy-production-latest.log"
 
 # ============================================
 # FUNCTIONS
@@ -74,13 +80,13 @@ git_pull() {
     # Stash lokale Änderungen
     git -C "$PROJECT_DIR" stash push -m "Stash before deploy" 2>/dev/null || true
 
-    # Fetch origin
-    git -C "$PROJECT_DIR" fetch origin
+  # Fetch origin
+  git -C "$PROJECT_DIR" fetch origin
 
-    # Reset zu origin/main
-    git -C "$PROJECT_DIR" reset --hard origin/main
+  # Reset zu origin/main (WICHTIG: Main-Branch für Production!)
+  git -C "$PROJECT_DIR" reset --hard origin/main
 
-    success_msg "Git reset zu origin/main erfolgreich"
+  success_msg "Git reset zu origin/main erfolgreich"
 
     # Prüfe ob --force oder -force in den Argumenten
     FORCE_DEPLOY=0
@@ -115,6 +121,51 @@ install_dependencies() {
 
     npm install --prefix "$PROJECT_DIR" --loglevel=error >> "$LOG_FILE" 2>&1 || error_exit "npm install fehlgeschlagen (Exit Code: $?)"
     success_msg "Dependencies installiert (npm install)"
+}
+
+# Map-Dateien für Production wiederherstellen
+restore_map_for_production() {
+    info_msg "Stelle Map-Dateien für Production wieder her..."
+    
+    # Backup erstellen
+    mkdir -p "$PROJECT_DIR/.deployment-backup"
+    cp "$PROJECT_DIR/src/AppRouter.tsx" "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
+    
+    # Map-Datei wiederherstellen
+    if [ -f "$PROJECT_DIR/src/pages/MapPage.production.tsx" ]; then
+        mv "$PROJECT_DIR/src/pages/MapPage.production.tsx" "$PROJECT_DIR/src/pages/MapPage.tsx" 2>&1 | tee -a "$LOG_FILE"
+        success_msg "MapPage.tsx wiederhergestellt"
+    else
+        warn_msg "MapPage.production.tsx nicht gefunden"
+    fi
+    
+    # AppRouter.tsx aktualisieren
+    info_msg "Aktualisiere AppRouter.tsx..."
+    sed -i 's/import("\.\/pages\/MapPagePlaceholder")/import("\.\/pages\/MapPage")/g' "$PROJECT_DIR/src/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
+    
+    success_msg "Map-Dateien für Production bereit"
+}
+
+# Development-Konfiguration nach Build wiederherstellen  
+restore_dev_config() {
+    info_msg "Stelle Development-Konfiguration wieder her..."
+    
+    # Map-Datei zurück zu .production.tsx
+    if [ -f "$PROJECT_DIR/src/pages/MapPage.tsx" ]; then
+        mv "$PROJECT_DIR/src/pages/MapPage.tsx" "$PROJECT_DIR/src/pages/MapPage.production.tsx" 2>&1 | tee -a "$LOG_FILE"
+        success_msg "MapPage.tsx → MapPage.production.tsx"
+    fi
+    
+    # AppRouter.tsx wiederherstellen
+    if [ -f "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" ]; then
+        cp "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" "$PROJECT_DIR/src/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
+        success_msg "AppRouter.tsx wiederhergestellt"
+    fi
+    
+    # Backup löschen
+    rm -rf "$PROJECT_DIR/.deployment-backup" 2>&1 | tee -a "$LOG_FILE"
+    
+    success_msg "Development-Konfiguration wiederhergestellt"
 }
 
 # Projekt bauen
@@ -234,7 +285,7 @@ summary() {
 main() {
     echo ""
     echo "=========================================="
-    echo "🚀 MojoBus VPS Deploy"
+    echo "🚀 MojoBus VPS Production Deploy"
     echo "=========================================="
     echo ""
 
@@ -250,8 +301,10 @@ main() {
 
     git_pull "$@"
     install_dependencies
+    restore_map_for_production
     build_project
     deploy_files "$1" "$2"
+    restore_dev_config
     verify_deployment
     summary
 }

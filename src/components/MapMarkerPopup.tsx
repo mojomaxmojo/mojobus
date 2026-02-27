@@ -1,15 +1,38 @@
 /**
  * Map Marker Popup Component
  *
- * Displays details for GPS-enabled posts on the map
+ * Displays details for GPS-enabled posts on map
  */
 
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getContentTypeEmoji, getContentTypeLabel } from '@/lib/markerIcons';
+import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { nip19 } from 'nostr-tools';
 import type { MapMarker } from '@/hooks/useGpsContent';
+
+// Content type definitions (moved from markerIcons.ts to avoid leaflet dependency)
+type ContentType = 'media' | 'note' | 'place' | 'article';
+
+function getContentTypeEmoji(type: ContentType): string {
+  const emojis: Record<ContentType, string> = {
+    media: '📷',
+    note: '📝',
+    place: '📍',
+    article: '📄',
+  };
+  return emojis[type];
+}
+
+function getContentTypeLabel(type: ContentType): string {
+  const labels: Record<ContentType, string> = {
+    media: 'Bilder/Videos',
+    note: 'Note',
+    place: 'Ort',
+    article: 'Artikel',
+  };
+  return labels[type];
+}
 
 interface MapMarkerPopupProps {
   marker: MapMarker;
@@ -27,18 +50,31 @@ export function MapMarkerPopup({ marker }: MapMarkerPopupProps) {
       naddr = nip19.noteEncode(marker.id);
     } else if (marker.kind === 30023) {
       // Long-form article - use naddr
-      const d = marker.tags.find(t => t[0] === 'd')?.[1] || `post-${marker.id}`;
+      const d = marker.event.tags.find(t => t[0] === 'd')?.[1] || `post-${marker.id}`;
+
+      // Get author-specific relay configuration
+      const authorRelayConfig = getAuthorRelayConfigByPubkey(marker.author);
+      const relay = authorRelayConfig?.activeRelay || 'wss://relay.mojobus.co';
+
       naddr = nip19.naddrEncode({
         kind: 30023,
         pubkey: marker.author,
         identifier: d,
+        relays: [relay],
       });
     }
   } catch (error) {
     console.error('Error generating naddr:', error);
   }
 
-  const href = `/${marker.kind === 1 ? 'note' : ''}${naddr}`;
+  // Generate href based on content type
+  // Media (images) go to /bild/{nip19}, articles to /artikel/{nip19}, everything else to /{nip19}
+  let href = `/${naddr}`;
+  if (marker.type === 'media') {
+    href = `/bild/${naddr}`;
+  } else if (marker.type === 'article') {
+    href = `/artikel/${naddr}`;
+  }
 
   return (
     <div className="p-3 min-w-[250px] max-w-[300px]">

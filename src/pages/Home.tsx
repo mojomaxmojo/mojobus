@@ -15,11 +15,12 @@ import { Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
-import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
+import { getGalleryThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { SocialBar } from '@/components/SocialBar';
 import { useToast } from '@/hooks/useToast';
+import { LivePositionIndicator } from '@/components/LivePositionIndicator';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place';
@@ -164,7 +165,7 @@ export function Home() {
         type: 'article',
         event,
         date: event.created_at,
-        thumbnailUrl: metadata.image ? getListThumbnailUrl(metadata.image) : undefined
+        thumbnailUrl: metadata.image ? getGalleryThumbnailUrl(metadata.image) : undefined
       });
     });
   }
@@ -176,7 +177,7 @@ export function Home() {
         type: 'place',
         event,
         date: event.created_at,
-        thumbnailUrl: metadata.image ? getListThumbnailUrl(metadata.image) : undefined
+        thumbnailUrl: metadata.image ? getGalleryThumbnailUrl(metadata.image) : undefined
       });
     });
   }
@@ -188,7 +189,7 @@ export function Home() {
         type: 'note',
         event,
         date: event.created_at,
-        thumbnailUrl: imageUrl ? getListThumbnailUrl(imageUrl) : undefined
+        thumbnailUrl: imageUrl ? getGalleryThumbnailUrl(imageUrl) : undefined
       });
     });
   }
@@ -200,7 +201,7 @@ export function Home() {
         type: 'image',
         event,
         date: event.created_at,
-        thumbnailUrl: imageUrl ? getListThumbnailUrl(imageUrl) : undefined
+        thumbnailUrl: imageUrl ? getGalleryThumbnailUrl(imageUrl) : undefined
       });
     });
   }
@@ -219,7 +220,12 @@ export function Home() {
 
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
-          <div className="max-w-5xl mx-auto text-center space-y-10">
+          <div className="max-w-5xl mx-auto text-center space-y-5">
+            {/* Live Position Indicator - One-Liner */}
+            <div className="flex justify-center">
+              <LivePositionIndicator />
+            </div>
+
             <div className="space-y-6">
               <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-tight">
                 <span className="gradient-text">Perpetual Travelers</span>

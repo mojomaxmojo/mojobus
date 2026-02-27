@@ -72,6 +72,22 @@ export function ServiceWorkerStatus() {
     setUpdateActivated(true);
   };
 
+  const handleClearCache = () => {
+    // Lösche den gesamten Service Worker Cache
+    if ('caches' in window) {
+      caches.keys().then(async (names) => {
+        for (const name of names) {
+          await caches.delete(name);
+        }
+        console.log('🗑️ Service Worker Cache gelöscht');
+        window.location.reload();
+      });
+    } else {
+      // Fallback: Einfach neu laden
+      window.location.reload();
+    }
+  };
+
   if (dismissed) return null;
 
   return (
