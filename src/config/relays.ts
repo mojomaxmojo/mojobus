@@ -210,14 +210,14 @@ export const RELAY_PRESETS = {
   susanne_publish: {
     name: 'Susanne Publish',
     description: 'Susanne Veröffentlichen-Relay (relays.mojobus.co)',
-    relayUrls: ['wss://relays.mojobus.co'],
+    relayUrls: ['wss://relay.mojobus.co'],
     maxRelays: 1,
     queryTimeout: 3000,
   },
   susanne_blossom: {
     name: 'Susanne Blossom',
     description: 'Susanne Blossom Server für Datei-Uploads',
-    blossomUrl: 'https://relays.mojobus.co',
+    blossomUrl: 'https://relay.mojobus.co',
   },
 } as const;
 

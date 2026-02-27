@@ -32,6 +32,107 @@ import { MilkdownEditor } from '@/components/MilkdownEditor';
 import { TripPublishForm } from '@/components/TripPublishForm';
 import { Progress } from '@/components/ui/progress';
 import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
+import exifr from 'exifr';
+
+/**
+ * Erstellt eine korrigierte Vorschau basierend auf EXIF-Daten
+ * Berücksichtigt die EXIF-Orientierung, die Browser oft ignorieren
+ */
+async function createCorrectedPreview(
+  file: File,
+  exifWidth?: number,
+  exifHeight?: number,
+  exifOrientation?: number
+): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      const actualWidth = img.naturalWidth;
+      const actualHeight = img.naturalHeight;
+
+      console.log(`[Preview] ${file.name}: Actual dimensions ${actualWidth}x${actualHeight}`);
+      console.log(`[Preview] ${file.name}: EXIF Orientation = ${exifOrientation || 'not set'}`);
+
+      // Rotation basierend auf EXIF Orientation (1-8)
+      let rotation = 0;
+      let flipH = false;
+
+      if (exifOrientation && exifOrientation !== 1) {
+        switch (exifOrientation) {
+          case 2: flipH = true; break;
+          case 3: rotation = 180; break;
+          case 4: rotation = 180; flipH = true; break;
+          case 5: rotation = -90; flipH = true; break;
+          case 6: rotation = 90; break;  // 90° CW korrigiert 90° CCW
+          case 7: rotation = 90; flipH = true; break;
+          case 8: rotation = -90; break;
+        }
+        console.log(`[Corrected File] ${file.name}: Orientation=${exifOrientation}, applying rotation=${rotation}°`);
+      }
+
+      // Wenn keine Korrektur nötig, Original zurückgeben
+      if (rotation === 0 && !flipH) {
+        URL.revokeObjectURL(url);
+        resolve(url);
+        return;
+      }
+
+      // Canvas erstellen
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        resolve(url);
+        return;
+      }
+
+      // Canvas-Größe basierend auf Rotation
+      if (rotation === 90 || rotation === -90) {
+        canvas.width = actualHeight;
+        canvas.height = actualWidth;
+      } else {
+        canvas.width = actualWidth;
+        canvas.height = actualHeight;
+      }
+
+      // Transformation anwenden
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      if (rotation !== 0) {
+        ctx.rotate((rotation * Math.PI) / 180);
+      }
+      if (flipH) {
+        ctx.scale(-1, 1);
+      }
+      ctx.translate(-actualWidth / 2, -actualHeight / 2);
+
+      // Bild zeichnen
+      ctx.drawImage(img, 0, 0, actualWidth, actualHeight);
+
+      // Neue URL erstellen
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const correctedUrl = URL.createObjectURL(blob);
+          console.log(`[Corrected File] ${file.name}: Created corrected preview`);
+          URL.revokeObjectURL(url);
+          resolve(correctedUrl);
+        } else {
+          URL.revokeObjectURL(url);
+          resolve(url);
+        }
+      }, 'image/jpeg', 0.9);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(url);
+    };
+
+    img.src = url;
+  });
+}
 
 // Media Types Configuration
 const mediaTypes = [
@@ -273,11 +374,46 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
     const newFiles: MediaFile[] = [];
 
+    // Device-Erkennung: Desktop braucht EXIF-Korrektur, Mobil nicht
+    const isDesktop = window.innerWidth > 768 || !/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    console.log(`[Device] Detected as ${isDesktop ? 'Desktop' : 'Mobile'} - ${isDesktop ? 'will correct EXIF orientation' : 'will use simple preview'}`);
+
     // Process each file asynchronously
     for (const file of Array.from(selectedFiles)) {
       const mediaType = file.type.startsWith('image/') ? 'image' :
                          file.type.startsWith('video/') ? 'video' :
                          file.type.startsWith('audio/') ? 'audio' : 'document';
+
+      let preview: string | undefined;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
+
+      // Für Desktop-Bilder: EXIF-Korrektur anwenden
+      if (mediaType === 'image' && isDesktop) {
+        try {
+          // EXIF-Daten lesen
+          const exifData = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight', 'Orientation'] });
+          exifWidth = exifData?.ImageWidth || exifData?.ExifImageWidth;
+          exifHeight = exifData?.ImageHeight || exifData?.ExifImageHeight;
+          exifOrientation = exifData?.Orientation;
+
+          if (exifOrientation && exifOrientation !== 1) {
+            console.log(`[EXIF] ${file.name}: Orientation=${exifOrientation}, will correct rotation`);
+            // Korrigierte Preview erstellen
+            preview = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+          } else {
+            // Keine Korrektur nötig
+            preview = URL.createObjectURL(file);
+          }
+        } catch (exifError) {
+          console.warn(`[EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+          preview = URL.createObjectURL(file);
+        }
+      } else {
+        // Für Mobil oder Nicht-Bilder: Einfache Preview
+        preview = mediaType === 'image' ? URL.createObjectURL(file) : undefined;
+      }
 
       const newFile: MediaFile = {
         id: Math.random().toString(36).substr(2, 9),
@@ -285,7 +421,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         name: file.name,
         type: mediaType,
         size: file.size,
-        preview: mediaType === 'image' ? URL.createObjectURL(file) : undefined,
+        preview,
         gpsStatus: 'not_found',
       };
 
