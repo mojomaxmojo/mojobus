@@ -209,15 +209,15 @@ export const RELAY_PRESETS = {
   // Susanne Presets
   susanne_publish: {
     name: 'Susanne Publish',
-    description: 'Susanne Veröffentlichen-Relay (relays.mojobus.co)',
-    relayUrls: ['wss://relays.mojobus.co'],
+    description: 'Susanne Veröffentlichen-Relay (relay.mojobus.co)',
+    relayUrls: ['wss://relay.mojobus.co'],
     maxRelays: 1,
     queryTimeout: 3000,
   },
   susanne_blossom: {
     name: 'Susanne Blossom',
-    description: 'Susanne Blossom Server für Datei-Uploads',
-    blossomUrl: 'https://relays.mojobus.co',
+    description: 'Susanne Blossom Server für Datei-Uploads (relay.mojobus.co)',
+    blossomUrl: 'https://relay.mojobus.co',
   },
 } as const;
 
@@ -344,9 +344,9 @@ export const AUTHOR_RELAY_CONFIG: Record<string, AuthorRelayConfig> = {
     authorId: 'susanne',
     npub: 'npub1jn4arsy5pzqausut0u79x2mnur2dd34szcxnlc9c5407f828002qdls5wz',
     pubkey: '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4',
-    read: ['wss://relays.mojobus.co'],
-    write: ['wss://relays.mojobus.co'],
-    activeRelay: 'wss://relays.mojobus.co',
+    read: ['wss://relay.mojobus.co'],
+    write: ['wss://relay.mojobus.co'],
+    activeRelay: 'wss://relay.mojobus.co',
   },
 } as const;
 

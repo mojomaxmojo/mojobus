@@ -32,6 +32,107 @@ import { MilkdownEditor } from '@/components/MilkdownEditor';
 import { TripPublishForm } from '@/components/TripPublishForm';
 import { Progress } from '@/components/ui/progress';
 import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
+import exifr from 'exifr';
+
+/**
+ * Erstellt eine korrigierte Vorschau basierend auf EXIF-Daten
+ * Berücksichtigt die EXIF-Orientierung, die Browser oft ignorieren
+ */
+async function createCorrectedPreview(
+  file: File,
+  exifWidth?: number,
+  exifHeight?: number,
+  exifOrientation?: number
+): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      const actualWidth = img.naturalWidth;
+      const actualHeight = img.naturalHeight;
+
+      console.log(`[Preview] ${file.name}: Actual dimensions ${actualWidth}x${actualHeight}`);
+      console.log(`[Preview] ${file.name}: EXIF Orientation = ${exifOrientation || 'not set'}`);
+
+      // Rotation basierend auf EXIF Orientation (1-8)
+      let rotation = 0;
+      let flipH = false;
+
+      if (exifOrientation && exifOrientation !== 1) {
+        switch (exifOrientation) {
+          case 2: flipH = true; break;
+          case 3: rotation = 180; break;
+          case 4: rotation = 180; flipH = true; break;
+          case 5: rotation = -90; flipH = true; break;
+          case 6: rotation = 90; break;  // 90° CW korrigiert 90° CCW
+          case 7: rotation = 90; flipH = true; break;
+          case 8: rotation = -90; break;
+        }
+        console.log(`[Corrected File] ${file.name}: Orientation=${exifOrientation}, applying rotation=${rotation}°`);
+      }
+
+      // Wenn keine Korrektur nötig, Original zurückgeben
+      if (rotation === 0 && !flipH) {
+        URL.revokeObjectURL(url);
+        resolve(url);
+        return;
+      }
+
+      // Canvas erstellen
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        resolve(url);
+        return;
+      }
+
+      // Canvas-Größe basierend auf Rotation
+      if (rotation === 90 || rotation === -90) {
+        canvas.width = actualHeight;
+        canvas.height = actualWidth;
+      } else {
+        canvas.width = actualWidth;
+        canvas.height = actualHeight;
+      }
+
+      // Transformation anwenden
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      if (rotation !== 0) {
+        ctx.rotate((rotation * Math.PI) / 180);
+      }
+      if (flipH) {
+        ctx.scale(-1, 1);
+      }
+      ctx.translate(-actualWidth / 2, -actualHeight / 2);
+
+      // Bild zeichnen
+      ctx.drawImage(img, 0, 0, actualWidth, actualHeight);
+
+      // Neue URL erstellen
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const correctedUrl = URL.createObjectURL(blob);
+          console.log(`[Corrected File] ${file.name}: Created corrected preview`);
+          URL.revokeObjectURL(url);
+          resolve(correctedUrl);
+        } else {
+          URL.revokeObjectURL(url);
+          resolve(url);
+        }
+      }, 'image/jpeg', 0.9);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(url);
+    };
+
+    img.src = url;
+  });
+}
 
 // Media Types Configuration
 const mediaTypes = [
@@ -95,11 +196,61 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
-  const { mutate: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
+
+  // KI-Artikelgenerierung
+  const generateArticleWithAI = async () => {
+    if (files.length === 0) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte lade mindestens ein Bild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingArticle(true);
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('images', file.file));
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('text', customTags || 'Meer Abenteuer Strand');
+      formData.append('location', location);
+      formData.append('model', selectedModel);
+
+      const response = await fetch('/api/generate-media-article', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.article) {
+        setDescription(data.article);
+        if (data.hashtags) {
+          setCustomTags(prev => prev ? `${prev} ${data.hashtags}` : data.hashtags);
+        }
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Artikel generiert mit ${data.model === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'} und in Felder eingefügt.`
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingArticle(false);
+    }
+  };
 
   // GPS editing state
   const [editingGpsFile, setEditingGpsFile] = useState<string | null>(null);
@@ -223,11 +374,55 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
     const newFiles: MediaFile[] = [];
 
+    // Device-Erkennung: Desktop braucht EXIF-Korrektur, Mobil nicht
+    const isDesktop = window.innerWidth > 768 || !/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    console.log(`[Device] Detected as ${isDesktop ? 'Desktop' : 'Mobile'} - ${isDesktop ? 'will correct EXIF orientation' : 'will use simple preview'}`);
+
     // Process each file asynchronously
     for (const file of Array.from(selectedFiles)) {
       const mediaType = file.type.startsWith('image/') ? 'image' :
                          file.type.startsWith('video/') ? 'video' :
                          file.type.startsWith('audio/') ? 'audio' : 'document';
+
+      let preview: string | undefined;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
+
+       // Für Desktop-Bilder: EXIF-Korrektur anwenden
+       if (mediaType === 'image' && isDesktop) {
+         try {
+           // EXIF-Daten lesen (wie in TripPublishForm.tsx)
+           // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+           try {
+             exifOrientation = await exifr.orientation(file);
+             console.log(`[Media EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+           } catch (orientErr) {
+             console.warn(`[Media EXIF] ${file.name}: Could not read orientation:`, orientErr);
+           }
+
+           // Bildabmessungen lesen
+           try {
+             const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+             exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+             exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+             if (exifWidth && exifHeight) {
+               console.log(`[Media EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+             }
+           } catch (dimErr) {
+             console.warn(`[Media EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+           }
+
+           // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
+           preview = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+         } catch (exifError) {
+           console.warn(`[Media EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+           preview = URL.createObjectURL(file);
+         }
+      } else {
+        // Für Mobil oder Nicht-Bilder: Einfache Preview
+        preview = mediaType === 'image' ? URL.createObjectURL(file) : undefined;
+      }
 
       const newFile: MediaFile = {
         id: Math.random().toString(36).substr(2, 9),
@@ -235,7 +430,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         name: file.name,
         type: mediaType,
         size: file.size,
-        preview: mediaType === 'image' ? URL.createObjectURL(file) : undefined,
+        preview,
         gpsStatus: 'not_found',
       };
 
@@ -831,16 +1026,80 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Beschreibung</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Beschreibe deine Bilder-Erlebnisse..."
-              rows={4}
-            />
-          </div>
+           <div className="space-y-2">
+             <Label htmlFor="description">Beschreibung</Label>
+             <Textarea
+               id="description"
+               value={description}
+               onChange={(e) => setDescription(e.target.value)}
+               placeholder="Beschreibe deine Bilder-Erlebnisse..."
+               rows={4}
+              />
+              
+              {/* KI-Modell Auswahl */}
+              <div className="mt-4 space-y-3">
+                <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div 
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'llama4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                    onClick={() => setSelectedModel('llama4')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🚀</span>
+                      <div>
+                        <p className="font-medium text-sm">Llama 4 Scout</p>
+                        <p className="text-xs text-muted-foreground">Schnell & Günstig</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <p>✅ 1-2 Sekunden</p>
+                      <p>💰 ~$0.005 pro Artikel</p>
+                      <p>⭐ Gute Qualität</p>
+                    </div>
+                  </div>
+                  
+                  <div
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'claude' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                    onClick={() => setSelectedModel('claude')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🤖</span>
+                      <div>
+                        <p className="font-medium text-sm">Claude Sonnet 4.6</p>
+                        <p className="text-xs text-muted-foreground">Neueste Premium Qualität</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <p>⏱️ 3-6 Sekunden</p>
+                      <p>💰 ~$0.015 pro Artikel</p>
+                      <p>⭐⭐⭐⭐ Neueste menschliche Texte</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={generateArticleWithAI}
+                disabled={isGeneratingArticle || files.length === 0}
+                className="mt-2"
+              >
+                {isGeneratingArticle ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generiere mit {selectedModel === 'claude' ? 'Claude 4.6' : 'Llama 4'}...
+                  </>
+                ) : (
+                  <>
+                    🤖 KI-Artikel generieren
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'})
+                    </span>
+                  </>
+                )}
+              </Button>
+            </div>
 
           {/* Categories */}
           <div className="space-y-4">
@@ -1321,12 +1580,59 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
 
     // Filter for image files only
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    setImageFiles(prev => [...prev, ...imageFiles]);
+    const newImageFiles: File[] = [];
+    const newImageUrls: string[] = [];
+
+    // Process each image file for EXIF correction
+    for (const file of imageFiles) {
+      let correctedPreviewUrl: string | undefined;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
+
+      try {
+        // EXIF-Daten lesen (wie in TripPublishForm.tsx)
+        // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+        try {
+          exifOrientation = await exifr.orientation(file);
+          console.log(`[Note EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+        } catch (orientErr) {
+          console.warn(`[Note EXIF] ${file.name}: Could not read orientation:`, orientErr);
+        }
+
+        // Bildabmessungen lesen
+        try {
+          const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+          exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+          exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+          if (exifWidth && exifHeight) {
+            console.log(`[Note EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+          }
+        } catch (dimErr) {
+          console.warn(`[Note EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+        }
+
+        // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
+        correctedPreviewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+      } catch (exifError) {
+        console.warn(`[Note EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+        // Fallback: Original file als Preview
+        correctedPreviewUrl = URL.createObjectURL(file);
+      }
+
+      newImageFiles.push(file);
+      if (correctedPreviewUrl) {
+        newImageUrls.push(correctedPreviewUrl);
+      }
+    }
+
+    setImageFiles(prev => [...prev, ...newImageFiles]);
+    setImageUrls(prev => [...prev, ...newImageUrls]);
 
     // Extract GPS from each image immediately upon selection
     const startIndex = imageUrls.length;
-    for (let i = 0; i < imageFiles.length; i++) {
-      const file = imageFiles[i];
+    for (let i = 0; i < newImageFiles.length; i++) {
+      const file = newImageFiles[i];
       const index = startIndex + i;
 
       try {
@@ -1373,7 +1679,13 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         setUploadProgress({ current: i + 1, total: imageFiles.length, status: 'Upload läuft...' });
       }
 
-      setImageUrls(prev => [...prev, ...uploadedUrls]);
+      // Ersetze die korrigierten Previews durch die hochgeladenen URLs
+      setImageUrls(prev => {
+        // Entferne die Preview-URLs für die hochgeladenen Bilder und füge die Upload-URLs hinzu
+        const existingUrls = prev.slice(0, prev.length - imageFiles.length);
+        return [...existingUrls, ...uploadedUrls];
+      });
+
       setImageFiles([]);
       setIsUploadingImages(false);
       setUploadProgress({ current: imageFiles.length, total: imageFiles.length, status: '' });
@@ -2238,11 +2550,52 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   };
 
   const handleImageFile = async (file: File) => {
-    setImageFile(file);
     setIsUploading(true);
     try {
+      // EXIF-Daten lesen und korrigierte Preview erstellen (wie in TripPublishForm.tsx)
+      let correctedPreviewUrl: string | undefined;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
+
+      try {
+        // EXIF-Daten lesen (wie in TripPublishForm.tsx)
+        // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+        try {
+          exifOrientation = await exifr.orientation(file);
+          console.log(`[Place EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+        } catch (orientErr) {
+          console.warn(`[Place EXIF] ${file.name}: Could not read orientation:`, orientErr);
+        }
+
+        // Bildabmessungen lesen
+        try {
+          const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+          exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+          exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+          if (exifWidth && exifHeight) {
+            console.log(`[Place EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+          }
+        } catch (dimErr) {
+          console.warn(`[Place EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+        }
+
+        // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
+        correctedPreviewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+      } catch (exifError) {
+        console.warn(`[Place EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+        // Fallback: Original file als Preview
+        correctedPreviewUrl = URL.createObjectURL(file);
+      }
+
+      // Setze die korrigierte Preview als Anzeige-URL
+      if (correctedPreviewUrl) {
+        setImage(correctedPreviewUrl);
+      }
+
+      // Upload des Original-Files (für Speicherung)
       const [urlTag] = await uploadFile(file);
-      setImage(urlTag[1]); // URL is in second position
+      // Speichere die Upload-URL für spätere Verwendung (aber zeige die korrigierte Preview)
 
       // Extract GPS from title image
       try {
@@ -2971,11 +3324,53 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const handleArticleImageUpload = async (file: File) => {
     setImageFile(file);
     setIsUploading(true);
-    
+
     try {
+      // EXIF-Daten lesen und korrigierte Preview erstellen (wie in TripPublishForm.tsx)
+      let correctedPreviewUrl: string | undefined;
+      let exifWidth: number | undefined;
+      let exifHeight: number | undefined;
+      let exifOrientation: number | undefined;
+
+      try {
+        // EXIF-Daten lesen (wie in TripPublishForm.tsx)
+        // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
+        try {
+          exifOrientation = await exifr.orientation(file);
+          console.log(`[Article EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
+        } catch (orientErr) {
+          console.warn(`[Article EXIF] ${file.name}: Could not read orientation:`, orientErr);
+        }
+
+        // Bildabmessungen lesen
+        try {
+          const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
+          exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
+          exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
+          if (exifWidth && exifHeight) {
+            console.log(`[Article EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
+          }
+        } catch (dimErr) {
+          console.warn(`[Article EXIF] ${file.name}: Could not read dimensions:`, dimErr);
+        }
+
+        // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
+        correctedPreviewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
+      } catch (exifError) {
+        console.warn(`[Article EXIF] Failed to read EXIF from ${file.name}:`, exifError);
+        // Fallback: Original file als Preview
+        correctedPreviewUrl = URL.createObjectURL(file);
+      }
+
+      // Setze die korrigierte Preview als Anzeige-URL
+      if (correctedPreviewUrl) {
+        setImage(correctedPreviewUrl);
+      }
+
+      // Upload des Original-Files (für Speicherung)
       const [urlTag] = await uploadFile(file);
-      setImage(urlTag[1]);
-      
+      // Speichere die Upload-URL für spätere Verwendung (aber zeige die korrigierte Preview)
+
       // Extract GPS from title image
       try {
         const gpsData = await extractGpsFromImage(file);

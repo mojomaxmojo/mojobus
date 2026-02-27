@@ -314,10 +314,97 @@ export function TripPublishForm() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
   const [isPublishing, setIsPublishing] = useState(false);
   
+  // KI-Artikelgenerierung state
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [generatingProgress, setGeneratingProgress] = useState(0);
+  const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
+  
   // Hooks
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
+  
+  // KI-Artikelgenerierung für Trips
+  const generateArticleWithAI = async () => {
+    if (stations.length === 0) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte lade mindestens ein Bild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingArticle(true);
+    setGeneratingProgress(0);
+    
+    try {
+      const formData = new FormData();
+      
+      // Alle Bilder hinzufügen
+      stations.forEach(station => {
+        if (station.file) {
+          formData.append('images', station.file);
+        }
+      });
+      
+      // Trip-Daten hinzufügen
+      formData.append('title', tripData.title || 'Meine Reise');
+      formData.append('description', tripData.summary || '');
+      formData.append('locations', JSON.stringify(stations.map(s => s.location || s.title)));
+      formData.append('startDate', stations[0]?.date || '');
+      formData.append('endDate', stations[stations.length - 1]?.date || '');
+      formData.append('model', selectedModel); // Modell-Auswahl
+
+      setGeneratingProgress(10);
+      
+      const response = await fetch('/api/generate-trip', {
+        method: 'POST',
+        body: formData
+      });
+
+      setGeneratingProgress(90);
+
+      const data = await response.json();
+      
+      if (data.article) {
+        // Artikel in Trip-Summary einfügen
+        setTripData(prev => ({
+          ...prev,
+          summary: data.article
+        }));
+        
+        // Hashtags hinzufügen
+        if (data.hashtags) {
+          const newTags = data.hashtags.split(' ').filter(Boolean);
+          console.log('[KI] Generated hashtags:', newTags);
+        }
+
+        setGeneratingProgress(100);
+        
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Artikel generiert mit ${data.model === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}! ${data.imageDescriptions?.length || 0} Stationen analysiert.`
+        });
+        
+        // Kurze Verzögerung für UI-Feedback
+        setTimeout(() => {
+          setGeneratingProgress(0);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('[KI] Generierung fehlgeschlagen:', error);
+      setGeneratingProgress(0);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen. Bitte versuche es erneut.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingArticle(false);
+    }
+  };
+  
   const navigate = useNavigate();
   
   // Populate form when editing existing trip
@@ -1247,6 +1334,88 @@ export function TripPublishForm() {
               placeholder="Eine kurze Beschreibung deiner Reise..."
               rows={2}
             />
+            
+            {/* KI-Modell Auswahl */}
+            <div className="mt-4 space-y-3">
+              <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div 
+                  className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'llama4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                  onClick={() => setSelectedModel('llama4')}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🚀</span>
+                    <div>
+                      <p className="font-medium text-sm">Llama 4 Scout</p>
+                      <p className="text-xs text-muted-foreground">Schnell & Günstig</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    <p>✅ 1-2 Sekunden</p>
+                    <p>💰 ~$0.005 pro Artikel</p>
+                    <p>⭐ Gute Qualität</p>
+                  </div>
+                </div>
+                
+                  <div
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'claude' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                    onClick={() => setSelectedModel('claude')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🤖</span>
+                      <div>
+                        <p className="font-medium text-sm">Claude Sonnet 4.6</p>
+                        <p className="text-xs text-muted-foreground">Neueste Premium Qualität</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <p>⏱️ 3-6 Sekunden</p>
+                      <p>💰 ~$0.015 pro Artikel</p>
+                      <p>⭐⭐⭐⭐ Neueste menschliche Texte</p>
+                    </div>
+                  </div>
+              </div>
+            </div>
+            
+            {/* KI-Artikel generieren Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={generateArticleWithAI}
+              disabled={isGeneratingArticle || stations.length === 0}
+              className="mt-2 w-full"
+            >
+              {isGeneratingArticle ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {generatingProgress < 100 
+                    ? `Generiere Artikel (${selectedModel === 'claude' ? 'Claude 4.6' : 'Llama 4'})... ${Math.round(generatingProgress)}%`
+                    : 'Artikel wird eingefügt...'
+                  }
+                </>
+              ) : (
+                <>
+                  <span className="mr-2">🗺️</span>
+                  KI-Reisebericht generieren ({stations.length} Stationen)
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    mit {selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}
+                  </span>
+                </>
+              )}
+            </Button>
+            
+            {/* Fortschrittsanzeige */}
+            {isGeneratingArticle && generatingProgress > 0 && (
+              <div className="mt-2 space-y-2">
+                <Progress value={generatingProgress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center">
+                  {generatingProgress < 10 && 'Starte Generierung...'}
+                  {generatingProgress >= 10 && generatingProgress < 90 && `Analysiere ${stations.length} Bilder...`}
+                  {generatingProgress >= 90 && generatingProgress < 100 && 'Generiere Artikel...'}
+                  {generatingProgress >= 100 && 'Fertig! Artikel eingefügt.'}
+                </p>
+              </div>
+            )}
           </div>
           
           {/* Trip Type Select - Pflichtfeld */}

@@ -23,6 +23,7 @@ const TripsPage = lazy(() => import("./pages/TripsPage").then(m => ({ default: m
 const TripDetail = lazy(() => import("./pages/TripDetail").then(m => ({ default: m.default })));
 const ImageDetail = lazy(() => import("./pages/ImageDetail").then(m => ({ default: m.ImageDetail })));
 const Publish = lazy(() => import("./pages/Publish").then(m => ({ default: m.Publish })));
+const PerpetualTravelers = lazy(() => import("./pages/PerpetualTravelers").then(m => ({ default: m.PerpetualTravelers })));
 const ContentEditorMinimal = lazy(() => import("./components/ContentEditorMinimal").then(m => ({ default: m.ContentEditorMinimal })));
 const Profile = lazy(() => import("./pages/Profile").then(m => ({ default: m.Profile })));
 const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.Settings })));
@@ -62,8 +63,9 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/service-worker" element={<ServiceWorkerSettings />} />
-              <Route path="/veroeffentlichen" element={<Publish />} />
-              <Route path="/veroeffentlichen/modern" element={<ContentEditorMinimal />} />
+               <Route path="/veroeffentlichen" element={<Publish />} />
+               <Route path="/veroeffentlichen/modern" element={<ContentEditorMinimal />} />
+               <Route path="/perpetual-travelers" element={<PerpetualTravelers />} />
               <Route path="/:nip19" element={<NIP19Page />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
