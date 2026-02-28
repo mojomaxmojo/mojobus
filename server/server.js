@@ -36,9 +36,58 @@ const validateApiKey = () => {
   return true
 }
 
+// Hilfsfunktion: Lifestyle-spezifische Konfiguration (Foster Huntington Stil)
+const getLifestyleConfig = (lifestyle = 'vanlife') => {
+  const configs = {
+    vanlife: {
+      vehicle: 'Van',
+      community: 'Vanlife-Community',
+      keywords: ['vanlife', 'van', 'aufRädern'],
+      example1: 'Du wachst morgens auf und der Van riecht nach letzter Nacht. Nicht glamourös, aber echt. Genau das macht Vanlife aus. Kennst du das Gefühl?',
+      example2: 'Parkst du auch immer am Arsch der Welt? Wo niemand hinfährt? Das sind die besten Plätze. Kein Wifi, aber echte Ruhe.',
+      example3: 'Man sagt immer "Freiheit", aber gestern musste ich 2 Stunden nach Wasser suchen. Trotzdem würde ich es nicht anders wollen.'
+    },
+    rvlife: {
+      vehicle: 'RV',
+      community: 'RVlife-Community',
+      keywords: ['rvlife', 'rv', 'recreationalVehicle'],
+      example1: 'Du wachst im RV und draußen ist es stürmisch. Das Wohnmobil wackelt, aber du bist dankbar für vier Wände auf Rädern. RVlife, Baby.',
+      example2: 'Mit dem RV durch die Pampa - kein Campground weit und breit. Einfach am Straßenrand geparkt. Die besten Nächte sind die ungeplanten.',
+      example3: 'Leute denken, RVlife ist nur Urlaub. Aber nach 6 Monaten on the road weißt du: Es ist ein komplettes Leben. Mit allen Höhen und Tiefen.'
+    },
+    buslife: {
+      vehicle: 'Bus',
+      community: 'Buslife-Community',
+      keywords: ['buslife', 'bus', 'skoolie'],
+      example1: 'Du fährst deinen umgebauten Schulbus auf einen Waldweg. 40 Fuß Stahl und Holz - dein Zuhause. Buslife ist anders, und genau das liebst du.',
+      example2: 'Mit dem Bus in der Stadt parken? Vergiss es. Aber das ist okay. Die besten Spots sind sowieso da, wo niemand hinkommt.',
+      example3: 'Ein Bus ist nicht nur ein Fahrzeug. Er ist ein Statement. Gegen Normalität, für Freiheit. Auch wenn die Reparaturen manchmal nerven.'
+    },
+    wohnmobil: {
+      vehicle: 'Wohnmobil',
+      community: 'Wohnmobil-Community',
+      keywords: ['wohnmobil', 'camper', 'mobil'],
+      example1: 'Du wachst im Wohnmobil auf, Regen prasselt aufs Dach. Gemütlich, aber du musst tanken. Willkommen im echten Wohnmobil-Leben.',
+      example2: 'Stellplätze in Deutschland? Entweder voll oder teuer. Aber manchmal findest du diesen einen perfekten Spot direkt am See.',
+      example3: 'Wohnmobil bedeutet nicht immer Luxus. Es bedeutet Freiheit mit praktischen Herausforderungen. Und das ist genau richtig so.'
+    },
+    'perpetual-travelers': {
+      vehicle: 'Reise',
+      community: 'Perpetual Travelers Community',
+      keywords: ['perpetualTravelers', 'permanentReisend', 'ortlos'],
+      example1: 'Du weißt nicht mehr, welcher Tag es ist. Oder welcher Monat. Perpetual Traveler zu sein bedeutet, die Zeit zu vergessen.',
+      example2: 'Heute hier, morgen dort. Kein fester Wohnsitz, nur dein Rucksack und die nächste Destination. Das ist dein Zuhause.',
+      example3: 'Leute fragen: "Wo lebst du?" Du antwortest: "Überall und nirgendwo." Perpetual Travel ist kein Urlaub, es ist eine Lebensphilosophie.'
+    }
+  }
+
+  return configs[lifestyle] || configs.vanlife
+}
+
 // Hilfsfunktion: Generiere Text mit ausgewähltem Modell
-const generateWithModel = async (prompt, model = 'llama4') => {
+const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife') => {
   const startTime = Date.now()
+  const lifestyleConfig = getLifestyleConfig(lifestyle)
 
   try {
     if (model === 'claude') {
@@ -51,7 +100,7 @@ const generateWithModel = async (prompt, model = 'llama4') => {
         model: 'claude-sonnet-4-6',
         max_tokens: 700,
         temperature: 0.9,
-        system: "Du bist ein erfahrener Vanlifer im Stil von Foster Huntington. Schreibe authentische, menschliche Geschichten.",
+        system: `Du bist ein erfahrener ${lifestyleConfig.vehicle}-Reisender im authentischen Foster Huntington Stil. Schreibe ehrlich, direkt, ungeschönt - keine perfekten Instagram-Geschichten.`,
         messages: [{ role: 'user', content: prompt }]
       }, {
         headers: {
@@ -156,23 +205,23 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
 
-  const title = sanitizeInput(req.body.title) || 'Mein Vanlife Abenteuer'
+  const title = sanitizeInput(req.body.title) || 'Mein Abenteuer'
   const description = sanitizeInput(req.body.description) || ''
-  const text = sanitizeInput(req.body.text) || 'Meer Abenteuer Strand'
+  const text = sanitizeInput(req.body.text) || 'Abenteuer Reise Freiheit'
   const location = sanitizeInput(req.body.location) || 'Unbekannt'
   const model = req.body.model || 'llama4' // Modell-Auswahl
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife' // Lifestyle-Typ
   const images = req.files
 
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Media-Artikel: "${title}", Bilder: ${images.length}, Standort: ${location}, Modell: ${model}`)
+  console.log(`[KI] Generiere Media-Artikel: "${title}", Bilder: ${images.length}, Standort: ${location}, Modell: ${model}, Lifestyle: ${lifestyle}`)
 
     try {
       // ===== BILD ANALYSE FÜR MEDIEN ARTIKEL =====
-      // Hier kannst du die Bild-Analyse-Prompts anpassen
-      // Für verschiedene Themen können spezifische Analyse-Anweisungen hinzugefügt werden
+      const lifestyleConfig = getLifestyleConfig(lifestyle)
       const imageDescriptions = await Promise.all(images.map(async (img) => {
       const base64 = img.buffer.toString('base64')
       console.log(`[KI] Analysiere Bild, Größe: ${(img.size / 1024).toFixed(1)}KB`)
@@ -182,7 +231,7 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
         messages: [{
           role: 'user',
           content: [
-             { type: 'text', text: 'Beschreibe dieses Bild für einen authentischen Vanlife-Artikel. Fokus auf: echte Atmosphäre (nicht Instagram), was wirklich passiert, besondere Details, Emotionen. Schreibe wie Foster Huntington - direkt, ehrlich, keine perfekten Beschreibungen.' },
+             { type: 'text', text: `Beschreibe dieses Bild für einen authentischen ${lifestyleConfig.vehicle}-Artikel. Fokus auf: echte Atmosphäre (nicht Instagram), was wirklich passiert, besondere Details, Emotionen. Schreibe wie Foster Huntington - direkt, ehrlich, keine perfekten Beschreibungen.` },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -198,25 +247,24 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
     console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
 
     // ===== FOSTER HUNTINGTON STIL PROMPT =====
-    // Diese Prompt ist optimiert für authentischen Vanlife-Stil
-    // Einfach anpassbar für verschiedene Themen
-    const prompt = `Du bist Foster Huntington und schreibst für deine Vanlife-Community. Dein Stil ist:
+    // Authentisch für ALLE Lifestyles: vanlife, rvlife, buslife, wohnmobil, perpetual-travelers
+    const prompt = `Du bist Foster Huntington und schreibst für deine ${lifestyleConfig.community}. Dein Stil ist:
 - Ehrlich und ungeschönt (zeige die Realität, nicht Instagram)
 - Persönlich und konversationell (wie ein Gespräch mit einem alten Freund)
 - Direkt und relatable (verwende "Du", "Ich", keine perfekten Sätze)
 - Minimalistisch (kurze Sätze, echte Emotionen)
 
-BEISPIEL DEINES STILS:
-"Du wachst morgens auf und der Van riecht nach letzter Nacht. Nicht glamourös, aber echt. Genau das macht Vanlife aus. Kennst du das Gefühl?"
+BEISPIEL DEINES STILS (authentisch Foster Huntington):
+"${lifestyleConfig.example1}"
 
-"Parkst du auch immer am Arsch der Welt? Wo niemand hinfährt? Das sind die besten Plätze. Kein Wifi, aber echte Ruhe."
+"${lifestyleConfig.example2}"
 
-"Man sagt immer 'Freiheit', aber gestern musste ich 2 Stunden nach Wasser suchen. Trotzdem würde ich es nicht anders wollen."
+"${lifestyleConfig.example3}"
 
 VERMEIDE:
 - "Der wunderschöne Sonnenaufgang tauchte die Landschaft in goldenes Licht"
 - "In diesem Artikel zeige ich dir..."
-- "Als Vanlifer musst du unbedingt..."
+- "Als ${lifestyleConfig.vehicle}-Reisender musst du unbedingt..."
 - Perfekte, polierte Sätze
 
 SCHREIBE EINEN ARTIKEL ÜBER: "${title}${description ? ' - ' + description : ''}"
@@ -239,7 +287,7 @@ SCHREIBSTIL:
 - Selbstironie und Humor
 - Direkte Ansprache: "Du", "Ich" statt "Man"
 
-MAX 300 WÖRTER. Füge 5-8 echte Hashtags hinzu.
+MAX 300 WÖRTER. Füge 5-8 echte Hashtags hinzu (inklusive #${lifestyle}).
 Beginne direkt mit einem persönlichen Moment. Keine Einleitung wie "In diesem Artikel...".`
 
     // Artikel generieren mit ausgewähltem Modell
@@ -255,6 +303,7 @@ Beginne direkt mit einem persönlichen Moment. Keine Einleitung wie "In diesem A
       article,
       hashtags: uniqueHashtags.join(' '),
       model,
+      lifestyle,
       imageDescriptions // Für Frontend-Debugging
     })
   } catch (error) {
@@ -286,18 +335,18 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
   const startDate = sanitizeInput(req.body.startDate) || ''
   const endDate = sanitizeInput(req.body.endDate) || ''
   const model = req.body.model || 'llama4' // Modell-Auswahl
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife' // Lifestyle-Typ
   const images = req.files
 
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Trip-Artikel: "${title}", Bilder: ${images.length}, Stationen: ${locations.length}, Modell: ${model}`)
+  console.log(`[KI] Generiere Trip-Artikel: "${title}", Bilder: ${images.length}, Stationen: ${locations.length}, Modell: ${model}, Lifestyle: ${lifestyle}`)
 
     try {
       // ===== BILD ANALYSE FÜR TRIP ARTIKEL =====
-      // Schritt 1: Für jedes Bild eine Kurzbeschreibung generieren
-      // Hier kannst du die Analyse-Prompts für Reisebilder anpassen
+      const lifestyleConfig = getLifestyleConfig(lifestyle)
       const imageDescriptions = await Promise.all(images.map(async (img, index) => {
       const base64 = img.buffer.toString('base64')
       console.log(`[KI] Analysiere Bild ${index + 1}/${images.length}, Größe: ${(img.size / 1024).toFixed(1)}KB`)
@@ -307,7 +356,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
         messages: [{
           role: 'user',
           content: [
-             { type: 'text', text: `Beschreibe diese Station ehrlich für einen Vanlife-Reisebericht. Was ist wirklich besonders? Atmosphäre? Herausforderungen? Menschen? Schreibe authentisch, nicht touristisch - wie für andere Reisende.` },
+             { type: 'text', text: `Beschreibe diese Station ehrlich für einen ${lifestyleConfig.vehicle}-Reisebericht. Was ist wirklich besonders? Atmosphäre? Herausforderungen? Menschen? Schreibe authentisch, nicht touristisch - wie für andere Reisende.` },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -324,14 +373,13 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
     }))
 
     // ===== FOSTER HUNTINGTON TRIP PROMPT =====
-    // Speziell für Reiseberichte optimiert
-    // Kann für verschiedene Reisearten angepasst werden
-    const prompt = `Du bist Foster Huntington und schreibst einen Reisebericht für andere Vanlifer. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Urlaubsgeschichten, sondern echte Erlebnisse.
+    // Authentisch für ALLE Lifestyles: vanlife, rvlife, buslife, wohnmobil, perpetual-travelers
+    const prompt = `Du bist Foster Huntington und schreibst einen Reisebericht für ${lifestyleConfig.community}. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Urlaubsgeschichten, sondern echte Erlebnisse.
 
-BEISPIEL DEINES STILS:
-"Die erste Nacht im Van war scheiße kalt. Regen prasselte aufs Dach, und ich fragte mich, ob das die richtige Entscheidung war. Am nächsten Morgen sah alles anders aus."
+BEISPIEL DEINES STILS (authentisch Foster Huntington):
+"${lifestyleConfig.example1}"
 
-"Du denkst, Vanlife ist Freiheit? Manchmal ist es nur: Wo parke ich heute? Wo finde ich Strom? Aber genau das macht's echt."
+"${lifestyleConfig.example2}"
 
 VERMEIDE IN REISEBERICHTEN:
 - "Wir genossen den wunderschönen Sonnenuntergang"
@@ -363,7 +411,7 @@ SCHREIBSTIL:
 - Verwende "Ich" statt "Man"
 
 LÄNGE: 300-500 Wörter
-HASHTAGS: 5-8 relevante Hashtags am Ende
+HASHTAGS: 5-8 relevante Hashtags am Ende (inklusive #${lifestyle})
 SPRACHE: Deutsch, authentisch, wie ein Gespräch
 
 Beginne direkt mit deiner Abreise oder einem konkreten Moment. Keine Einleitung wie "In diesem Reisebericht...".`
@@ -379,7 +427,8 @@ Beginne direkt mit deiner Abreise oder einem konkreten Moment. Keine Einleitung 
     res.json({
       article,
       imageDescriptions,
-      hashtags: uniqueHashtags.join(' ')
+      hashtags: uniqueHashtags.join(' '),
+      lifestyle
     })
   } catch (error) {
     console.error('[KI] Fehler bei Trip-Generierung:', error.response?.data || error.message)
