@@ -497,6 +497,275 @@ app.post('/api/generate-video', (req, res) => {
   res.json({ videoUrl: 'placeholder.mp4' })
 })
 
+// ===== API FÜR BERICHT/ARTIKEL GENERIERUNG =====
+// Tab: "Berichte" in /veroeffentlichen
+app.post('/api/generate-article', upload.array('images', 10), async (req, res) => {
+  if (!validateApiKey()) {
+    return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
+  }
+
+  const title = sanitizeInput(req.body.title) || 'Mein Bericht'
+  const description = sanitizeInput(req.body.description) || ''
+  const location = sanitizeInput(req.body.location) || 'Unbekannt'
+  const text = sanitizeInput(req.body.text) || 'Bericht'
+  const model = req.body.model || 'llama4'
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
+  const images = req.files
+
+  if (!images || images.length === 0) {
+    return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
+  }
+
+  console.log(`[KI] Generiere Bericht: "${title}", Bilder: ${images.length}, Modell: ${model}, Lifestyle: ${lifestyle}`)
+
+  try {
+    const lifestyleConfig = getLifestyleConfig(lifestyle)
+    
+    // Bilder analysieren
+    const imageDescriptions = await Promise.all(images.map(async (img) => {
+      const base64 = img.buffer.toString('base64')
+      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: `Beschreibe dieses Bild für einen authentischen ${lifestyleConfig.vehicle}-Bericht. Fokus auf: Details, Problemlösung, praktische Aspekte. Schreibe wie Foster Huntington - direkt, ehrlich, informativ.` },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+          ]
+        }],
+        max_tokens: 150,
+        temperature: 0.7
+      }, {
+        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+        timeout: 30000
+      })
+      return visionResponse.data.choices[0].message.content
+    }))
+
+    // Foster Huntington Prompt für Berichte
+    const prompt = `Du bist Foster Huntington und schreibst einen Bericht für ${lifestyleConfig.community}. Dein Stil ist:
+${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
+
+BEISPIEL DEINES STILS:
+"${lifestyleConfig.example1}"
+
+"${lifestyleConfig.example2}"
+
+VERMEIDE:
+${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
+
+SCHREIBE EINEN BERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
+
+STRUKTUR:
+1. Hook: Beginne mit einer starken Aussage oder Frage
+2. Problem: Was war die Herausforderung?
+3. Lösung: Wie hast du es gelöst?
+4. Lektion: Was hast du gelernt?
+5. Call-to-Action: Frage an die Community
+
+Bilder zeigen: ${imageDescriptions.join('; ')}
+Standort: ${location}
+Kontext: ${text}
+
+SCHREIBSTIL:
+${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
+
+MAX 300 WÖRTER. Füge 5-8 relevante Hashtags hinzu (inklusive #${lifestyleConfig.keywords[0]}).
+Beginne direkt. Keine Einleitung wie "In diesem Bericht...".`
+
+    const article = await generateWithModel(prompt, model, lifestyle)
+    
+    const hashtags = article.match(/#\w+/g) || []
+    const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
+
+    res.json({
+      article,
+      hashtags: uniqueHashtags.join(' '),
+      lifestyle
+    })
+  } catch (error) {
+    console.error('[KI] Fehler bei Bericht-Generierung:', error.response?.data || error.message)
+    res.status(500).json({ error: 'Fehler bei Generierung. Versuche es erneut.' })
+  }
+})
+
+// ===== API FÜR PLATZ GENERIERUNG =====
+// Tab: "Plätze" in /veroeffentlichen
+app.post('/api/generate-place', upload.array('images', 10), async (req, res) => {
+  if (!validateApiKey()) {
+    return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
+  }
+
+  const title = sanitizeInput(req.body.title) || 'Mein Platz'
+  const description = sanitizeInput(req.body.description) || ''
+  const location = sanitizeInput(req.body.location) || 'Unbekannt'
+  const gps_lat = sanitizeInput(req.body.gps_lat) || ''
+  const gps_lon = sanitizeInput(req.body.gps_lon) || ''
+  const model = req.body.model || 'llama4'
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
+  const images = req.files
+
+  if (!images || images.length === 0) {
+    return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
+  }
+
+  console.log(`[KI] Generiere Platz-Beschreibung: "${title}", Bilder: ${images.length}, GPS: ${gps_lat},${gps_lon}, Lifestyle: ${lifestyle}`)
+
+  try {
+    const lifestyleConfig = getLifestyleConfig(lifestyle)
+    
+    // Bilder analysieren
+    const imageDescriptions = await Promise.all(images.map(async (img) => {
+      const base64 = img.buffer.toString('base64')
+      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: `Beschreibe diesen Ort für ${lifestyleConfig.vehicle}-Reisende. Was ist besonders? Was muss man wissen? Schreibe praktisch und ehrlich.` },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+          ]
+        }],
+        max_tokens: 150,
+        temperature: 0.7
+      }, {
+        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+        timeout: 30000
+      })
+      return visionResponse.data.choices[0].message.content
+    }))
+
+    // Foster Huntington Prompt für Plätze
+    const prompt = `Du bist Foster Huntington und beschreibst einen Ort für ${lifestyleConfig.community}. Dein Stil ist praktisch, direkt und ehrlich.
+
+BEISPIEL:
+"Dieser Platz hat nichts Spektakuläres. Aber er hat das, was zählt: Ruhe, Schatten und keinen Stress mit der Polizei. Genau das brauchst du manchmal."
+
+SCHREIBE EINE BESCHREIBUNG FÜR: "${title}${description ? ' - ' + description : ''}"
+
+ORT-DETAILS:
+Standort: ${location}
+GPS: ${gps_lat && gps_lon ? `${gps_lat}, ${gps_lon}` : 'Nicht verfügbar'}
+
+Bilder zeigen: ${imageDescriptions.join('; ')}
+
+STRUKTUR:
+1. Was ist das Besondere? (1 Satz)
+2. Praktische Infos (Parken, Wasser, Strom, Wifi)
+3. Warnings (was man wissen muss)
+4. Für wen geeignet?
+
+SCHREIBSTIL:
+- Kurz und direkt (max 150 Wörter)
+- Keine schwärmenden Beschreibungen
+- Fokus auf praktische Infos
+- Ehrlich über Vor- und Nachteile
+
+Füge 3-5 relevante Hashtags hinzu (inklusive #${lifestyleConfig.keywords[0]}).`
+
+    const description_text = await generateWithModel(prompt, model, lifestyle)
+    
+    const hashtags = description_text.match(/#\w+/g) || []
+    const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
+
+    res.json({
+      description: description_text,
+      hashtags: uniqueHashtags.join(' '),
+      lifestyle
+    })
+  } catch (error) {
+    console.error('[KI] Fehler bei Platz-Generierung:', error.response?.data || error.message)
+    res.status(500).json({ error: 'Fehler bei Generierung. Versuche es erneut.' })
+  }
+})
+
+// ===== API FÜR NOTE GENERIERUNG =====
+// Tab: "Note" in /veroeffentlichen
+app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
+  if (!validateApiKey()) {
+    return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
+  }
+
+  const title = sanitizeInput(req.body.title) || 'Notiz'
+  const description = sanitizeInput(req.body.description) || ''
+  const location = sanitizeInput(req.body.location) || 'Unbekannt'
+  const text = sanitizeInput(req.body.text) || ''
+  const model = req.body.model || 'llama4'
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
+  const images = req.files
+
+  if (!images || images.length === 0) {
+    return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
+  }
+
+  console.log(`[KI] Generiere Notiz: "${title}", Bilder: ${images.length}, Lifestyle: ${lifestyle}`)
+
+  try {
+    const lifestyleConfig = getLifestyleConfig(lifestyle)
+    
+    // Bilder analysieren
+    const imageDescriptions = await Promise.all(images.map(async (img) => {
+      const base64 = img.buffer.toString('base64')
+      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: `Beschreibe dieses Bild für eine authentische ${lifestyleConfig.vehicle}-Notiz. Fokus auf: Moment, Stimmung, was gerade passiert. Schreibe wie Foster Huntington - direkt, kurz, ehrlich.` },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+          ]
+        }],
+        max_tokens: 100,
+        temperature: 0.7
+      }, {
+        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+        timeout: 30000
+      })
+      return visionResponse.data.choices[0].message.content
+    }))
+
+    // Foster Huntington Prompt für Notizen
+    const prompt = `Du bist Foster Huntington und schreibst eine kurze Notiz für ${lifestyleConfig.community}. Dein Stil ist:
+${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
+
+BEISPIEL DEINES STILS:
+"${lifestyleConfig.example1}"
+
+"${lifestyleConfig.example2}"
+
+SCHREIBE EINE NOTIZ ÜBER: "${title}${description ? ' - ' + description : ''}"
+
+STRUKTUR:
+1. Moment: Was passiert gerade?
+2. Gefühl: Wie fühlst du dich dabei?
+3. Frage: Was möchtest du wissen oder teilen?
+
+Bilder zeigen: ${imageDescriptions.join('; ')}
+Standort: ${location}
+Kontext: ${text}
+
+SCHREIBSTIL:
+${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
+
+MAX 150 WÖRTER. Füge 3-5 relevante Hashtags hinzu (inklusive #${lifestyleConfig.keywords[0]}).
+Kurz, direkt, authentisch. Wie ein Instagram-Post, aber ehrlich.`
+
+    const note = await generateWithModel(prompt, model, lifestyle)
+    
+    const hashtags = note.match(/#\w+/g) || []
+    const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
+
+    res.json({
+      note,
+      hashtags: uniqueHashtags.join(' '),
+      lifestyle
+    })
+  } catch (error) {
+    console.error('[KI] Fehler bei Notiz-Generierung:', error.response?.data || error.message)
+    res.status(500).json({ error: 'Fehler bei Generierung. Versuche es erneut.' })
+  }
+})
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({
