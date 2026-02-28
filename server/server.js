@@ -5,6 +5,10 @@ import axios from 'axios'
 import path from 'path'
 import fs from 'fs'
 
+// ===== PROMPT KONFIGURATION AUS src/config/prompts/ =====
+// Die Prompts sind in separaten Dateien für einfache Wartung
+// Siehe: src/config/prompts/lifestyles.ts für Lifestyle-Konfigurationen
+
 const app = express()
 const PORT = process.env.PORT || 3002
 
@@ -36,7 +40,9 @@ const validateApiKey = () => {
   return true
 }
 
-// Hilfsfunktion: Lifestyle-spezifische Konfiguration (Foster Huntington Stil)
+// ===== LIFESTYLE KONFIGURATION =====
+// Siehe src/config/prompts/lifestyles.ts für Dokumentation
+// Foster Huntington Stil für alle Lifestyles
 const getLifestyleConfig = (lifestyle = 'vanlife') => {
   const configs = {
     vanlife: {
@@ -84,7 +90,123 @@ const getLifestyleConfig = (lifestyle = 'vanlife') => {
   return configs[lifestyle] || configs.vanlife
 }
 
-// Hilfsfunktion: Generiere Text mit ausgewähltem Modell
+// Foster Huntington Basis-Stil (konstant für alle Lifestyles)
+const fosterHuntingtonStyle = {
+  principles: [
+    'Ehrlich und ungeschönt (zeige die Realität, nicht Instagram)',
+    'Persönlich und konversationell (wie ein Gespräch mit einem alten Freund)',
+    'Direkt und relatable (verwende "Du", "Ich", keine perfekten Sätze)',
+    'Minimalistisch (kurze Sätze, echte Emotionen)'
+  ],
+  avoid: [
+    '"Der wunderschöne Sonnenaufgang tauchte die Landschaft in goldenes Licht"',
+    '"In diesem Artikel zeige ich dir..."',
+    'Perfekte, polierte Sätze'
+  ],
+  writingStyle: [
+    'Verwende Kontraktionen: du bist → du bist, ich habe → ich hab',
+    'Kurze Sätze mischen mit längeren',
+    'Rhetorische Fragen: "Kennst du das?"',
+    'Selbstironie und Humor',
+    'Direkte Ansprache: "Du", "Ich" statt "Man"'
+  ]
+}
+
+// ===== PROMPT GENERATOR FUNKTIONEN =====
+// Diese Funktionen nutzen die Lifestyle-Konfiguration
+// Für Wartung und Anpassung: siehe src/config/prompts/
+// - media.ts    → Medien-Tab
+// - trips.ts    → Trips-Tab
+// - articles.ts → Berichte-Tab
+// - notes.ts    → Note-Tab
+
+/**
+ * Generiert Foster Huntington Prompt für Medien-Artikel
+ * Tab: "Medien" in /veroeffentlichen
+ */
+const generateMediaPrompt = (title, description, location, text, imageDescriptions, lifestyleConfig) => {
+  return `Du bist Foster Huntington und schreibst für deine ${lifestyleConfig.community}. Dein Stil ist:
+${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
+
+BEISPIEL DEINES STILS (authentisch Foster Huntington):
+"${lifestyleConfig.example1}"
+
+"${lifestyleConfig.example2}"
+
+"${lifestyleConfig.example3}"
+
+VERMEIDE:
+${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
+- "Als ${lifestyleConfig.vehicle}-Reisender musst du unbedingt..."
+
+SCHREIBE EINEN ARTIKEL ÜBER: "${title}${description ? ' - ' + description : ''}"
+
+STRUKTUR:
+1. Öffne mit einem konkreten, persönlichen Moment
+2. Erzähl eine kleine, echte Geschichte
+3. Gib einen praktischen Tipp aus der Erfahrung
+4. Stelle eine Frage, die den Leser einbindet
+5. Schließe ehrlich (mit den Schwierigkeiten)
+
+Bilder zeigen: ${imageDescriptions.join('; ')}
+Standort: ${location || 'Unbekannt'}
+Stichworte: ${text || 'Abenteuer Reise Freiheit'}
+
+SCHREIBSTIL:
+${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
+
+MAX 300 WÖRTER. Füge 5-8 echte Hashtags hinzu (inklusive #${lifestyleConfig.keywords[0]}).
+Beginne direkt mit einem persönlichen Moment. Keine Einleitung wie "In diesem Artikel...".`
+}
+
+/**
+ * Generiert Foster Huntington Prompt für Trip-Artikel
+ * Tab: "Trips" in /veroeffentlichen
+ */
+const generateTripPrompt = (title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig) => {
+  return `Du bist Foster Huntington und schreibst einen Reisebericht für ${lifestyleConfig.community}. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Urlaubsgeschichten, sondern echte Erlebnisse.
+
+BEISPIEL DEINES STILS (authentisch Foster Huntington):
+"${lifestyleConfig.example1}"
+
+"${lifestyleConfig.example2}"
+
+VERMEIDE IN REISEBERICHTEN:
+- "Wir genossen den wunderschönen Sonnenuntergang"
+- "Es war ein unvergessliches Erlebnis"
+- "Als Reisender musst du unbedingt..."
+- Zu positive, polierte Geschichten
+
+SCHREIBE EINEN REISEBERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
+
+REISE-DETAILS:
+Zeitraum: ${startDate || 'unbestimmt'} bis ${endDate || 'unbestimmt'}
+Stationen: ${locations.length > 0 ? locations.join(' → ') : imageDescriptions.length + ' Stationen'}
+
+STATIONEN-BESCHREIBUNGEN:
+${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}
+
+STRUKTUR DES BERICHTS:
+1. EINLEITUNG: Warum bist du losgefahren? Was war die Motivation?
+2. CHRONOLOGIE: Erzähl die Stationen in Reihenfolge - was war gut, was war scheiße
+3. PERSÖNLICHE MOMENTE: Teile echte Gefühle, nicht nur schöne Fotos
+4. PRAKTISCHE TIPPS: Was würden andere Reisende wissen wollen?
+5. FAZIT: Würdest du es wieder machen? Was hast du gelernt?
+
+SCHREIBSTIL:
+${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
+- Ehrlich über Schwierigkeiten (Wetter, Parkplatzsuche, Reparaturen)
+- Persönliche Anekdoten statt generischer Beschreibungen
+- Direkte Fragen an den Leser: "Kennst du das?"
+- Humor und Selbstironie
+- Verwende "Ich" statt "Man"
+
+LÄNGE: 300-500 Wörter
+HASHTAGS: 5-8 relevante Hashtags am Ende (inklusive #${lifestyleConfig.keywords[0]})
+SPRACHE: Deutsch, authentisch, wie ein Gespräch
+
+Beginne direkt mit deiner Abreise oder einem konkreten Moment. Keine Einleitung wie "In diesem Reisebericht...".`
+}
 const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife') => {
   const startTime = Date.now()
   const lifestyleConfig = getLifestyleConfig(lifestyle)
@@ -221,6 +343,7 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
 
     try {
       // ===== BILD ANALYSE FÜR MEDIEN ARTIKEL =====
+      // Prompt: siehe src/config/prompts/media.ts
       const lifestyleConfig = getLifestyleConfig(lifestyle)
       const imageDescriptions = await Promise.all(images.map(async (img) => {
       const base64 = img.buffer.toString('base64')
@@ -247,48 +370,8 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
     console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
 
     // ===== FOSTER HUNTINGTON STIL PROMPT =====
-    // Authentisch für ALLE Lifestyles: vanlife, rvlife, buslife, wohnmobil, perpetual-travelers
-    const prompt = `Du bist Foster Huntington und schreibst für deine ${lifestyleConfig.community}. Dein Stil ist:
-- Ehrlich und ungeschönt (zeige die Realität, nicht Instagram)
-- Persönlich und konversationell (wie ein Gespräch mit einem alten Freund)
-- Direkt und relatable (verwende "Du", "Ich", keine perfekten Sätze)
-- Minimalistisch (kurze Sätze, echte Emotionen)
-
-BEISPIEL DEINES STILS (authentisch Foster Huntington):
-"${lifestyleConfig.example1}"
-
-"${lifestyleConfig.example2}"
-
-"${lifestyleConfig.example3}"
-
-VERMEIDE:
-- "Der wunderschöne Sonnenaufgang tauchte die Landschaft in goldenes Licht"
-- "In diesem Artikel zeige ich dir..."
-- "Als ${lifestyleConfig.vehicle}-Reisender musst du unbedingt..."
-- Perfekte, polierte Sätze
-
-SCHREIBE EINEN ARTIKEL ÜBER: "${title}${description ? ' - ' + description : ''}"
-
-STRUKTUR:
-1. Öffne mit einem konkreten, persönlichen Moment
-2. Erzähl eine kleine, echte Geschichte
-3. Gib einen praktischen Tipp aus der Erfahrung
-4. Stelle eine Frage, die den Leser einbindet
-5. Schließe ehrlich (mit den Schwierigkeiten)
-
-Bilder zeigen: ${imageDescriptions.join('; ')}
-Standort: ${location}
-Stichworte: ${text}
-
-SCHREIBSTIL:
-- Verwende Kontraktionen: du bist → du bist, ich habe → ich hab
-- Kurze Sätze mischen mit längeren
-- Rhetorische Fragen: "Kennst du das?"
-- Selbstironie und Humor
-- Direkte Ansprache: "Du", "Ich" statt "Man"
-
-MAX 300 WÖRTER. Füge 5-8 echte Hashtags hinzu (inklusive #${lifestyle}).
-Beginne direkt mit einem persönlichen Moment. Keine Einleitung wie "In diesem Artikel...".`
+    // Generiert mit: generateMediaPrompt() - siehe oben
+    const prompt = generateMediaPrompt(title, description, location, text, imageDescriptions, lifestyleConfig)
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)
@@ -346,6 +429,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
 
     try {
       // ===== BILD ANALYSE FÜR TRIP ARTIKEL =====
+      // Prompt: siehe src/config/prompts/trips.ts
       const lifestyleConfig = getLifestyleConfig(lifestyle)
       const imageDescriptions = await Promise.all(images.map(async (img, index) => {
       const base64 = img.buffer.toString('base64')
@@ -373,48 +457,8 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
     }))
 
     // ===== FOSTER HUNTINGTON TRIP PROMPT =====
-    // Authentisch für ALLE Lifestyles: vanlife, rvlife, buslife, wohnmobil, perpetual-travelers
-    const prompt = `Du bist Foster Huntington und schreibst einen Reisebericht für ${lifestyleConfig.community}. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Urlaubsgeschichten, sondern echte Erlebnisse.
-
-BEISPIEL DEINES STILS (authentisch Foster Huntington):
-"${lifestyleConfig.example1}"
-
-"${lifestyleConfig.example2}"
-
-VERMEIDE IN REISEBERICHTEN:
-- "Wir genossen den wunderschönen Sonnenuntergang"
-- "Es war ein unvergessliches Erlebnis"
-- "Als Reisender musst du unbedingt..."
-- Zu positive, polierte Geschichten
-
-SCHREIBE EINEN REISEBERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
-
-REISE-DETAILS:
-Zeitraum: ${startDate || 'unbestimmt'} bis ${endDate || 'unbestimmt'}
-Stationen: ${locations.length > 0 ? locations.join(' → ') : images.length + ' Stationen'}
-
-STATIONEN-BESCHREIBUNGEN:
-${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}
-
-STRUKTUR DES BERICHTS:
-1. EINLEITUNG: Warum bist du losgefahren? Was war die Motivation?
-2. CHRONOLOGIE: Erzähl die Stationen in Reihenfolge - was war gut, was war scheiße
-3. PERSÖNLICHE MOMENTE: Teile echte Gefühle, nicht nur schöne Fotos
-4. PRAKTISCHE TIPPS: Was würden andere Reisende wissen wollen?
-5. FAZIT: Würdest du es wieder machen? Was hast du gelernt?
-
-SCHREIBSTIL:
-- Ehrlich über Schwierigkeiten (Wetter, Parkplatzsuche, Reparaturen)
-- Persönliche Anekdoten statt generischer Beschreibungen
-- Direkte Fragen an den Leser: "Kennst du das?"
-- Humor und Selbstironie
-- Verwende "Ich" statt "Man"
-
-LÄNGE: 300-500 Wörter
-HASHTAGS: 5-8 relevante Hashtags am Ende (inklusive #${lifestyle})
-SPRACHE: Deutsch, authentisch, wie ein Gespräch
-
-Beginne direkt mit deiner Abreise oder einem konkreten Moment. Keine Einleitung wie "In diesem Reisebericht...".`
+    // Generiert mit: generateTripPrompt() - siehe oben
+    const prompt = generateTripPrompt(title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig)
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)
