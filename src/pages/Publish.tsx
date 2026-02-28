@@ -3468,10 +3468,62 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [publishedAt, setPublishedAt] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
   const navigate = useNavigate();
+
+  // KI-Artikel generieren (Foster Huntington Stil)
+  const generateArticleWithAI = async () => {
+    if (!imageFile) {
+      toast({
+        title: 'Bild erforderlich',
+        description: 'Bitte lade zuerst ein Titelbild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingArticle(true);
+    try {
+      const formData = new FormData();
+      formData.append('images', imageFile);
+      formData.append('title', title);
+      formData.append('description', summary);
+      formData.append('location', location);
+      formData.append('text', content);
+      formData.append('lifestyle', lifestyle);
+
+      const response = await fetch('/api/generate-article', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.article) {
+        setContent(data.article);
+        if (data.hashtags) {
+          const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
+          setTags([...tags, ...newTags]);
+        }
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Artikel generiert (${data.lifestyle})`
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingArticle(false);
+    }
+  };
 
   // Load edit data
   useEffect(() => {
@@ -4043,6 +4095,58 @@ Schreibe deinen Artikel hier...
               // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
             }}
           />
+        </div>
+
+        {/* KI-Artikel generieren (Optional) */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Artikel generieren (Optional)</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wähle deinen Lifestyle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Foster Huntington Stil - ehrlich, direkt, authentisch
+            </p>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={generateArticleWithAI}
+            disabled={isGeneratingArticle || !imageFile}
+            className="w-full"
+          >
+            {isGeneratingArticle ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere Artikel...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Artikel generieren ({lifestyle})
+              </>
+            )}
+          </Button>
+          {!imageFile && (
+            <p className="text-xs text-muted-foreground">
+              💡 Lade zuerst ein Titelbild hoch, um die KI-Generierung zu nutzen.
+            </p>
+          )}
         </div>
 
         {/* Automatisch generierte Tags anzeigen */}
