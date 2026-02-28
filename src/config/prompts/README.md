@@ -6,22 +6,25 @@ Diese Dateien enthalten die Foster Huntington Stil-Prompts für alle Tabs in `/v
 
 ```
 src/config/prompts/
-├── index.ts              # Zentraler Export aller Prompts
-├── lifestyles.ts         # Lifestyle-Konfigurationen (vanlife, rvlife, beachlife, wohnmobil, perpetual-travelers)
-├── media.ts              # Prompt für Medien-Tab (MediaUploadForm)
-├── trips.ts              # Prompt für Trips-Tab (TripForm)
-├── articles.ts           # Prompt für Berichte-Tab (ArticleForm)
-└── notes.ts              # Prompt für Note-Tab (NoteForm)
+├── index.js              # Zentraler Export aller Prompts
+├── lifestyles.js         # Lifestyle-Konfigurationen (vanlife, rvlife, beachlife, wohnmobil, perpetual-travelers)
+├── media.js              # Prompt für Medien-Tab (MediaUploadForm)
+├── trips.js              # Prompt für Trips-Tab (TripForm)
+├── articles.js           # Prompt für Berichte-Tab (ArticleForm)
+├── notes.js              # Prompt für Note-Tab (NoteForm)
+├── place.js              # Prompt für Plätze-Tab (PlaceForm)
+└── README.md             # Diese Dokumentation
 ```
 
 ## 🎯 Tabs und Prompts
 
 | Tab | Datei | Beschreibung | API-Endpoint | Kontext-Felder |
 |-----|-------|--------------|--------------|----------------|
-| **Medien** | `media.ts` | Artikel mit Bildern | `/api/generate-media-article` | mainCategory, subCategories, detailedTags, manualTags, additionalImageUrls, country |
-| **Trips** | `trips.ts` | Reiseberichte mit Stationen | `/api/generate-trip` | tripType, stationDescriptions |
-| **Berichte** | `articles.ts` | Ausführliche Berichte | `/api/generate-article` | category, tags, country |
-| **Note** | `notes.ts` | Kurze Notizen | `/api/generate-note` | - |
+| **Medien** | `media.js` | Artikel mit Bildern | `/api/generate-media-article` | mainCategory, subCategories, detailedTags, manualTags, additionalImageUrls, country |
+| **Trips** | `trips.js` | Reiseberichte mit Stationen | `/api/generate-trip` | tripType, stationDescriptions |
+| **Berichte** | `articles.js` | Ausführliche Berichte | `/api/generate-article` | category, tags, country |
+| **Note** | `notes.js` | Kurze Notizen | `/api/generate-note` | - |
+| **Plätze** | `place.js` | Platz-Beschreibungen | `/api/generate-place` | gps_lat, gps_lon |
 
 ## 🚀 Lifestyles
 
@@ -124,24 +127,27 @@ In der entsprechenden Prompt-Datei:
 
 ## 📊 Server-Integration
 
-**⚠️ WICHTIG**: Die Prompts sind aktuell **dupliziert**:
-- `src/config/prompts/*.ts` - TypeScript Definitionen (für Dokumentation)
-- `server/server.js` - Inline Prompts (für Server)
+✅ **Prompts werden direkt importiert!**
 
-Bei Änderungen müssen **beide** Orte aktualisiert werden!
-
-Die `server/server.js` verwendet inline Funktionen:
+Die `server/server.js` importiert alle Prompts aus diesem Verzeichnis:
 
 ```javascript
-// Lifestyle-Konfiguration laden
-const lifestyleConfig = getLifestyleConfig(lifestyle)
-
-// Kontext-Objekt
-const context = { mainCategory, subCategories, detailedTags, manualTags, additionalImageUrls, country }
-
-// Prompt generieren
-const prompt = generateMediaPrompt(title, description, location, text, imageDescriptions, lifestyleConfig, context)
+import {
+  getLifestyleConfig,
+  generateMediaPrompt,
+  generateTripPrompt,
+  generateArticlePrompt,
+  generateNotePrompt,
+  generatePlacePrompt,
+  getMediaImageAnalysisPrompt,
+  getTripImageAnalysisPrompt,
+  getArticleImageAnalysisPrompt,
+  getNoteImageAnalysisPrompt,
+  getPlaceImageAnalysisPrompt
+} from '../src/config/prompts/index.js'
 ```
+
+**Bei Änderungen:** Nur die Dateien in `src/config/prompts/` bearbeiten!
 
 ## 🎨 Beispiel
 

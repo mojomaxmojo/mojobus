@@ -6,25 +6,12 @@
  * Erweitert mit Kontext-Feldern: tripType, stationDescriptions
  */
 
-import { LifestyleConfig, fosterHuntingtonStyle } from './lifestyles'
-
-export interface TripPromptParams {
-  title: string
-  description?: string
-  locations: string[]
-  startDate?: string
-  endDate?: string
-  imageDescriptions: string[]
-  lifestyleConfig: LifestyleConfig
-  // Zusätzliche Kontext-Felder
-  tripType?: string
-  stationDescriptions?: Array<{ location: string; description: string }>
-}
+import { fosterHuntingtonStyle } from './lifestyles.js'
 
 /**
  * Generiert den Foster Huntington Prompt für Trip-Artikel
  */
-export const generateTripPrompt = (params: TripPromptParams): string => {
+export const generateTripPrompt = (params) => {
   const {
     title,
     description,
@@ -96,6 +83,6 @@ Beginne direkt mit deiner Abreise oder einem konkreten Moment. Keine Einleitung 
 /**
  * Bild-Analyse-Prompt für Trips-Tab
  */
-export const getTripImageAnalysisPrompt = (lifestyleConfig: LifestyleConfig): string => {
+export const getTripImageAnalysisPrompt = (lifestyleConfig) => {
   return `Beschreibe diese Station ehrlich für einen ${lifestyleConfig.vehicle}-Reisebericht. Was ist wirklich besonders? Atmosphäre? Herausforderungen? Menschen? Schreibe authentisch, nicht touristisch - wie für andere Reisende.`
 }

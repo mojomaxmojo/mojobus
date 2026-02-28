@@ -6,25 +6,12 @@
  * Erweitert mit Kontext-Feldern: category, tags, country
  */
 
-import { LifestyleConfig, fosterHuntingtonStyle } from './lifestyles'
-
-export interface ArticlePromptParams {
-  title: string
-  description?: string
-  location?: string
-  text?: string
-  imageDescriptions: string[]
-  lifestyleConfig: LifestyleConfig
-  // Zusätzliche Kontext-Felder
-  category?: string
-  tags?: string[]
-  country?: string
-}
+import { fosterHuntingtonStyle } from './lifestyles.js'
 
 /**
  * Generiert den Foster Huntington Prompt für Berichte-Artikel
  */
-export const generateArticlePrompt = (params: ArticlePromptParams): string => {
+export const generateArticlePrompt = (params) => {
   const {
     title,
     description,
@@ -78,6 +65,6 @@ Beginne direkt. Keine Einleitung wie "In diesem Bericht...".`
 /**
  * Bild-Analyse-Prompt für Berichte-Tab
  */
-export const getArticleImageAnalysisPrompt = (lifestyleConfig: LifestyleConfig): string => {
+export const getArticleImageAnalysisPrompt = (lifestyleConfig) => {
   return `Beschreibe dieses Bild für einen authentischen ${lifestyleConfig.vehicle}-Bericht. Fokus auf: Details, Problemlösung, praktische Aspekte. Schreibe wie Foster Huntington - direkt, ehrlich, informativ.`
 }

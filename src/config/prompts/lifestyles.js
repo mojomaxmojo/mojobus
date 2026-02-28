@@ -7,18 +7,7 @@
  * - Keine perfekten Instagram-Beschreibungen
  */
 
-export type LifestyleType = 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'
-
-export interface LifestyleConfig {
-  vehicle: string
-  community: string
-  keywords: string[]
-  example1: string
-  example2: string
-  example3: string
-}
-
-export const lifestyles: Record<LifestyleType, LifestyleConfig> = {
+export const lifestyles = {
   vanlife: {
     vehicle: 'Van',
     community: 'Vanlife-Community',
@@ -53,15 +42,6 @@ export const lifestyles: Record<LifestyleType, LifestyleConfig> = {
     example1: 'Du wachst im Wohnmobil auf, Regen prasselt aufs Dach. Gemütlich, aber du musst tanken. Willkommen im echten Wohnmobil-Leben.',
     example2: 'Stellplätze in Deutschland? Entweder voll oder teuer. Aber manchmal findest du diesen einen perfekten Spot direkt am See.',
     example3: 'Wohnmobil bedeutet nicht immer Luxus. Es bedeutet Freiheit mit praktischen Herausforderungen. Und das ist genau richtig so.'
-  },
-
-    buslife: {
-    vehicle: 'Bus',
-    community: 'Buslife-Community',
-    keywords: ['buslife', 'bus', 'skoolie'],
-    example1: 'Du fährst deinen umgebauten Schulbus auf einen Waldweg. 40 Fuß Stahl und Holz - dein Zuhause. Buslife ist anders, und genau das liebst du.',
-    example2: 'Mit dem Bus in der Stadt parken? Vergiss es. Aber das ist okay. Die besten Spots sind sowieso da, wo niemand hinkommt.',
-    example3: 'Ein Bus ist nicht nur ein Fahrzeug. Er ist ein Statement. Gegen Normalität, für Freiheit. Auch wenn die Reparaturen manchmal nerven.'
   },
 
   'perpetual-travelers': {
@@ -104,6 +84,6 @@ export const fosterHuntingtonStyle = {
 /**
  * Hilfsfunktion: Lifestyle-Konfiguration abrufen
  */
-export const getLifestyleConfig = (lifestyle: LifestyleType = 'vanlife'): LifestyleConfig => {
+export const getLifestyleConfig = (lifestyle = 'vanlife') => {
   return lifestyles[lifestyle] || lifestyles.vanlife
 }

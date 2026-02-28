@@ -6,28 +6,12 @@
  * Erweitert mit Kontext-Feldern: mainCategory, subCategories, detailedTags, additionalImageUrls, manualTags, country
  */
 
-import { LifestyleConfig, fosterHuntingtonStyle } from './lifestyles'
-
-export interface MediaPromptParams {
-  title: string
-  description?: string
-  location?: string
-  text?: string
-  imageDescriptions: string[]
-  lifestyleConfig: LifestyleConfig
-  // Zusätzliche Kontext-Felder
-  mainCategory?: string
-  subCategories?: string[]
-  detailedTags?: string[]
-  additionalImageUrls?: string
-  manualTags?: string[]
-  country?: string
-}
+import { fosterHuntingtonStyle } from './lifestyles.js'
 
 /**
  * Generiert den Foster Huntington Prompt für Medien-Artikel
  */
-export const generateMediaPrompt = (params: MediaPromptParams): string => {
+export const generateMediaPrompt = (params) => {
   const {
     title,
     description,
@@ -89,6 +73,6 @@ Beginne direkt mit einem persönlichen Moment. Keine Einleitung wie "In diesem A
 /**
  * Bild-Analyse-Prompt für Medien-Tab
  */
-export const getMediaImageAnalysisPrompt = (lifestyleConfig: LifestyleConfig): string => {
+export const getMediaImageAnalysisPrompt = (lifestyleConfig) => {
   return `Beschreibe dieses Bild für einen authentischen ${lifestyleConfig.vehicle}-Artikel. Fokus auf: echte Atmosphäre (nicht Instagram), was wirklich passiert, besondere Details, Emotionen. Schreibe wie Foster Huntington - direkt, ehrlich, keine perfekten Beschreibungen.`
 }

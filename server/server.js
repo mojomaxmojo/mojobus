@@ -4,10 +4,24 @@ import multer from 'multer'
 import axios from 'axios'
 import path from 'path'
 import fs from 'fs'
+import { fileURLToPath } from 'url'
 
-// ===== PROMPT KONFIGURATION AUS src/config/prompts/ =====
-// Die Prompts sind in separaten Dateien für einfache Wartung
-// Siehe: src/config/prompts/lifestyles.ts für Lifestyle-Konfigurationen
+// ===== PROMPTS AUS src/config/prompts/ IMPORTIEREN =====
+// Alle Prompts sind zentral in src/config/prompts/ definiert
+// Bei Änderungen: NUR dort ändern, nicht hier!
+import {
+  getLifestyleConfig,
+  generateMediaPrompt,
+  generateTripPrompt,
+  generateArticlePrompt,
+  generateNotePrompt,
+  generatePlacePrompt,
+  getMediaImageAnalysisPrompt,
+  getTripImageAnalysisPrompt,
+  getArticleImageAnalysisPrompt,
+  getNoteImageAnalysisPrompt,
+  getPlaceImageAnalysisPrompt
+} from '../src/config/prompts/index.js'
 
 const app = express()
 const PORT = process.env.PORT || 3002
@@ -40,56 +54,6 @@ const validateApiKey = () => {
   return true
 }
 
-// ===== LIFESTYLE KONFIGURATION =====
-// Siehe src/config/prompts/lifestyles.ts für Dokumentation
-// Foster Huntington Stil für alle Lifestyles
-const getLifestyleConfig = (lifestyle = 'vanlife') => {
-  const configs = {
-    vanlife: {
-      vehicle: 'Van',
-      community: 'Vanlife-Community',
-      keywords: ['vanlife', 'van', 'aufRädern'],
-      example1: 'Du wachst morgens auf und der Van riecht nach letzter Nacht. Nicht glamourös, aber echt. Genau das macht Vanlife aus. Kennst du das Gefühl?',
-      example2: 'Parkst du auch immer am Arsch der Welt? Wo niemand hinfährt? Das sind die besten Plätze. Kein Wifi, aber echte Ruhe.',
-      example3: 'Man sagt immer "Freiheit", aber gestern musste ich 2 Stunden nach Wasser suchen. Trotzdem würde ich es nicht anders wollen.'
-    },
-    rvlife: {
-      vehicle: 'RV',
-      community: 'RVlife-Community',
-      keywords: ['rvlife', 'rv', 'recreationalVehicle'],
-      example1: 'Du wachst im RV und draußen ist es stürmisch. Das Wohnmobil wackelt, aber du bist dankbar für vier Wände auf Rädern. RVlife, Baby.',
-      example2: 'Mit dem RV durch die Pampa - kein Campground weit und breit. Einfach am Straßenrand geparkt. Die besten Nächte sind die ungeplanten.',
-      example3: 'Leute denken, RVlife ist nur Urlaub. Aber nach 6 Monaten on the road weißt du: Es ist ein komplettes Leben. Mit allen Höhen und Tiefen.'
-    },
-    beachlife: {
-      vehicle: 'Strand',
-      community: 'Beachlife-Community',
-      keywords: ['beachlife', 'beach', 'strand', 'ocean', 'surf'],
-      example1: 'Du wachst auf und hörst die Wellen. Sand überall - im Van, im Bett, im Essen. Aber genau das macht Beachlife aus. Kennst du das Gefühl?',
-      example2: 'Morgens surfen, abends Lagerfeuer am Strand. Kein fester Plan, nur die Gezeiten bestimmen deinen Tag. Das ist echte Freiheit.',
-      example3: 'Leute denken Beachlife ist nur Urlaub. Aber nach Wochen am Strand weißt du: Es ist ein Lebensgefühl. Salz in der Luft und Sand unter den Füßen.'
-    },
-    wohnmobil: {
-      vehicle: 'Wohnmobil',
-      community: 'Wohnmobil-Community',
-      keywords: ['wohnmobil', 'camper', 'mobil'],
-      example1: 'Du wachst im Wohnmobil auf, Regen prasselt aufs Dach. Gemütlich, aber du musst tanken. Willkommen im echten Wohnmobil-Leben.',
-      example2: 'Stellplätze in Deutschland? Entweder voll oder teuer. Aber manchmal findest du diesen einen perfekten Spot direkt am See.',
-      example3: 'Wohnmobil bedeutet nicht immer Luxus. Es bedeutet Freiheit mit praktischen Herausforderungen. Und das ist genau richtig so.'
-    },
-    'perpetual-travelers': {
-      vehicle: 'Reise',
-      community: 'Perpetual Travelers Community',
-      keywords: ['perpetualTravelers', 'permanentReisend', 'ortlos'],
-      example1: 'Du weißt nicht mehr, welcher Tag es ist. Oder welcher Monat. Perpetual Traveler zu sein bedeutet, die Zeit zu vergessen.',
-      example2: 'Heute hier, morgen dort. Kein fester Wohnsitz, nur dein Rucksack und die nächste Destination. Das ist dein Zuhause.',
-      example3: 'Leute fragen: "Wo lebst du?" Du antwortest: "Überall und nirgendwo." Perpetual Travel ist kein Urlaub, es ist eine Lebensphilosophie.'
-    }
-  }
-
-  return configs[lifestyle] || configs.vanlife
-}
-
 // Hilfsfunktion für sicheres JSON-Parsing
 const safelyParseJSON = (str) => {
   if (!str) return null
@@ -100,151 +64,15 @@ const safelyParseJSON = (str) => {
   }
 }
 
-// Foster Huntington Basis-Stil (konstant für alle Lifestyles)
-const fosterHuntingtonStyle = {
-  principles: [
-    'Ehrlich und ungeschönt (zeige die Realität, nicht Instagram)',
-    'Persönlich und konversationell (wie ein Gespräch mit einem alten Freund)',
-    'Direkt und relatable (verwende "Du", "Ich", keine perfekten Sätze)',
-    'Minimalistisch (kurze Sätze, echte Emotionen)'
-  ],
-  avoid: [
-    '"Der wunderschöne Sonnenaufgang tauchte die Landschaft in goldenes Licht"',
-    '"In diesem Artikel zeige ich dir..."',
-    'Perfekte, polierte Sätze'
-  ],
-  writingStyle: [
-    'Verwende Kontraktionen: du bist → du bist, ich habe → ich hab',
-    'Kurze Sätze mischen mit längeren',
-    'Rhetorische Fragen: "Kennst du das?"',
-    'Selbstironie und Humor',
-    'Direkte Ansprache: "Du", "Ich" statt "Man"'
-  ]
-}
+// ===== PROMPT FUNKTIONEN WERDEN AUS src/config/prompts/ IMPORTIERT =====
+// Siehe: src/config/prompts/index.js
+// - generateMediaPrompt() → Medien-Tab (media.js)
+// - generateTripPrompt() → Trips-Tab (trips.js)
+// - generateArticlePrompt() → Berichte-Tab (articles.js)
+// - generateNotePrompt() → Note-Tab (notes.js)
+// - generatePlacePrompt() → Plätze-Tab (place.js)
 
-// ===== PROMPT GENERATOR FUNKTIONEN =====
-// Diese Funktionen nutzen die Lifestyle-Konfiguration
-// Für Wartung und Anpassung: siehe src/config/prompts/
-// - media.ts    → Medien-Tab
-// - trips.ts    → Trips-Tab
-// - articles.ts → Berichte-Tab
-// - notes.ts    → Note-Tab
-
-/**
- * Generiert Foster Huntington Prompt für Medien-Artikel
- * Tab: "Medien" in /veroeffentlichen
- * Erweitert mit: mainCategory, subCategories, detailedTags, additionalImageUrls, manualTags, country
- */
-const generateMediaPrompt = (title, description, location, text, imageDescriptions, lifestyleConfig, context = {}) => {
-  const { mainCategory, subCategories, detailedTags, additionalImageUrls, manualTags, country } = context
-
-  // Baue Kontext-Informationen zusammen
-  let contextInfo = ''
-  if (mainCategory) contextInfo += `\nHauptkategorie: ${mainCategory}`
-  if (subCategories && subCategories.length > 0) contextInfo += `\nThemen: ${subCategories.join(', ')}`
-  if (detailedTags && detailedTags.length > 0) contextInfo += `\nSchlagworte: ${detailedTags.join(', ')}`
-  if (manualTags && manualTags.length > 0) contextInfo += `\nZusätzliche Tags: ${manualTags.join(', ')}`
-  if (country) contextInfo += `\nLand: ${country}`
-  if (additionalImageUrls) contextInfo += `\nWeitere Bild-URLs: ${additionalImageUrls}`
-
-  return `Du bist Foster Huntington und schreibst für deine ${lifestyleConfig.community}. Dein Stil ist:
-${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
-
-BEISPIEL DEINES STILS (authentisch Foster Huntington):
-"${lifestyleConfig.example1}"
-
-"${lifestyleConfig.example2}"
-
-"${lifestyleConfig.example3}"
-
-VERMEIDE:
-${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
-- "Als ${lifestyleConfig.vehicle}-Reisender musst du unbedingt..."
-
-SCHREIBE EINEN ARTIKEL ÜBER: "${title}${description ? ' - ' + description : ''}"
-${contextInfo}
-
-STRUKTUR:
-1. Öffne mit einem konkreten, persönlichen Moment
-2. Erzähl eine kleine, echte Geschichte
-3. Gib einen praktischen Tipp aus der Erfahrung
-4. Stelle eine Frage, die den Leser einbindet
-5. Schließe ehrlich (mit den Schwierigkeiten)
-
-Bilder zeigen: ${imageDescriptions.join('; ')}
-Standort: ${location || 'Unbekannt'}${country ? `, ${country}` : ''}
-Stichworte: ${text || 'Abenteuer Reise Freiheit'}${detailedTags && detailedTags.length > 0 ? `, ${detailedTags.join(', ')}` : ''}${manualTags && manualTags.length > 0 ? `, ${manualTags.join(', ')}` : ''}
-
-SCHREIBSTIL:
-${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
-
-MAX 300 WÖRTER. Füge 5-8 echte Hashtags hinzu (inklusive #${lifestyleConfig.keywords[0]}).
-Beginne direkt mit einem persönlichen Moment. Keine Einleitung wie "In diesem Artikel...".`
-}
-
-/**
- * Generiert Foster Huntington Prompt für Trip-Artikel
- * Tab: "Trips" in /veroeffentlichen
- * Erweitert mit: tripType, stationDescriptions
- */
-const generateTripPrompt = (title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig, context = {}) => {
-  const { tripType, stationDescriptions } = context
-
-  // Baue Kontext-Informationen zusammen
-  let contextInfo = ''
-  if (tripType) contextInfo += `\nArt der Reise: ${tripType}`
-
-  // Station-Beschreibungen mit Benutzer-Input kombinieren
-  let stationDetails = ''
-  if (stationDescriptions && stationDescriptions.length > 0) {
-    stationDetails = '\n\nBENUTZER-STATION-BESCHREIBUNGEN:\n' +
-      stationDescriptions.map((s, i) => `${i + 1}. ${s.location}: ${s.description}`).join('\n')
-  }
-
-  return `Du bist Foster Huntington und schreibst einen Reisebericht für ${lifestyleConfig.community}. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Urlaubsgeschichten, sondern echte Erlebnisse.
-
-BEISPIEL DEINES STILS (authentisch Foster Huntington):
-"${lifestyleConfig.example1}"
-
-"${lifestyleConfig.example2}"
-
-VERMEIDE IN REISEBERICHTEN:
-- "Wir genossen den wunderschönen Sonnenuntergang"
-- "Es war ein unvergessliches Erlebnis"
-- "Als Reisender musst du unbedingt..."
-- Zu positive, polierte Geschichten
-
-SCHREIBE EINEN REISEBERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
-${contextInfo}
-
-REISE-DETAILS:
-Zeitraum: ${startDate || 'unbestimmt'} bis ${endDate || 'unbestimmt'}
-Stationen: ${locations.length > 0 ? locations.join(' → ') : imageDescriptions.length + ' Stationen'}
-
-STATIONEN-BESCHREIBUNGEN (aus Bildern analysiert):
-${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}${stationDetails}
-
-STRUKTUR DES BERICHTS:
-1. EINLEITUNG: Warum bist du losgefahren? Was war die Motivation?
-2. CHRONOLOGIE: Erzähl die Stationen in Reihenfolge - was war gut, was war scheiße
-3. PERSÖNLICHE MOMENTE: Teile echte Gefühle, nicht nur schöne Fotos
-4. PRAKTISCHE TIPPS: Was würden andere Reisende wissen wollen?
-5. FAZIT: Würdest du es wieder machen? Was hast du gelernt?
-
-SCHREIBSTIL:
-${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
-- Ehrlich über Schwierigkeiten (Wetter, Parkplatzsuche, Reparaturen)
-- Persönliche Anekdoten statt generischer Beschreibungen
-- Direkte Fragen an den Leser: "Kennst du das?"
-- Humor und Selbstironie
-- Verwende "Ich" statt "Man"
-
-LÄNGE: 300-500 Wörter
-HASHTAGS: 5-8 relevante Hashtags am Ende (inklusive #${lifestyleConfig.keywords[0]})
-SPRACHE: Deutsch, authentisch, wie ein Gespräch
-
-Beginne direkt mit deiner Abreise oder einem konkreten Moment. Keine Einleitung wie "In diesem Reisebericht...".`
-}
+// ===== KI-MODELL FUNKTION =====
 const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife') => {
   const startTime = Date.now()
   const lifestyleConfig = getLifestyleConfig(lifestyle)
@@ -343,7 +171,7 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
         messages: [{
           role: 'user',
           content: [
-             { type: 'text', text: `Beschreibe dieses Bild für einen authentischen ${lifestyleConfig.vehicle}-Artikel. Fokus auf: echte Atmosphäre (nicht Instagram), was wirklich passiert, besondere Details, Emotionen. Schreibe wie Foster Huntington - direkt, ehrlich, keine perfekten Beschreibungen.` },
+             { type: 'text', text: getMediaImageAnalysisPrompt(lifestyleConfig) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -359,17 +187,21 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
     console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
 
     // ===== FOSTER HUNTINGTON STIL PROMPT =====
-    // Generiert mit: generateMediaPrompt() - siehe oben
-    // Kontext-Objekt mit allen zusätzlichen Informationen
-    const context = {
+    // Generiert mit: generateMediaPrompt() - importiert aus src/config/prompts/media.js
+    const prompt = generateMediaPrompt({
+      title,
+      description,
+      location,
+      text,
+      imageDescriptions,
+      lifestyleConfig,
       mainCategory,
       subCategories,
       detailedTags,
       additionalImageUrls,
       manualTags,
       country
-    }
-    const prompt = generateMediaPrompt(title, description, location, text, imageDescriptions, lifestyleConfig, context)
+    })
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)
@@ -444,7 +276,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
         messages: [{
           role: 'user',
           content: [
-             { type: 'text', text: `Beschreibe diese Station ehrlich für einen ${lifestyleConfig.vehicle}-Reisebericht. Was ist wirklich besonders? Atmosphäre? Herausforderungen? Menschen? Schreibe authentisch, nicht touristisch - wie für andere Reisende.` },
+             { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -461,13 +293,18 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
     }))
 
     // ===== FOSTER HUNTINGTON TRIP PROMPT =====
-    // Generiert mit: generateTripPrompt() - siehe oben
-    // Kontext-Objekt mit allen zusätzlichen Informationen
-    const context = {
+    // Generiert mit: generateTripPrompt() - importiert aus src/config/prompts/trips.js
+    const prompt = generateTripPrompt({
+      title,
+      description,
+      locations,
+      startDate,
+      endDate,
+      imageDescriptions,
+      lifestyleConfig,
       tripType,
       stationDescriptions
-    }
-    const prompt = generateTripPrompt(title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig, context)
+    })
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)
@@ -545,7 +382,7 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: `Beschreibe dieses Bild für einen authentischen ${lifestyleConfig.vehicle}-Bericht. Fokus auf: Details, Problemlösung, praktische Aspekte. Schreibe wie Foster Huntington - direkt, ehrlich, informativ.` },
+            { type: 'text', text: getArticleImageAnalysisPrompt(lifestyleConfig) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -558,43 +395,18 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       return visionResponse.data.choices[0].message.content
     }))
 
-    // Foster Huntington Prompt für Berichte
-    // Baue Kontext-Informationen zusammen
-    let contextInfo = ''
-    if (category) contextInfo += `\nKategorie: ${category}`
-    if (tags && tags.length > 0) contextInfo += `\nTags: ${tags.join(', ')}`
-    if (country) contextInfo += `\nLand: ${country}`
-
-    const prompt = `Du bist Foster Huntington und schreibst einen Bericht für ${lifestyleConfig.community}. Dein Stil ist:
-${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
-
-BEISPIEL DEINES STILS:
-"${lifestyleConfig.example1}"
-
-"${lifestyleConfig.example2}"
-
-VERMEIDE:
-${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
-
-SCHREIBE EINEN BERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
-${contextInfo}
-
-STRUKTUR:
-1. Hook: Beginne mit einer starken Aussage oder Frage
-2. Problem: Was war die Herausforderung?
-3. Lösung: Wie hast du es gelöst?
-4. Lektion: Was hast du gelernt?
-5. Call-to-Action: Frage an die Community
-
-Bilder zeigen: ${imageDescriptions.join('; ')}
-Standort: ${location}${country ? `, ${country}` : ''}
-Kontext: ${text}${tags && tags.length > 0 ? `\nSchlagworte: ${tags.join(', ')}` : ''}
-
-SCHREIBSTIL:
-${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
-
-MAX 300 WÖRTER. Füge 5-8 relevante Hashtags hinzu (inklusive #${lifestyleConfig.keywords[0]}).
-Beginne direkt. Keine Einleitung wie "In diesem Bericht...".`
+    // Foster Huntington Prompt für Berichte - importiert aus src/config/prompts/articles.js
+    const prompt = generateArticlePrompt({
+      title,
+      description,
+      location,
+      text,
+      imageDescriptions,
+      lifestyleConfig,
+      category,
+      tags,
+      country
+    })
 
     const article = await generateWithModel(prompt, model, lifestyle)
     
@@ -645,7 +457,7 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: `Beschreibe diesen Ort für ${lifestyleConfig.vehicle}-Reisende. Was ist besonders? Was muss man wissen? Schreibe praktisch und ehrlich.` },
+            { type: 'text', text: getPlaceImageAnalysisPrompt(lifestyleConfig) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -658,33 +470,16 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
       return visionResponse.data.choices[0].message.content
     }))
 
-    // Foster Huntington Prompt für Plätze
-    const prompt = `Du bist Foster Huntington und beschreibst einen Ort für ${lifestyleConfig.community}. Dein Stil ist praktisch, direkt und ehrlich.
-
-BEISPIEL:
-"Dieser Platz hat nichts Spektakuläres. Aber er hat das, was zählt: Ruhe, Schatten und keinen Stress mit der Polizei. Genau das brauchst du manchmal."
-
-SCHREIBE EINE BESCHREIBUNG FÜR: "${title}${description ? ' - ' + description : ''}"
-
-ORT-DETAILS:
-Standort: ${location}
-GPS: ${gps_lat && gps_lon ? `${gps_lat}, ${gps_lon}` : 'Nicht verfügbar'}
-
-Bilder zeigen: ${imageDescriptions.join('; ')}
-
-STRUKTUR:
-1. Was ist das Besondere? (1 Satz)
-2. Praktische Infos (Parken, Wasser, Strom, Wifi)
-3. Warnings (was man wissen muss)
-4. Für wen geeignet?
-
-SCHREIBSTIL:
-- Kurz und direkt (max 150 Wörter)
-- Keine schwärmenden Beschreibungen
-- Fokus auf praktische Infos
-- Ehrlich über Vor- und Nachteile
-
-Füge 3-5 relevante Hashtags hinzu (inklusive #${lifestyleConfig.keywords[0]}).`
+    // Foster Huntington Prompt für Plätze - importiert aus src/config/prompts/place.js
+    const prompt = generatePlacePrompt({
+      title,
+      description,
+      location,
+      gps_lat,
+      gps_lon,
+      imageDescriptions,
+      lifestyleConfig
+    })
 
     const description_text = await generateWithModel(prompt, model, lifestyle)
     
@@ -734,7 +529,7 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: `Beschreibe dieses Bild für eine authentische ${lifestyleConfig.vehicle}-Notiz. Fokus auf: Moment, Stimmung, was gerade passiert. Schreibe wie Foster Huntington - direkt, kurz, ehrlich.` },
+            { type: 'text', text: getNoteImageAnalysisPrompt(lifestyleConfig) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -747,31 +542,15 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
       return visionResponse.data.choices[0].message.content
     }))
 
-    // Foster Huntington Prompt für Notizen
-    const prompt = `Du bist Foster Huntington und schreibst eine kurze Notiz für ${lifestyleConfig.community}. Dein Stil ist:
-${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
-
-BEISPIEL DEINES STILS:
-"${lifestyleConfig.example1}"
-
-"${lifestyleConfig.example2}"
-
-SCHREIBE EINE NOTIZ ÜBER: "${title}${description ? ' - ' + description : ''}"
-
-STRUKTUR:
-1. Moment: Was passiert gerade?
-2. Gefühl: Wie fühlst du dich dabei?
-3. Frage: Was möchtest du wissen oder teilen?
-
-Bilder zeigen: ${imageDescriptions.join('; ')}
-Standort: ${location}
-Kontext: ${text}
-
-SCHREIBSTIL:
-${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
-
-MAX 150 WÖRTER. Füge 3-5 relevante Hashtags hinzu (inklusive #${lifestyleConfig.keywords[0]}).
-Kurz, direkt, authentisch. Wie ein Instagram-Post, aber ehrlich.`
+    // Foster Huntington Prompt für Notizen - importiert aus src/config/prompts/notes.js
+    const prompt = generateNotePrompt({
+      title,
+      description,
+      location,
+      text,
+      imageDescriptions,
+      lifestyleConfig
+    })
 
     const note = await generateWithModel(prompt, model, lifestyle)
     

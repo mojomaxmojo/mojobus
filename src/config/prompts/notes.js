@@ -1,25 +1,16 @@
 /**
  * KI-Prompt für Notizen (NoteForm)
  * Tab: "Note" in /veroeffentlichen
- * 
+ *
  * Foster Huntington Stil für alle Lifestyles
  */
 
-import { LifestyleConfig, fosterHuntingtonStyle } from './lifestyles'
-
-export interface NotePromptParams {
-  title: string
-  description?: string
-  location?: string
-  text?: string
-  imageDescriptions: string[]
-  lifestyleConfig: LifestyleConfig
-}
+import { fosterHuntingtonStyle } from './lifestyles.js'
 
 /**
  * Generiert den Foster Huntington Prompt für Notizen
  */
-export const generateNotePrompt = (params: NotePromptParams): string => {
+export const generateNotePrompt = (params) => {
   const { title, description, location, text, imageDescriptions, lifestyleConfig } = params
 
   return `Du bist Foster Huntington und schreibst eine kurze Notiz für ${lifestyleConfig.community}. Dein Stil ist:
@@ -54,6 +45,6 @@ Kurz, direkt, authentisch. Wie ein Instagram-Post, aber ehrlich.`
 /**
  * Bild-Analyse-Prompt für Note-Tab
  */
-export const getNoteImageAnalysisPrompt = (lifestyleConfig: LifestyleConfig): string => {
+export const getNoteImageAnalysisPrompt = (lifestyleConfig) => {
   return `Beschreibe dieses Bild für eine authentische ${lifestyleConfig.vehicle}-Notiz. Fokus auf: Moment, Stimmung, was gerade passiert. Schreibe wie Foster Huntington - direkt, kurz, ehrlich.`
 }
