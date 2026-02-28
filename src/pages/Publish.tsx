@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Route } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Route, Sparkles } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -198,12 +198,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const navigate = useNavigate();
 
-  // KI-Artikelgenerierung
+  // KI-Artikelgenerierung mit Lifestyle-Unterstützung
   const generateArticleWithAI = async () => {
     if (files.length === 0) {
       toast({
@@ -220,9 +221,10 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       files.forEach(file => formData.append('images', file.file));
       formData.append('title', title);
       formData.append('description', description);
-      formData.append('text', customTags || 'Meer Abenteuer Strand');
+      formData.append('text', customTags || 'Abenteuer Reise Freiheit');
       formData.append('location', location);
       formData.append('model', selectedModel);
+      formData.append('lifestyle', lifestyle); // NEU: Lifestyle Parameter
 
       const response = await fetch('/api/generate-media-article', {
         method: 'POST',
@@ -237,7 +239,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         }
         toast({
           title: 'Erfolg!',
-          description: `KI-Artikel generiert mit ${data.model === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'} und in Felder eingefügt.`
+          description: `KI-Artikel generiert (${data.model === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}, Lifestyle: ${data.lifestyle}) und in Felder eingefügt.`
         });
       }
     } catch (error) {
@@ -1078,6 +1080,26 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                 </div>
               </div>
               
+              {/* Lifestyle Selector */}
+              <div className="space-y-2">
+                <Label>Lifestyle</Label>
+                <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wähle deinen Lifestyle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                    <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                    <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                    <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                    <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Wähle deinen Reisestil für passenden Foster Huntington KI-Text
+                </p>
+              </div>
+              
               <Button
                 type="button"
                 variant="outline"
@@ -1094,7 +1116,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                   <>
                     🤖 KI-Artikel generieren
                     <span className="ml-2 text-xs text-muted-foreground">
-                      ({selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'})
+                      ({selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'} • {lifestyle})
                     </span>
                   </>
                 )}
@@ -3257,6 +3279,8 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [publishedAt, setPublishedAt] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -3394,6 +3418,56 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // KI-Artikelgenerierung für Berichte
+  const generateArticleWithAI = async () => {
+    if (!imageFile) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte lade zuerst ein Bild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingArticle(true);
+    try {
+      const formData = new FormData();
+      formData.append('images', imageFile);
+      formData.append('title', title);
+      formData.append('description', summary);
+      formData.append('location', location);
+      formData.append('text', tags.join(' ') || 'Bericht');
+      formData.append('lifestyle', lifestyle);
+
+      const response = await fetch('/api/generate-article', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.article) {
+        setContent(data.article);
+        if (data.hashtags) {
+          const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
+          setTags([...tags, ...newTags]);
+        }
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Bericht generiert (Lifestyle: ${data.lifestyle}) und eingefügt.`
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingArticle(false);
     }
   };
 
@@ -3799,11 +3873,59 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
           />
         </div>
 
+        {/* KI-Artikelgenerierung */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Bericht generieren</h3>
+          </div>
+          
+          {/* Lifestyle Selector */}
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wähle deinen Lifestyle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Foster Huntington Stil - ehrlich, direkt, authentisch
+            </p>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={generateArticleWithAI}
+            disabled={isGeneratingArticle || !imageFile}
+            className="w-full"
+          >
+            {isGeneratingArticle ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere Bericht...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Bericht generieren ({lifestyle})
+              </>
+            )}
+          </Button>
+        </div>
+
          <div className="space-y-2">
            <Label htmlFor="article-content">Inhalt</Label>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            WYSIWYG Editor - Schreibe deinen Artikel mit Formatierung, Bildern und Links
-          </div>
+           <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+             WYSIWYG Editor - Schreibe deinen Artikel mit Formatierung, Bildern und Links
+           </div>
           <MilkdownEditor
             content={content}
             onChange={setContent}
@@ -4185,5 +4307,509 @@ export function Publish() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+// Place Form Component - Neu mit KI-Generierung
+function PlaceForm({ editEvent }: { editEvent?: any }) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [address, setAddress] = useState('');
+  const [image, setImage] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [latitude, setLatitude] = useState<number>(0);
+  const [longitude, setLongitude] = useState<number>(0);
+  const [tags, setTags] = useState<string[]>([]);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const { toast } = useToast();
+  const { mutate: publishEvent } = useNostrPublish();
+  const { mutateAsync: uploadFile } = useUploadFile();
+  const navigate = useNavigate();
+
+  // KI-Platz-Beschreibung generieren
+  const generatePlaceWithAI = async () => {
+    if (!imageFile) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte lade zuerst ein Bild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    try {
+      const formData = new FormData();
+      formData.append('images', imageFile);
+      formData.append('title', name);
+      formData.append('description', description);
+      formData.append('location', address);
+      if (latitude && longitude) {
+        formData.append('gps_lat', latitude.toString());
+        formData.append('gps_lon', longitude.toString());
+      }
+      formData.append('lifestyle', lifestyle);
+
+      const response = await fetch('/api/generate-place', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.description) {
+        setDescription(data.description);
+        if (data.hashtags) {
+          const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
+          setTags([...tags, ...newTags]);
+        }
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Platz-Beschreibung generiert (Lifestyle: ${data.lifestyle})`
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    const url = URL.createObjectURL(file);
+    setImage(url);
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
+
+    setIsGeneratingDescription(true);
+    try {
+      let imageUrl = image;
+      if (imageFile) {
+        const [urlTag] = await uploadFile(imageFile);
+        imageUrl = urlTag[1];
+      }
+
+      const finalTags = [
+        ...tags.map(tag => ['t', tag]),
+        ['type', 'place']
+      ];
+
+      if (latitude && longitude) {
+        finalTags.push(['gps_lat', latitude.toString()]);
+        finalTags.push(['gps_lon', longitude.toString()]);
+      }
+
+      publishEvent({
+        kind: 30001, // Place event
+        content: description,
+        tags: finalTags
+      });
+
+      toast({
+        title: 'Erfolg!',
+        description: 'Platz erfolgreich gespeichert.'
+      });
+
+      setName('');
+      setDescription('');
+      setAddress('');
+      setImage('');
+      setImageFile(null);
+      setTags([]);
+
+      setTimeout(() => navigate('/plaetze'), 1000);
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Speichern.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingDescription(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Map className="h-5 w-5" />
+          Plätze speichern
+        </CardTitle>
+        <CardDescription>
+          Teile besondere Orte mit der Community
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Image Upload */}
+        <div className="space-y-2">
+          <Label>Bild</Label>
+          <Input type="file" accept="image/*" onChange={handleImageUpload} />
+          {image && (
+            <img src={image} alt="Preview" className="w-full h-32 object-cover rounded-lg mt-2" />
+          )}
+        </div>
+
+        {/* Name */}
+        <div className="space-y-2">
+          <Label>Name des Ortes</Label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="z.B. Geheimer Strandplatz"
+          />
+        </div>
+
+        {/* Address */}
+        <div className="space-y-2">
+          <Label>Adresse / Standort</Label>
+          <Input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="z.B. Lagos, Portugal"
+          />
+        </div>
+
+        {/* GPS */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Breitengrad</Label>
+            <Input
+              type="number"
+              step="0.000001"
+              value={latitude}
+              onChange={(e) => setLatitude(parseFloat(e.target.value))}
+              placeholder="37.102820"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Längengrad</Label>
+            <Input
+              type="number"
+              step="0.000001"
+              value={longitude}
+              onChange={(e) => setLongitude(parseFloat(e.target.value))}
+              placeholder="-8.672850"
+            />
+          </div>
+        </div>
+
+        {/* KI-Generierung */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Beschreibung generieren</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={generatePlaceWithAI}
+            disabled={isGeneratingDescription || !imageFile}
+            className="w-full"
+          >
+            {isGeneratingDescription ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Beschreibung ({lifestyle})
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <Label>Beschreibung</Label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Was ist besonders an diesem Ort?"
+            rows={4}
+          />
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-2">
+          <Label>Tags</Label>
+          <Input
+            value={tags.join(' ')}
+            onChange={(e) => setTags(e.target.value.split(' ').filter(Boolean))}
+            placeholder="strand wildcampen portugal"
+          />
+        </div>
+
+        <Button onClick={handleSubmit} className="w-full" disabled={!name.trim()}>
+          <Map className="h-4 w-4 mr-2" />
+          Platz speichern
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Note Form Component - Neu mit KI-Generierung
+function NoteForm({ editEvent }: { editEvent?: any }) {
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [image, setImage] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [location, setLocation] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [isGeneratingNote, setIsGeneratingNote] = useState(false);
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const { toast } = useToast();
+  const { mutate: publishEvent } = useNostrPublish();
+  const { mutateAsync: uploadFile } = useUploadFile();
+
+  // KI-Notiz generieren
+  const generateNoteWithAI = async () => {
+    if (!imageFile) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte lade zuerst ein Bild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingNote(true);
+    try {
+      const formData = new FormData();
+      formData.append('images', imageFile);
+      formData.append('title', title);
+      formData.append('location', location);
+      formData.append('text', tags.join(' ') || '');
+      formData.append('lifestyle', lifestyle);
+
+      const response = await fetch('/api/generate-note', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.note) {
+        setContent(data.note);
+        if (data.hashtags) {
+          const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
+          setTags([...tags, ...newTags]);
+        }
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Notiz generiert (Lifestyle: ${data.lifestyle})`
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingNote(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    const url = URL.createObjectURL(file);
+    setImage(url);
+  };
+
+  const handleSubmit = async () => {
+    if (!content.trim()) return;
+
+    setIsGeneratingNote(true);
+    try {
+      let imageUrl = image;
+      if (imageFile) {
+        const [urlTag] = await uploadFile(imageFile);
+        imageUrl = urlTag[1];
+      }
+
+      const finalTags = [
+        ...tags.map(tag => ['t', tag]),
+        ['type', 'note']
+      ];
+
+      if (imageUrl) {
+        finalTags.push(['image', imageUrl]);
+      }
+
+      publishEvent({
+        kind: 1, // Note event
+        content: content,
+        tags: finalTags
+      });
+
+      toast({
+        title: 'Erfolg!',
+        description: 'Notiz erfolgreich veröffentlicht.'
+      });
+
+      setTitle('');
+      setContent('');
+      setImage('');
+      setImageFile(null);
+      setLocation('');
+      setTags([]);
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Veröffentlichen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingNote(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          Kurze Notiz
+        </CardTitle>
+        <CardDescription>
+          Teile einen Moment oder Gedanken mit der Community
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Image Upload */}
+        <div className="space-y-2">
+          <Label>Bild (optional)</Label>
+          <Input type="file" accept="image/*" onChange={handleImageUpload} />
+          {image && (
+            <img src={image} alt="Preview" className="w-full h-32 object-cover rounded-lg mt-2" />
+          )}
+        </div>
+
+        {/* Title */}
+        <div className="space-y-2">
+          <Label>Titel (optional)</Label>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Kurzer Titel"
+          />
+        </div>
+
+        {/* Location */}
+        <div className="space-y-2">
+          <Label>Standort (optional)</Label>
+          <Input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="z.B. Sagres, Portugal"
+          />
+        </div>
+
+        {/* KI-Generierung */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Notiz generieren</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={generateNoteWithAI}
+            disabled={isGeneratingNote || !imageFile}
+            className="w-full"
+          >
+            {isGeneratingNote ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Notiz ({lifestyle})
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-2">
+          <Label>Inhalt</Label>
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Was möchtest du teilen?"
+            rows={4}
+          />
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-2">
+          <Label>Tags</Label>
+          <Input
+            value={tags.join(' ')}
+            onChange={(e) => setTags(e.target.value.split(' ').filter(Boolean))}
+            placeholder="vanlife reisen"
+          />
+        </div>
+
+        <Button onClick={handleSubmit} className="w-full" disabled={!content.trim()}>
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Notiz veröffentlichen
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

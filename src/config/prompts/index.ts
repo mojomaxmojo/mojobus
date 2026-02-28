@@ -9,6 +9,7 @@ export * from './lifestyles'
 export * from './media'
 export * from './trips'
 export * from './articles'
+export * from './places'
 export * from './notes'
 
 /**
@@ -29,6 +30,11 @@ export const promptConfigs = {
     name: 'Berichte',
     description: 'Für ArticleForm - Ausführliche Berichte',
     file: 'articles'
+  },
+  places: {
+    name: 'Plätze',
+    description: 'Für PlaceForm - Ortsbeschreibungen',
+    file: 'places'
   },
   notes: {
     name: 'Note',
