@@ -1510,10 +1510,62 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [publishProgress, setPublishProgress] = useState({ stage: '', status: '' });
   const [editingGpsImage, setEditingGpsImage] = useState<number | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
+  const [isGeneratingNote, setIsGeneratingNote] = useState(false);
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
   const navigate = useNavigate();
+
+  // KI-Notiz generieren (Foster Huntington Stil)
+  const generateNoteWithAI = async () => {
+    if (imageFiles.length === 0) {
+      toast({
+        title: 'Bild erforderlich',
+        description: 'Bitte lade zuerst mindestens ein Bild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingNote(true);
+    try {
+      const formData = new FormData();
+      imageFiles.forEach((file) => {
+        formData.append('images', file);
+      });
+      formData.append('location', location);
+      formData.append('text', tags.join(' ') || '');
+      formData.append('lifestyle', lifestyle);
+
+      const response = await fetch('/api/generate-note', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.note) {
+        setContent(data.note);
+        if (data.hashtags) {
+          const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
+          setTags([...tags, ...newTags]);
+        }
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Notiz generiert (${data.lifestyle})`
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingNote(false);
+    }
+  };
 
   // Load edit data
   useEffect(() => {
@@ -1962,6 +2014,58 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
           <p className="text-sm text-muted-foreground">
             {content.length}/500 Zeichen
           </p>
+        </div>
+
+        {/* KI-Notiz generieren (Optional) */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Notiz generieren (Optional)</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wähle deinen Lifestyle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Foster Huntington Stil - ehrlich, direkt, authentisch
+            </p>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={generateNoteWithAI}
+            disabled={isGeneratingNote || imageFiles.length === 0}
+            className="w-full"
+          >
+            {isGeneratingNote ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere Notiz...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Notiz generieren ({lifestyle})
+              </>
+            )}
+          </Button>
+          {imageFiles.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              💡 Lade zuerst Bilder hoch, um die KI-Generierung zu nutzen.
+            </p>
+          )}
         </div>
 
         {/* Image Upload Area */}
