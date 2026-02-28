@@ -90,6 +90,16 @@ const getLifestyleConfig = (lifestyle = 'vanlife') => {
   return configs[lifestyle] || configs.vanlife
 }
 
+// Hilfsfunktion für sicheres JSON-Parsing
+const safelyParseJSON = (str) => {
+  if (!str) return null
+  try {
+    return JSON.parse(str)
+  } catch (e) {
+    return null
+  }
+}
+
 // Foster Huntington Basis-Stil (konstant für alle Lifestyles)
 const fosterHuntingtonStyle = {
   principles: [
@@ -123,8 +133,20 @@ const fosterHuntingtonStyle = {
 /**
  * Generiert Foster Huntington Prompt für Medien-Artikel
  * Tab: "Medien" in /veroeffentlichen
+ * Erweitert mit: mainCategory, subCategories, detailedTags, additionalImageUrls, manualTags, country
  */
-const generateMediaPrompt = (title, description, location, text, imageDescriptions, lifestyleConfig) => {
+const generateMediaPrompt = (title, description, location, text, imageDescriptions, lifestyleConfig, context = {}) => {
+  const { mainCategory, subCategories, detailedTags, additionalImageUrls, manualTags, country } = context
+
+  // Baue Kontext-Informationen zusammen
+  let contextInfo = ''
+  if (mainCategory) contextInfo += `\nHauptkategorie: ${mainCategory}`
+  if (subCategories && subCategories.length > 0) contextInfo += `\nThemen: ${subCategories.join(', ')}`
+  if (detailedTags && detailedTags.length > 0) contextInfo += `\nSchlagworte: ${detailedTags.join(', ')}`
+  if (manualTags && manualTags.length > 0) contextInfo += `\nZusätzliche Tags: ${manualTags.join(', ')}`
+  if (country) contextInfo += `\nLand: ${country}`
+  if (additionalImageUrls) contextInfo += `\nWeitere Bild-URLs: ${additionalImageUrls}`
+
   return `Du bist Foster Huntington und schreibst für deine ${lifestyleConfig.community}. Dein Stil ist:
 ${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
 
@@ -140,6 +162,7 @@ ${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
 - "Als ${lifestyleConfig.vehicle}-Reisender musst du unbedingt..."
 
 SCHREIBE EINEN ARTIKEL ÜBER: "${title}${description ? ' - ' + description : ''}"
+${contextInfo}
 
 STRUKTUR:
 1. Öffne mit einem konkreten, persönlichen Moment
@@ -149,8 +172,8 @@ STRUKTUR:
 5. Schließe ehrlich (mit den Schwierigkeiten)
 
 Bilder zeigen: ${imageDescriptions.join('; ')}
-Standort: ${location || 'Unbekannt'}
-Stichworte: ${text || 'Abenteuer Reise Freiheit'}
+Standort: ${location || 'Unbekannt'}${country ? `, ${country}` : ''}
+Stichworte: ${text || 'Abenteuer Reise Freiheit'}${detailedTags && detailedTags.length > 0 ? `, ${detailedTags.join(', ')}` : ''}${manualTags && manualTags.length > 0 ? `, ${manualTags.join(', ')}` : ''}
 
 SCHREIBSTIL:
 ${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
@@ -277,11 +300,20 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife' // Lifestyle-Typ
   const images = req.files
 
+  // Zusätzliche Kontext-Felder für bessere KI-Generierung
+  const mainCategory = sanitizeInput(req.body.mainCategory) || ''
+  const subCategories = safelyParseJSON(req.body.subCategories) || []
+  const detailedTags = safelyParseJSON(req.body.detailedTags) || []
+  const additionalImageUrls = sanitizeInput(req.body.additionalImageUrls) || ''
+  const manualTags = safelyParseJSON(req.body.manualTags) || []
+  const country = sanitizeInput(req.body.country) || ''
+
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
   console.log(`[KI] Generiere Media-Artikel: "${title}", Bilder: ${images.length}, Standort: ${location}, Modell: ${model}, Lifestyle: ${lifestyle}`)
+  console.log(`[KI] Kontext: Kategorie=${mainCategory}, SubTags=${subCategories.length}, DetailTags=${detailedTags.length}, ManualTags=${manualTags.length}`)
 
     try {
       // ===== BILD ANALYSE FÜR MEDIEN ARTIKEL =====
@@ -313,7 +345,16 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
 
     // ===== FOSTER HUNTINGTON STIL PROMPT =====
     // Generiert mit: generateMediaPrompt() - siehe oben
-    const prompt = generateMediaPrompt(title, description, location, text, imageDescriptions, lifestyleConfig)
+    // Kontext-Objekt mit allen zusätzlichen Informationen
+    const context = {
+      mainCategory,
+      subCategories,
+      detailedTags,
+      additionalImageUrls,
+      manualTags,
+      country
+    }
+    const prompt = generateMediaPrompt(title, description, location, text, imageDescriptions, lifestyleConfig, context)
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)

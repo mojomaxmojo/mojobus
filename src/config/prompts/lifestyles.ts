@@ -55,6 +55,15 @@ export const lifestyles: Record<LifestyleType, LifestyleConfig> = {
     example3: 'Wohnmobil bedeutet nicht immer Luxus. Es bedeutet Freiheit mit praktischen Herausforderungen. Und das ist genau richtig so.'
   },
 
+    buslife: {
+    vehicle: 'Bus',
+    community: 'Buslife-Community',
+    keywords: ['buslife', 'bus', 'skoolie'],
+    example1: 'Du fährst deinen umgebauten Schulbus auf einen Waldweg. 40 Fuß Stahl und Holz - dein Zuhause. Buslife ist anders, und genau das liebst du.',
+    example2: 'Mit dem Bus in der Stadt parken? Vergiss es. Aber das ist okay. Die besten Spots sind sowieso da, wo niemand hinkommt.',
+    example3: 'Ein Bus ist nicht nur ein Fahrzeug. Er ist ein Statement. Gegen Normalität, für Freiheit. Auch wenn die Reparaturen manchmal nerven.'
+  },
+
   'perpetual-travelers': {
     vehicle: 'Reise',
     community: 'Perpetual Travelers Community',

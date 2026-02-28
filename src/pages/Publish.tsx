@@ -226,6 +226,14 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       formData.append('model', selectedModel);
       formData.append('lifestyle', lifestyle);
 
+      // Zusätzliche Kontext-Felder für bessere KI-Generierung
+      formData.append('mainCategory', mainCategory || '');
+      formData.append('subCategories', JSON.stringify(selectedSubTags));
+      formData.append('detailedTags', JSON.stringify(detailedTags));
+      formData.append('additionalImageUrls', additionalImagesUrlInput || '');
+      formData.append('manualTags', JSON.stringify(manualTags));
+      formData.append('country', selectedCountry || '');
+
       const response = await fetch('/api/generate-media-article', {
         method: 'POST',
         body: formData
