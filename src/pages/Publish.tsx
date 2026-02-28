@@ -198,12 +198,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const navigate = useNavigate();
 
-  // KI-Artikelgenerierung
+  // KI-Artikelgenerierung (Foster Huntington Stil)
   const generateArticleWithAI = async () => {
     if (files.length === 0) {
       toast({
@@ -223,6 +224,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       formData.append('text', customTags || 'Meer Abenteuer Strand');
       formData.append('location', location);
       formData.append('model', selectedModel);
+      formData.append('lifestyle', lifestyle);
 
       const response = await fetch('/api/generate-media-article', {
         method: 'POST',
@@ -1026,942 +1028,130 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             </div>
           </div>
 
-           <div className="space-y-2">
-             <Label htmlFor="description">Beschreibung</Label>
-             <Textarea
-               id="description"
-               value={description}
-               onChange={(e) => setDescription(e.target.value)}
-               placeholder="Beschreibe deine Bilder-Erlebnisse..."
-               rows={4}
-              />
-              
-              {/* KI-Modell Auswahl */}
-              <div className="mt-4 space-y-3">
-                <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div 
-                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'llama4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
-                    onClick={() => setSelectedModel('llama4')}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">🚀</span>
-                      <div>
-                        <p className="font-medium text-sm">Llama 4 Scout</p>
-                        <p className="text-xs text-muted-foreground">Schnell & Günstig</p>
-                      </div>
-                    </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      <p>✅ 1-2 Sekunden</p>
-                      <p>💰 ~$0.005 pro Artikel</p>
-                      <p>⭐ Gute Qualität</p>
-                    </div>
-                  </div>
-                  
-                  <div
-                    className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'claude' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
-                    onClick={() => setSelectedModel('claude')}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">🤖</span>
-                      <div>
-                        <p className="font-medium text-sm">Claude Sonnet 4.6</p>
-                        <p className="text-xs text-muted-foreground">Neueste Premium Qualität</p>
-                      </div>
-                    </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      <p>⏱️ 3-6 Sekunden</p>
-                      <p>💰 ~$0.015 pro Artikel</p>
-                      <p>⭐⭐⭐⭐ Neueste menschliche Texte</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Button
-                type="button"
-                variant="outline"
-                onClick={generateArticleWithAI}
-                disabled={isGeneratingArticle || files.length === 0}
-                className="mt-2"
-              >
-                {isGeneratingArticle ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generiere mit {selectedModel === 'claude' ? 'Claude 4.6' : 'Llama 4'}...
-                  </>
-                ) : (
-                  <>
-                    🤖 KI-Artikel generieren
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      ({selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'})
-                    </span>
-                  </>
-                )}
-              </Button>
-            </div>
-
-          {/* Categories */}
-          <div className="space-y-4">
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Hauptkategorie</Label>
-                <Select value={mainCategory} onValueChange={handleMainCategoryChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Hauptkategorie waehlen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mainCategories.map(cat => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        <span className="flex items-center gap-2">
-                          <span>{cat.icon}</span>
-                          {cat.label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Themen</Label>
-                  {selectedSubTags.length > 0 && (
-                    <span className="text-sm text-muted-foreground">
-                      {selectedSubTags.length} ausgewählt
-                    </span>
-                  )}
-                </div>
-
-                {mainCategory ? (
-                  <>
-                    <div className="flex flex-wrap gap-2">
-                      {subCategories[mainCategory as keyof typeof subCategories]?.map(tag => (
-                        <Badge
-                          key={tag}
-                          variant={selectedSubTags.includes(tag) ? "default" : "outline"}
-                          className={`cursor-pointer transition-all hover:scale-105 ${
-                            selectedSubTags.includes(tag)
-                              ? "bg-ocean-600 hover:bg-ocean-700 text-white"
-                              : "hover:bg-ocean-100 hover:text-ocean-700 hover:border-ocean-300"
-                          }`}
-                          onClick={() => handleSubTagToggle(tag)}
-                        >
-                          {selectedSubTags.includes(tag) && (
-                            <span className="mr-1">✓</span>
-                          )}
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    {selectedSubTags.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Ausgewählte Themen:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {selectedSubTags.map(tag => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="text-xs bg-ocean-100 text-ocean-700 hover:bg-ocean-200"
-                            >
-                              {tag}
-                              <button
-                                onClick={() => handleSubTagToggle(tag)}
-                                className="ml-1 hover:text-ocean-900"
-                              >
-                                ×
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Special handling for Nature category - show detailed tags */}
-                    {mainCategory === 'natur' && selectedSubTags.length > 0 && (
-                      <div className="mt-4 space-y-3">
-                        <div className="text-sm font-medium text-muted-foreground">
-                          Detaillierte Tags für {selectedSubTags.join(', ')}:
-                        </div>
-                        {selectedSubTags.map(subCategory => {
-                          const categoryConfig = MAIN_MENU.nature[subCategory as keyof typeof MAIN_MENU.nature];
-                          if (!categoryConfig?.tags) return null;
-
-                          return (
-                            <div key={subCategory} className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">{categoryConfig.emoji}</span>
-                                <span className="font-medium">{categoryConfig.name}</span>
-                              </div>
-
-                              <div className="space-y-2">
-                                <div>
-                                  <p className="text-xs font-medium text-muted-foreground mb-1">Primär-Tags:</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {categoryConfig.tags.primary.map(tag => (
-                                      <Badge
-                                        key={`primary-${tag}`}
-                                        variant={detailedTags.includes(tag) ? "default" : "outline"}
-                                        className={`text-xs cursor-pointer transition-all hover:scale-105 ${
-                                          detailedTags.includes(tag)
-                                            ? "bg-green-600 hover:bg-green-700 text-white"
-                                            : "hover:bg-green-100 hover:text-green-700 hover:border-green-300"
-                                        }`}
-                                        onClick={() => handleDetailedTagToggle(tag)}
-                                      >
-                                        {detailedTags.includes(tag) && <span className="mr-1">✓</span>}
-                                        #{tag}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <p className="text-xs font-medium text-muted-foreground mb-1">Sekundär-Tags:</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {categoryConfig.tags.secondary.map(tag => (
-                                      <Badge
-                                        key={`secondary-${tag}`}
-                                        variant={detailedTags.includes(tag) ? "default" : "outline"}
-                                        className={`text-xs cursor-pointer transition-all hover:scale-105 ${
-                                          detailedTags.includes(tag)
-                                            ? "bg-blue-600 hover:bg-blue-700 text-white"
-                                            : "hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300"
-                                        }`}
-                                        onClick={() => handleDetailedTagToggle(tag)}
-                                      >
-                                        {detailedTags.includes(tag) && <span className="mr-1">✓</span>}
-                                        #{tag}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Show selected detailed tags */}
-                    {detailedTags.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-sm font-medium text-muted-foreground mb-1">Ausgewählte Detail-Tags:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {detailedTags.map(tag => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                              #{tag}
-                              <button
-                                onClick={() => handleDetailedTagToggle(tag)}
-                                className="ml-1 hover:text-gray-900"
-                              >
-                                ×
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-sm text-muted-foreground p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed">
-                    Bitte wähle zuerst eine Hauptkategorie
-                  </div>
-                )}
-              </div>
+          {/* KI-Artikel generieren (Optional) */}
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-5 w-5 text-ocean-500" />
+              <h3 className="font-semibold">KI-Artikel generieren (Optional)</h3>
             </div>
 
             <div className="space-y-2">
-              <Label>Eigene Tags</Label>
-              <Input
-                placeholder="sunset-watching vanlife portugal (mit Leerzeichen trennen)"
-                value={customTags}
-                onChange={(e) => setCustomTags(e.target.value)}
-              />
-              {customTags && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Vorschau:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {customTags.split(' ').filter(Boolean).map((tag, index) => (
-                      <Badge
-                        key={index}
-                        variant="outline"
-                        className="text-xs bg-purple-100 text-purple-700 border-purple-300"
-                      >
-                        #{tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <Label>Lifestyle</Label>
+              <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wähle deinen Lifestyle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                  <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                  <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                  <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                  <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Foster Huntington Stil - ehrlich, direkt, authentisch
+              </p>
             </div>
+
+            <div className="space-y-2">
+              <Label>KI-Modell</Label>
+              <Select value={selectedModel} onValueChange={(value: 'llama4' | 'gpt4') => setSelectedModel(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="llama4">Llama 4 (Standard)</SelectItem>
+                  <SelectItem value="gpt4">GPT-4 (Premium)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={generateArticleWithAI}
+              disabled={isGeneratingArticle || files.length === 0}
+              className="w-full"
+            >
+              {isGeneratingArticle ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generiere Artikel...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  KI-Artikel generieren ({lifestyle})
+                </>
+              )}
+            </Button>
+            {files.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                💡 Lade zuerst Bilder hoch, um die KI-Generierung zu nutzen.
+              </p>
+            )}
           </div>
 
-          {/* Tag Summary */}
-          {(mainCategory || selectedSubTags.length > 0 || detailedTags.length > 0 || customTags) && (
-            <div className="mt-6 p-4 bg-ocean-50 dark:bg-ocean-950 rounded-lg border border-ocean-200 dark:border-ocean-800">
-              <h4 className="font-medium text-ocean-900 dark:text-ocean-100 mb-3">
-                📋 Zusammenfassung aller Tags
-              </h4>
-              <div className="space-y-2">
-                {mainCategory && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground">Hauptkategorie:</span>
-                    <Badge className="ml-2 bg-ocean-600 text-white">
-                      {mainCategories.find(cat => cat.value === mainCategory)?.icon} {mainCategory}
-                    </Badge>
-                  </div>
-                )}
-                {selectedSubTags.length > 0 && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground">Themen:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {selectedSubTags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="bg-ocean-100 text-ocean-700">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {detailedTags.length > 0 && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground">Detail-Tags:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {detailedTags.map(tag => (
-                        <Badge key={tag} variant="outline" className="text-xs border-green-300 text-green-700">
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {customTags && (
-                  <div>
-                    <span className="text-xs font-medium text-muted-foreground">Eigene Tags:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {customTags.split(' ').filter(Boolean).map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs border-purple-300 text-purple-700">
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Upload Progress */}
-          {isUploading && (
-            <Card className={`border-2 ${
-              uploadProgress.stage === 'error'
-                ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950'
-                : uploadProgress.stage === 'success'
-                  ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950'
-                  : 'border-ocean-200 dark:border-ocean-800 bg-ocean-50 dark:bg-ocean-950'
-            }`}>
-              <CardContent className="pt-6">
-                <div className="space-y-6">
-                  {/* Stage Indicator */}
-                  <div className="flex items-center gap-4">
-                    <div className={`flex items-center gap-2 ${
-                      uploadProgress.stage === 'upload' ? 'text-ocean-600 dark:text-ocean-400' :
-                      uploadProgress.stage === 'publish' ? 'text-ocean-600 dark:text-ocean-400' :
-                      uploadProgress.stage === 'success' ? 'text-green-600 dark:text-green-400' :
-                      uploadProgress.stage === 'error' ? 'text-red-600 dark:text-red-400' :
-                      'text-gray-400'
-                    }`}>
-                      {uploadProgress.stage === 'upload' && <Loader2 className="h-5 w-5 animate-spin" />}
-                      {uploadProgress.stage === 'publish' && <UploadCloud className="h-5 w-5" />}
-                      {uploadProgress.stage === 'success' && <CheckCircle className="h-5 w-5" />}
-                      {uploadProgress.stage === 'error' && <span className="text-2xl">❌</span>}
-                      {!uploadProgress.stage && <span className="text-2xl">⏳</span>}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="font-medium text-sm">
-                        {uploadProgress.status}
-                      </p>
-                      {/* Stage badges */}
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className={`text-xs ${
-                          uploadProgress.stage === 'upload'
-                            ? 'bg-ocean-100 border-ocean-300 text-ocean-700'
-                            : uploadProgress.stage === 'publish' || uploadProgress.stage === 'success'
-                              ? 'bg-green-100 border-green-300 text-green-700'
-                              : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          🌸 Blossom Upload
-                        </Badge>
-                        <Badge variant="outline" className={`text-xs ${
-                          uploadProgress.stage === 'publish'
-                            ? 'bg-ocean-100 border-ocean-300 text-ocean-700'
-                            : uploadProgress.stage === 'success'
-                              ? 'bg-green-100 border-green-300 text-green-700'
-                              : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          📡 Nostr Post
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* File Upload Progress */}
-                  {uploadProgress.stage === 'upload' && (
-                    <>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-ocean-600 dark:text-ocean-400">
-                          {uploadProgress.current} von {uploadProgress.total} Dateien
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
-                        </Badge>
-                      </div>
-                      <Progress
-                        value={(uploadProgress.current / uploadProgress.total) * 100}
-                        className="h-2"
-                      />
-                    </>
-                  )}
-
-                  {/* Publishing Progress */}
-                  {uploadProgress.stage === 'publish' && (
-                    <div className="flex items-center gap-3 text-sm text-ocean-600 dark:text-ocean-400">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <p>Event wird zu {uploadProgress.total} Nostr Relays gesendet...</p>
-                    </div>
-                  )}
-
-                  {/* Success State */}
-                  {uploadProgress.stage === 'success' && (
-                    <div className="flex items-center gap-3 text-sm text-green-600 dark:text-green-400">
-                      <CheckCircle className="h-4 w-4" />
-                      <p>Bilder erfolgreich zu Blossom hochgeladen und zu Nostr veroeffentlicht!</p>
-                    </div>
-                  )}
-
-                  {/* Error State */}
-                  {uploadProgress.stage === 'error' && (
-                    <div className="flex items-start gap-3 text-sm text-red-600 dark:text-red-400">
-                      <span className="text-xl">⚠️</span>
-                      <div className="space-y-1">
-                        <p>{uploadProgress.status}</p>
-                        <p className="text-xs">Bitte versuche es erneut.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
+          <div className="space-y-2">
+            <Label htmlFor="description">Beschreibung</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Was möchtest du über diese Bilder erzählen?"
+              rows={4}
+            />
+          </div>
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Notiz generieren (Optional)</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wähle deinen Lifestyle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Foster Huntington Stil - ehrlich, direkt, authentisch
+            </p>
+          </div>
+          
           <Button
-            onClick={handleSubmit}
+            type="button"
+            variant="outline"
+            onClick={generateNoteWithAI}
+            disabled={isGeneratingNote || imageFiles.length === 0}
             className="w-full"
-            disabled={files.length === 0 || isUploading}
           >
-            {isUploading ? (
+            {isGeneratingNote ? (
               <>
-                {uploadProgress.stage === 'upload' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {uploadProgress.stage === 'publish' && <UploadCloud className="h-4 w-4 mr-2" />}
-                {uploadProgress.stage === 'success' && <CheckCircle className="h-4 w-4 mr-2" />}
-                {uploadProgress.stage === 'error' && <span className="mr-2">⚠️</span>}
-                {!uploadProgress.stage && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {uploadProgress.stage === 'upload' && 'Upload zu Blossom...'}
-                {uploadProgress.stage === 'publish' && 'Post zu Nostr...'}
-                {uploadProgress.stage === 'success' && '✅ Erfolgreich!'}
-                {uploadProgress.stage === 'error' && 'Fehler aufgetreten'}
-                {!uploadProgress.stage && 'Wird verarbeitet...'}
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere Notiz...
               </>
             ) : (
               <>
-                <UploadCloud className="h-4 w-4 mr-2" />
-                Bilder veroeffentlichen
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Notiz generieren ({lifestyle})
               </>
             )}
           </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// Note Form Component
-function NoteForm({ editEvent }: { editEvent?: any }) {
-  const [content, setContent] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [location, setLocation] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [isPublic, setIsPublic] = useState(true);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [imageGpsData, setImageGpsData] = useState<Record<number, GpsData>>({});
-  const [imageGpsStatuses, setImageGpsStatuses] = useState<Record<number, GpsStatus>>({});
-  const [isUploadingImages, setIsUploadingImages] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, status: '' });
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [publishProgress, setPublishProgress] = useState({ stage: '', status: '' });
-  const [editingGpsImage, setEditingGpsImage] = useState<number | null>(null);
-  const [showMapPicker, setShowMapPicker] = useState(false);
-  const { toast } = useToast();
-  const { mutate: publishEvent } = useNostrPublish();
-  const { mutateAsync: uploadFile } = useUploadFile();
-  const navigate = useNavigate();
-
-  // Load edit data
-  useEffect(() => {
-    if (editEvent) {
-      setContent(editEvent.content || '');
-      const eventTags = editEvent.tags?.filter((tag: any) => tag[0] === 't')?.map((tag: any) => tag[1]) || [];
-      setTags(eventTags);
-
-      // Extract country from tags
-      const countryTags = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
-      const foundCountry = eventTags.find(tag => countryTags.includes(tag));
-      if (foundCountry) {
-        setSelectedCountry(foundCountry);
-      }
-
-      // Extract images from edit content
-      const imageTags = editEvent.tags?.filter((tag: any) => tag[0] === 'image')?.map((tag: any) => tag[1]) || [];
-      if (imageTags.length > 0) {
-        setImageUrls(imageTags);
-
-        // Load GPS data from tags for each image
-        // GPS tags are stored sequentially with image tags
-        const allGpsLatTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_lat')?.map((tag: any) => tag[1]) || [];
-        const allGpsLonTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_lon')?.map((tag: any) => tag[1]) || [];
-        const allGpsAltTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_alt')?.map((tag: any) => tag[1]) || [];
-        const allGpsPrecisionTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_precision')?.map((tag: any) => tag[1]) || [];
-        const allGpsSourceTags = editEvent.tags?.filter((tag: any) => tag[0] === 'gps_source')?.map((tag: any) => tag[1]) || [];
-
-        // Assign GPS data to images by index
-        allGpsLatTags.forEach((lat, index) => {
-          if (index < imageTags.length) {
-            setImageGpsData(prev => ({
-              ...prev,
-              [index]: {
-                latitude: parseFloat(lat),
-                longitude: parseFloat(allGpsLonTags[index]),
-                altitude: allGpsAltTags[index] ? parseFloat(allGpsAltTags[index]) : undefined,
-                precision: allGpsPrecisionTags[index] || 'medium'
-              }
-            }));
-            setImageGpsStatuses(prev => ({
-              ...prev,
-              [index]: (allGpsSourceTags[index] as GpsStatus) || 'detected'
-            }));
-          }
-        });
-        console.log('[Note Edit] GPS data loaded from tags for', imageTags.length, 'images');
-      }
-    }
-  }, [editEvent]);
-
-  const handleTagToggle = (tag: string) => {
-    setTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
-
-
-
-  const handleImageSelect = async (files: FileList | null) => {
-    if (!files) return;
-
-    // Filter for image files only
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    const newImageFiles: File[] = [];
-    const newImageUrls: string[] = [];
-
-    // Process each image file for EXIF correction
-    for (const file of imageFiles) {
-      let correctedPreviewUrl: string | undefined;
-      let exifWidth: number | undefined;
-      let exifHeight: number | undefined;
-      let exifOrientation: number | undefined;
-
-      try {
-        // EXIF-Daten lesen (wie in TripPublishForm.tsx)
-        // Orientation separat lesen (funktioniert auch wenn parse fehlschlägt)
-        try {
-          exifOrientation = await exifr.orientation(file);
-          console.log(`[Note EXIF] ${file.name}: Orientation (via exifr.orientation) = ${exifOrientation || 'not found'}`);
-        } catch (orientErr) {
-          console.warn(`[Note EXIF] ${file.name}: Could not read orientation:`, orientErr);
-        }
-
-        // Bildabmessungen lesen
-        try {
-          const dimExif = await exifr.parse(file, { exif: true, pickTags: ['ImageWidth', 'ImageHeight', 'ExifImageWidth', 'ExifImageHeight'] });
-          exifWidth = dimExif?.ImageWidth || dimExif?.ExifImageWidth;
-          exifHeight = dimExif?.ImageHeight || dimExif?.ExifImageHeight;
-          if (exifWidth && exifHeight) {
-            console.log(`[Note EXIF] ${file.name}: EXIF dimensions ${exifWidth}x${exifHeight}`);
-          }
-        } catch (dimErr) {
-          console.warn(`[Note EXIF] ${file.name}: Could not read dimensions:`, dimErr);
-        }
-
-        // Korrigierte Preview erstellen (immer, wie in TripPublishForm.tsx)
-        correctedPreviewUrl = await createCorrectedPreview(file, exifWidth, exifHeight, exifOrientation);
-      } catch (exifError) {
-        console.warn(`[Note EXIF] Failed to read EXIF from ${file.name}:`, exifError);
-        // Fallback: Original file als Preview
-        correctedPreviewUrl = URL.createObjectURL(file);
-      }
-
-      newImageFiles.push(file);
-      if (correctedPreviewUrl) {
-        newImageUrls.push(correctedPreviewUrl);
-      }
-    }
-
-    setImageFiles(prev => [...prev, ...newImageFiles]);
-    setImageUrls(prev => [...prev, ...newImageUrls]);
-
-    // Extract GPS from each image immediately upon selection
-    const startIndex = imageUrls.length;
-    for (let i = 0; i < newImageFiles.length; i++) {
-      const file = newImageFiles[i];
-      const index = startIndex + i;
-
-      try {
-        const gpsData = await extractGpsFromImage(file);
-        if (gpsData) {
-          setImageGpsData(prev => ({ ...prev, [index]: gpsData }));
-          setImageGpsStatuses(prev => ({ ...prev, [index]: 'detected' }));
-          console.log(`[Note GPS] Extracted from ${file.name} (image ${index}):`, gpsData);
-        } else {
-          setImageGpsStatuses(prev => ({ ...prev, [index]: 'not_found' }));
-        }
-      } catch (error) {
-        console.error(`[Note GPS] Failed to extract from ${file.name}:`, error);
-        setImageGpsStatuses(prev => ({ ...prev, [index]: 'error' }));
-      }
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    handleImageSelect(e.dataTransfer.files);
-  };
-
-  const removeImageFile = (index: number) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const uploadImages = async () => {
-    if (imageFiles.length === 0) return;
-
-    setIsUploadingImages(true);
-    setUploadProgress({ current: 0, total: imageFiles.length, status: 'Upload läuft...' });
-
-    try {
-      const uploadedUrls: string[] = [];
-
-      for (let i = 0; i < imageFiles.length; i++) {
-        const file = imageFiles[i];
-        const [urlTag] = await uploadFile(file);
-        uploadedUrls.push(urlTag[1]); // URL is in second position
-
-        // Update progress
-        setUploadProgress({ current: i + 1, total: imageFiles.length, status: 'Upload läuft...' });
-      }
-
-      // Ersetze die korrigierten Previews durch die hochgeladenen URLs
-      setImageUrls(prev => {
-        // Entferne die Preview-URLs für die hochgeladenen Bilder und füge die Upload-URLs hinzu
-        const existingUrls = prev.slice(0, prev.length - imageFiles.length);
-        return [...existingUrls, ...uploadedUrls];
-      });
-
-      setImageFiles([]);
-      setIsUploadingImages(false);
-      setUploadProgress({ current: imageFiles.length, total: imageFiles.length, status: '' });
-
-      toast({
-        title: 'Erfolg!',
-        description: `${uploadedUrls.length} Bild(er) erfolgreich hochgeladen.`,
-      });
-    } catch (error) {
-      setIsUploadingImages(false);
-      setUploadProgress({ current: 0, total: 0, status: 'Upload fehlgeschlagen' });
-      toast({
-        title: 'Fehler',
-        description: 'Bild-Upload fehlgeschlagen. Bitte versuche es erneut.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const removeImageUrl = (index: number) => {
-    setImageUrls(prev => prev.filter((_, i) => i !== index));
-    // Also remove GPS data for this image
-    setImageGpsData(prev => {
-      const { [index]: _, ...rest } = prev;
-      return rest;
-    });
-    setImageGpsStatuses(prev => {
-      const { [index]: _, ...rest } = prev;
-      return rest;
-    });
-  };
-
-  // GPS editing functions for Note Form
-  const openGpsEditor = (imageIndex: number) => {
-    setEditingGpsImage(imageIndex);
-  };
-
-  const closeGpsEditor = () => {
-    setEditingGpsImage(null);
-    setShowMapPicker(false);
-  };
-
-  const saveGps = async (imageIndex: number, gps: GpsData) => {
-    // Save GPS data
-    setImageGpsData(prev => ({
-      ...prev,
-      [imageIndex]: gps
-    }));
-    setImageGpsStatuses(prev => ({
-      ...prev,
-      [imageIndex]: 'manual'
-    }));
-
-    // Auto-fill location and country using reverse geocoding
-    try {
-      console.log('[Note GPS Manual] Reverse geocoding for manual GPS...', gps);
-      const locationData = await reverseGeocode(gps.latitude, gps.longitude);
-      if (locationData) {
-        // Set location to city + neighbourhood/suburb (no postcode)
-        const locationParts = [
-          locationData.city,
-          locationData.neighbourhood,
-          locationData.suburb
-        ].filter(Boolean);
-        const loc = locationParts.join(', ');
-        setLocation(loc);
-        console.log('[Note GPS Manual] Location found:', loc);
-
-        // Auto-fill country if detected
-        const country = mapCountryCode(locationData);
-        if (country) {
-          setSelectedCountry(country);
-          console.log('[Note GPS Manual] Country auto-filled:', country);
-        }
-      }
-    } catch (error) {
-      console.error('[Note GPS Manual] Reverse geocoding failed:', error);
-    }
-
-    closeGpsEditor();
-  };
-
-  const removeGps = (imageIndex: number) => {
-    setImageGpsData(prev => {
-      const { [imageIndex]: _, ...rest } = prev;
-      return rest;
-    });
-    setImageGpsStatuses(prev => ({
-      ...prev,
-      [imageIndex]: 'not_found'
-    }));
-    closeGpsEditor();
-  };
-
-  // Auto-fill location and country from GPS data (first image)
-  useEffect(() => {
-      const autoFillLocation = async () => {
-        // Use GPS from first image if available
-        const firstGpsData = Object.values(imageGpsData)[0];
-
-        if (firstGpsData) {
-          console.log('[Note GPS] GPS detected, reverse geocoding...');
-          const locationData = await reverseGeocode(firstGpsData.latitude, firstGpsData.longitude);
-          if (locationData) {
-            // Set location to city + neighbourhood/suburb (no postcode)
-            const locationParts = [
-              locationData.city,
-              locationData.neighbourhood,
-              locationData.suburb
-            ].filter(Boolean);
-            const loc = locationParts.join(', ');
-            setLocation(loc);
-            console.log('[Note GPS] Location found:', loc);
-
-            // Auto-fill country if detected
-            const country = mapCountryCode(locationData);
-            if (country && !selectedCountry) {
-              setSelectedCountry(country);
-              console.log('[Note GPS] Country auto-filled:', country);
-            }
-          }
-        }
-      };
-
-      autoFillLocation();
-    }, [imageGpsData]);
-
-  const handleSubmit = () => {
-    if (!content.trim()) {
-      toast({
-        title: 'Fehler',
-        description: 'Bitte gib einen Text ein.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    // Warn if there are unsaved images
-    if (imageFiles.length > 0) {
-      toast({
-        title: 'Achtung',
-        description: 'Bitte lade die ausgewählten Bilder zuerst hoch.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setIsPublishing(true);
-    setPublishProgress({ stage: 'publish', status: 'Event wird zu Nostr gesendet...' });
-
-    // Entferne Country-Tags aus tags, um Duplikate zu vermeiden
-    const countryList = ['portugal', 'spanien', 'frankreich', 'belgien', 'deutschland', 'luxemburg'];
-    const tagsWithoutCountry = tags.filter(tag =>
-      !countryList.includes(tag.toLowerCase()) && !tag.startsWith('#') && !countryList.includes(tag.replace('#', '').toLowerCase())
-    );
-
-    // Create event tags with country tags and #mojobus
-    const baseTags = createRequiredTags('notes', tagsWithoutCountry);
-    const additionalTags = [
-      ['type', 'note'],      // Explicit type marker
-      ['t', 'mojobus'],     // #mojobus tag
-      ['t', 'note'],        // Standard tag #note
-      ['t', 'notiz']        // Standard tag #notiz
-    ];
-
-    // Add location tag if set
-    if (location.trim()) {
-      additionalTags.push(['location', location.trim()]);
-    }
-
-    // Add country tags (nur wenn selectedCountry gewählt wurde)
-    if (selectedCountry) {
-      const countryTags = getCountryTag(selectedCountry);
-      countryTags.forEach(tag => additionalTags.push(['t', tag]));
-    }
-
-    // Add image tags if images exist
-    imageUrls.forEach((url, index) => {
-      additionalTags.push(['image', url]);
-
-      // Add GPS tags if available for this image
-      const gpsData = imageGpsData[index];
-      const gpsStatus = imageGpsStatuses[index];
-      if (gpsData && gpsStatus) {
-        additionalTags.push(['gps_lat', gpsData.latitude.toString()], ['gps_lon', gpsData.longitude.toString()]);
-        if (gpsData.altitude) {
-          additionalTags.push(['gps_alt', gpsData.altitude.toString()]);
-        }
-        additionalTags.push(['gps_precision', gpsData.precision]);
-        additionalTags.push(['gps_source', gpsStatus]);
-      }
-    });
-
-    const eventTags = [
-      ...baseTags,
-      ...additionalTags
-    ];
-
-    // Create content with images
-    let articleContent = content.trim();
-    if (imageFiles.length > 0) {
-      articleContent += '\n\n'; // Add spacing before images
-      imageFiles.forEach((file, index) => {
-        articleContent += `\n![Titelbild ${index + 1}](${URL.createObjectURL(file)})`;
-      });
-    }
-
-    publishEvent({
-      kind: 1, // Note
-      content: articleContent,
-      tags: eventTags
-    }, {
-      onSuccess: () => {
-        setIsPublishing(false);
-        setPublishProgress({ stage: 'success', status: 'Erfolgreich veröffentlicht!' });
-
-        toast({
-          title: 'Erfolg!',
-          description: 'Note erfolgreich veroeffentlicht.'
-        });
-
-        // Reset form and redirect
-        setContent('');
-        setTags([]);
-        setLocation('');
-        setSelectedCountry('');
-        setImageFiles([]);
-        setImageUrls([]);
-        setImageGpsData({});
-        setImageGpsStatuses({});
-        setPublishProgress({ stage: '', status: '' });
-
-        // Redirect to notes page after successful publish
-        setTimeout(() => {
-          navigate('/notes');
-        }, 1000);
-      },
-      onError: (error) => {
-        setIsPublishing(false);
-        setPublishProgress({ stage: 'error', status: 'Veröffentlichung fehlgeschlagen' });
-
-        toast({
-          title: 'Fehler',
-          description: 'Veröffentlichung fehlgeschlagen. Bitte versuche es erneut.',
-          variant: 'destructive'
-        });
-      }
-    });
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Note veroeffentlichen
-        </CardTitle>
-        <CardDescription>
-          Kurze Updates, Gedanken und Momente fuer deine Vanlife-Gemeinschaft
-        </CardDescription>
-        <ImageOptimizationToggle className="mt-4" />
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="note-content">Dein Note</Label>
-          <Textarea
-            id="note-content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Was machst du gerade? Was bewegt dich? Share your vanlife moments..."
-            rows={4}
-            className="resize-none"
-          />
-          <p className="text-sm text-muted-foreground">
-            {content.length}/500 Zeichen
-          </p>
+          {imageFiles.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              💡 Lade zuerst Bilder hoch, um die KI-Generierung zu nutzen.
+            </p>
+          )}
         </div>
 
         {/* Image Upload Area */}
@@ -2347,12 +1537,67 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
    const [manualTags, setManualTags] = useState<string[]>([]);
    const [selectedCountry, setSelectedCountry] = useState<string>('');
    const [isUploading, setIsUploading] = useState(false);
-  const { toast } = useToast();
-  const { mutate: publishEvent } = useNostrPublish();
-  const { mutateAsync: uploadFile } = useUploadFile();
-  const navigate = useNavigate();
+   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+   const { toast } = useToast();
+   const { mutate: publishEvent } = useNostrPublish();
+   const { mutateAsync: uploadFile } = useUploadFile();
+   const navigate = useNavigate();
 
-  // Load edit data
+   // KI-Platz-Beschreibung generieren (Foster Huntington Stil)
+   const generatePlaceWithAI = async () => {
+     if (!imageFile) {
+       toast({
+         title: 'Bild erforderlich',
+         description: 'Bitte lade zuerst ein Titelbild hoch.',
+         variant: 'destructive'
+       });
+       return;
+     }
+
+     setIsGeneratingDescription(true);
+     try {
+       const formData = new FormData();
+       formData.append('images', imageFile);
+       formData.append('title', name);
+       formData.append('description', description);
+       formData.append('location', location);
+       if (coordinates.lat && coordinates.lng) {
+         formData.append('gps_lat', coordinates.lat);
+         formData.append('gps_lon', coordinates.lng);
+       }
+       formData.append('lifestyle', lifestyle);
+
+       const response = await fetch('/api/generate-place', {
+         method: 'POST',
+         body: formData
+       });
+
+       const data = await response.json();
+       if (data.description) {
+         setDescription(data.description);
+         if (data.hashtags) {
+           const newTags = data.hashtags.split(' ').filter((t: string) => !manualTags.includes(t));
+           setManualTags([...manualTags, ...newTags]);
+         }
+         toast({
+           title: 'Erfolg!',
+           description: `KI-Beschreibung generiert (${data.lifestyle})`
+         });
+       }
+     } catch (error) {
+       console.error(error);
+       toast({
+         title: 'Fehler',
+         description: 'KI-Generierung fehlgeschlagen.',
+         variant: 'destructive'
+       });
+     } finally {
+       setIsGeneratingDescription(false);
+     }
+   };
+
+   // Load edit data
   useEffect(() => {
     if (editEvent) {
       setName(editEvent.tags?.find((tag: any) => tag[0] === 'name')?.[1] || '');
@@ -3121,6 +2366,58 @@ Beschreibe hier den Ort, was macht ihn besonders...
           />
         </div>
 
+        {/* KI-Beschreibung generieren (Optional) */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Beschreibung generieren (Optional)</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wähle deinen Lifestyle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Foster Huntington Stil - ehrlich, direkt, authentisch
+            </p>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={generatePlaceWithAI}
+            disabled={isGeneratingDescription || !imageFile}
+            className="w-full"
+          >
+            {isGeneratingDescription ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere Beschreibung...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Beschreibung generieren ({lifestyle})
+              </>
+            )}
+          </Button>
+          {!imageFile && (
+            <p className="text-xs text-muted-foreground">
+              💡 Lade zuerst ein Titelbild hoch, um die KI-Generierung zu nutzen.
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label>Bewertung</Label>
@@ -3257,10 +2554,62 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [publishedAt, setPublishedAt] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
   const navigate = useNavigate();
+
+  // KI-Artikel generieren (Foster Huntington Stil)
+  const generateArticleWithAI = async () => {
+    if (!imageFile) {
+      toast({
+        title: 'Bild erforderlich',
+        description: 'Bitte lade zuerst ein Titelbild hoch.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsGeneratingArticle(true);
+    try {
+      const formData = new FormData();
+      formData.append('images', imageFile);
+      formData.append('title', title);
+      formData.append('description', summary);
+      formData.append('location', location);
+      formData.append('text', content);
+      formData.append('lifestyle', lifestyle);
+
+      const response = await fetch('/api/generate-article', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      if (data.article) {
+        setContent(data.article);
+        if (data.hashtags) {
+          const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
+          setTags([...tags, ...newTags]);
+        }
+        toast({
+          title: 'Erfolg!',
+          description: `KI-Artikel generiert (${data.lifestyle})`
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'Fehler',
+        description: 'KI-Generierung fehlgeschlagen.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingArticle(false);
+    }
+  };
 
   // Load edit data
   useEffect(() => {
@@ -3832,6 +3181,58 @@ Schreibe deinen Artikel hier...
               // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
             }}
           />
+        </div>
+
+        {/* KI-Artikel generieren (Optional) */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Artikel generieren (Optional)</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wähle deinen Lifestyle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Foster Huntington Stil - ehrlich, direkt, authentisch
+            </p>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={generateArticleWithAI}
+            disabled={isGeneratingArticle || !imageFile}
+            className="w-full"
+          >
+            {isGeneratingArticle ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere Artikel...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Artikel generieren ({lifestyle})
+              </>
+            )}
+          </Button>
+          {!imageFile && (
+            <p className="text-xs text-muted-foreground">
+              💡 Lade zuerst ein Titelbild hoch, um die KI-Generierung zu nutzen.
+            </p>
+          )}
         </div>
 
         {/* Automatisch generierte Tags anzeigen */}
