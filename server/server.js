@@ -260,64 +260,6 @@ const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife'
   }
 }
 
-// API für Artikel-Generierung mit Bilder-Analyse (Legacy - für PerpetualTravelers)
-app.post('/api/generate-article', upload.array('images', 10), async (req, res) => {
-  if (!validateApiKey()) {
-    return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
-  }
-
-  const text = sanitizeInput(req.body.text) || 'Meer Abenteuer'
-  const images = req.files
-
-  if (!images || images.length === 0) {
-    return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
-  }
-
-  console.log(`[KI] Generiere Artikel (Legacy), Bilder: ${images.length}, Text: ${text}`)
-
-  try {
-    // Bilder analysieren
-    const imageDescriptions = await Promise.all(images.map(async (img, index) => {
-      const base64 = img.buffer.toString('base64')
-      console.log(`[KI] Analysiere Bild ${index + 1}/${images.length}, Größe: ${(img.size / 1024).toFixed(1)}KB`)
-
-      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Beschreibe dieses Bild kurz für einen Meer-Thema-Artikel (z.B. Strand, Wellen, Gebäude).' },
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
-          ]
-        }],
-        max_tokens: 150,
-        temperature: 0.7
-      }, {
-        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-        timeout: 30000
-      })
-      return visionResponse.data.choices[0].message.content
-    }))
-
-    // Artikel generieren
-    const prompt = `Erstelle einen inspirierenden Artikel über "Unser Leben am Meer" mit persönlichen Geschichten, praktischen Tipps und Einblicken zwischen Sand und Horizont. Bilder-Beschreibungen: ${imageDescriptions.join(', ')}. Verwende Stichworte: ${text}. Max 100 Wörter. Füge Keywords und Hashtags hinzu.`
-
-    const article = await generateWithModel(prompt, 'llama4')
-    res.json({ article })
-  } catch (error) {
-    console.error('[KI] Fehler bei Generierung:', error.response?.data || error.message)
-
-    if (error.response?.status === 429) {
-      res.status(429).json({ error: 'API-Limit erreicht. Bitte warte einen Moment.' })
-    } else if (error.response?.status === 400) {
-      res.status(400).json({ error: 'Ungültige Anfrage. Prüfe deine Eingaben.' })
-    } else if (error.code === 'ECONNABORTED') {
-      res.status(408).json({ error: 'Zeitüberschreitung. Versuche es erneut.' })
-    } else {
-      res.status(500).json({ error: 'Fehler bei Generierung. Versuche es erneut.' })
-    }
-  }
-})
 
 // ===== API FÜR MEDIEN ARTIKEL GENERIERUNG =====
 // Generiert authentische Vanlife-Artikel im Foster Huntington Stil
