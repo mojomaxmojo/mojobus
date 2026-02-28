@@ -198,12 +198,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const navigate = useNavigate();
 
-  // KI-Artikelgenerierung
+  // KI-Artikelgenerierung (Foster Huntington Stil)
   const generateArticleWithAI = async () => {
     if (files.length === 0) {
       toast({
@@ -223,6 +224,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       formData.append('text', customTags || 'Meer Abenteuer Strand');
       formData.append('location', location);
       formData.append('model', selectedModel);
+      formData.append('lifestyle', lifestyle);
 
       const response = await fetch('/api/generate-media-article', {
         method: 'POST',
@@ -1036,6 +1038,26 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                rows={4}
               />
               
+              {/* Lifestyle Selection */}
+              <div className="mt-4 space-y-3">
+                <Label className="text-sm font-medium">Lifestyle auswählen:</Label>
+                <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wähle deinen Lifestyle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                    <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                    <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                    <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                    <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Foster Huntington Stil - ehrlich, direkt, authentisch
+                </p>
+              </div>
+              
               {/* KI-Modell Auswahl */}
               <div className="mt-4 space-y-3">
                 <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
@@ -1092,13 +1114,19 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                   </>
                 ) : (
                   <>
-                    🤖 KI-Artikel generieren
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    KI-Artikel generieren ({lifestyle})
                     <span className="ml-2 text-xs text-muted-foreground">
                       ({selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'})
                     </span>
                   </>
                 )}
               </Button>
+              {files.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  💡 Lade zuerst Bilder hoch, um die KI-Generierung zu nutzen.
+                </p>
+              )}
             </div>
 
           {/* Categories */}
