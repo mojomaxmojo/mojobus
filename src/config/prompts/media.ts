@@ -1,8 +1,9 @@
 /**
  * KI-Prompt für Medien-Artikel (MediaUploadForm)
  * Tab: "Medien" in /veroeffentlichen
- * 
+ *
  * Foster Huntington Stil für alle Lifestyles
+ * Erweitert mit Kontext-Feldern: mainCategory, subCategories, detailedTags, additionalImageUrls, manualTags, country
  */
 
 import { LifestyleConfig, fosterHuntingtonStyle } from './lifestyles'
@@ -14,13 +15,42 @@ export interface MediaPromptParams {
   text?: string
   imageDescriptions: string[]
   lifestyleConfig: LifestyleConfig
+  // Zusätzliche Kontext-Felder
+  mainCategory?: string
+  subCategories?: string[]
+  detailedTags?: string[]
+  additionalImageUrls?: string
+  manualTags?: string[]
+  country?: string
 }
 
 /**
  * Generiert den Foster Huntington Prompt für Medien-Artikel
  */
 export const generateMediaPrompt = (params: MediaPromptParams): string => {
-  const { title, description, location, text, imageDescriptions, lifestyleConfig } = params
+  const {
+    title,
+    description,
+    location,
+    text,
+    imageDescriptions,
+    lifestyleConfig,
+    mainCategory,
+    subCategories,
+    detailedTags,
+    additionalImageUrls,
+    manualTags,
+    country
+  } = params
+
+  // Baue Kontext-Informationen zusammen
+  let contextInfo = ''
+  if (mainCategory) contextInfo += `\nHauptkategorie: ${mainCategory}`
+  if (subCategories && subCategories.length > 0) contextInfo += `\nThemen: ${subCategories.join(', ')}`
+  if (detailedTags && detailedTags.length > 0) contextInfo += `\nSchlagworte: ${detailedTags.join(', ')}`
+  if (manualTags && manualTags.length > 0) contextInfo += `\nZusätzliche Tags: ${manualTags.join(', ')}`
+  if (country) contextInfo += `\nLand: ${country}`
+  if (additionalImageUrls) contextInfo += `\nWeitere Bild-URLs: ${additionalImageUrls}`
 
   return `Du bist Foster Huntington und schreibst für deine ${lifestyleConfig.community}. Dein Stil ist:
 ${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
@@ -36,6 +66,7 @@ VERMEIDE:
 ${fosterHuntingtonStyle.avoid.map(a => `- ${a.replace('[Lifestyle]', lifestyleConfig.vehicle)}`).join('\n')}
 
 SCHREIBE EINEN ARTIKEL ÜBER: "${title}${description ? ' - ' + description : ''}"
+${contextInfo}
 
 STRUKTUR:
 1. Öffne mit einem konkreten, persönlichen Moment
@@ -45,8 +76,8 @@ STRUKTUR:
 5. Schließe ehrlich (mit den Schwierigkeiten)
 
 Bilder zeigen: ${imageDescriptions.join('; ')}
-Standort: ${location || 'Unbekannt'}
-Stichworte: ${text || 'Abenteuer Reise Freiheit'}
+Standort: ${location || 'Unbekannt'}${country ? `, ${country}` : ''}
+Stichworte: ${text || 'Abenteuer Reise Freiheit'}${detailedTags && detailedTags.length > 0 ? `, ${detailedTags.join(', ')}` : ''}${manualTags && manualTags.length > 0 ? `, ${manualTags.join(', ')}` : ''}
 
 SCHREIBSTIL:
 ${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}

@@ -16,12 +16,12 @@ src/config/prompts/
 
 ## 🎯 Tabs und Prompts
 
-| Tab | Datei | Beschreibung | API-Endpoint |
-|-----|-------|--------------|--------------|
-| **Medien** | `media.ts` | Artikel mit Bildern | `/api/generate-media-article` |
-| **Trips** | `trips.ts` | Reiseberichte mit Stationen | `/api/generate-trip` |
-| **Berichte** | `articles.ts` | Ausführliche Berichte | (geplant) |
-| **Note** | `notes.ts` | Kurze Notizen | (geplant) |
+| Tab | Datei | Beschreibung | API-Endpoint | Kontext-Felder |
+|-----|-------|--------------|--------------|----------------|
+| **Medien** | `media.ts` | Artikel mit Bildern | `/api/generate-media-article` | mainCategory, subCategories, detailedTags, manualTags, additionalImageUrls, country |
+| **Trips** | `trips.ts` | Reiseberichte mit Stationen | `/api/generate-trip` | tripType, stationDescriptions |
+| **Berichte** | `articles.ts` | Ausführliche Berichte | `/api/generate-article` | category, tags, country |
+| **Note** | `notes.ts` | Kurze Notizen | `/api/generate-note` | - |
 
 ## 🚀 Lifestyles
 
@@ -32,6 +32,59 @@ Verfügbare Lifestyles (alle im Foster Huntington Stil):
 - **beachlife** - Strand & Surf Lifestyle
 - **wohnmobil** - Wohnmobil/Camper (deutsch)
 - **perpetual-travelers** - Permanent Reisende/Ortlos
+
+## 📊 Kontext-Felder
+
+### Medien-Tab (media.ts)
+```typescript
+interface MediaPromptParams {
+  title: string
+  description?: string
+  location?: string
+  text?: string
+  imageDescriptions: string[]
+  lifestyleConfig: LifestyleConfig
+  // Kontext-Felder
+  mainCategory?: string        // Hauptkategorie
+  subCategories?: string[]     // Unterkategorien
+  detailedTags?: string[]      // Detail-Tags
+  additionalImageUrls?: string // Zusätzliche Bild-URLs
+  manualTags?: string[]        // Manuelle Tags
+  country?: string             // Land
+}
+```
+
+### Trips-Tab (trips.ts)
+```typescript
+interface TripPromptParams {
+  title: string
+  description?: string
+  locations: string[]
+  startDate?: string
+  endDate?: string
+  imageDescriptions: string[]
+  lifestyleConfig: LifestyleConfig
+  // Kontext-Felder
+  tripType?: string            // Art der Reise
+  stationDescriptions?: Array<{ location: string; description: string }>
+}
+```
+
+### Berichte-Tab (articles.ts)
+```typescript
+interface ArticlePromptParams {
+  title: string
+  description?: string
+  location?: string
+  text?: string
+  imageDescriptions: string[]
+  lifestyleConfig: LifestyleConfig
+  // Kontext-Felder
+  category?: string            // Kategorie
+  tags?: string[]              // Tags
+  country?: string             // Land
+}
+```
 
 ## ✍️ Foster Huntington Stil
 
@@ -53,13 +106,15 @@ Verfügbare Lifestyles (alle im Foster Huntington Stil):
 
 1. Entsprechende Datei öffnen (z.B. `media.ts`)
 2. `generateMediaPrompt()` Funktion anpassen
-3. Server neu starten
+3. **WICHTIG**: Auch `server/server.js` inline Prompts aktualisieren!
+4. Server neu starten
 
 ### Neuen Lifestyle hinzufügen
 
 1. `lifestyles.ts` öffnen
 2. Neuen Lifestyle zu `lifestyles` Objekt hinzufügen
 3. Beispiel-Texte im Foster Huntington Stil schreiben
+4. Auch in `server/server.js` `getLifestyleConfig()` hinzufügen!
 
 ### Prompt-Länge ändern
 
@@ -69,14 +124,23 @@ In der entsprechenden Prompt-Datei:
 
 ## 📊 Server-Integration
 
-Die `server/server.js` lädt die Konfigurationen:
+**⚠️ WICHTIG**: Die Prompts sind aktuell **dupliziert**:
+- `src/config/prompts/*.ts` - TypeScript Definitionen (für Dokumentation)
+- `server/server.js` - Inline Prompts (für Server)
+
+Bei Änderungen müssen **beide** Orte aktualisiert werden!
+
+Die `server/server.js` verwendet inline Funktionen:
 
 ```javascript
 // Lifestyle-Konfiguration laden
 const lifestyleConfig = getLifestyleConfig(lifestyle)
 
+// Kontext-Objekt
+const context = { mainCategory, subCategories, detailedTags, manualTags, additionalImageUrls, country }
+
 // Prompt generieren
-const prompt = generateMediaPrompt(title, description, location, text, imageDescriptions, lifestyleConfig)
+const prompt = generateMediaPrompt(title, description, location, text, imageDescriptions, lifestyleConfig, context)
 ```
 
 ## 🎨 Beispiel
@@ -92,13 +156,19 @@ const prompt = generateMediaPrompt(title, description, location, text, imageDesc
 
 ## 📝 Frontend-Nutzung
 
-Im Frontend kann der Lifestyle-Parameter übergeben werden:
+Im Frontend können alle Parameter übergeben werden:
 
 ```javascript
 const formData = new FormData()
 formData.append('lifestyle', 'rvlife')  // oder 'beachlife', 'wohnmobil', etc.
 formData.append('title', 'Mein RV-Abenteuer')
 formData.append('images', imageFile)
+
+// Kontext-Felder
+formData.append('mainCategory', 'reise')
+formData.append('subCategories', JSON.stringify(['strand', 'sonne']))
+formData.append('detailedTags', JSON.stringify(['atlantik', 'wellen']))
+formData.append('country', 'PT')
 
 const response = await fetch('/api/generate-media-article', {
   method: 'POST',

@@ -1,8 +1,9 @@
 /**
  * KI-Prompt für Trip-Artikel (TripForm)
  * Tab: "Trips" in /veroeffentlichen
- * 
+ *
  * Foster Huntington Stil für alle Lifestyles
+ * Erweitert mit Kontext-Feldern: tripType, stationDescriptions
  */
 
 import { LifestyleConfig, fosterHuntingtonStyle } from './lifestyles'
@@ -15,13 +16,37 @@ export interface TripPromptParams {
   endDate?: string
   imageDescriptions: string[]
   lifestyleConfig: LifestyleConfig
+  // Zusätzliche Kontext-Felder
+  tripType?: string
+  stationDescriptions?: Array<{ location: string; description: string }>
 }
 
 /**
  * Generiert den Foster Huntington Prompt für Trip-Artikel
  */
 export const generateTripPrompt = (params: TripPromptParams): string => {
-  const { title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig } = params
+  const {
+    title,
+    description,
+    locations,
+    startDate,
+    endDate,
+    imageDescriptions,
+    lifestyleConfig,
+    tripType,
+    stationDescriptions
+  } = params
+
+  // Baue Kontext-Informationen zusammen
+  let contextInfo = ''
+  if (tripType) contextInfo += `\nArt der Reise: ${tripType}`
+
+  // Station-Beschreibungen mit Benutzer-Input kombinieren
+  let stationDetails = ''
+  if (stationDescriptions && stationDescriptions.length > 0) {
+    stationDetails = '\n\nBENUTZER-STATION-BESCHREIBUNGEN:\n' +
+      stationDescriptions.map((s, i) => `${i + 1}. ${s.location}: ${s.description}`).join('\n')
+  }
 
   return `Du bist Foster Huntington und schreibst einen Reisebericht für ${lifestyleConfig.community}. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Urlaubsgeschichten, sondern echte Erlebnisse.
 
@@ -37,13 +62,14 @@ VERMEIDE IN REISEBERICHTEN:
 - Zu positive, polierte Geschichten
 
 SCHREIBE EINEN REISEBERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
+${contextInfo}
 
 REISE-DETAILS:
 Zeitraum: ${startDate || 'unbestimmt'} bis ${endDate || 'unbestimmt'}
 Stationen: ${locations.length > 0 ? locations.join(' → ') : imageDescriptions.length + ' Stationen'}
 
-STATIONEN-BESCHREIBUNGEN:
-${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}
+STATIONEN-BESCHREIBUNGEN (aus Bildern analysiert):
+${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}${stationDetails}
 
 STRUKTUR DES BERICHTS:
 1. EINLEITUNG: Warum bist du losgefahren? Was war die Motivation?

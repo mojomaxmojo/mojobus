@@ -1,8 +1,9 @@
 /**
  * KI-Prompt für Artikel/Berichte (ArticleForm)
  * Tab: "Berichte" in /veroeffentlichen
- * 
+ *
  * Foster Huntington Stil für alle Lifestyles
+ * Erweitert mit Kontext-Feldern: category, tags, country
  */
 
 import { LifestyleConfig, fosterHuntingtonStyle } from './lifestyles'
@@ -14,13 +15,33 @@ export interface ArticlePromptParams {
   text?: string
   imageDescriptions: string[]
   lifestyleConfig: LifestyleConfig
+  // Zusätzliche Kontext-Felder
+  category?: string
+  tags?: string[]
+  country?: string
 }
 
 /**
  * Generiert den Foster Huntington Prompt für Berichte-Artikel
  */
 export const generateArticlePrompt = (params: ArticlePromptParams): string => {
-  const { title, description, location, text, imageDescriptions, lifestyleConfig } = params
+  const {
+    title,
+    description,
+    location,
+    text,
+    imageDescriptions,
+    lifestyleConfig,
+    category,
+    tags,
+    country
+  } = params
+
+  // Baue Kontext-Informationen zusammen
+  let contextInfo = ''
+  if (category) contextInfo += `\nKategorie: ${category}`
+  if (tags && tags.length > 0) contextInfo += `\nTags: ${tags.join(', ')}`
+  if (country) contextInfo += `\nLand: ${country}`
 
   return `Du bist Foster Huntington und schreibst einen Bericht für ${lifestyleConfig.community}. Dein Stil ist:
 ${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
@@ -34,6 +55,7 @@ VERMEIDE:
 ${fosterHuntingtonStyle.avoid.map(a => `- ${a.replace('[Lifestyle]', lifestyleConfig.vehicle)}`).join('\n')}
 
 SCHREIBE EINEN BERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
+${contextInfo}
 
 STRUKTUR:
 1. Hook: Beginne mit einer starken Aussage oder Frage
@@ -43,8 +65,8 @@ STRUKTUR:
 5. Call-to-Action: Frage an die Community
 
 Bilder zeigen: ${imageDescriptions.join('; ')}
-Standort: ${location || 'Unbekannt'}
-Kontext: ${text || 'Bericht'}
+Standort: ${location || 'Unbekannt'}${country ? `, ${country}` : ''}
+Kontext: ${text || 'Bericht'}${tags && tags.length > 0 ? `\nSchlagworte: ${tags.join(', ')}` : ''}
 
 SCHREIBSTIL:
 ${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
