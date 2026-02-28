@@ -318,7 +318,8 @@ export function TripPublishForm() {
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
-  
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+
   // Hooks
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -355,6 +356,16 @@ export function TripPublishForm() {
       formData.append('startDate', stations[0]?.date || '');
       formData.append('endDate', stations[stations.length - 1]?.date || '');
       formData.append('model', selectedModel); // Modell-Auswahl
+      formData.append('lifestyle', lifestyle); // Lifestyle-Typ
+
+      // Zusätzliche Kontext-Felder
+      formData.append('tripType', tripData.tripType || ''); // Trip-Typ
+      formData.append('stationDescriptions', JSON.stringify(
+        stations.map(s => ({
+          location: s.location || s.title,
+          description: s.description || ''
+        })).filter(s => s.description) // Nur Stationen mit Beschreibung
+      ));
 
       setGeneratingProgress(10);
       
@@ -1334,7 +1345,27 @@ export function TripPublishForm() {
               placeholder="Eine kurze Beschreibung deiner Reise..."
               rows={2}
             />
-            
+
+            {/* Lifestyle Auswahl für KI-Generierung */}
+            <div className="mt-4 space-y-2">
+              <Label className="text-sm font-medium">Lifestyle für KI-Text:</Label>
+              <Select value={lifestyle} onValueChange={(value) => setLifestyle(value as typeof lifestyle)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wähle deinen Lifestyle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                  <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                  <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
+                  <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                  <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Foster Huntington Stil - ehrlich, direkt, authentisch
+              </p>
+            </div>
+
             {/* KI-Modell Auswahl */}
             <div className="mt-4 space-y-3">
               <Label className="text-sm font-medium">KI-Modell auswählen:</Label>

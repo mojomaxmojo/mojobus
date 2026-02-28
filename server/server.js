@@ -185,8 +185,22 @@ Beginne direkt mit einem persönlichen Moment. Keine Einleitung wie "In diesem A
 /**
  * Generiert Foster Huntington Prompt für Trip-Artikel
  * Tab: "Trips" in /veroeffentlichen
+ * Erweitert mit: tripType, stationDescriptions
  */
-const generateTripPrompt = (title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig) => {
+const generateTripPrompt = (title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig, context = {}) => {
+  const { tripType, stationDescriptions } = context
+
+  // Baue Kontext-Informationen zusammen
+  let contextInfo = ''
+  if (tripType) contextInfo += `\nArt der Reise: ${tripType}`
+
+  // Station-Beschreibungen mit Benutzer-Input kombinieren
+  let stationDetails = ''
+  if (stationDescriptions && stationDescriptions.length > 0) {
+    stationDetails = '\n\nBENUTZER-STATION-BESCHREIBUNGEN:\n' +
+      stationDescriptions.map((s, i) => `${i + 1}. ${s.location}: ${s.description}`).join('\n')
+  }
+
   return `Du bist Foster Huntington und schreibst einen Reisebericht für ${lifestyleConfig.community}. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Urlaubsgeschichten, sondern echte Erlebnisse.
 
 BEISPIEL DEINES STILS (authentisch Foster Huntington):
@@ -201,13 +215,14 @@ VERMEIDE IN REISEBERICHTEN:
 - Zu positive, polierte Geschichten
 
 SCHREIBE EINEN REISEBERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
+${contextInfo}
 
 REISE-DETAILS:
 Zeitraum: ${startDate || 'unbestimmt'} bis ${endDate || 'unbestimmt'}
 Stationen: ${locations.length > 0 ? locations.join(' → ') : imageDescriptions.length + ' Stationen'}
 
-STATIONEN-BESCHREIBUNGEN:
-${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}
+STATIONEN-BESCHREIBUNGEN (aus Bildern analysiert):
+${imageDescriptions.map((desc, i) => `Station ${i + 1}: ${desc}`).join('\n')}${stationDetails}
 
 STRUKTUR DES BERICHTS:
 1. EINLEITUNG: Warum bist du losgefahren? Was war die Motivation?
@@ -404,11 +419,17 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife' // Lifestyle-Typ
   const images = req.files
 
+  // Zusätzliche Kontext-Felder
+  const tripType = sanitizeInput(req.body.tripType) || ''
+  const stationDescriptions = safelyParseJSON(req.body.stationDescriptions) || []
+
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
   console.log(`[KI] Generiere Trip-Artikel: "${title}", Bilder: ${images.length}, Stationen: ${locations.length}, Modell: ${model}, Lifestyle: ${lifestyle}`)
+  if (tripType) console.log(`[KI] Trip-Typ: ${tripType}`)
+  if (stationDescriptions.length > 0) console.log(`[KI] Station-Beschreibungen: ${stationDescriptions.length}`)
 
     try {
       // ===== BILD ANALYSE FÜR TRIP ARTIKEL =====
@@ -441,7 +462,12 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
 
     // ===== FOSTER HUNTINGTON TRIP PROMPT =====
     // Generiert mit: generateTripPrompt() - siehe oben
-    const prompt = generateTripPrompt(title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig)
+    // Kontext-Objekt mit allen zusätzlichen Informationen
+    const context = {
+      tripType,
+      stationDescriptions
+    }
+    const prompt = generateTripPrompt(title, description, locations, startDate, endDate, imageDescriptions, lifestyleConfig, context)
 
     // Artikel generieren mit ausgewähltem Modell
     const article = await generateWithModel(prompt, model)
