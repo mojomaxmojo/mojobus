@@ -3506,6 +3506,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -3531,6 +3532,12 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       formData.append('location', location);
       formData.append('text', content);
       formData.append('lifestyle', lifestyle);
+      formData.append('model', selectedModel);
+
+      // Zusätzliche Kontext-Felder
+      formData.append('category', category || '');
+      formData.append('tags', JSON.stringify(tags));
+      formData.append('country', selectedCountry || '');
 
       const response = await fetch('/api/generate-article', {
         method: 'POST',
@@ -4130,7 +4137,26 @@ Schreibe deinen Artikel hier...
             onImageUpload={(url) => {
               // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
             }}
-          />
+           />
+         </div>
+
+        {/* Kategorie */}
+        <div className="space-y-2">
+          <Label htmlFor="article-category">Kategorie</Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="Wähle eine Kategorie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="reise">🗺️ Reise</SelectItem>
+              <SelectItem value="outdoor">🏕️ Outdoor</SelectItem>
+              <SelectItem value="technik">🔧 Technik</SelectItem>
+              <SelectItem value="lifestyle">🏠 Lifestyle</SelectItem>
+              <SelectItem value="food">🍳 Food & Cooking</SelectItem>
+              <SelectItem value="community">👥 Community</SelectItem>
+              <SelectItem value="diy">🛠️ DIY & Ausbau</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* KI-Artikel generieren (Optional) */}
@@ -4139,7 +4165,8 @@ Schreibe deinen Artikel hier...
             <Sparkles className="h-5 w-5 text-ocean-500" />
             <h3 className="font-semibold">KI-Artikel generieren (Optional)</h3>
           </div>
-          
+
+          {/* Lifestyle Auswahl */}
           <div className="space-y-2">
             <Label>Lifestyle</Label>
             <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
@@ -4158,7 +4185,38 @@ Schreibe deinen Artikel hier...
               Foster Huntington Stil - ehrlich, direkt, authentisch
             </p>
           </div>
-          
+
+          {/* KI-Modell Auswahl */}
+          <div className="space-y-2">
+            <Label>KI-Modell</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div
+                className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'llama4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                onClick={() => setSelectedModel('llama4')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🚀</span>
+                  <div>
+                    <p className="font-medium text-sm">Llama 4 Scout</p>
+                    <p className="text-xs text-muted-foreground">Schnell & Günstig</p>
+                  </div>
+                </div>
+              </div>
+              <div
+                className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'gpt4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                onClick={() => setSelectedModel('gpt4')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🤖</span>
+                  <div>
+                    <p className="font-medium text-sm">GPT-4</p>
+                    <p className="text-xs text-muted-foreground">Premium Qualität</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <Button
             type="button"
             variant="outline"
@@ -4174,7 +4232,7 @@ Schreibe deinen Artikel hier...
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                KI-Artikel generieren ({lifestyle})
+                KI-Artikel generieren ({selectedModel === 'gpt4' ? 'GPT-4' : 'Llama 4'})
               </>
             )}
           </Button>

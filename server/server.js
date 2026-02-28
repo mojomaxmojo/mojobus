@@ -521,11 +521,18 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
   const images = req.files
 
+  // Zusätzliche Kontext-Felder
+  const category = sanitizeInput(req.body.category) || ''
+  const tags = safelyParseJSON(req.body.tags) || []
+  const country = sanitizeInput(req.body.country) || ''
+
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
   console.log(`[KI] Generiere Bericht: "${title}", Bilder: ${images.length}, Modell: ${model}, Lifestyle: ${lifestyle}`)
+  if (category) console.log(`[KI] Kategorie: ${category}`)
+  if (tags.length > 0) console.log(`[KI] Tags: ${tags.join(', ')}`)
 
   try {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
@@ -552,6 +559,12 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
     }))
 
     // Foster Huntington Prompt für Berichte
+    // Baue Kontext-Informationen zusammen
+    let contextInfo = ''
+    if (category) contextInfo += `\nKategorie: ${category}`
+    if (tags && tags.length > 0) contextInfo += `\nTags: ${tags.join(', ')}`
+    if (country) contextInfo += `\nLand: ${country}`
+
     const prompt = `Du bist Foster Huntington und schreibst einen Bericht für ${lifestyleConfig.community}. Dein Stil ist:
 ${fosterHuntingtonStyle.principles.map(p => `- ${p}`).join('\n')}
 
@@ -564,6 +577,7 @@ VERMEIDE:
 ${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
 
 SCHREIBE EINEN BERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
+${contextInfo}
 
 STRUKTUR:
 1. Hook: Beginne mit einer starken Aussage oder Frage
@@ -573,8 +587,8 @@ STRUKTUR:
 5. Call-to-Action: Frage an die Community
 
 Bilder zeigen: ${imageDescriptions.join('; ')}
-Standort: ${location}
-Kontext: ${text}
+Standort: ${location}${country ? `, ${country}` : ''}
+Kontext: ${text}${tags && tags.length > 0 ? `\nSchlagworte: ${tags.join(', ')}` : ''}
 
 SCHREIBSTIL:
 ${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
