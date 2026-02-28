@@ -198,7 +198,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
-  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1048,7 +1048,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                   <SelectContent>
                     <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
                     <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                    <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                    <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
                     <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
                     <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
                   </SelectContent>
@@ -1539,7 +1539,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [editingGpsImage, setEditingGpsImage] = useState<number | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [isGeneratingNote, setIsGeneratingNote] = useState(false);
-  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -2060,7 +2060,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
               <SelectContent>
                 <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
                 <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
                 <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
                 <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
               </SelectContent>
@@ -2480,7 +2480,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
    const [selectedCountry, setSelectedCountry] = useState<string>('');
    const [isUploading, setIsUploading] = useState(false);
    const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
-   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
    const { toast } = useToast();
    const { mutate: publishEvent } = useNostrPublish();
    const { mutateAsync: uploadFile } = useUploadFile();
@@ -3324,7 +3324,7 @@ Beschreibe hier den Ort, was macht ihn besonders...
               <SelectContent>
                 <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
                 <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
                 <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
                 <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
               </SelectContent>
@@ -3497,7 +3497,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [publishedAt, setPublishedAt] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
-  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const { toast } = useToast();
   const { mutate: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -4141,7 +4141,7 @@ Schreibe deinen Artikel hier...
               <SelectContent>
                 <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
                 <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
                 <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
                 <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
               </SelectContent>

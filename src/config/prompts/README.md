@@ -7,7 +7,7 @@ Diese Dateien enthalten die Foster Huntington Stil-Prompts für alle Tabs in `/v
 ```
 src/config/prompts/
 ├── index.ts              # Zentraler Export aller Prompts
-├── lifestyles.ts         # Lifestyle-Konfigurationen (vanlife, rvlife, buslife, wohnmobil, perpetual-travelers)
+├── lifestyles.ts         # Lifestyle-Konfigurationen (vanlife, rvlife, beachlife, wohnmobil, perpetual-travelers)
 ├── media.ts              # Prompt für Medien-Tab (MediaUploadForm)
 ├── trips.ts              # Prompt für Trips-Tab (TripForm)
 ├── articles.ts           # Prompt für Berichte-Tab (ArticleForm)
@@ -29,7 +29,7 @@ Verfügbare Lifestyles (alle im Foster Huntington Stil):
 
 - **vanlife** - Van-Life (Standard)
 - **rvlife** - RV/Recreational Vehicle
-- **buslife** - Schulbus-Umbau/Skoolie
+- **beachlife** - Strand & Surf Lifestyle
 - **wohnmobil** - Wohnmobil/Camper (deutsch)
 - **perpetual-travelers** - Permanent Reisende/Ortlos
 
@@ -84,8 +84,8 @@ const prompt = generateMediaPrompt(title, description, location, text, imageDesc
 ### Vanlife:
 > "Du wachst morgens auf und der Van riecht nach letzter Nacht. Nicht glamourös, aber echt. Genau das macht Vanlife aus."
 
-### Buslife:
-> "Du fährst deinen umgebauten Schulbus auf einen Waldweg. 40 Fuß Stahl und Holz - dein Zuhause."
+### Beachlife:
+> "Du wachst auf und hörst die Wellen. Sand überall - im Van, im Bett, im Essen. Aber genau das macht Beachlife aus."
 
 ### Perpetual Travelers:
 > "Du weißt nicht mehr, welcher Tag es ist. Perpetual Traveler zu sein bedeutet, die Zeit zu vergessen."
@@ -96,7 +96,7 @@ Im Frontend kann der Lifestyle-Parameter übergeben werden:
 
 ```javascript
 const formData = new FormData()
-formData.append('lifestyle', 'rvlife')  // oder 'buslife', 'wohnmobil', etc.
+formData.append('lifestyle', 'rvlife')  // oder 'beachlife', 'wohnmobil', etc.
 formData.append('title', 'Mein RV-Abenteuer')
 formData.append('images', imageFile)
 

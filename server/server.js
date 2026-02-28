@@ -61,13 +61,13 @@ const getLifestyleConfig = (lifestyle = 'vanlife') => {
       example2: 'Mit dem RV durch die Pampa - kein Campground weit und breit. Einfach am Straßenrand geparkt. Die besten Nächte sind die ungeplanten.',
       example3: 'Leute denken, RVlife ist nur Urlaub. Aber nach 6 Monaten on the road weißt du: Es ist ein komplettes Leben. Mit allen Höhen und Tiefen.'
     },
-    buslife: {
-      vehicle: 'Bus',
-      community: 'Buslife-Community',
-      keywords: ['buslife', 'bus', 'skoolie'],
-      example1: 'Du fährst deinen umgebauten Schulbus auf einen Waldweg. 40 Fuß Stahl und Holz - dein Zuhause. Buslife ist anders, und genau das liebst du.',
-      example2: 'Mit dem Bus in der Stadt parken? Vergiss es. Aber das ist okay. Die besten Spots sind sowieso da, wo niemand hinkommt.',
-      example3: 'Ein Bus ist nicht nur ein Fahrzeug. Er ist ein Statement. Gegen Normalität, für Freiheit. Auch wenn die Reparaturen manchmal nerven.'
+    beachlife: {
+      vehicle: 'Strand',
+      community: 'Beachlife-Community',
+      keywords: ['beachlife', 'beach', 'strand', 'ocean', 'surf'],
+      example1: 'Du wachst auf und hörst die Wellen. Sand überall - im Van, im Bett, im Essen. Aber genau das macht Beachlife aus. Kennst du das Gefühl?',
+      example2: 'Morgens surfen, abends Lagerfeuer am Strand. Kein fester Plan, nur die Gezeiten bestimmen deinen Tag. Das ist echte Freiheit.',
+      example3: 'Leute denken Beachlife ist nur Urlaub. Aber nach Wochen am Strand weißt du: Es ist ein Lebensgefühl. Salz in der Luft und Sand unter den Füßen.'
     },
     wohnmobil: {
       vehicle: 'Wohnmobil',
