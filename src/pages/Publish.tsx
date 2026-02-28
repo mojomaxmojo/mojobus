@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Route } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Route, Sparkles } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -2347,12 +2347,67 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
    const [manualTags, setManualTags] = useState<string[]>([]);
    const [selectedCountry, setSelectedCountry] = useState<string>('');
    const [isUploading, setIsUploading] = useState(false);
-  const { toast } = useToast();
-  const { mutate: publishEvent } = useNostrPublish();
-  const { mutateAsync: uploadFile } = useUploadFile();
-  const navigate = useNavigate();
+   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'buslife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+   const { toast } = useToast();
+   const { mutate: publishEvent } = useNostrPublish();
+   const { mutateAsync: uploadFile } = useUploadFile();
+   const navigate = useNavigate();
 
-  // Load edit data
+   // KI-Platz-Beschreibung generieren (Foster Huntington Stil)
+   const generatePlaceWithAI = async () => {
+     if (!imageFile) {
+       toast({
+         title: 'Bild erforderlich',
+         description: 'Bitte lade zuerst ein Titelbild hoch.',
+         variant: 'destructive'
+       });
+       return;
+     }
+
+     setIsGeneratingDescription(true);
+     try {
+       const formData = new FormData();
+       formData.append('images', imageFile);
+       formData.append('title', name);
+       formData.append('description', description);
+       formData.append('location', location);
+       if (coordinates.lat && coordinates.lng) {
+         formData.append('gps_lat', coordinates.lat);
+         formData.append('gps_lon', coordinates.lng);
+       }
+       formData.append('lifestyle', lifestyle);
+
+       const response = await fetch('/api/generate-place', {
+         method: 'POST',
+         body: formData
+       });
+
+       const data = await response.json();
+       if (data.description) {
+         setDescription(data.description);
+         if (data.hashtags) {
+           const newTags = data.hashtags.split(' ').filter((t: string) => !manualTags.includes(t));
+           setManualTags([...manualTags, ...newTags]);
+         }
+         toast({
+           title: 'Erfolg!',
+           description: `KI-Beschreibung generiert (${data.lifestyle})`
+         });
+       }
+     } catch (error) {
+       console.error(error);
+       toast({
+         title: 'Fehler',
+         description: 'KI-Generierung fehlgeschlagen.',
+         variant: 'destructive'
+       });
+     } finally {
+       setIsGeneratingDescription(false);
+     }
+   };
+
+   // Load edit data
   useEffect(() => {
     if (editEvent) {
       setName(editEvent.tags?.find((tag: any) => tag[0] === 'name')?.[1] || '');
@@ -3119,6 +3174,58 @@ Beschreibe hier den Ort, was macht ihn besonders...
               // Optional: Füge hochgeladene Bilder zu einer Liste hinzu
             }}
           />
+        </div>
+
+        {/* KI-Beschreibung generieren (Optional) */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-ocean-500" />
+            <h3 className="font-semibold">KI-Beschreibung generieren (Optional)</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Lifestyle</Label>
+            <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wähle deinen Lifestyle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                <SelectItem value="buslife">🚌 Buslife - Schulbus-Umbau/Skoolie</SelectItem>
+                <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Foster Huntington Stil - ehrlich, direkt, authentisch
+            </p>
+          </div>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={generatePlaceWithAI}
+            disabled={isGeneratingDescription || !imageFile}
+            className="w-full"
+          >
+            {isGeneratingDescription ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generiere Beschreibung...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                KI-Beschreibung generieren ({lifestyle})
+              </>
+            )}
+          </Button>
+          {!imageFile && (
+            <p className="text-xs text-muted-foreground">
+              💡 Lade zuerst ein Titelbild hoch, um die KI-Generierung zu nutzen.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
