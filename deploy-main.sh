@@ -200,6 +200,26 @@ deploy_files() {
     # Inhalt von dist/ nach DEPLOY_DIR kopieren
     cp -r "$PROJECT_DIR/dist/"* "$DEPLOY_DIR/" || error_exit "Kopieren fehlgeschlagen"
 
+    # Server-Verzeichnis kopieren
+    if [ -d "$PROJECT_DIR/server" ]; then
+        cp -r "$PROJECT_DIR/server" "$DEPLOY_DIR/" || error_exit "Kopieren des server/ Verzeichnisses fehlgeschlagen"
+        info_msg "✓ server/ Verzeichnis deployed"
+
+        # Server Dependencies installieren
+        if [ -f "$DEPLOY_DIR/server/package.json" ]; then
+            info_msg "Installiere Server Dependencies..."
+            npm install --prefix "$DEPLOY_DIR/server" --silent || warn_msg "npm install für Server fehlgeschlagen"
+            success_msg "Server Dependencies installiert"
+        fi
+    fi
+
+    # src/config/prompts/ kopieren (wichtig für Server-Imports!)
+    if [ -d "$PROJECT_DIR/src/config/prompts" ]; then
+        mkdir -p "$DEPLOY_DIR/src/config"
+        cp -r "$PROJECT_DIR/src/config/prompts" "$DEPLOY_DIR/src/config/" || error_exit "Kopieren von src/config/prompts fehlgeschlagen"
+        info_msg "✓ src/config/prompts/ deployed"
+    fi
+
     # Prüfe ob assets Ordner existiert
     if [ ! -d "$DEPLOY_DIR/assets" ]; then
         error_exit "assets Ordner nicht im Deployment gefunden! Build hat nicht funktioniert."

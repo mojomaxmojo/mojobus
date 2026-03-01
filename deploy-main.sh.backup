@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # ============================================
-# MojoBus VPS TEST Deploy Script
-# Deploy auf Testseite: test.mojobus.co
+# MojoBus VPS Production Deploy Script
+# Deploy auf Production: mojobus.co
 # Nur deployen: Git pull → Build → Deploy
 # Voraussetzung: Nginx, SSL, Directory sind bereit
 # 
 # OPTIONAL: COMMIT-RESET
 # Wenn du ein bestimmtes Deploy (Commit, Rollback) willst:
 # Setze environment variable DEPLOY_COMMIT_HASH vor dem Aufruf
-# Beispiel: DEPLOY_COMMIT_HASH=6647829 ./deploy-test.sh --force
+# Beispiel: DEPLOY_COMMIT_HASH=6647829 ./deploy-simple.sh --force
 # ============================================
 
 # Farben für Ausgabe
@@ -21,10 +21,10 @@ NC='\033[0m' # No Color
 
 # Konfiguration
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEPLOY_DIR="/home/nginx/domains/test.mojobus.co/public"
+DEPLOY_DIR="/home/nginx/domains/mojobus.co/public"
 LOG_DIR="$PROJECT_DIR/logs"
-LOG_FILE="$LOG_DIR/deploy-test-$(date +%Y%m%d-%H%M%S).log"
-LATEST_LOG="$LOG_DIR/deploy-test-latest.log"
+LOG_FILE="$LOG_DIR/deploy-production-$(date +%Y%m%d-%H%M%S).log"
+LATEST_LOG="$LOG_DIR/deploy-production-latest.log"
 
 # ============================================
 # FUNCTIONS
@@ -83,10 +83,10 @@ git_pull() {
   # Fetch origin
   git -C "$PROJECT_DIR" fetch origin
 
-  # Reset zu origin/test (WICHTIG: Test-Branch für Testseite!)
-  git -C "$PROJECT_DIR" reset --hard origin/test
+  # Reset zu origin/main (WICHTIG: Main-Branch für Production!)
+  git -C "$PROJECT_DIR" reset --hard origin/main
 
-  success_msg "Git reset zu origin/test erfolgreich"
+  success_msg "Git reset zu origin/main erfolgreich"
 
     # Prüfe ob --force oder -force in den Argumenten
     FORCE_DEPLOY=0
@@ -131,13 +131,8 @@ restore_map_for_production() {
     mkdir -p "$PROJECT_DIR/.deployment-backup"
     cp "$PROJECT_DIR/src/AppRouter.tsx" "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" 2>&1 | tee -a "$LOG_FILE"
     
-    # Map-Datei wiederherstellen
-    if [ -f "$PROJECT_DIR/src/pages/MapPage.production.tsx" ]; then
-        mv "$PROJECT_DIR/src/pages/MapPage.production.tsx" "$PROJECT_DIR/src/pages/MapPage.tsx" 2>&1 | tee -a "$LOG_FILE"
-        success_msg "MapPage.tsx wiederhergestellt"
-    else
-        warn_msg "MapPage.production.tsx nicht gefunden"
-    fi
+    # MapPage.tsx wird jetzt direkt verwendet (keine .production.tsx mehr nötig)
+    # Die neue MapPage.tsx mit VanillaMap funktioniert für Production
     
     # AppRouter.tsx aktualisieren
     info_msg "Aktualisiere AppRouter.tsx..."
@@ -150,11 +145,7 @@ restore_map_for_production() {
 restore_dev_config() {
     info_msg "Stelle Development-Konfiguration wieder her..."
     
-    # Map-Datei zurück zu .production.tsx
-    if [ -f "$PROJECT_DIR/src/pages/MapPage.tsx" ]; then
-        mv "$PROJECT_DIR/src/pages/MapPage.tsx" "$PROJECT_DIR/src/pages/MapPage.production.tsx" 2>&1 | tee -a "$LOG_FILE"
-        success_msg "MapPage.tsx → MapPage.production.tsx"
-    fi
+    # MapPage.tsx bleibt wie sie ist (keine .production.tsx mehr)
     
     # AppRouter.tsx wiederherstellen
     if [ -f "$PROJECT_DIR/.deployment-backup/AppRouter.tsx" ]; then
@@ -209,26 +200,39 @@ deploy_files() {
     # Inhalt von dist/ nach DEPLOY_DIR kopieren
     cp -r "$PROJECT_DIR/dist/"* "$DEPLOY_DIR/" || error_exit "Kopieren fehlgeschlagen"
 
-    # Server-Verzeichnis kopieren
-    if [ -d "$PROJECT_DIR/server" ]; then
-        cp -r "$PROJECT_DIR/server" "$DEPLOY_DIR/" || error_exit "Kopieren des server/ Verzeichnisses fehlgeschlagen"
-        info_msg "✓ server/ Verzeichnis deployed"
-
-        # Server Dependencies installieren
-        if [ -f "$DEPLOY_DIR/server/package.json" ]; then
-            info_msg "Installiere Server Dependencies..."
-            npm install --prefix "$DEPLOY_DIR/server" --silent || warn_msg "npm install für Server fehlgeschlagen"
-        fi
+    # Prüfe ob assets Ordner existiert
+    if [ ! -d "$DEPLOY_DIR/assets" ]; then
+        error_exit "assets Ordner nicht im Deployment gefunden! Build hat nicht funktioniert."
     fi
 
-    # src/config/prompts/ kopieren (wichtig für Server-Imports!)
-    if [ -d "$PROJECT_DIR/src/config/prompts" ]; then
-        mkdir -p "$DEPLOY_DIR/src/config"
-        cp -r "$PROJECT_DIR/src/config/prompts" "$DEPLOY_DIR/src/config/" || error_exit "Kopieren von src/config/prompts fehlgeschlagen"
-        info_msg "✓ src/config/prompts/ deployed"
+    # Prüfe ob polyfills.js existiert (sollte nicht!)
+    if [ -f "$DEPLOY_DIR/polyfills.js" ]; then
+        warn_msg "⚠ polyfills.js existiert noch - sollte gelöscht sein, lösche jetzt"
+        rm -f "$DEPLOY_DIR/polyfills.js"
     fi
 
+    # Prüfe ob chunks erstellt wurden
+    JS_FILES=$(find "$DEPLOY_DIR/assets" -name "*.js" -type f 2>/dev/null | wc -l)
+    if [ "$JS_FILES" -lt 5 ]; then
+        error_exit "Nur $JS_FILES JS-Chunks gefunden - Code-Splitting funktioniert nicht!"
+    else
+        info_msg "✓ $JS_FILES JS-Chunks deployed"
+    fi
 
+    # Emergency SW deployen wenn --emergency flag
+    if [ "$1" == "--emergency" ] || [ "$2" == "--emergency" ]; then
+        warn_msg "Deploye Emergency Service Worker zum Cache-Leeren..."
+        cp "$PROJECT_DIR/public/sw-emergency.js" "$DEPLOY_DIR/sw.js"
+        info_msg "✓ Emergency SW deployed"
+    fi
+
+    # Permissions setzen
+    chown -R nginx:nginx "$DEPLOY_DIR"
+    find "$DEPLOY_DIR" -type d -exec chmod 755 {} \;
+    find "$DEPLOY_DIR" -type f -exec chmod 644 {} \;
+
+    success_msg "Files deployed und Permissions gesetzt"
+}
 
 # Verify
 verify_deployment() {
@@ -261,7 +265,7 @@ summary() {
     echo "   Owner: nginx:nginx"
     echo "   Log: $LOG_FILE"
     echo ""
-    info_msg "Teste: https://test.mojobus.co"
+    info_msg "Teste: https://mojobus.co"
     echo ""
 }
 
@@ -272,7 +276,7 @@ summary() {
 main() {
     echo ""
     echo "=========================================="
-    echo "🧪 MojoBus VPS TEST Deploy"
+    echo "🚀 MojoBus VPS Production Deploy"
     echo "=========================================="
     echo ""
 
