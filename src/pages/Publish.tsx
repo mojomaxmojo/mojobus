@@ -2496,22 +2496,19 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
    // KI-Platz-Beschreibung generieren (Foster Huntington Stil)
    const generatePlaceWithAI = async () => {
-     console.log('[Place AI] Button geklickt');
-     console.log('[Place AI] imageFile:', imageFile);
-     console.log('[Place AI] name:', name);
-     console.log('[Place AI] location:', location);
-
      if (!imageFile) {
-       console.log('[Place AI] ❌ Kein Bild hochgeladen');
        toast({
-         title: 'Bild erforderlich',
-         description: 'Bitte lade zuerst ein Titelbild hoch.',
+         title: 'Debug: Kein Bild',
+         description: `imageFile=${imageFile}, name=${name}, location=${location}`,
          variant: 'destructive'
        });
        return;
      }
 
-     console.log('[Place AI] ✅ Bild vorhanden, starte Generierung...');
+     toast({
+       title: 'Debug: Starte KI',
+       description: `imageFile=${imageFile.name}, name=${name}`,
+     });
 
      setIsGeneratingDescription(true);
      try {
