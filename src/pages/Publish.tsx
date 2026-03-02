@@ -195,6 +195,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
+  const [additionalImagesUrlInput, setAdditionalImagesUrlInput] = useState('');
+  const [manualTags, setManualTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
