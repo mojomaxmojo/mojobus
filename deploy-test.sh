@@ -209,7 +209,15 @@ deploy_files() {
         if [ -f "$DEPLOY_DIR/server/package.json" ]; then
             info_msg "Installiere Server Dependencies..."
             npm install --prefix "$DEPLOY_DIR/server" --silent || warn_msg "npm install für Server fehlgeschlagen"
+            success_msg "Server Dependencies installiert"
         fi
+    fi
+
+    # src/config/prompts/ kopieren (wichtig für Server-Imports!)
+    if [ -d "$PROJECT_DIR/src/config/prompts" ]; then
+        mkdir -p "$DEPLOY_DIR/src/config"
+        cp -r "$PROJECT_DIR/src/config/prompts" "$DEPLOY_DIR/src/config/" || error_exit "Kopieren von src/config/prompts fehlgeschlagen"
+        info_msg "✓ src/config/prompts/ deployed"
     fi
 
     # Prüfe ob assets Ordner existiert
