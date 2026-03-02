@@ -195,6 +195,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
+  const [additionalImagesUrlInput, setAdditionalImagesUrlInput] = useState('');
+  const [manualTags, setManualTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
@@ -230,8 +232,6 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       formData.append('mainCategory', mainCategory || '');
       formData.append('subCategories', JSON.stringify(selectedSubTags));
       formData.append('detailedTags', JSON.stringify(detailedTags));
-      formData.append('additionalImageUrls', additionalImagesUrlInput || '');
-      formData.append('manualTags', JSON.stringify(manualTags));
       formData.append('country', selectedCountry || '');
 
       const response = await fetch('/api/generate-media-article', {
@@ -2788,7 +2788,10 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         setImage(correctedPreviewUrl);
       }
 
-      // Upload des Original-Files (für Speicherung)
+      // Speichere das File für KI-Generierung
+      setImageFile(file);
+
+      // Upload des Original-File (für Speicherung)
       const [urlTag] = await uploadFile(file);
       // Speichere die Upload-URL für spätere Verwendung (aber zeige die korrigierte Preview)
 
