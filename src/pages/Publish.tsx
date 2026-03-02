@@ -2498,17 +2498,12 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
    const generatePlaceWithAI = async () => {
      if (!imageFile) {
        toast({
-         title: 'Debug: Kein Bild',
-         description: `imageFile=${imageFile}, name=${name}, location=${location}`,
+         title: 'Bild erforderlich',
+         description: 'Bitte lade zuerst ein Titelbild hoch.',
          variant: 'destructive'
        });
        return;
      }
-
-     toast({
-       title: 'Debug: Starte KI',
-       description: `imageFile=${imageFile.name}, name=${name}`,
-     });
 
      setIsGeneratingDescription(true);
      try {
@@ -2793,7 +2788,10 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         setImage(correctedPreviewUrl);
       }
 
-      // Upload des Original-Files (für Speicherung)
+      // Speichere das File für KI-Generierung
+      setImageFile(file);
+
+      // Upload des Original-File (für Speicherung)
       const [urlTag] = await uploadFile(file);
       // Speichere die Upload-URL für spätere Verwendung (aber zeige die korrigierte Preview)
 
