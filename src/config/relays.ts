@@ -126,17 +126,7 @@ export const RELAYS: RelayConfig[] = [
     name: 'MojoBus Private',
     url: 'wss://relay.mojobus.co',
     category: 'stable',
-    description: 'Privates Relay - nur mit Mojo npub schreibbar',
-    read: true,
-    write: true,
-    search: false,
-    nips: [1, 2, 9, 11, 12, 15, 16, 20, 22, 26, 40, 42, 50, 57, 70],
-  },
-    {
-    name: 'SumSumBus Private',
-    url: 'wss://relays.mojobus.co',
-    category: 'stable',
-    description: 'Privates Relay - nur mit SumSum npub schreibbar',
+    description: 'Privates Relay - nur mit Mojo/Susanne npub schreibbar',
     read: true,
     write: true,
     search: false,
@@ -152,12 +142,11 @@ export const RELAY_PRESETS = {
   // MojoBus Preset - Hauptkonfiguration für MojoBus Blog
   mojobus: {
     name: 'MojoBus',
-    description: 'MojoBus Relays (relay.mojobus.co + Backup)',
+    description: 'MojoBus Relay (relay.mojobus.co)',
     relayUrls: [
       'wss://relay.mojobus.co',
-      'wss://relays.mojobus.co',
     ],
-    maxRelays: 2,
+    maxRelays: 1,
     queryTimeout: 3000, // 3s ist ausreichend nach Optimierung auf ~60 Events (statt 230)
   },
 
@@ -167,10 +156,9 @@ export const RELAY_PRESETS = {
     description: 'Ein schneller Relay für maximale Performance',
     relayUrls: [
        'wss://relay.mojobus.co',
-       'wss://relays.mojobus.co',
        'wss://relay.primal.net',
       ],
-    maxRelays: 3,
+    maxRelays: 2,
     queryTimeout: 4000,
   },
 
@@ -180,11 +168,10 @@ export const RELAY_PRESETS = {
     description: 'Ausgewogene Mischung aus schnellen und zuverlässigen Relays',
     relayUrls: [
        'wss://relay.mojobus.co',
-       'wss://relays.mojobus.co',
        'wss://relay.primal.net',
       'wss://nos.lol',
     ],
-    maxRelays: 4,
+    maxRelays: 3,
     queryTimeout: 5000,
   },
 
@@ -278,8 +265,8 @@ export const getSearchRelays = (): RelayConfig[] => {
  * Kann durch localStorage überschrieben werden
  *
  * KONFIGURATION:
- * - READ (Abrufen/Queries): MOJOBUS Preset - private Relays mit 3s Timeout
- * - WRITE (Veröffentlichen): MOJOBUS Preset - private Relays mit Redundanz
+ * - READ (Abrufen/Queries): MOJOBUS Preset - privates Relay mit 3s Timeout
+ * - WRITE (Veröffentlichen): MOJOBUS Preset - privates Relay
  *
  * PERFORMANCE-OPTIMIERUNG:
  * Home-Seite lädt nur ~60 Events statt 230 Events (74% weniger)
@@ -298,8 +285,8 @@ export const DEFAULT_APP_CONFIG = {
   // READ KONFIGURATION (Abrufen/Queries) - MOJOBUS Preset
   // ============================================================================
   read: {
-    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co + relays.mojobus.co
-    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // Beide Relays verwenden (2)
+    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co
+    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // 1 Relay
     queryTimeout: RELAY_PRESETS.mojobus.queryTimeout, // 3000ms - Ausreichend nach Optimierung
   },
 
@@ -307,8 +294,8 @@ export const DEFAULT_APP_CONFIG = {
   // WRITE KONFIGURATION (Veröffentlichen) - MOJOBUS Preset
   // ============================================================================
   write: {
-    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co + relays.mojobus.co
-    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // Beide Relays verwenden (2)
+    relayUrls: RELAY_PRESETS.mojobus.relayUrls, // relay.mojobus.co
+    maxRelays: RELAY_PRESETS.mojobus.maxRelays, // 1 Relay
     activeRelay: RELAY_PRESETS.mojobus.relayUrls[0], // relay.mojobus.co als aktiver Relay
   },
 
