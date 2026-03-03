@@ -360,6 +360,7 @@ export function TripPublishForm() {
 
       // Zusätzliche Kontext-Felder
       formData.append('tripType', tripData.tripType || ''); // Trip-Typ
+      formData.append('country', tripData.country || ''); // Land
       formData.append('stationDescriptions', JSON.stringify(
         stations.map(s => ({
           location: s.location || s.title,
