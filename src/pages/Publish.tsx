@@ -235,6 +235,10 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       formData.append('detailedTags', JSON.stringify(detailedTags));
       formData.append('country', selectedCountry || '');
 
+      // Erweiterte Kontext-Felder für noch bessere KI-Generierung
+      formData.append('manualTags', JSON.stringify(manualTags));
+      formData.append('additionalImageUrls', additionalImagesUrlInput || '');
+
       const response = await fetch('/api/generate-media-article', {
         method: 'POST',
         body: formData
@@ -2519,19 +2523,25 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
      }
 
      setIsGeneratingDescription(true);
-     try {
-       const formData = new FormData();
-       formData.append('images', imageFile);
-       formData.append('title', name);
-       formData.append('description', description);
-       formData.append('location', location);
-       if (coordinates.lat && coordinates.lng) {
-         formData.append('gps_lat', coordinates.lat);
-         formData.append('gps_lon', coordinates.lng);
-       }
-       formData.append('lifestyle', lifestyle);
+      try {
+        const formData = new FormData();
+        formData.append('images', imageFile);
+        formData.append('title', name);
+        formData.append('description', description);
+        formData.append('location', location);
+        if (coordinates.lat && coordinates.lng) {
+          formData.append('gps_lat', coordinates.lat);
+          formData.append('gps_lon', coordinates.lng);
+        }
+        formData.append('lifestyle', lifestyle);
 
-       const response = await fetch('/api/generate-place', {
+        // Zusätzliche Kontext-Felder für bessere KI-Generierung
+        formData.append('category', category || '');
+        formData.append('facilities', JSON.stringify(facilities));
+        formData.append('bestFor', JSON.stringify(bestFor));
+        formData.append('country', selectedCountry || '');
+
+        const response = await fetch('/api/generate-place', {
          method: 'POST',
          body: formData
        });
