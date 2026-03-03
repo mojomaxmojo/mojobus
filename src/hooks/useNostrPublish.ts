@@ -26,14 +26,26 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
           created_at: t.created_at ?? Math.floor(Date.now() / 1000),
         });
 
-        await nostr.event(event, { signal: AbortSignal.timeout(5000) });
+        console.log('[useNostrPublish] Publishing event to relays...');
+        console.log('[useNostrPublish] Event:', JSON.stringify(event, null, 2));
+        
+        const result = await nostr.event(event, { signal: AbortSignal.timeout(15000) });
+        
+        console.log('[useNostrPublish] Publish result:', result);
         return event;
       } else {
         throw new Error("User is not logged in");
       }
     },
-    onError: (error) => {
-      console.error("Failed to publish event:", error);
+    onError: (error: any) => {
+      console.error("[useNostrPublish] Failed to publish event:", error);
+      console.error("[useNostrPublish] Error details:", {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack,
+        cause: error?.cause,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      });
     },
     onSuccess: (data) => {
       console.log("Event published successfully:", data);

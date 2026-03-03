@@ -708,14 +708,26 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
       // Publish to Nostr
       try {
-        publishEvent({
+        console.log('[MediaUpload] Publishing event to Nostr...');
+        console.log('[MediaUpload] Content:', content.substring(0, 100) + '...');
+        console.log('[MediaUpload] Tags count:', tags.length);
+        
+        await publishEvent({
           kind: 1, // Text note with media attachments
           content,
           tags
         });
-      } catch (publishError) {
-        console.error('Publish failed:', publishError);
-        throw new Error(`Publishing failed: ${publishError.message}`);
+        
+        console.log('[MediaUpload] Event published successfully!');
+      } catch (publishError: any) {
+        console.error('[MediaUpload] Publish failed:', publishError);
+        console.error('[MediaUpload] Error details:', {
+          name: publishError?.name,
+          message: publishError?.message,
+          stack: publishError?.stack,
+          cause: publishError?.cause
+        });
+        throw new Error(`Publishing failed: ${publishError?.message || 'Unknown error'}`);
       }
 
       // SUCCESS!
@@ -1549,7 +1561,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [isGeneratingNote, setIsGeneratingNote] = useState(false);
   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const { toast } = useToast();
-  const { mutate: publishEvent } = useNostrPublish();
+  const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
   const navigate = useNavigate();
 
@@ -2490,7 +2502,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
    const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
    const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
    const { toast } = useToast();
-   const { mutate: publishEvent } = useNostrPublish();
+   const { mutateAsync: publishEvent } = useNostrPublish();
    const { mutateAsync: uploadFile } = useUploadFile();
    const navigate = useNavigate();
 
@@ -3511,7 +3523,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
   const { toast } = useToast();
-  const { mutate: publishEvent } = useNostrPublish();
+  const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
   const navigate = useNavigate();
 
