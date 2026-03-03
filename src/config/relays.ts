@@ -145,8 +145,9 @@ export const RELAY_PRESETS = {
     description: 'MojoBus Relay (relay.mojobus.co)',
     relayUrls: [
       'wss://relay.mojobus.co',
+      'wss://relay.primal.net',
     ],
-    maxRelays: 1,
+    maxRelays: 2,
     queryTimeout: 3000, // 3s ist ausreichend nach Optimierung auf ~60 Events (statt 230)
   },
 
