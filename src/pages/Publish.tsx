@@ -204,6 +204,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
+  const { mutateAsync: publishEvent } = useNostrPublish();
   const navigate = useNavigate();
 
   // KI-Artikelgenerierung (Foster Huntington Stil)
