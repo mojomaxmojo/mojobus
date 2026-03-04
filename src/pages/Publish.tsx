@@ -1590,6 +1590,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       formData.append('location', location);
       formData.append('text', tags.join(' ') || '');
       formData.append('lifestyle', lifestyle);
+      formData.append('country', selectedCountry || '');
 
       const response = await fetch('/api/generate-note', {
         method: 'POST',
