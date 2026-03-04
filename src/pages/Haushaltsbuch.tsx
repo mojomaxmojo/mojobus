@@ -418,10 +418,10 @@ export default function Haushaltsbuch() {
             <div className="space-y-2">
               <Label>Kategorie</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Kategorie wählen" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999]" position="popper" sideOffset={5}>
                   {BUDGET_CATEGORIES[transactionType].map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.icon} {cat.label}
