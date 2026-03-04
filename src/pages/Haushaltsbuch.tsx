@@ -147,6 +147,59 @@ export default function Haushaltsbuch() {
         </div>
       </div>
 
+      {/* Letzte Buchungen - GANZ OBEN */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">📋 Letzte Buchungen</CardTitle>
+              <CardDescription>
+                Die letzten 5 Einträge
+              </CardDescription>
+            </div>
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Neue
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {currentMonth?.transactions.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              Noch keine Buchungen in diesem Monat
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {currentMonth?.transactions.slice(0, 5).map(transaction => {
+                const category = getCategoryById(transaction.category, transaction.type);
+                
+                return (
+                  <div 
+                    key={transaction.id}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{category?.icon}</span>
+                      <div>
+                        <p className="font-medium">{transaction.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(transaction.date), 'dd.MM.yyyy')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`text-right font-bold ${
+                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.type === 'income' ? '+' : '-'}{transaction.amount.toFixed(2)} €
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Monats-Navigation */}
       <Card>
         <CardHeader>
@@ -212,7 +265,7 @@ export default function Haushaltsbuch() {
         </CardContent>
       </Card>
 
-      {/* Budget-Fortschritt & Kategorien */}
+      {/* Budget-Fortschritt & Statistiken */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Budget-Fortschritt */}
         <Card>
@@ -258,113 +311,60 @@ export default function Haushaltsbuch() {
           </CardContent>
         </Card>
 
-        {/* Letzte Buchungen */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">📋 Letzte Buchungen</CardTitle>
-                <CardDescription>
-                  Die letzten 5 Einträge
-                </CardDescription>
-              </div>
-              <Button onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Neue
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {currentMonth?.transactions.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Noch keine Buchungen in diesem Monat
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {currentMonth?.transactions.slice(0, 5).map(transaction => {
-                  const category = getCategoryById(transaction.category, transaction.type);
-                  
-                  return (
-                    <div 
-                      key={transaction.id}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{category?.icon}</span>
-                        <div>
-                          <p className="font-medium">{transaction.description}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(transaction.date), 'dd.MM.yyyy')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className={`text-right font-bold ${
-                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {transaction.type === 'income' ? '+' : '-'}{transaction.amount.toFixed(2)} €
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Statistiken */}
-      {stats && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">📈 Statistiken</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Tagesdurchschnitt (Ausgaben)</p>
-                <p className="text-2xl font-bold">{stats.dailyAverage.expense.toFixed(2)} €</p>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Tagesdurchschnitt (Einnahmen)</p>
-                <p className="text-2xl font-bold">{stats.dailyAverage.income.toFixed(2)} €</p>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Sparquote</p>
-                <p className="text-2xl font-bold">
-                  {stats.totalIncome > 0 
-                    ? Math.round((stats.balance / stats.totalIncome) * 100) 
-                    : 0}%
-                </p>
-              </div>
-            </div>
-
-            {/* Top Kategorien */}
-            {stats.topExpenses.length > 0 && (
-              <div className="mt-6">
-                <h4 className="font-medium mb-3">🏆 Top Ausgaben-Kategorien</h4>
-                <div className="space-y-2">
-                  {stats.topExpenses.map((item, index) => {
-                    const category = getCategoryById(item.category, 'expense');
-                    const percentage = stats.byCategory[item.category]?.percentage || 0;
-                    
-                    return (
-                      <div key={item.category} className="flex items-center gap-3">
-                        <span className="font-bold text-lg text-muted-foreground w-6">
-                          {index + 1}.
-                        </span>
-                        <span className="text-xl">{category?.icon}</span>
-                        <span className="flex-1">{category?.label}</span>
-                        <span className="font-medium">{item.total.toFixed(2)} €</span>
-                        <Badge variant="secondary">{percentage}%</Badge>
-                      </div>
-                    );
-                  })}
+        {/* Statistiken */}
+        {stats && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">📈 Statistiken</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">Tagesdurchschnitt (Ausgaben)</p>
+                  <p className="text-2xl font-bold">{stats.dailyAverage.expense.toFixed(2)} €</p>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">Tagesdurchschnitt (Einnahmen)</p>
+                  <p className="text-2xl font-bold">{stats.dailyAverage.income.toFixed(2)} €</p>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground">Sparquote</p>
+                  <p className="text-2xl font-bold">
+                    {stats.totalIncome > 0 
+                      ? Math.round((stats.balance / stats.totalIncome) * 100) 
+                      : 0}%
+                  </p>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+
+              {/* Top Kategorien */}
+              {stats.topExpenses.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="font-medium mb-3">🏆 Top Ausgaben-Kategorien</h4>
+                  <div className="space-y-2">
+                    {stats.topExpenses.map((item, index) => {
+                      const category = getCategoryById(item.category, 'expense');
+                      const percentage = stats.byCategory[item.category]?.percentage || 0;
+                      
+                      return (
+                        <div key={item.category} className="flex items-center gap-3">
+                          <span className="font-bold text-lg text-muted-foreground w-6">
+                            {index + 1}.
+                          </span>
+                          <span className="text-xl">{category?.icon}</span>
+                          <span className="flex-1">{category?.label}</span>
+                          <span className="font-medium">{item.total.toFixed(2)} €</span>
+                          <Badge variant="secondary">{percentage}%</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Neue Buchung Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
