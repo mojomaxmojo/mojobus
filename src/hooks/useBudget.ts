@@ -1,78 +1,52 @@
-/**
- * Haushaltsbuch Hook
- * 
- * Haupt-Hook für alle Haushaltsbuch-Operationen:
- * - Transaktionen laden/speichern
- * - Statistiken berechnen
- * - Budget-Verfolgung
- */
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   type BudgetTransaction, 
   type BudgetStats, 
-  type BudgetMonth,
-  BUDGET_EVENT_KIND,
-  BUDGET_TAG,
-  DEFAULT_CURRENCY,
-  BUDGET_RELAYS,
-  BUDGET_AUTHORIZED_PUBKEYS
+  type BudgetMonth
 } from '@/config/budget';
-import { BUDGET_CATEGORIES, type BudgetCategory } from '@/config/budgetCategories';
-import { DEFAULT_BUDGET_LIMITS, calculateBudgetUsage, type BudgetLimit } from '@/config/budgetLimits';
-import { useBudgetEncryption } from './useBudgetEncryption';
-import { useNostr } from './useNostr';
+import { BUDGET_CATEGORIES } from '@/config/budgetCategories';
+import { DEFAULT_BUDGET_LIMITS, calculateBudgetUsage } from '@/config/budgetLimits';
+import { useCurrentUser } from './useCurrentUser';
 import { useToast } from './useToast';
 
-// Simple ID generator
-const generateEventId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-};
-
 // ============================================================================
-// TYPES
+// LOCAL STORAGE KEY
 // ============================================================================
 
-interface UseBudgetOptions {
-  year?: number;
-  month?: number;  // 1-12
-}
-
-interface UseBudgetReturn {
-  // Daten
-  transactions: BudgetTransaction[];
-  currentMonth: BudgetMonth | null;
-  stats: BudgetStats | null;
-  
-  // Loading States
-  isLoading: boolean;
-  isSaving: boolean;
-  error: string | null;
-  
-  // Aktionen
-  addTransaction: (transaction: Omit<BudgetTransaction, 'id' | 'createdAt' | 'createdBy'>) => Promise<void>;
-  updateTransaction: (id: string, updates: Partial<BudgetTransaction>) => Promise<void>;
-  deleteTransaction: (id: string) => Promise<void>;
-  
-  // Navigation
-  goToMonth: (year: number, month: number) => void;
-  goToPreviousMonth: () => void;
-  goToNextMonth: () => void;
-  goToCurrentMonth: () => void;
-  
-  // Helpers
-  getCategoryById: (id: string, type: 'expense' | 'income') => BudgetCategory | undefined;
-  getCategoryLimit: (categoryId: string) => BudgetLimit | undefined;
-  getCategoryUsage: (categoryId: string) => ReturnType<typeof calculateBudgetUsage> | null;
-  
-  // Export
-  exportToCSV: () => string;
-}
+const STORAGE_KEY = 'haushaltsbuch_transactions';
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Lädt Transaktionen aus localStorage
+ */
+function loadTransactions(): BudgetTransaction[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return [];
+    
+    const transactions = JSON.parse(data);
+    return transactions.sort((a: BudgetTransaction, b: BudgetTransaction) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  } catch (error) {
+    console.error('[Budget] Failed to load transactions:', error);
+    return [];
+  }
+}
+
+/**
+ * Speichert Transaktionen in localStorage
+ */
+function saveTransactions(transactions: BudgetTransaction[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  } catch (error) {
+    console.error('[Budget] Failed to save transactions:', error);
+  }
+}
 
 /**
  * Berechnet Statistiken für eine Liste von Transaktionen
@@ -168,163 +142,25 @@ function calculateMonth(transactions: BudgetTransaction[], year: number, month: 
 // HOOK
 // ============================================================================
 
-export function useBudget(options: UseBudgetOptions = {}): UseBudgetReturn {
-  const { year: initialYear, month: initialMonth } = options;
-  
+export function useBudget() {
   // State
   const currentDate = new Date();
-  const [selectedYear, setSelectedYear] = useState(initialYear || currentDate.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(initialMonth || currentDate.getMonth() + 1);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [transactions, setTransactions] = useState<BudgetTransaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Hooks
   const { toast } = useToast();
-  const { user, ndk } = useNostr();
-  const queryClient = useQueryClient();
-  const { encryptForAllAuthors, decryptFromEvent } = useBudgetEncryption();
-  
-  // Prüfe ob User berechtigt ist
-  const isAuthorized = user?.pubkey && BUDGET_AUTHORIZED_PUBKEYS.includes(user.pubkey);
+  const { user } = useCurrentUser();
 
-  // ============================================================================
-  // QUERY: Transaktionen laden
-  // ============================================================================
-
-  const { 
-    data: transactions = [], 
-    isLoading,
-    refetch 
-  } = useQuery({
-    queryKey: ['budget', selectedYear, selectedMonth],
-    queryFn: async (): Promise<BudgetTransaction[]> => {
-      if (!ndk || !user?.pubkey || !user?.privkey) {
-        throw new Error('Nicht eingeloggt');
-      }
-
-      if (!isAuthorized) {
-        throw new Error('Nicht berechtigt');
-      }
-
-      try {
-        // Alle Budget-Events abrufen
-        const filter = {
-          kinds: [BUDGET_EVENT_KIND],
-          '#t': [BUDGET_TAG],
-          authors: BUDGET_AUTHORIZED_PUBKEYS,
-          limit: 1000
-        };
-
-        const events = await ndk.fetchEvents(filter);
-        const allTransactions: BudgetTransaction[] = [];
-
-        for (const event of events) {
-          try {
-            // Verschlüsselten Content parsen
-            const encryptedMap = JSON.parse(event.content);
-            
-            // Entschlüsseln
-            const decrypted = decryptFromEvent<BudgetTransaction>(
-              encryptedMap,
-              user.pubkey,
-              user.privkey,
-              event.pubkey
-            );
-
-            if (decrypted) {
-              allTransactions.push({
-                ...decrypted,
-                id: event.dTag || event.id,
-                createdBy: event.pubkey,
-                createdAt: event.created_at
-              });
-            }
-          } catch (err) {
-            console.warn('[Budget] Failed to decrypt event:', event.id, err);
-          }
-        }
-
-        // Nach Datum sortieren (neueste zuerst)
-        allTransactions.sort((a, b) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-
-        return allTransactions;
-      } catch (err) {
-        console.error('[Budget] Load error:', err);
-        throw err;
-      }
-    },
-    enabled: !!ndk && !!user?.pubkey && isAuthorized,
-    staleTime: 30000, // 30 Sekunden
-  });
-
-  // ============================================================================
-  // MUTATION: Transaktion speichern
-  // ============================================================================
-
-  const saveMutation = useMutation({
-    mutationFn: async (transaction: BudgetTransaction) => {
-      if (!ndk || !user?.pubkey || !user?.privkey) {
-        throw new Error('Nicht eingeloggt');
-      }
-
-      if (!isAuthorized) {
-        throw new Error('Nicht berechtigt');
-      }
-
-      // Für alle Autoren verschlüsseln
-      const encryptedContent = encryptForAllAuthors(transaction, user.privkey);
-
-      // Event erstellen
-      const event = {
-        kind: BUDGET_EVENT_KIND,
-        content: JSON.stringify(encryptedContent),
-        tags: [
-          ['t', BUDGET_TAG],
-          ['d', transaction.id],
-          ['type', transaction.type],
-          ['category', transaction.category],
-          ['date', transaction.date],
-          ...BUDGET_AUTHORIZED_PUBKEYS.map(pk => ['p', pk])
-        ],
-        created_at: Math.floor(Date.now() / 1000)
-      };
-
-      // Publish
-      // TODO: NDK publish implementieren
-      
-      return event;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budget'] });
-      toast({
-        title: 'Gespeichert',
-        description: 'Buchung wurde gespeichert'
-      });
-    },
-    onError: (err: Error) => {
-      toast({
-        title: 'Fehler',
-        description: err.message,
-        variant: 'destructive'
-      });
-    }
-  });
-
-  // ============================================================================
-  // ABGELEITETE DATEN
-  // ============================================================================
-
-  // Aktueller Monat
-  const currentMonth = useMemo(() => {
-    return calculateMonth(transactions, selectedYear, selectedMonth);
-  }, [transactions, selectedYear, selectedMonth]);
-
-  // Statistiken für aktuellen Monat
-  const stats = useMemo(() => {
-    if (!currentMonth) return null;
-    return calculateStats(currentMonth.transactions);
-  }, [currentMonth]);
+  // Transaktionen beim Mounten laden
+  useEffect(() => {
+    const loaded = loadTransactions();
+    setTransactions(loaded);
+    setIsLoading(false);
+  }, []);
 
   // ============================================================================
   // AKTIONEN
@@ -334,38 +170,95 @@ export function useBudget(options: UseBudgetOptions = {}): UseBudgetReturn {
     transactionData: Omit<BudgetTransaction, 'id' | 'createdAt' | 'createdBy'>
   ) => {
     if (!user?.pubkey) {
+      toast({
+        title: 'Nicht eingeloggt',
+        description: 'Bitte loggen Sie sich ein, um Buchungen zu speichern.',
+        variant: 'destructive'
+      });
       throw new Error('Nicht eingeloggt');
     }
 
-    const transaction: BudgetTransaction = {
-      ...transactionData,
-      id: generateEventId(),
-      createdAt: Math.floor(Date.now() / 1000),
-      createdBy: user.pubkey
-    };
+    setIsSaving(true);
 
-    await saveMutation.mutateAsync(transaction);
-  }, [user?.pubkey, saveMutation]);
+    try {
+      const transaction: BudgetTransaction = {
+        ...transactionData,
+        id: `budget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        createdAt: Math.floor(Date.now() / 1000),
+        createdBy: user.pubkey
+      };
+
+      const updatedTransactions = [transaction, ...transactions];
+      setTransactions(updatedTransactions);
+      saveTransactions(updatedTransactions);
+
+      toast({
+        title: 'Gespeichert',
+        description: 'Buchung wurde gespeichert'
+      });
+    } catch (error) {
+      console.error('[Budget] Save failed:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Buchung konnte nicht gespeichert werden.',
+        variant: 'destructive'
+      });
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user?.pubkey, transactions, toast]);
 
   const updateTransaction = useCallback(async (id: string, updates: Partial<BudgetTransaction>) => {
-    const existing = transactions.find(t => t.id === id);
-    if (!existing) {
-      throw new Error('Transaktion nicht gefunden');
+    setIsSaving(true);
+
+    try {
+      const updated = transactions.map(t => 
+        t.id === id ? { ...t, ...updates, updatedAt: Math.floor(Date.now() / 1000) } : t
+      );
+      
+      setTransactions(updated);
+      saveTransactions(updated);
+
+      toast({
+        title: 'Aktualisiert',
+        description: 'Buchung wurde aktualisiert'
+      });
+    } catch (error) {
+      console.error('[Budget] Update failed:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Buchung konnte nicht aktualisiert werden.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
     }
-
-    const updated: BudgetTransaction = {
-      ...existing,
-      ...updates,
-      updatedAt: Math.floor(Date.now() / 1000)
-    };
-
-    await saveMutation.mutateAsync(updated);
-  }, [transactions, saveMutation]);
+  }, [transactions, toast]);
 
   const deleteTransaction = useCallback(async (id: string) => {
-    // TODO: Delete implementieren (replaceable event mit leerem content)
-    console.log('Delete transaction:', id);
-  }, []);
+    setIsSaving(true);
+
+    try {
+      const updated = transactions.filter(t => t.id !== id);
+      setTransactions(updated);
+      saveTransactions(updated);
+
+      toast({
+        title: 'Gelöscht',
+        description: 'Buchung wurde gelöscht'
+      });
+    } catch (error) {
+      console.error('[Budget] Delete failed:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Buchung konnte nicht gelöscht werden.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [transactions, toast]);
 
   // ============================================================================
   // NAVIGATION
@@ -399,6 +292,21 @@ export function useBudget(options: UseBudgetOptions = {}): UseBudgetReturn {
     setSelectedYear(now.getFullYear());
     setSelectedMonth(now.getMonth() + 1);
   }, []);
+
+  // ============================================================================
+  // ABGELEITETE DATEN
+  // ============================================================================
+
+  // Aktueller Monat
+  const currentMonth = useMemo(() => {
+    return calculateMonth(transactions, selectedYear, selectedMonth);
+  }, [transactions, selectedYear, selectedMonth]);
+
+  // Statistiken für aktuellen Monat
+  const stats = useMemo(() => {
+    if (!currentMonth) return null;
+    return calculateStats(currentMonth.transactions);
+  }, [currentMonth]);
 
   // ============================================================================
   // HELPERS
@@ -458,8 +366,7 @@ export function useBudget(options: UseBudgetOptions = {}): UseBudgetReturn {
     currentMonth,
     stats,
     isLoading,
-    isSaving: saveMutation.isPending,
-    error,
+    isSaving,
     addTransaction,
     updateTransaction,
     deleteTransaction,
