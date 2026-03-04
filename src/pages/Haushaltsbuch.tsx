@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,13 +50,14 @@ export default function Haushaltsbuch() {
     addTransaction,
     goToPreviousMonth,
     goToNextMonth,
-    goToCurrentMonth,
     getCategoryById,
-    getCategoryUsage
+    getCategoryUsage,
+    exportToCSV
   } = useBudget();
 
   // State für Dialog
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [transactionType, setTransactionType] = useState<'expense' | 'income'>('expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -94,8 +95,20 @@ export default function Haushaltsbuch() {
   };
 
   const handleExportCSV = () => {
-    // TODO: CSV Export implementieren
-    console.log('Export CSV');
+    const csv = exportToCSV();
+    if (!csv) {
+      alert('Keine Daten zum Exportieren');
+      return;
+    }
+
+    // Download CSV
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `haushaltsbuch-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   // ============================================================================
@@ -127,7 +140,7 @@ export default function Haushaltsbuch() {
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowSettingsDialog(true)}>
             <Settings className="h-4 w-4 mr-2" />
             Einstellungen
           </Button>
@@ -411,10 +424,7 @@ export default function Haushaltsbuch() {
                 <SelectContent>
                   {BUDGET_CATEGORIES[transactionType].map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      <span className="flex items-center gap-2">
-                        <span>{cat.icon}</span>
-                        <span>{cat.label}</span>
-                      </span>
+                      {cat.icon} {cat.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -469,6 +479,66 @@ export default function Haushaltsbuch() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Einstellungen Dialog */}
+      <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>⚙️ Haushaltsbuch-Einstellungen</DialogTitle>
+            <DialogDescription>
+              Budget-Limits pro Kategorie festlegen
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-3">
+              {DEFAULT_BUDGET_LIMITS.categories.map(limitConfig => {
+                const category = getCategoryById(limitConfig.categoryId, 'expense');
+                if (!category) return null;
+
+                return (
+                  <div 
+                    key={limitConfig.categoryId} 
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{category.icon}</span>
+                      <div>
+                        <p className="font-medium">{category.label}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Warnung bei {limitConfig.warningThreshold}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        className="w-24"
+                        value={limitConfig.limit}
+                        disabled
+                      />
+                      <span className="text-sm text-muted-foreground">€</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                💡 Die Budget-Limits können in einer zukünftigen Version angepasst werden. 
+                Aktuell werden die Standard-Werte verwendet.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSettingsDialog(false)}>
+              Schließen
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

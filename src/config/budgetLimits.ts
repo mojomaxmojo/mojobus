@@ -25,18 +25,18 @@ export interface BudgetLimitsConfig {
  */
 export const DEFAULT_BUDGET_LIMITS: BudgetLimitsConfig = {
   categories: [
-    { categoryId: 'essen', limit: 500, warningThreshold: 80, currency: 'EUR' },
-    { categoryId: 'sprit', limit: 400, warningThreshold: 80, currency: 'EUR' },
-    { categoryId: 'camping', limit: 300, warningThreshold: 80, currency: 'EUR' },
-    { categoryId: 'reparatur', limit: 200, warningThreshold: 80, currency: 'EUR' },
+    { categoryId: 'essen', limit: 600, warningThreshold: 80, currency: 'EUR' },
+    { categoryId: 'sprit', limit: 200, warningThreshold: 80, currency: 'EUR' },
+    { categoryId: 'camping', limit: 100, warningThreshold: 80, currency: 'EUR' },
+    { categoryId: 'reparatur', limit: 100, warningThreshold: 80, currency: 'EUR' },
     { categoryId: 'gesundheit', limit: 100, warningThreshold: 80, currency: 'EUR' },
-    { categoryId: 'freizeit', limit: 150, warningThreshold: 80, currency: 'EUR' },
+    { categoryId: 'freizeit', limit: 100, warningThreshold: 80, currency: 'EUR' },
     { categoryId: 'kommunikation', limit: 50, warningThreshold: 80, currency: 'EUR' },
     { categoryId: 'versicherung', limit: 100, warningThreshold: 80, currency: 'EUR' },
     { categoryId: 'ausruestung', limit: 100, warningThreshold: 80, currency: 'EUR' },
     { categoryId: 'sonstiges', limit: 100, warningThreshold: 80, currency: 'EUR' }
   ],
-  total: 2000,
+  total: 1600,
   totalWarningThreshold: 90,
   currency: 'EUR'
 };
