@@ -30,6 +30,7 @@ const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.S
 const ServiceWorkerSettings = lazy(() => import("./pages/ServiceWorkerSettings").then(m => ({ default: m.ServiceWorkerSettings })));
 const NIP19Page = lazy(() => import("./pages/NIP19Page").then(m => ({ default: m.NIP19Page })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.default })));
+const Haushaltsbuch = lazy(() => import("./pages/Haushaltsbuch").then(m => ({ default: m.default })));
 
 function App() {
   return (
@@ -60,9 +61,10 @@ function App() {
               <Route path="/notes" element={<Notes />} />
               <Route path="/notes/:country" element={<Notes />} />
               <Route path="/about" element={<About />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/service-worker" element={<ServiceWorkerSettings />} />
+<Route path="/profile" element={<Profile />} />
+               <Route path="/settings" element={<Settings />} />
+               <Route path="/settings/service-worker" element={<ServiceWorkerSettings />} />
+               <Route path="/haushaltsbuch" element={<Haushaltsbuch />} />
                <Route path="/veroeffentlichen" element={<Publish />} />
                <Route path="/veroeffentlichen/modern" element={<ContentEditorMinimal />} />
                <Route path="/perpetual-travelers" element={<PerpetualTravelers />} />
