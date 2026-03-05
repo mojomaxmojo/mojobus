@@ -71,9 +71,3 @@ export { Download, Database, Palette, Server, Users, Moon, Copy, Zap, Gauge, Bar
 // ============================================================================
 
 export { Wallet } from 'lucide-react';
-
-// ============================================================================
-// BUDGET ICONS
-// ============================================================================
-
-export { TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';

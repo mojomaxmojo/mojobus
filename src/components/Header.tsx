@@ -28,7 +28,6 @@ import {
   Calendar,
   Lightbulb,
   Sun,
-  Wallet,
 } from '@/lib/icons';
 import {
   DropdownMenu,
@@ -377,12 +376,6 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/haushaltsbuch" className="flex items-center gap-2">
-                      <Wallet className="h-4 w-4" />
-                      💰 Haushaltsbuch
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
                     <Link to="/profile" className="flex items-center gap-2">
                       <User className="h-4 w-4" />
                       Profil
@@ -584,14 +577,6 @@ export function Header() {
                   >
                     <PenSquare className="h-5 w-5 text-gray-600" />
                     <span className="text-gray-900 dark:text-gray-100">Beitrag erstellen</span>
-                  </Link>
-                  <Link
-                    to="/haushaltsbuch"
-                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    onClick={handleMobileMenuClick}
-                  >
-                    <Wallet className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-900 dark:text-gray-100">💰 Haushaltsbuch</span>
                   </Link>
                   <Link
                     to="/profile"
