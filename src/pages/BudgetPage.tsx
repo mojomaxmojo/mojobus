@@ -163,10 +163,14 @@ function BudgetPageContent() {
 
     try {
       if (editingEntry) {
-        await updateMutation.mutateAsync({
+        // Bearbeiten: Kompletten Eintrag mit Updates zusammenführen
+        const updatedEntry: BudgetEntry = {
+          ...editingEntry,
+          ...data,
           id: editingEntry.id,
-          updates: data,
-        });
+          createdAt: editingEntry.createdAt,
+        };
+        await updateMutation.mutateAsync(updatedEntry);
       } else {
         await createMutation.mutateAsync(data);
       }

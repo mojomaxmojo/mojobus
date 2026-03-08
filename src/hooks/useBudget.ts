@@ -205,20 +205,11 @@ export function useBudget() {
   // Budget-Eintrag aktualisieren
   const useUpdateBudgetEntry = () => {
     const mutation = useMutation({
-      mutationFn: async ({ id, updates }: { id: string; updates: Partial<BudgetEntry> }) => {
+      mutationFn: async (entry: BudgetEntry) => {
         try {
-          // Alten Eintrag laden
-          const entries = queryClient.getQueryData<BudgetEntry[]>(['budget', 'entries']) || [];
-          const existingEntry = entries.find(e => e.id === id);
-          
-          if (!existingEntry) {
-            throw new Error('Budget entry not found');
-          }
-
           // Aktualisierten Eintrag erstellen
           const updatedEntry: BudgetEntry = {
-            ...existingEntry,
-            ...updates,
+            ...entry,
             updatedAt: Math.floor(Date.now() / 1000),
           };
 
