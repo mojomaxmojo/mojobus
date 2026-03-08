@@ -57,6 +57,13 @@ export const DEFAULT_CATEGORIES: BudgetCategory[] = [
     type: 'expense',
   },
   {
+    id: 'reparatur',
+    name: 'Reparatur',
+    icon: '🔧',
+    color: 'text-amber-600 bg-amber-50',
+    type: 'expense',
+  },
+  {
     id: 'freizeit',
     name: 'Freizeit',
     icon: '🎉',

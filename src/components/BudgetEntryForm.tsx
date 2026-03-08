@@ -23,6 +23,7 @@ const BUDGET_CATEGORIES = [
   { id: 'strom', name: 'Strom', icon: '💡' },
   { id: 'internet', name: 'Internet/Telefon', icon: '📱' },
   { id: 'versicherung', name: 'Versicherung', icon: '🛡️' },
+  { id: 'reparatur', name: 'Reparatur', icon: '🔧' },
   { id: 'freizeit', name: 'Freizeit', icon: '🎉' },
   { id: 'kleidung', name: 'Kleidung', icon: '👕' },
   { id: 'sonstiges', name: 'Sonstiges', icon: '📦' },

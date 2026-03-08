@@ -3,7 +3,7 @@ import { BudgetEntry } from '@/types/budget';
 import { formatAmount } from '@/types/budget';
 import { getCategoryById, getCategoryName, getCategoryColor, getCategoryIcon } from '@/config/budget';
 import { useBudget } from '@/hooks/useBudget';
-import { Calendar, Tag, User, Share2, FileImage, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Tag, Share2, FileImage, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -42,18 +42,6 @@ export function BudgetTable({ entries, isLoading, onEdit, onDelete }: BudgetTabl
       month: '2-digit',
       year: 'numeric',
     });
-  };
-
-  const getPayerIcon = (payer: 'mojo' | 'susanne') => {
-    return payer === 'mojo' ? '👨' : '👩';
-  };
-
-  const getPayerColor = (payer: 'mojo' | 'susanne') => {
-    return payer === 'mojo' ? 'text-blue-600 bg-blue-50' : 'text-pink-600 bg-pink-50';
-  };
-
-  const getPayerName = (payer: 'mojo' | 'susanne') => {
-    return payer === 'mojo' ? 'Mojo' : 'Susanne';
   };
 
   const handleDeleteClick = (entry: BudgetEntry) => {
@@ -110,15 +98,12 @@ export function BudgetTable({ entries, isLoading, onEdit, onDelete }: BudgetTabl
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Datum & Beschreibung
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Kategorie
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bezahlt von
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Betrag
-              </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Kategorie
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Betrag
+            </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Aktionen
               </th>
@@ -129,7 +114,6 @@ export function BudgetTable({ entries, isLoading, onEdit, onDelete }: BudgetTabl
               const isIncome = entry.amount >= 0;
               const category = getCategoryById(entry.category);
               const categoryColor = getCategoryColor(entry.category);
-              const payerColor = getPayerColor(entry.payer);
               
               return (
                 <tr key={entry.id} className="hover:bg-gray-50">
@@ -169,12 +153,6 @@ export function BudgetTable({ entries, isLoading, onEdit, onDelete }: BudgetTabl
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={`${payerColor} font-medium`}>
-                      <User className="h-3 w-3 mr-1" />
-                      {getPayerIcon(entry.payer)} {getPayerName(entry.payer)}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm font-medium ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
                       {formatAmount(entry.amount, entry.currency)}
                     </div>
@@ -208,11 +186,11 @@ export function BudgetTable({ entries, isLoading, onEdit, onDelete }: BudgetTabl
               );
             })}
           </tbody>
-          <tfoot className="bg-gray-50">
-            <tr>
-              <td colSpan={3} className="px-6 py-4 text-right text-sm font-medium text-gray-700">
-                Gesamt:
-              </td>
+        <tfoot className="bg-gray-50">
+          <tr>
+            <td colSpan={2} className="px-6 py-4 text-right text-sm font-medium text-gray-700">
+              Gesamt:
+            </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div className="text-gray-900">
                   {formatAmount(
