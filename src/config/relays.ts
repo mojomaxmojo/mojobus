@@ -47,7 +47,7 @@ export interface RelayConfig {
 // PRESET TYPES
 // ============================================================================
 
-export type RelayPresetType = 'mojobus' | 'fast' | 'balanced' | 'mojo_publish' | 'mojo_blossom' | 'susanne_publish' | 'susanne_blossom';
+export type RelayPresetType = 'mojobus' | 'fast' | 'balanced' | 'mojo_publish' | 'mojo_blossom' | 'susanne_publish' | 'susanne_blossom' | 'budget';
 
 export interface RelayPreset {
   name: string;
@@ -132,6 +132,16 @@ export const RELAYS: RelayConfig[] = [
     search: false,
     nips: [1, 2, 9, 11, 12, 15, 16, 20, 22, 26, 40, 42, 50, 57, 70],
   },
+  {
+    name: 'MojoBus Budget',
+    url: 'wss://relay.mojobus.co/private',
+    category: 'stable',
+    description: 'Privates Relay für Haushaltsbuch - nur für Mojo/Susanne les- und schreibbar',
+    read: true,
+    write: true,
+    search: false,
+    nips: [1, 2, 9, 11, 12, 15, 16, 20, 22, 26, 40, 42, 50, 57, 70],
+  },
 ] as const;
 
 // ============================================================================
@@ -206,6 +216,15 @@ export const RELAY_PRESETS = {
     name: 'Susanne Blossom',
     description: 'Susanne Blossom Server für Datei-Uploads (relay.mojobus.co)',
     blossomUrl: 'https://relay.mojobus.co',
+  },
+
+  // Budget Preset - Haushaltsbuch
+  budget: {
+    name: 'Budget',
+    description: 'Privates Relay für Haushaltsbuch mit NIP-42 AUTH (nur für Mojo/Susanne)',
+    relayUrls: ['wss://relay.mojobus.co/private'],
+    maxRelays: 1,
+    queryTimeout: 10000, // 10s for AUTH
   },
 } as const;
 

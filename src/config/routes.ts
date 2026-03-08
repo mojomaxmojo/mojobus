@@ -21,6 +21,7 @@ export const ROUTES: Route[] = [
   { path: '/profile', component: 'Profile', title: 'Profil', requiresAuth: true },
   { path: '/settings', component: 'Settings', title: 'Einstellungen', requiresAuth: true },
   { path: '/veroeffentlichen', component: 'Publish', title: 'Veröffentlichen', requiresAuth: true },
+  { path: '/budget', component: 'BudgetPage', title: 'Haushaltsbuch', requiresAuth: true },
   { path: '/:nip19', component: 'NIP19Page', title: 'Nostr Content' },
   { path: '*', component: 'NotFound', title: 'Seite nicht gefunden' }
 ];

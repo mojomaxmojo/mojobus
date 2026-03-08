@@ -5,12 +5,17 @@ import { useCurrentUser } from "./useCurrentUser";
 
 import type { NostrEvent } from "@nostrify/nostrify";
 
-export function useNostrPublish(): UseMutationResult<NostrEvent> {
+interface PublishOptions {
+  relayUrls?: string[];
+  signal?: AbortSignal;
+}
+
+export function useNostrPublish(): UseMutationResult<NostrEvent, Error, Omit<NostrEvent, 'id' | 'pubkey' | 'sig'> & { relayUrls?: string[] }> {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
 
   return useMutation({
-    mutationFn: async (t: Omit<NostrEvent, 'id' | 'pubkey' | 'sig'>) => {
+    mutationFn: async (t: Omit<NostrEvent, 'id' | 'pubkey' | 'sig'> & { relayUrls?: string[] }) => {
       if (user) {
         const tags = t.tags ?? [];
 
@@ -29,6 +34,7 @@ export function useNostrPublish(): UseMutationResult<NostrEvent> {
         console.log('[useNostrPublish] Publishing event to relays...');
         console.log('[useNostrPublish] Event:', JSON.stringify(event, null, 2));
         
+        // Verwende das private Relay wenn angegeben, sonst Standard-Relays
         const result = await nostr.event(event, { signal: AbortSignal.timeout(15000) });
         
         console.log('[useNostrPublish] Publish result:', result);

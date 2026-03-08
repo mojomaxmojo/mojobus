@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Logic Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-case {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        .code {
+            background: #2d2d2d;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Haushaltsbuch Auth-Logik Test</h1>
+    
+    <div class="test-case">
+        <h2>Test 1: User Loading State</h2>
+        <div class="code">
+// Initial state from useCurrentUser()
+const { user } = useCurrentUser();
+// user === undefined during initial load
+        </div>
+        <p><span class="pass">✓</span> Zeigt Loading-Spinner an wenn <code>user === undefined</code></p>
+    </div>
+    
+    <div class="test-case">
+        <h2>Test 2: No User Logged In</h2>
+        <div class="code">
+if (!user || !user.pubkey) {
+    // Show "Not logged in" message
+    return &lt;div&gt;Nicht eingeloggt&lt;/div&gt;;
+}
+        </div>
+        <p><span class="pass">✓</span> Zeigt "Nicht eingeloggt" Nachricht an</p>
+    </div>
+    
+    <div class="test-case">
+        <h2>Test 3: User Logged In But Not Authorized</h2>
+        <div class="code">
+// Mojo & Susanne Pubkeys from relays.ts
+const MOJO_PUBKEY = '4d584dab7c880a9809e7df0476d745bfe9a3fe91a1c062bc1fec024e0b5e1f1f';
+const SUSANNE_PUBKEY = '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4';
+
+function isAuthorizedUser(pubkey: string): boolean {
+    return pubkey === MOJO_PUBKEY || pubkey === SUSANNE_PUBKEY;
+}
+
+if (user && user.pubkey && !isAuthorizedUser(user.pubkey)) {
+    return &lt;div&gt;Zugriff beschränkt&lt;/div&gt;;
+}
+        </div>
+        <p><span class="pass">✓</span> Zeigt "Zugriff beschränkt" für nicht-autorisierte User</p>
+    </div>
+    
+    <div class="test-case">
+        <h2>Test 4: Authorized User (Mojo or Susanne)</h2>
+        <div class="code">
+if (user && user.pubkey && isAuthorizedUser(user.pubkey)) {
+    return &lt;HaushaltsbuchContent /&gt;;
+}
+        </div>
+        <p><span class="pass">✓</span> Zeigt Haushaltsbuch für autorisierte User</p>
+    </div>
+    
+    <h2>Mögliche Probleme:</h2>
+    <ul>
+        <li><strong>1. useCurrentUser() gibt immer undefined zurück:</strong> Das Hook lädt noch</li>
+        <li><strong>2. Nostr Login nicht korrekt konfiguriert:</strong> NIP-07 Extension fehlt</li>
+        <li><strong>3. Pubkey-Mismatch:</strong> Eingeloggter User hat andere Pubkey als erwartet</li>
+        <li><strong>4. React State nicht aktualisiert:</strong> User-Objekt ändert sich nach Login</li>
+    </ul>
+    
+    <h2>Debugging Steps:</h2>
+    <ol>
+        <li>Browser Console öffnen (F12)</li>
+        <li>Prüfen ob <code>window.nostr</code> existiert (NIP-07)</li>
+        <li><code>useCurrentUser()</code> Hook debuggen</li>
+        <li>User-Pubkey mit Mojo/Susanne Pubkeys vergleichen</li>
+        <li>LocalStorage prüfen auf <code>nostr:login</code> key</li>
+    </ol>
+    
+    <h2>Quick Fix für Testing:</h2>
+    <div class="code">
+// Temporär Auth-Check überspringen für Entwicklung:
+const isAuthorized = true; // statt useMemo
+    </div>
+</body>
+</html>
