@@ -39,7 +39,7 @@ export const lifestyles = {
     community: 'RVlife-Community',
     keywords: ['rvlife', 'rv', 'recreationalVehicle', 'ontheroad', 'wohnmobil'],
     example1: 'Wind in der Nacht. Das RV wackelt und die Schranktür geht auf und zu, auf und zu. Ich liege wach und höre zu. Draußen ist irgendwo ein Meer das ich morgen früh sehen werde.',
-    example2: 'Kein Campground weit und breit. Straßenrand, Feldweg, Schotter. Motor aus. Das Klicken wenn die Karosserie sich abkühlt. Dann Stille. Die ungeplanten Nächte sind die die bleiben.',
+    example2: 'Kein Campground weit und breit. Straßenrand, Feldweg, Schotter. Motor aus. Das Klicken wenn die Karosserie sich abkühlt. Dann Stille. Ich bleibe.',
     example3: 'Sechs Monate. Die Leute fragen wann ich zurückkomme. Zurück wohin. Das RV ist acht Meter lang und hat alles was ich brauche. Außer manchmal Geduld mit der Wasserpumpe.'
   },
 
@@ -47,9 +47,9 @@ export const lifestyles = {
     vehicle: 'Strand',
     community: 'Beachlife-Community',
     keywords: ['beachlife', 'beach', 'strand', 'ocean', 'surf', 'küste'],
-    example1: 'Sand im Schlafsack. Sand in der Tastatur. Sand im Kaffee. Irgendwann hörst du auf es rauszuschütteln. Es gehört dazu.',
-    example2: 'Morgens Wellen. Nicht die großen, die kleinen die kaum brechen. Kein Wind. Das Wasser ist so glatt dass du die Steine am Grund siehst. Ich steh da und guck und vergesse den Kaffee.',
-    example3: 'Drei Wochen am selben Strand. Morgens Surfen, abends Feuer, dazwischen nichts. Die Gezeiten geben den Rhythmus vor. Irgendwann hörst du auf auf die Uhr zu gucken. Funktioniert auch ohne.'
+    example1: 'Sand im Schlafsack. Sand in der Tastatur. Sand im Kaffee. Irgendwann hab ich aufgehört es rauszuschütteln. Es gehört dazu.',
+    example2: 'Morgens Wellen. Nicht die großen, die kleinen die kaum brechen. Kein Wind. Das Wasser ist so glatt dass ich die Steine am Grund sehe. Ich steh da und guck und vergesse den Kaffee.',
+    example3: 'Drei Wochen am selben Strand. Morgens Surfen, abends Feuer, dazwischen nichts. Die Gezeiten geben den Rhythmus vor. Irgendwann hab ich aufgehört auf die Uhr zu gucken. Geht auch ohne.'
   },
 
   wohnmobil: {
@@ -57,7 +57,7 @@ export const lifestyles = {
     community: 'Wohnmobil-Community',
     keywords: ['wohnmobil', 'camper', 'mobil', 'stellplatz', 'unterwegs'],
     example1: 'Regen aufs Dach. Das Geräusch das ich am meisten vermisse wenn ich nicht unterwegs bin. Drinnen warm, draußen grau. Tank fast leer aber das ist morgen.',
-    example2: 'Stellplatz voll. Nächster auch. Dritter: ein Feldweg hinter einem Dorf, kein Schild, Blick auf den See. Manchmal findest du die besseren Orte wenn die offensichtlichen nicht funktionieren.',
+    example2: 'Stellplatz voll. Nächster auch. Dritter: ein Feldweg hinter einem Dorf, kein Schild, Blick auf den See. Die besten Orte finde ich immer wenn die offensichtlichen nicht funktionieren.',
     example3: 'Die Wasserpumpe macht ein Geräusch das sie gestern noch nicht gemacht hat. Neues Geräusch ist nie gut. Ich trinke meinen Kaffee und beschließe dass es morgen ein Problem ist. Heute nicht.'
   },
 

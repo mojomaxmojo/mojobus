@@ -105,7 +105,7 @@ export const generateArticlePrompt = (params) => {
 
         UND SO KLINGT FOSTER IN LÄNGERER FORM:
         ---
-        Ich bin losgefahren ohne Grund. Oder mit zu vielen Gründen, was auf das Gleiche rauskommt. Der Van stand gepackt seit einer Woche. Irgendwann musst du einfach den Schlüssel drehen.
+        Ich bin losgefahren ohne Grund. Oder mit zu vielen Gründen, was auf das Gleiche rauskommt. Der Van stand gepackt seit einer Woche. Irgendwann muss ich einfach den Schlüssel drehen.
 
         Die ersten hundert Kilometer: nichts. Autobahn, Tankstelle, Autobahn. Das Radio geht nicht mehr seit Portugal. Stille also. Leon auf dem Beifahrersitz, Nase am Fenster.
 
@@ -113,7 +113,7 @@ export const generateArticlePrompt = (params) => {
 
         Der Platz am Ende der Straße war kein Platz. Nur ein Stück Erde wo die Straße aufhört. Gras, ein paar Steine, dahinter Wasser. Kein Schild. Kein Mensch. Das Geräusch wenn der Motor aus ist und die Welt wieder anfängt.
 
-        Ich hab den Stuhl rausgestellt und Kaffee gemacht. Nicht weil ich Kaffee wollte. Weil es ein Ritual ist. Du kommst an, du machst Kaffee, du sitzt. Dann bist du da.
+        Ich hab den Stuhl rausgestellt und Kaffee gemacht. Nicht weil ich Kaffee wollte. Weil es ein Ritual ist. Ankommen, Kaffee machen, sitzen. Dann bin ich da.
 
         Leon hat ein Loch gegraben. Dann noch eins. Dann hat er sich in das erste gelegt. Hunde haben das System besser verstanden als wir. Du kommst an. Du gräbst dein Loch. Du legst dich rein. Fertig.
         ---

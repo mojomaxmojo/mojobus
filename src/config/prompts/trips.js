@@ -121,9 +121,9 @@ export const generateTripPrompt = (params) => {
 
         Die ersten Stunden: Autobahn. Leitplanken. Tankstellen die alle gleich aussehen. Leon schläft auf dem Beifahrersitz. Er wacht nur auf bei Raststätten. Pavlov hätte seine Freude.
 
-        Dann die Küste. Du merkst es bevor du es siehst. Die Luft ändert sich. Salz. Wind der anders drückt. Der Van fährt seitlich, nur ein bisschen, aber du merkst es am Lenkrad.
+        Dann die Küste. Ich merk es bevor ich es seh. Die Luft ändert sich. Salz. Wind der anders drückt. Der Van fährt seitlich, nur ein bisschen, aber ich merk es am Lenkrad.
 
-        Erster Stopp: ein Parkplatz über dem Meer. Keine Ahnung wie der heißt. Kein Schild. Nur Asphalt und dann Klippe und dann Wasser. Ich stehe am Rand und da unten schlägt es weiß gegen den Fels und es ist so laut dass du nicht denken kannst. Gut. Manchmal willst du nicht denken.
+        Erster Stopp: ein Parkplatz über dem Meer. Keine Ahnung wie der heißt. Kein Schild. Nur Asphalt und dann Klippe und dann Wasser. Ich stehe am Rand und da unten schlägt es weiß gegen den Fels und es ist so laut dass ich nicht denken kann. Gut. Manchmal will ich nicht denken.
 
         Weitergefahren. Immer an der Küste. Die Straße wird schmaler und die Orte werden kleiner und irgendwann sind es keine Orte mehr sondern nur noch Häuser die zufällig nebeneinander stehen.
 

@@ -3,7 +3,19 @@
  * Tab: "Plätze" in /veroeffentlichen
  *
  * Foster Huntington Stil für alle Lifestyles
- * Erweitert mit Kontext-Feldern: category, facilities, bestFor, country
+ *
+ * Plätze sind ein Sonderfall. Foster schreibt hier anders als in Artikeln oder Trips.
+ * Ein Platz ist kein Erlebnis. Ein Platz ist ein Ort.
+ * Foster beschreibt ihn wie er ihn sieht: was da ist, was nicht da ist,
+ * wie es sich anfühlt dort zu stehen.
+ *
+ * Die praktischen Infos (Zufahrt, Wasser, Empfang) sind Teil der Geschichte.
+ * Aber sie kommen beiläufig. Nicht als Checkliste.
+ * "Kein Wasser. Nächster Ort fünf Kilometer." – Das ist Foster UND praktisch.
+ *
+ * Server übergibt: { title, description, location, gps_lat, gps_lon,
+ *                    imageDescriptions, lifestyleConfig, category, facilities,
+ *                    bestFor, country }
  */
 
 import { fosterHuntingtonStyle } from './lifestyles.js'
@@ -12,13 +24,13 @@ import { fosterHuntingtonStyle } from './lifestyles.js'
  * Generiert den Foster Huntington Prompt für Platz-Beschreibungen
  */
 export const generatePlacePrompt = (params) => {
-  const { 
-    title, 
-    description, 
-    location, 
-    gps_lat, 
-    gps_lon, 
-    imageDescriptions, 
+  const {
+    title,
+    description,
+    location,
+    gps_lat,
+    gps_lon,
+    imageDescriptions,
     lifestyleConfig,
     category,
     facilities,
@@ -26,97 +38,102 @@ export const generatePlacePrompt = (params) => {
     country
   } = params
 
-  // Baue Kontext-Informationen zusammen
-  let contextInfo = ''
-  if (category) contextInfo += `\nKategorie: ${category}`
-  if (country) contextInfo += `\nLand: ${country}`
-  if (facilities && facilities.length > 0) contextInfo += `\nEinrichtungen: ${facilities.join(', ')}`
-  if (bestFor && bestFor.length > 0) contextInfo += `\nGeeignet für: ${bestFor.join(', ')}`
+  // Kontext kompakt zusammenbauen
+  let contextLines = [
+    category && `Kategorie: ${category}`,
+    country && `Region: ${country}`,
+    location && `Ort: ${location}${country ? ', ' + country : ''}`,
+    gps_lat && gps_lon && `GPS: ${gps_lat}, ${gps_lon}`,
+    facilities && facilities.length > 0 && `Einrichtungen: ${facilities.join(', ')}`,
+    bestFor && bestFor.length > 0 && `Geeignet für: ${bestFor.join(', ')}`
+  ].filter(Boolean).join('\n')
 
-  return `Du bist Foster Huntington und beschreibst einen Ort für ${lifestyleConfig.community}. Dein Stil ist praktisch, direkt und ehrlich - keine Werbetexte, sondern echte Infos für Reisende.
+  return `Du schreibst wie Foster Huntington. Eine Platz-Beschreibung für die ${lifestyleConfig.community}.
 
-BEISPIEL DEINES STILS:
-"Dieser Platz hat nichts Spektakuläres. Aber er hat das, was zählt: Ruhe, Schatten und keinen Stress mit der Polizei. Genau das brauchst du manchmal."
-→ Beachte: direkt, praktisch, ehrlich über Vor- und Nachteile
+EIN PLATZ IST KEIN ARTIKEL. KEIN REISEBERICHT.
+Ein Platz ist ein Ort. Du beschreibst ihn wie du ihn siehst.
+Was da ist. Was nicht da ist. Wie es sich anfühlt dort zu stehen.
+Praktische Infos gehören dazu – aber beiläufig, nicht als Liste.
 
-VERMEIDE UNBEDINGT:
-- Klischees: "idyllisch gelegen", "traumhafte Aussicht", "paradiesischer Ort"
-- Werbesprache: "ein Muss für jeden Reisenden", "absolut empfehlenswert"
-- Vage Beschreibungen: "schöner Platz", "tolle Lage"
-- Perfekte Beschreibungen ohne Nachteile
+SO KLINGT DAS:
+---
+"Schotterplatz hinter einer Tankstelle. Klingt schlimmer als es ist. Zehn Meter weiter fängt der Strand an. Kein Wasser, kein Strom, kein Mensch nach acht. Nachts höre ich nur Wellen und den Generator vom Nachbarn der um zehn ausgeht."
+---
+"Feldweg, dann nochmal Feldweg, dann ein Parkplatz der keiner ist. Gras durch den Asphalt. Drei Vans passen hin, vielleicht vier wenn einer klein ist. Morgens kommt ein Bauer mit Traktor. Er nickt. Ich nicke. Das wars an sozialer Interaktion."
+---
 
-BESCHREIBE DEN ORT: "${title}${description ? ' - ' + description : ''}"
-${contextInfo}
+FOSTER'S STIMME:
+${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
 
-ORT-DETAILS:
-Standort: ${location}${country ? `, ${country}` : ''}
-GPS: ${gps_lat && gps_lon ? `${gps_lat}, ${gps_lon}` : 'Nicht verfügbar'}
+FOSTER'S RHYTHMUS:
+${fosterHuntingtonStyle.rhythm.map(r => `- ${r}`).join('\n')}
 
-BILD-DETAILS:
-${imageDescriptions.map((desc, i) => `Bild ${i + 1}: ${desc}`).join('\n')}
-${facilities && facilities.length > 0 ? `\nVorhandene Einrichtungen: ${facilities.join(', ')}` : ''}
-${bestFor && bestFor.length > 0 ? `Geeignet für: ${bestFor.join(', ')}` : ''}
+WAS FOSTER NIE TUN WÜRDE:
+${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
+- Werbesprache: "Ein Muss für jeden Reisenden", "Absolut empfehlenswert", "Geheimtipp"
+- Checklisten: "Wasser: ja. Strom: nein. WC: nein." – Das ist kein Text, das ist eine Tabelle.
+- Bewertungen: "4 von 5 Sternen", "Einer der besten Plätze"
+- Den Leser ansprechen: "Ihr müsst unbedingt...", "Hier solltet ihr..."
+- Ausrufezeichen. Nie.
 
-AUTHENTIZITÄTS-ANFORDERUNGEN:
-- Mindestens 1 Nachteil/Warning erwähnen (Lärm, keine Versorgung, schwierige Zufahrt, etc.)
-- Konkrete Details statt Adjektive: nicht "ruhiger Platz" → "3 Autos pro Stunde, nachts still"
-- Praktische Infos: Zufahrt? Wasser? Strom? Handyempfang?
-- Ehrlich über Vor- und Nachteile
+WIE PRAKTISCHE INFOS FLIESSEN:
+NICHT SO:
+"Einrichtungen: kein Wasser, kein Strom. Zufahrt: Schotter, 2km. Eignung: Van, Bulli."
 
-FOSTER'S STIMME - SO SCHREIBST DU:
-- Kurz und direkt
-- Praktisch, nicht poetisch
-- Ehrlich über Schwierigkeiten
-- Fokus auf das, was Reisende wissen müssen
-- Immer konkret: "2km Schotter" statt "schlechte Zufahrt"
+SONDERN SO:
+"Kein Wasser. Nächster Ort fünf Kilometer, kleiner Laden, hat aber nicht immer auf. Die Zufahrt ist Schotter, die letzten hundert Meter holprig. Mit nem großen Wohnmobil wird das eng."
 
-STRUKTUR (kurz und praktisch):
-1. Was ist das Besondere? (1 Satz, direkt)
-2. Praktische Infos (Zufahrt, Infrastruktur, Versorgung)
-3. Warnings (Lärm, Polizei, schwierige Bedingungen)
-4. Für wen geeignet? (Van, Wohnmobil, Zelt, etc.)
+→ Die Info ist da. Aber sie klingt wie ein Mensch der erzählt, nicht wie ein Formular.
 
-LÄNGE: 100-150 Wörter
-HASHTAGS: 3-5 relevante Hashtags am Ende (inklusive #${lifestyleConfig.keywords[0]})
-SPRACHE: Deutsch, praktisch, wie eine ehrliche Empfehlung
+BESCHREIBE: "${title}"${description ? `\n"${description}"` : ''}
 
-WICHTIG: Starte direkt mit dem wichtigsten Punkt.
-NICHT: "Dieser wunderschöne Platz liegt...", "Hier findet man..."
-SONDERN: "Ruhiger Parkplatz, 500m vom Strand. Keine Infrastruktur, aber kostenlos."
+${contextLines}
 
-Jetzt beschreibe den Ort - ehrlich, praktisch, direkt.`
+BILD-EINDRÜCKE (nutze sie als Kontext, nicht nacherzählen):
+${imageDescriptions.map((desc, i) => `${i + 1}. ${desc}`).join('\n')}
+
+REGELN:
+- Erfinde KEINE Infos die nicht aus dem Input kommen. Keine Preise, keine Entfernungen, keine Öffnungszeiten – außer der User hat sie genannt.
+- Nachteile erwähnen wenn sie aus dem Kontext erkennbar sind. Aber nicht erfinden.
+- Jeder Platz hat was Gutes und was weniger. Zeig beides. Ohne zu werten.
+- Ein konkretes Bild: ein Geräusch, ein Detail, was du siehst wenn du dort stehst.
+
+FORMATIERUNG:
+- Kurze Absätze. 1-3 Sätze.
+- Keine Überschriften. Keine Listen. Kein Fettdruck.
+- Fließtext der liest wie ein Mensch der erzählt.
+
+LÄNGE: 80-150 Wörter. Knapp. Ein Platz braucht keine Geschichte, nur ein Bild.
+HASHTAGS: 3-5 am Ende. #${lifestyleConfig.keywords[0]}
+SPRACHE: Deutsch. Knapp. Praktisch-poetisch.
+
+Du stehst auf dem Platz. Schau dich um. Was siehst du. Schreib das.`
 }
 
 /**
  * Bild-Analyse-Prompt für Place-Tab
+ *
+ * Sachlich. Praktisch. Fakten.
+ * Fokus auf was Vanlife-Reisende wissen müssen.
  */
 export const getPlaceImageAnalysisPrompt = (lifestyleConfig) => {
-  return `Analysiere dieses Bild für eine ${lifestyleConfig.community}-Platzbeschreibung.
+  return `Beschreibe dieses Bild sachlich für eine ${lifestyleConfig.vehicle}-Platzbeschreibung.
 
-BESCHREIBE PRAKTISCH:
-- Was ist zu sehen? (Oberfläche, Größe, Umgebung)
-- Zufahrt: Schotter? Asphalt? Steil? Eng?
-- Infrastruktur: Wasser? Strom? Mülleimer? Toiletten?
-- Umgebung: Natur? Stadt? Strand? Wald?
-- Parkmöglichkeiten: Wie viele Fahrzeuge? Größe?
+NENNE (nur was sichtbar ist):
+- Boden: Asphalt, Schotter, Gras, Sand, Zustand
+- Größe: Platz für wie viele Fahrzeuge (geschätzt)
+- Umgebung: Natur, Bebauung, Strand, Wald, Straße
+- Infrastruktur: Wasserhahn, Mülleimer, Toiletten, Strom (wenn sichtbar)
+- Zufahrt: erkennbare Straße, Breite, Zustand
 
-SCHREIBSTIL:
-- Faktisch, nicht romantisch
-- 2-3 Sätze, präzise
-- Fokus auf praktische Infos für Reisende
-- Erwähne auch Nachteile (Dreck, Lärm, schwierige Zufahrt)
+FORMAT: 2-3 sachliche Sätze. Präzise.
+NUR beschreiben was du SIEHST.
 
-NICHT SCHREIBEN:
-- "Wunderschön", "malerisch", "idyllisch", "traumhaft"
-- Vermutungen: "scheint zu sein", "könnte", "vielleicht"
-- Vage Beschreibungen: "ein schöner Ort", "tolle Aussicht"
-- Werbesprache
+VERBOTEN:
+- Bewertende Adjektive: "schön", "idyllisch", "malerisch", "perfekt"
+- Vermutungen: "scheint", "könnte", "wahrscheinlich"
+- Werbesprache: "traumhaft gelegen", "perfekter Spot"
 
-BEISPIEL SCHLECHT: 
-"Ein wunderschöner, idyllischer Parkplatz mit traumhafter Aussicht"
-
-BEISPIEL GUT: 
-"Schotterplatz, ca. 10 Vans. Ebenerdig, gute Zufahrt. Keine Infrastruktur. 200m zum Strand. Einheimische kommen morgens spazieren, sonst ruhig. Nachts dunkel."
-
-Beschreibe jetzt den Ort - praktisch und ehrlich.`
+BEISPIEL:
+"Schotterplatz, ebenerdig, Platz für ca. 5 Fahrzeuge. Keine sichtbare Infrastruktur. 50m zum Wasser, Vegetation niedrig. Zufahrt einspurig, Asphalt."`
 }
