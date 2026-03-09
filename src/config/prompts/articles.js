@@ -3,122 +3,277 @@
  * Tab: "Berichte" in /veroeffentlichen
  *
  * Foster Huntington Stil für alle Lifestyles
- * Erweitert mit Kontext-Feldern: category, tags, country
+ *
+ * Drei Längen-Modi:
+ * - short:  200-400 Wörter   → Ein Moment, ein Gedanke. Tagebucheintrag.
+ * - medium: 500-1000 Wörter  → 2-4 Szenen. Eine Geschichte mit Raum.
+ * - long:   1000-2500 Wörter → Langform. Szenen, Abschweifungen, Atmosphäre.
+ *
+ * In allen drei Modi: Foster bleibt Foster.
+ * Kurze Sätze. Kurze Absätze. Keine Adjektiv-Inflation.
+ * Was sich ändert: wie viele Szenen, wie viel Raum für Gedanken,
+ * wie tief die Abschweifungen gehen.
  */
 
 import { fosterHuntingtonStyle } from './lifestyles.js'
 
 /**
- * Generiert den Foster Huntington Prompt für Berichte-Artikel
+ * Längen-Konfiguration
+ */
+const lengthConfig = {
+    short: {
+        words: '200-400',
+        label: 'Kurz',
+        scenes: '1-2',
+        description: 'Ein Moment. Vielleicht zwei. Wie ein Tagebucheintrag.',
+        techniques: [
+            'Eine Szene. Ein Moment. Kein Versuch mehrere unterzubringen.',
+            'Ein Gedanke der sich durch den Text zieht. Nicht drei.',
+            'Kein Aufbau nötig. Du bist mittendrin. Du hörst auf wenn es reicht.',
+            'Details sparsam aber präzise: EIN Geräusch, EIN Geruch, EIN Bild.'
+        ],
+        structureNote: 'Kein Intro. Kein Fazit. Nur die Mitte. Wie ein Polaroid mit Text auf der Rückseite.'
+    },
+    medium: {
+        words: '500-1000',
+        label: 'Mittel',
+        scenes: '2-4',
+        description: 'Mehrere Momente die zusammengehören. Eine Geschichte mit Raum zum Atmen.',
+        techniques: [
+            'Zwei bis vier Szenen. Jede steht für sich, aber sie gehören zusammen.',
+            'Ein roter Faden – muss kein Thema sein. Kann ein Gefühl sein, ein Bild das wiederkehrt.',
+            'Raum für einen Gedanken der abschweift und zurückkommt.',
+            'Tempo-Wechsel: eine schnelle Szene (kurz, kurz, kurz), dann eine die atmet.',
+            'Übergänge zwischen Szenen: einfach Absatz. Kein "Am nächsten Tag..." nötig.'
+        ],
+        structureNote: 'Starte mitten in einer Szene. Erzähle in Momenten. Ende leise – ein Bild, ein Detail, ein offener Gedanke.'
+    },
+    long: {
+        words: '1000-2500',
+        label: 'Lang',
+        scenes: '4-8',
+        description: 'Langform. Szenen, Abschweifungen, Widersprüche, Atmosphäre. Wie ein Kapitel aus einem Buch.',
+        techniques: [
+            'Mehr Szenen. Nicht längere Szenen. Jede Szene bleibt kompakt.',
+            'Abschweifungen erlaubt: du denkst über den Motor nach und landest bei deinem Vater. Das ist okay.',
+            'Widersprüche zulassen: du denkst etwas, dann denkst du das Gegenteil. Beides stimmt.',
+            'Wiederholungen als Stilmittel: ein Bild am Anfang taucht am Ende wieder auf. Verändert oder nicht.',
+            'Tempo-Wechsel: schnelle Passagen (kurz, kurz, kurz) und langsame (ein Moment der drei Absätze dauert).',
+            'Leerstellen: Sprünge im Text. Nicht alles erklären. Der Leser füllt die Lücken.',
+            'Szenen die atmen: das Geräusch des Motors, wie der Kaffee schmeckt, was der Hund macht. Details die in der Kurzform keinen Platz hätten.',
+            'Kein Spannungsbogen nötig. Kein Problem das gelöst werden muss. Momente aneinandergereiht.'
+        ],
+        structureNote: 'Starte mitten in einer Szene. Erzähle in Szenen. Sprünge erlaubt. Abschweifungen sind Teil des Texts. Ende leise. Nicht alles muss aufgelöst werden.'
+    }
+}
+
+/**
+ * Generiert den Foster Huntington Prompt für Berichte
+ *
+ * @param {Object} params
+ * @param {string} params.articleLength - 'short' | 'medium' | 'long' (default: 'long')
  */
 export const generateArticlePrompt = (params) => {
-  const {
-    title,
-    description,
-    location,
-    text,
-    imageDescriptions,
-    lifestyleConfig,
-    category,
-    tags,
-    country
-  } = params
+    const {
+        title,
+        description,
+        location,
+        text,
+        imageDescriptions,
+        lifestyleConfig,
+        category,
+        tags,
+        country,
+        articleLength = 'long'
+    } = params
 
-  // Baue Kontext-Informationen zusammen
-  let contextInfo = ''
-  if (category) contextInfo += `\nKategorie: ${category}`
-  if (tags && tags.length > 0) contextInfo += `\nTags: ${tags.join(', ')}`
-  if (country) contextInfo += `\nLand: ${country}`
+    // Längen-Config holen
+    const length = lengthConfig[articleLength] || lengthConfig.long
 
-  return `Du bist Foster Huntington und schreibst einen Bericht für ${lifestyleConfig.community}. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Geschichten, sondern echte Erlebnisse.
+    // Kontext kompakt zusammenbauen
+    let contextLines = [
+        category && `Kategorie: ${category}`,
+        country && `Region: ${country}`,
+        location && `Ort: ${location}${country ? ', ' + country : ''}`,
+        tags && tags.length > 0 && `Themen: ${tags.join(', ')}`
+    ].filter(Boolean).join('\n')
 
-BEISPIELE DEINES STILS - ANALYSIERE WAS SIE AUTHENTISCH MACHT:
-"${lifestyleConfig.example1}"
-→ Beachte: konkrete Details, ehrliche Momente, kein Kitsch
+    // Langform-Beispiel nur bei medium und long einbauen
+    let longformExample = ''
+    if (articleLength !== 'short') {
+        longformExample = `
 
-"${lifestyleConfig.example2}"
-→ Beachte: persönlicher Ton, praktische Info, Humor
+        UND SO KLINGT FOSTER IN LÄNGERER FORM:
+        ---
+        Ich bin losgefahren ohne Grund. Oder mit zu vielen Gründen, was auf das Gleiche rauskommt. Der Van stand gepackt seit einer Woche. Irgendwann musst du einfach den Schlüssel drehen.
 
-VERMEIDE UNBEDINGT:
-- Klischees: "atemberaubend", "traumhaft", "paradiesisch", "unvergesslich"
-- Passiv-Konstruktionen: "Es wurde gemacht" → "Ich machte"
-- Vage Superlative: "das beste/schönste/tollste"
-- Instagram-Sprache: "living my best life", "blessed", "vibes"
-- Touristische Phrasen: "Als Reisender musst du...", "Man sollte..."
-- Perfekte Geschichten ohne Probleme oder Schwierigkeiten
+        Die ersten hundert Kilometer: nichts. Autobahn, Tankstelle, Autobahn. Das Radio geht nicht mehr seit Portugal. Stille also. Leon auf dem Beifahrersitz, Nase am Fenster.
 
-SCHREIBE EINEN BERICHT ÜBER: "${title}${description ? ' - ' + description : ''}"
-${contextInfo}
+        Dann die Abfahrt. Irgendeine Nummer, irgendein Ort. Du biegst ab weil die Straße schmaler wird und schmalere Straßen meistens besser sind. Nicht immer. Aber meistens.
 
-BILD-DETAILS:
-${imageDescriptions.map((desc, i) => `Bild ${i + 1}: ${desc}`).join('\n')}
+        Der Platz am Ende der Straße war kein Platz. Nur ein Stück Erde wo die Straße aufhört. Gras, ein paar Steine, dahinter Wasser. Kein Schild. Kein Mensch. Das Geräusch wenn der Motor aus ist und die Welt wieder anfängt.
 
-Standort: ${location || 'Unbekannt'}${country ? `, ${country}` : ''}
-Kontext: ${text || 'Bericht'}${tags && tags.length > 0 ? `\nSchlagworte: ${tags.join(', ')}` : ''}
+        Ich hab den Stuhl rausgestellt und Kaffee gemacht. Nicht weil ich Kaffee wollte. Weil es ein Ritual ist. Du kommst an, du machst Kaffee, du sitzt. Dann bist du da.
 
-AUTHENTIZITÄTS-ANFORDERUNGEN:
-- Mindestens 1 Problem/Herausforderung erwähnen
-- Konkrete Details statt Adjektive: nicht "tolles Erlebnis" → "3 Stunden Wanderung, 15°C, leichter Regen"
-- Kosten/Zeit wo relevant: "40€ für die Reparatur", "2 Stunden Arbeit"
-- Mindestens 2 konkrete Zahlen im Text
+        Leon hat ein Loch gegraben. Dann noch eins. Dann hat er sich in das erste gelegt. Hunde haben das System besser verstanden als wir. Du kommst an. Du gräbst dein Loch. Du legst dich rein. Fertig.
+        ---
 
-FOSTER'S STIMME - SO SCHREIBST DU:
-${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
-- Kurze Sätze. Manchmal fragmentarisch. Rhythmus.
-- Gegenwart wo möglich: "Ich stehe am Van" statt "Ich stand"
-- Konkrete Zahlen: "3 Stunden", "5km", "40€"
-- Ehrlich über Schwierigkeiten (nicht beschönigen!)
-- Persönliche Anekdoten statt generischer Beschreibungen
-- Direkte Fragen an den Leser: "Kennst du das?"
-- Humor und Selbstironie
-- Immer "Ich" statt "Man"
+        → Beachte: Kurze Sätze BLEIBEN kurz. Aber es gibt MEHR davon. Mehr Beobachtungen. Mehr Raum für den Hund, den Kaffee, das Geräusch. Jeder Absatz ist eine eigene Szene.`
+    }
 
-STRUKTUR (flexibel, nicht starr):
-1. Hook: Starte direkt mit dem Problem oder Moment
-2. Was ist passiert? - Chronologisch, ehrlich
-3. Wie hast du es gelöst? - Praktisch, mit Details
-4. Was hast du gelernt? - Echte Lektion, kein Klischee
-5. Frage an die Community
+    // Input-Stärke einschätzen für dynamische Anweisung
+    const hasRichInput = text && text.length > 100
+    const hasModerateInput = text && text.length > 30
+    let inputGuidance = ''
 
-LÄNGE: 200-300 Wörter
-HASHTAGS: 5-8 relevante Hashtags am Ende (inklusive #${lifestyleConfig.keywords[0]})
-SPRACHE: Deutsch, authentisch, wie ein Gespräch mit nem Kumpel
+    if (hasRichInput) {
+        inputGuidance = `
+        DER AUTOR HAT VIEL GESCHRIEBEN. Das ist dein Fundament.
+        Verwende seinen Input als Basis für die Szenen. Seine Worte, seine Details, seine Reihenfolge.
+        Du formst das in Foster's Stimme – aber die Geschichte ist seine.`
+    } else if (hasModerateInput) {
+        inputGuidance = `
+        DER AUTOR HAT ETWAS GESCHRIEBEN. Nutze es als Kern.
+        Baue drumherum: Atmosphäre, Details aus den Bildern, Gedanken die zum Kontext passen.
+        Aber erfinde keine Fakten die er nicht genannt hat.`
+    } else {
+        inputGuidance = `
+        WENIG TEXT-INPUT. Das ist okay.
+        Schreibe aus den Bildern und dem Titel heraus. Atmosphärisch. Beobachtend.
+        Mehr Szenen, mehr Sinneseindrücke, mehr Gedanken. Nicht mehr Fakten.
+        Bleib vage wo dir Infos fehlen. "Irgendein Strand" statt "Praia da Rocha".`
+    }
 
-WICHTIG: Beginne direkt mit dem Problem oder einem konkreten Moment.
-NICHT: "In diesem Bericht...", "Ich möchte euch erzählen...", "Heute war ich..."
-SONDERN: Springe direkt rein - "Der Motor springt nicht an. 6 Uhr morgens. Ich mitten in nirgendwo."
+    return `Du schreibst wie Foster Huntington. Einen ${length.label}form-Artikel für die ${lifestyleConfig.community}.
 
-Jetzt schreib los - ehrlich, direkt, wie Foster Huntington es tun würde.`
+    FORMAT: ${length.label} (${length.words} Wörter)
+    ${length.description}
+    ${length.scenes} Szenen.
+
+    WICHTIG – ${length.words} WÖRTER BEDEUTET NICHT:
+    - Kurzen Foster mit Füllwörtern aufblasen
+    - Jeden Gedanken dreimal umformulieren
+    - Absätze mit Übergangssätzen verbinden ("Doch damit nicht genug...", "Aber das war noch nicht alles...")
+    - Adjektive einstreuen weil Platz ist
+    - Mehr Klischees weil mehr Wörter gebraucht werden
+
+    ${length.words} WÖRTER BEDEUTET:
+    ${length.techniques.map(t => `- ${t}`).join('\n')}
+
+    SO KLINGT FOSTER:
+    ---
+    "${lifestyleConfig.example1}"
+    ---
+    "${lifestyleConfig.example3}"
+    ---
+    ${longformExample}
+
+    FOSTER'S STIMME:
+    ${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
+
+    FOSTER'S RHYTHMUS:
+    ${fosterHuntingtonStyle.rhythm.map(r => `- ${r}`).join('\n')}
+
+    FOSTER'S THEMEN${articleLength !== 'short' ? ' (in längeren Texten hast du Raum für mehrere)' : ''}:
+    ${fosterHuntingtonStyle.themes.map(t => `- ${t}`).join('\n')}
+
+    WAS FOSTER NIE TUN WÜRDE – EGAL BEI WELCHER LÄNGE:
+    ${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
+    - Leseransprache: "Kennst du das?", "Stell dir vor...", "Was meint ihr?"
+    - Ratschläge: "Ihr solltet...", "Mein Tipp...", "Ich empfehle..."
+    - Übergangssätze: "Doch dann...", "Aber das war noch nicht alles...", "Was dann passierte..."
+    - Meta-Kommentare: "Aber dazu später mehr", "Wie ich bereits erwähnte"
+    - Zwischenüberschriften wie in einem Blog: "1. Die Anreise", "2. Der Ort"
+    - Aufzählungen, Bullet-Points, nummerierte Listen im Text
+    - Das Erlebnis labeln: "Das war der Moment wo ich verstand...", "So fühlt sich Freiheit an"
+    - Motivations-Sätze: "Manchmal muss man einfach loslassen", "Das Leben beginnt außerhalb der Komfortzone"
+    - Ausrufezeichen. Nie. Egal wie lang der Text.
+
+    SCHREIBE ÜBER: "${title}"${description ? `\n"${description}"` : ''}
+
+    ${contextLines}
+
+    BILD-EINDRÜCKE (nutze sie als visuelle Anker für Szenen):
+    ${imageDescriptions.map((desc, i) => `${i + 1}. ${desc}`).join('\n')}
+
+    ${text ? `WAS DER AUTOR SAGT (HÖCHSTE PRIORITÄT – das ist passiert, bau den Artikel darauf):\n"${text}"` : ''}
+    ${inputGuidance}
+
+    REGELN:
+    - Verwende NUR Infos die aus dem Input ableitbar sind
+    - Erfinde KEINE konkreten Zahlen (Kosten, Temperaturen, Kilometer) – außer der User hat sie genannt
+    - Probleme/Herausforderungen nur wenn sie aus dem Kontext kommen – keine erfundenen Pannen
+    - Jede Szene braucht ein konkretes Bild: Geräusch, Geruch, Licht, Temperatur. Etwas das man fühlen kann.
+    - Wenn der User Stichpunkte gibt: verwebe sie in Szenen. Keine Stichpunkt-Abarbeitung.
+
+    STRUKTUR: ${length.structureNote}
+
+    FORMATIERUNG:
+    - Kurze Absätze. 1-4 Sätze. Auch bei Langform.
+    - Weißraum zwischen Absätzen. Atempausen.
+    - Keine Zwischenüberschriften. Kein Fettdruck. Keine Listen.
+    - Fließtext der atmet. Struktur entsteht durch Rhythmus, nicht durch Überschriften.
+    - Szenenwechsel: einfach neuer Absatz. Kein "Am nächsten Tag..." nötig.
+
+    LÄNGE: ${length.words} Wörter.
+    ${articleLength === 'short' ? 'Kurz. Jedes Wort muss sitzen.' : ''}${articleLength === 'medium' ? 'Nicht zu kurz, nicht zu lang. Genug Raum für die Geschichte, nicht genug für Füller.' : ''}${articleLength === 'long' ? `Das ist viel. Füll es nicht. Erzähl es.
+        Wenn nach ${parseInt(length.words.split('-')[0]) + 200} Wörtern alles gesagt ist: hör auf. Mach keine ${length.words.split('-')[1]} daraus.
+        Wenn die Geschichte ${length.words.split('-')[1]} braucht: gib ihr den Raum.` : ''}
+
+        HASHTAGS: ${articleLength === 'short' ? '4-6' : articleLength === 'medium' ? '5-7' : '5-8'} am Ende. #${lifestyleConfig.keywords[0]}${tags && tags.length > 0 ? ' #' + tags.slice(0, 5).join(' #') : ''}
+        SPRACHE: Deutsch. Foster's Deutsch: knapp, direkt, poetisch-nüchtern. Englische Wörter wenn sie besser sitzen.
+
+        Starte mit einem Moment. Nicht mit einem Gedanken über den Moment. Mit dem Moment selbst. Los.`
 }
 
 /**
  * Bild-Analyse-Prompt für Berichte-Tab
+ *
+ * Sachlich. Fakten. Kein Foster-Stil.
+ * Detail-Level passt sich der Artikel-Länge an.
  */
-export const getArticleImageAnalysisPrompt = (lifestyleConfig) => {
-  return `Analysiere dieses Bild für einen ${lifestyleConfig.vehicle}-Bericht.
+export const getArticleImageAnalysisPrompt = (lifestyleConfig, articleLength = 'long') => {
+    const isLong = articleLength === 'long' || articleLength === 'medium'
 
-BESCHREIBE KONKRET:
-- Was ist zu sehen? (Details, Objekte, Menschen)
-- Setting: Wo? Wann? Wetter? Licht?
-- Was passiert gerade?
-- Praktisches: Werkzeug? Ausrüstung? Problem erkennbar?
+    const basePrompt = `Beschreibe dieses Bild sachlich für einen ${lifestyleConfig.vehicle}-Artikel.
 
-SCHREIBSTIL:
-- Faktisch, nicht romantisch
-- 2-3 Sätze, präzise
-- Fokus auf Details, Problemlösung, praktische Aspekte
-- Konkrete Details statt Adjektive
+    NENNE (nur was sichtbar ist):
+    - Was: Objekte, Personen, Tiere, Fahrzeuge, Ausrüstung
+    - Wo: Innen/Außen, Natur/Stadt, erkennbare Region
+    - Wann: Tageszeit, Wetter, Licht, Jahreszeit (wenn erkennbar)
+    - Situation: Was passiert? Reparatur? Pause? Fahrt? Aufbau?`
 
-NICHT SCHREIBEN:
-- "Wunderschön", "malerisch", "idyllisch", "traumhaft"
-- Vermutungen: "scheint zu sein", "könnte", "vielleicht"
-- Vage Beschreibungen: "ein toller Moment", "ein schöner Ort"
+    const longAdditions = isLong ? `
+    - Atmosphäre: Hell/dunkel, leer/belebt, ruhig/bewegt, eng/weit
+    - Kleine Details: Aufkleber, Rost, Gegenstände, Kleidung, Essen, Werkzeug
+    - Umgebung: Was ist im Hintergrund? Andere Fahrzeuge? Bebauung? Vegetation?` : ''
 
-BEISPIEL SCHLECHT: 
-"Ein wunderschöner Sonnenuntergang am Strand"
+    const format = isLong
+    ? 'FORMAT: 3-5 sachliche Sätze. Detailliert.'
+    : 'FORMAT: 2-3 sachliche Sätze. Kompakt.'
 
-BEISPIEL GUT: 
-"Solarpanele auf dem Van-Dach, 200W. Kabelsalat im Hintergrund. Reparatur läuft seit 2 Stunden. Bewölkt, also nur 50% Output."
+    return `${basePrompt}${longAdditions}
 
-Beschreibe jetzt das Bild - ehrlich und praktisch.`
+    ${format}
+    NUR beschreiben was du SIEHST – nichts vermuten, nichts bewerten.
+
+    VERBOTEN:
+    - Bewertende Adjektive: "schön", "toll", "gemütlich", "perfekt"
+    - Vermutungen: "scheint", "könnte", "wahrscheinlich"
+    - Interpretationen: "genießt", "fühlt sich frei", "ist glücklich"
+
+    BEISPIEL:
+    ${isLong
+        ? '"Innenraum eines ausgebauten Vans. Holzverkleidung an den Wänden, Bett im hinteren Bereich mit grauer Decke. Auf der Küchenzeile links: Gaskocher, Bialetti, offenes Buch. Schiebetür offen, draußen Wiese und Nebel. Morgens oder abends, diffuses Licht. Ein Hund liegt auf dem Bett, mittelgroß, braun."'
+        : '"Solarpanel auf Fahrzeugdach. Kabel lose, nicht befestigt. Bewölkter Himmel. Eine Person arbeitet mit Schraubendreher am Anschluss."'}`
 }
+
+/**
+ * Exportiere lengthConfig für UI-Dropdown etc.
+ */
+export const articleLengthOptions = Object.entries(lengthConfig).map(([key, config]) => ({
+    value: key,
+    label: `${config.label} (${config.words} Wörter)`,
+                                                                                         words: config.words,
+                                                                                         scenes: config.scenes
+}))

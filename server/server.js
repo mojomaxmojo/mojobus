@@ -254,12 +254,13 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
   // Zusätzliche Kontext-Felder
   const tripType = sanitizeInput(req.body.tripType) || ''
   const stationDescriptions = safelyParseJSON(req.body.stationDescriptions) || []
+  const tripLength = sanitizeInput(req.body.tripLength) || 'medium'
 
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Trip-Artikel: "${title}", Bilder: ${images.length}, Stationen: ${locations.length}, Modell: ${model}, Lifestyle: ${lifestyle}`)
+  console.log(`[KI] Generiere Trip-Artikel: "${title}", Bilder: ${images.length}, Stationen: ${locations.length}, Modell: ${model}, Lifestyle: ${lifestyle}, Länge: ${tripLength}`)
   if (tripType) console.log(`[KI] Trip-Typ: ${tripType}`)
   if (stationDescriptions.length > 0) console.log(`[KI] Station-Beschreibungen: ${stationDescriptions.length}`)
 
@@ -276,7 +277,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
         messages: [{
           role: 'user',
           content: [
-             { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig) },
+             { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -303,7 +304,8 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       imageDescriptions,
       lifestyleConfig,
       tripType,
-      stationDescriptions
+      stationDescriptions,
+      tripLength
     })
 
     // Artikel generieren mit ausgewähltem Modell
@@ -318,7 +320,8 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       article,
       imageDescriptions,
       hashtags: uniqueHashtags.join(' '),
-      lifestyle
+      lifestyle,
+      tripLength
     })
   } catch (error) {
     console.error('[KI] Fehler bei Trip-Generierung:', error.response?.data || error.message)
@@ -362,12 +365,13 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   const category = sanitizeInput(req.body.category) || ''
   const tags = safelyParseJSON(req.body.tags) || []
   const country = sanitizeInput(req.body.country) || ''
+  const articleLength = sanitizeInput(req.body.articleLength) || 'medium'
 
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Bericht: "${title}", Bilder: ${images.length}, Modell: ${model}, Lifestyle: ${lifestyle}`)
+  console.log(`[KI] Generiere Bericht: "${title}", Bilder: ${images.length}, Modell: ${model}, Lifestyle: ${lifestyle}, Länge: ${articleLength}`)
   if (category) console.log(`[KI] Kategorie: ${category}`)
   if (tags.length > 0) console.log(`[KI] Tags: ${tags.join(', ')}`)
 
@@ -382,7 +386,7 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: getArticleImageAnalysisPrompt(lifestyleConfig) },
+            { type: 'text', text: getArticleImageAnalysisPrompt(lifestyleConfig, articleLength) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -405,7 +409,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       lifestyleConfig,
       category,
       tags,
-      country
+      country,
+      articleLength
     })
 
     const article = await generateWithModel(prompt, model, lifestyle)
@@ -416,7 +421,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
     res.json({
       article,
       hashtags: uniqueHashtags.join(' '),
-      lifestyle
+      lifestyle,
+      articleLength
     })
   } catch (error) {
     console.error('[KI] Fehler bei Bericht-Generierung:', error.response?.data || error.message)
