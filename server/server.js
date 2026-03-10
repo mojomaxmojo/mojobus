@@ -73,22 +73,26 @@ const safelyParseJSON = (str) => {
 // - generatePlacePrompt() → Plätze-Tab (place.js)
 
 // ===== KI-MODELL FUNKTION =====
-const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife') => {
+const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife', options = {}) => {
   const startTime = Date.now()
   const lifestyleConfig = getLifestyleConfig(lifestyle)
 
+  // Defaults die pro Tab überschrieben werden können
+  const maxTokens = options.maxTokens || 700
+  const temperature = options.temperature || 0.8
+
   try {
     if (model === 'claude') {
-      // Claude 3.5 Sonnet (Anthropic)
+      // Claude Sonnet (Anthropic)
       if (!process.env.ANTHROPIC_API_KEY) {
         throw new Error('ANTHROPIC_API_KEY fehlt')
       }
 
       const response = await axios.post('https://api.anthropic.com/v1/messages', {
         model: 'claude-sonnet-4-6',
-        max_tokens: 700,
-        temperature: 0.9,
-        system: `Du bist ein erfahrener ${lifestyleConfig.vehicle}-Reisender im authentischen Foster Huntington Stil. Schreibe ehrlich, direkt, ungeschönt - keine perfekten Instagram-Geschichten.`,
+        max_tokens: maxTokens,
+        temperature,
+        system: `Du schreibst wie Foster Huntington. Erste Person. Kurze Sätze. Keine Überschriften, kein Fettdruck, keine Listen. Keine Leseransprache, keine Tipps, keine Ausrufezeichen. Nur Fließtext.`,
         messages: [{ role: 'user', content: prompt }]
       }, {
         headers: {
@@ -100,16 +104,22 @@ const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife'
       })
 
       const duration = Date.now() - startTime
-      console.log(`[KI] Claude 3.5 Sonnet generiert in ${duration}ms, Kosten: ~$0.015`)
+      console.log(`[KI] Claude Sonnet generiert in ${duration}ms (maxTokens: ${maxTokens})`)
       return response.data.content[0].text
 
     } else {
       // Llama 4 Scout (Groq) - Standard
       const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
         model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 700,
-        temperature: 0.85,
+        messages: [
+          {
+            role: 'system',
+            content: 'Du schreibst wie Foster Huntington. Erste Person. Kurze Sätze. Keine Überschriften, kein Fettdruck, keine Listen. Keine Leseransprache, keine Tipps, keine Ausrufezeichen. Nur Fließtext.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: maxTokens,
+        temperature,
         top_p: 0.9
       }, {
         headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
@@ -117,7 +127,7 @@ const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife'
       })
 
       const duration = Date.now() - startTime
-      console.log(`[KI] Llama 4 Scout generiert in ${duration}ms, Kosten: ~$0.005`)
+      console.log(`[KI] Llama 4 Scout generiert in ${duration}ms (maxTokens: ${maxTokens})`)
       return response.data.choices[0].message.content
     }
   } catch (error) {
@@ -203,14 +213,17 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
       country
     })
 
-    // Artikel generieren mit ausgewähltem Modell
-    const article = await generateWithModel(prompt, model)
+    // Artikel generieren – MEDIEN: max 150 Tokens (35-50 Wörter + Hashtags)
+    const article = await generateWithModel(prompt, model, lifestyle, {
+      maxTokens: 150,
+      temperature: 0.7
+    })
 
     // Hashtags extrahieren (verbessert)
     const hashtags = article.match(/#\w+/g) || []
     const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
 
-    console.log(`[KI] Artikel generiert: ${article.length} Zeichen, Hashtags: ${uniqueHashtags.length}`)
+    console.log(`[KI] Media-Post generiert: ${article.length} Zeichen, Hashtags: ${uniqueHashtags.length}`)
 
     res.json({
       article,
@@ -308,9 +321,13 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       tripLength
     })
 
-    // Artikel generieren mit ausgewähltem Modell
-    const article = await generateWithModel(prompt, model)
-    console.log(`[KI] Trip-Artikel generiert: ${article.length} Zeichen`)
+    // Trips: maxTokens abhängig von tripLength
+    const tripMaxTokens = tripLength === 'short' ? 500 : tripLength === 'medium' ? 1400 : 2500
+    const article = await generateWithModel(prompt, model, lifestyle, {
+      maxTokens: tripMaxTokens,
+      temperature: 0.8
+    })
+    console.log(`[KI] Trip-Artikel generiert: ${article.length} Zeichen (maxTokens: ${tripMaxTokens})`)
 
     // Hashtags extrahieren
     const hashtags = article.match(/#\w+/g) || []
@@ -413,7 +430,12 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       articleLength
     })
 
-    const article = await generateWithModel(prompt, model, lifestyle)
+    // Berichte: maxTokens abhängig von articleLength
+    const articleMaxTokens = articleLength === 'short' ? 500 : articleLength === 'medium' ? 1200 : 2500
+    const article = await generateWithModel(prompt, model, lifestyle, {
+      maxTokens: articleMaxTokens,
+      temperature: 0.8
+    })
     
     const hashtags = article.match(/#\w+/g) || []
     const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
@@ -487,7 +509,11 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
       lifestyleConfig
     })
 
-    const description_text = await generateWithModel(prompt, model, lifestyle)
+    // Plätze: max 250 Tokens (80-150 Wörter + Hashtags)
+    const description_text = await generateWithModel(prompt, model, lifestyle, {
+      maxTokens: 250,
+      temperature: 0.75
+    })
     
     const hashtags = description_text.match(/#\w+/g) || []
     const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
@@ -558,7 +584,11 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
       lifestyleConfig
     })
 
-    const note = await generateWithModel(prompt, model, lifestyle)
+    // Notizen: max 120 Tokens (20-80 Wörter + Hashtags)
+    const note = await generateWithModel(prompt, model, lifestyle, {
+      maxTokens: 120,
+      temperature: 0.7
+    })
     
     const hashtags = note.match(/#\w+/g) || []
     const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
