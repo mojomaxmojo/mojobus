@@ -319,6 +319,7 @@ export function TripPublishForm() {
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [tripLength, setTripLength] = useState<'short' | 'medium' | 'long'>('medium');
 
   // Hooks
   const { toast } = useToast();
@@ -361,6 +362,7 @@ export function TripPublishForm() {
       // Zusätzliche Kontext-Felder
       formData.append('tripType', tripData.tripType || ''); // Trip-Typ
       formData.append('country', tripData.country || ''); // Land
+      formData.append('tripLength', tripLength); // Trip-Länge
       formData.append('stationDescriptions', JSON.stringify(
         stations.map(s => ({
           location: s.location || s.title,
@@ -1364,6 +1366,38 @@ export function TripPublishForm() {
               </Select>
               <p className="text-xs text-muted-foreground">
                 Foster Huntington Stil - ehrlich, direkt, authentisch
+              </p>
+            </div>
+
+            {/* Trip-Länge Auswahl */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Trip-Länge:</span>
+                <div className="flex gap-1">
+                  {([
+                    { value: 'short', label: 'Kurz', words: '150-400' },
+                    { value: 'medium', label: 'Mittel', words: '500-1200' },
+                    { value: 'long', label: 'Lang', words: '1200-2500' }
+                  ] as const).map((len) => (
+                    <button
+                      key={len.value}
+                      type="button"
+                      onClick={() => setTripLength(len.value)}
+                      className={`h-5 px-2 text-xs rounded transition-colors ${
+                        tripLength === len.value
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {tripLength === len.value && '✓ '}{len.label} <span className="opacity-70">({len.words})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {tripLength === 'short' && '📖 Ein Tag unterwegs. Eine Strecke. Der Moment wo du ankommst.'}
+                {tripLength === 'medium' && '📖 Mehrere Tage. Stationen die zusammengehören. Eine Geschichte mit Bewegung.'}
+                {tripLength === 'long' && '📖 Die ganze Reise. Szenen, Abschweifungen, Veränderung.'}
               </p>
             </div>
 

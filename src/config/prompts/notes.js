@@ -3,108 +3,126 @@
  * Tab: "Note" in /veroeffentlichen
  *
  * Foster Huntington Stil für alle Lifestyles
- * Erweitert mit Kontext-Feldern: country
+ *
+ * Eine Notiz ist das Kürzeste was Foster schreibt.
+ * Kürzer als ein Medien-Post. Ein Satz. Vielleicht drei.
+ * Ein Gedanke der nicht warten kann. Ein Moment der vorbeigeht
+ * wenn man ihn nicht jetzt festhält.
+ *
+ * Keine Struktur. Kein Aufbau. Kein Versuch etwas daraus zu machen.
+ * Es ist was es ist.
  */
 
 import { fosterHuntingtonStyle } from './lifestyles.js'
 
 /**
  * Generiert den Foster Huntington Prompt für Notizen
+ *
+ * Server übergibt: { title, description, location, text, imageDescriptions, lifestyleConfig, country }
  */
 export const generateNotePrompt = (params) => {
-  const { 
-    title, 
-    description, 
-    location, 
-    text, 
-    imageDescriptions, 
+  const {
+    title,
+    description,
+    location,
+    text,
+    imageDescriptions,
     lifestyleConfig,
-    country 
+    country
   } = params
 
-  // Baue Kontext-Informationen zusammen
-  let contextInfo = ''
-  if (country) contextInfo += `\nLand: ${country}`
+  // Kontext kompakt zusammenbauen
+  let contextLines = [
+    country && `Region: ${country}`,
+    location && `Ort: ${location}${country ? ', ' + country : ''}`
+  ].filter(Boolean).join('\n')
 
-  return `Du bist Foster Huntington und schreibst eine kurze Notiz für ${lifestyleConfig.community}. Dein Stil ist ehrlich, direkt und authentisch - wie ein kurzer Gedanke, kein ausgearbeiteter Post.
+  // Input-Stärke einschätzen
+  const hasText = text && text.length > 10
+  let inputGuidance = ''
 
-BEISPIELE DEINES STILS:
+  if (hasText) {
+    inputGuidance = `
+    DER AUTOR HAT ETWAS GESCHRIEBEN. Das ist dein Fundament.
+    Forme es in Foster's Stimme. Kürze es. Destilliere den Kern.
+    Aber erfinde nichts dazu.`
+  } else {
+    inputGuidance = `
+    WENIG TEXT-INPUT. Das ist okay.
+    Schreibe aus dem Bild heraus. Ein Gedanke. Nicht mehr.
+    Bleib vage wo dir Infos fehlen.`
+  }
+
+  return `Du schreibst wie Foster Huntington. Eine Notiz für die ${lifestyleConfig.community}.
+
+DAS WICHTIGSTE: Eine Notiz ist KEIN Artikel. Kein Medien-Post. Kein Bericht.
+Es ist ein Gedanke. Ein Fragment. Wie eine Nachricht an dich selbst.
+1-5 Sätze. Meistens weniger.
+
+SO KLINGT DAS:
+---
 "${lifestyleConfig.example1}"
-→ Beachte: direkt, keine Einleitung, springt ins Thema
-
+---
 "${lifestyleConfig.example2}"
-→ Beachte: kurz, persönlich, echte Beobachtung
+---
 
-VERMEIDE UNBEDINGT:
-- Klischees: "atemberaubend", "traumhaft", "perfekter Moment"
-- Instagram-Sprache: "living my best life", "blessed", "vibes", "grateful"
-- Vage Beschreibungen: "einfach toll", "so schön"
-- Perfekte, polierte Geschichten
+FOSTER'S STIMME:
+${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
 
-SCHREIBE EINE NOTIZ ÜBER: "${title}${description ? ' - ' + description : ''}"
-${contextInfo}
+FOSTER'S RHYTHMUS:
+${fosterHuntingtonStyle.rhythm.map(r => `- ${r}`).join('\n')}
 
-BILD-DETAILS:
-${imageDescriptions.map((desc, i) => `Bild ${i + 1}: ${desc}`).join('\n')}
+WAS FOSTER NIE TUN WÜRDE:
+${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
+- Das Bild beschreiben: "Hier sieht man...", "Auf dem Foto..."
+- Den Leser ansprechen: "Kennst du das?", "Was meint ihr?"
+- Kontext erklären: "Heute war ich...", "Ich wollte kurz teilen..."
+- Ausrufezeichen. Nie.
 
-Standort: ${location || 'Unbekannt'}${country ? `, ${country}` : ''}
-Kontext: ${text || 'Notiz'}
+THEMA: "${title}"${description ? `\n"${description}"` : ''}
 
-AUTHENTIZITÄTS-ANFORDERUNGEN:
-- Echte Beobachtung, nicht inszeniert
-- Konkrete Details statt Adjektive
-- Kurz und direkt
-- Mindestens 1 konkretes Detail (Zahl, Ort, Wetter)
+${contextLines}
 
-FOSTER'S STIMME - SO SCHREIBST DU:
-- Kurze Sätze. Manchmal fragmentarisch.
-- Direkt, kein Vorgeplänkel
-- Persönlich, nicht generisch
-- Humor und Selbstironie wo passend
-- Immer "Ich" statt "Man"
+WAS AUF DEM BILD ZU SEHEN IST (als Kontext, nicht nacherzählen):
+${imageDescriptions.map((desc, i) => `${i + 1}. ${desc}`).join('\n')}
 
-STRUKTUR (kurz und knapp):
-1. Moment: Was passiert gerade? (1 Satz)
-2. Detail: Ein konkretes Ding, das auffällt
-3. Gefühl/Gedanke: Kurz, ehrlich
+${text ? `WAS DER AUTOR SAGT (HÖCHSTE PRIORITÄT):\n"${text}"` : ''}
+${inputGuidance}
 
-LÄNGE: 50-100 Wörter
-HASHTAGS: 3-5 relevante Hashtags am Ende (inklusive #${lifestyleConfig.keywords[0]})
-SPRACHE: Deutsch, authentisch, wie ein kurzer Gedanke
+REGELN:
+- Erfinde NICHTS. Keine Zahlen, keine Fakten die nicht im Input sind.
+- Beschreibe nicht das Bild. Der Leser sieht es.
+- Kein Intro. Kein Fazit. Kein Aufbau.
+- Beginne mitten drin. Höre auf wenn es reicht.
 
-WICHTIG: Beginne direkt. Keine Einleitung.
-NICHT: "Ich wollte kurz teilen...", "Ein kleiner Moment heute..."
-SONDERN: Springe direkt rein - "Regen. 3 Uhr nachts. Ich liege wach."
+LÄNGE: 20-80 Wörter. Eher kürzer. Eine Notiz quatscht nicht.
+HASHTAGS: 3-5 am Ende. #${lifestyleConfig.keywords[0]}
+SPRACHE: Deutsch. Knapp. Fragmentarisch.
 
-Jetzt schreib los - kurz, direkt, authentisch.`
+Ein Gedanke. Schreib ihn auf. Fertig.`
 }
 
 /**
  * Bild-Analyse-Prompt für Note-Tab
+ *
+ * Sachlich. Minimal. Fakten.
  */
 export const getNoteImageAnalysisPrompt = (lifestyleConfig) => {
-  return `Analysiere dieses Bild für eine ${lifestyleConfig.vehicle}-Notiz.
+  return `Beschreibe dieses Bild sachlich für eine ${lifestyleConfig.vehicle}-Notiz.
 
-BESCHREIBE KONKRET UND KURZ:
-- Was ist zu sehen? (1-2 Details)
-- Setting: Wo? Wann? Wetter?
-- Was ist der Moment?
+NENNE (nur was sichtbar ist):
+- Was: Objekte, Personen, Tiere, Fahrzeuge
+- Wo: Setting, Umgebung
+- Wann: Tageszeit, Wetter (wenn erkennbar)
 
-SCHREIBSTIL:
-- Maximal 2 Sätze
-- Faktisch, nicht romantisch
-- Konkrete Details statt Adjektive
+FORMAT: 1-2 sachliche Sätze. Kompakt.
+NUR beschreiben was du SIEHST.
 
-NICHT SCHREIBEN:
-- "Wunderschön", "traumhaft", "perfekt"
-- Vage Beschreibungen: "tolle Stimmung", "schöner Ort"
-- Instagram-Sprache
+VERBOTEN:
+- Bewertende Adjektive: "schön", "toll", "perfekt", "idyllisch"
+- Vermutungen: "scheint", "könnte", "wahrscheinlich"
+- Interpretationen: "genießt", "fühlt sich frei"
 
-BEISPIEL SCHLECHT: 
-"Ein wunderschöner Moment am Strand bei Sonnenuntergang"
-
-BEISPIEL GUT: 
-"Strand, 18 Uhr. Bewölkt. Van 10m vom Wasser. Windig."
-
-Beschreibe jetzt das Bild - kurz und ehrlich.`
+BEISPIEL:
+"Strand, Dämmerung. Van am Wasser, Schiebetür offen. Bewölkt, windig."`
 }

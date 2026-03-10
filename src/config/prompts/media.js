@@ -1,9 +1,14 @@
+
 /**
  * KI-Prompt für Medien-Artikel (MediaUploadForm)
  * Tab: "Medien" in /veroeffentlichen
  *
  * Foster Huntington Stil für alle Lifestyles
- * Erweitert mit Kontext-Feldern: mainCategory, subCategories, detailedTags, additionalImageUrls, manualTags, country
+ * 
+ * Medien-Posts sind die kürzesten und visuellsten.
+ * Foster würde zu einem Foto 2-5 Sätze schreiben. Nicht mehr.
+ * Das Bild erzählt die Geschichte. Der Text ist das was das Bild nicht zeigt:
+ * ein Gedanke, ein Geräusch, ein Gefühl, ein Detail das außerhalb des Rahmens liegt.
  */
 
 import { fosterHuntingtonStyle } from './lifestyles.js'
@@ -27,112 +32,117 @@ export const generateMediaPrompt = (params) => {
     country
   } = params
 
-  // Baue Kontext-Informationen zusammen
-  let contextInfo = ''
-  if (mainCategory) contextInfo += `\nHauptkategorie: ${mainCategory}`
-  if (subCategories && subCategories.length > 0) contextInfo += `\nThemen: ${subCategories.join(', ')}`
-  if (detailedTags && detailedTags.length > 0) contextInfo += `\nSchlagworte: ${detailedTags.join(', ')}`
-  if (manualTags && manualTags.length > 0) contextInfo += `\nZusätzliche Tags: ${manualTags.join(', ')}`
-  if (country) contextInfo += `\nLand: ${country}`
-  if (additionalImageUrls) contextInfo += `\nWeitere Bilder: ${additionalImageUrls}`
+  // Kontext kompakt – nur was relevant ist
+  let contextLines = [
+    mainCategory && `Kategorie: ${mainCategory}`,
+    subCategories && subCategories.length > 0 && `Themen: ${subCategories.join(', ')}`,
+    country && `Region: ${country}`,
+    location && `Ort: ${location}${country ? ', ' + country : ''}`,
+    additionalImageUrls && `Weitere Bilder vorhanden: ja`
+  ].filter(Boolean).join('\n')
 
-  return `Du bist Foster Huntington und schreibst für deine ${lifestyleConfig.community}. Dein Stil ist ehrlich, persönlich und direkt - keine perfekten Instagram-Geschichten, sondern echte Erlebnisse.
+  // Alle Tags zusammenführen für Hashtags
+  let allTags = [
+    ...(lifestyleConfig.keywords || []),
+    ...(detailedTags || []),
+    ...(manualTags || [])
+  ].filter(Boolean)
 
-BEISPIELE DEINES STILS - ANALYSIERE WAS SIE AUTHENTISCH MACHT:
+  return `Du schreibst wie Foster Huntington. Einen Medien-Post für die ${lifestyleConfig.community}.
+
+DAS WICHTIGSTE ZUERST:
+Ein Medien-Post ist KEIN Artikel. Kein Reisebericht. Kein Blog-Post.
+Es ist ein Foto mit Text. Das Foto erzählt die Geschichte.
+Dein Text erzählt was das Foto NICHT zeigt: einen Gedanken, ein Geräusch, was davor passiert ist, was danach kam. Oder einfach nur wie sich der Moment angefühlt hat.
+
+SO KLINGT DAS:
+---
 "${lifestyleConfig.example1}"
-→ Beachte: konkrete Details, ehrliche Momente, kein Kitsch
-
+---
 "${lifestyleConfig.example2}"
-→ Beachte: persönlicher Ton, praktische Info, Humor
+---
 
-"${lifestyleConfig.example3}"
-→ Beachte: Direktheit, keine Einleitung, springt ins Thema
+DAS IST FOSTER:
+- Ein Foto. Ein paar Sätze. Fertig.
+- Der Text erklärt das Bild nicht. Er ergänzt es.
+- Manchmal hat der Text fast nichts mit dem Bild zu tun. Ein Gedanke der in dem Moment kam.
+- Keine Bildunterschrift. Keine Beschreibung. Ein Fragment aus deinem Kopf.
 
-VERMEIDE UNBEDINGT:
-- Klischees: "atemberaubend", "traumhaft", "paradiesisch", "unvergesslich"
-- Passiv-Konstruktionen: "Es wurde genossen" → "Ich genoss"
-- Vage Superlative: "das beste/schönste/tollste"
-- Instagram-Sprache: "living my best life", "blessed", "vibes", "perfect moment"
-- Touristische Phrasen: "Als Reisender musst du...", "Man sollte unbedingt..."
-- Perfekte Geschichten ohne Probleme oder Schwierigkeiten
-
-SCHREIBE EINEN ARTIKEL ÜBER: "${title}${description ? ' - ' + description : ''}"
-${contextInfo}
-
-BILD-DETAILS:
-${imageDescriptions.map((desc, i) => `Bild ${i + 1}: ${desc}`).join('\n')}
-
-Standort: ${location || 'Unbekannt'}${country ? `, ${country}` : ''}
-Stichworte: ${text || 'Abenteuer Reise Freiheit'}${detailedTags && detailedTags.length > 0 ? `, ${detailedTags.join(', ')}` : ''}${manualTags && manualTags.length > 0 ? `, ${manualTags.join(', ')}` : ''}
-
-AUTHENTIZITÄTS-ANFORDERUNGEN:
-- Mindestens 1 Problem/Herausforderung erwähnen (Wetter, Pech, Fehlplanung)
-- Konkrete Details statt Adjektive: nicht "schöner Strand" → "schwarzer Lavasand, 15°C Wasser, Wind"
-- Kosten/Budget wo relevant: "40€ Diesel", "15€ Campingplatz"
-- Wetter realistisch: nicht nur Sonnenschein
-- Mindestens 2 konkrete Zahlen im Text
-
-FOSTER'S STIMME - SO SCHREIBST DU:
+FOSTER'S STIMME:
 ${fosterHuntingtonStyle.writingStyle.map(s => `- ${s}`).join('\n')}
-- Kurze Sätze. Manchmal fragmentarisch. Rhythmus.
-- Gegenwart wo möglich: "Ich sitze am Feuer" statt "Ich saß"
-- Konkrete Zahlen: "3 Tage", "5km", "40€"
-- Ein Swear-Word ist okay wenn natürlich platziert
-- Ehrlich über Schwierigkeiten (nicht beschönigen!)
-- Persönliche Anekdoten statt generischer Beschreibungen
-- Direkte Fragen an den Leser: "Kennst du das?"
-- Humor und Selbstironie
-- Immer "Ich" statt "Man"
 
-STRUKTUR (flexibel, nicht starr):
-1. Öffne mit einem konkreten, persönlichen Moment
-2. Erzähl eine kleine, echte Geschichte
-3. Mindestens 1 Herausforderung oder Problem erwähnen
-4. Gib einen praktischen Tipp aus der Erfahrung
-5. Stelle eine Frage, die den Leser einbindet
-6. Schließe ehrlich (mit den Schwierigkeiten)
+FOSTER'S RHYTHMUS:
+${fosterHuntingtonStyle.rhythm.map(r => `- ${r}`).join('\n')}
 
-LÄNGE: 200-300 Wörter
-HASHTAGS: 5-8 relevante Hashtags am Ende (inklusive #${lifestyleConfig.keywords[0]})
-SPRACHE: Deutsch, authentisch, wie ein Gespräch mit nem Kumpel
+WAS FOSTER NIE TUN WÜRDE:
+${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
+- Das Bild beschreiben: "Hier sieht man...", "Auf dem Foto ist..."
+- Tipps geben: "Mein Tipp:", "Ihr solltet..."
+- Den Leser ansprechen: "Kennst du das?", "Was meint ihr?"
+- Hashtag-Sprache im Text: "So sieht #vanlife wirklich aus"
+- Das Erlebnis bewerten: "Das war toll/schlimm/krass"
+- Ausrufezeichen. Nie.
 
-WICHTIG: Beginne direkt mit einem persönlichen Moment.
-NICHT: "In diesem Artikel...", "Ich möchte euch zeigen...", "Heute war ich..."
-SONDERN: Springe direkt rein - "Ich sitze am Feuer. Der Regen prasselt aufs Dach. 3 Uhr nachts."
+THEMA: "${title}"${description ? `\n"${description}"` : ''}
 
-Jetzt schreib los - ehrlich, direkt, wie Foster Huntington es tun würde.`
+${contextLines}
+
+WAS AUF DEN BILDERN ZU SEHEN IST (als Kontext, nicht nacherzählen):
+${imageDescriptions.map((desc, i) => `${i + 1}. ${desc}`).join('\n')}
+
+${text ? `WAS DER AUTOR SAGT (HÖCHSTE PRIORITÄT – verwende das als Wahrheit):\n"${text}"` : ''}
+
+REGELN:
+- ERZÄHLE NICHT WAS AUF DEM BILD IST. Der Leser hat Augen.
+- Erfinde NICHTS. Keine Zahlen, keine Kosten, keine Temperaturen – außer der User hat sie genannt.
+- Wenn der User im Text-Feld etwas geschrieben hat: das ist dein Fundament. Bau darauf.
+- Wenn der User nichts geschrieben hat: schreibe aus dem Bild-Kontext heraus – aber beschreibe nicht das Bild. Schreibe den Gedanken der zum Bild gehört.
+- Probleme/Herausforderungen nur wenn sie aus dem Input kommen. Keine erfundenen Pannen.
+
+STRUKTUR: Keine.
+- Kein Intro. Kein Fazit. Kein Aufbau.
+- Ein Moment. Ein Gedanke. Vielleicht zwei.
+- Beginne mitten drin. Höre auf wenn es sich richtig anfühlt.
+- Der letzte Satz ist leise. Ein Bild. Ein Detail. Stille.
+
+FORMATIERUNG:
+- Kurze Absätze. 1-3 Sätze.
+- Keine Überschriften. Keine Listen. Kein Fettdruck.
+- Weißraum ist Teil des Texts.
+
+LÄNGE: 50-150 Wörter. Eher kürzer. Foster quatscht nicht. Bei einem Medien-Post schon gar nicht.
+HASHTAGS: 4-6 am Ende.${allTags.length > 0 ? ` Nutze wenn passend: #${allTags.slice(0, 6).join(' #')}` : ` Inklusive #${lifestyleConfig.keywords[0]}`}
+SPRACHE: Deutsch. Knapp. Englische Wörter wenn sie besser passen.
+
+Ein Bild liegt vor dir. Was denkst du gerade? Schreib das auf. Nur das.`
 }
 
 /**
  * Bild-Analyse-Prompt für Medien-Tab
+ * 
+ * Sachlich. Kurz. Fakten.
+ * Das ist ein Tool-Prompt, kein Text-Output.
+ * Foster-Stil wird nur im finalen Medien-Prompt angewendet.
  */
 export const getMediaImageAnalysisPrompt = (lifestyleConfig) => {
-  return `Analysiere dieses Bild für einen ${lifestyleConfig.vehicle}-Artikel.
+  return `Beschreibe dieses Bild sachlich für einen ${lifestyleConfig.vehicle}-Post.
 
-BESCHREIBE KONKRET:
-- Was ist zu sehen? (Details, Objekte, Menschen, Atmosphäre)
-- Setting: Wo? Wann? Wetter? Licht? Tageszeit?
-- Was passiert gerade? Was ist das Besondere?
-- Praktisches: Ausrüstung? Ort? Situation?
+NENNE (nur was sichtbar ist):
+- Was: Objekte, Personen, Tiere, Fahrzeuge
+- Wo: Setting, Umgebung, erkennbare Region
+- Wann: Tageszeit, Wetter, Licht (wenn erkennbar)
+- Stimmung: Ruhig/aktiv, einsam/belebt, hell/dunkel
+- Details: Besonderes das auffällt, auch Negatives
 
-SCHREIBSTIL:
-- Faktisch, nicht romantisch
-- 2-3 Sätze, präzise
-- Echte Atmosphäre (nicht Instagram-perfekt)
-- Was wirklich passiert, nicht was schön aussieht
-- Konkrete Details statt Adjektive
+FORMAT: 2-3 sachliche Sätze. Präzise.
+NUR beschreiben was du SIEHST.
 
-NICHT SCHREIBEN:
-- "Wunderschön", "malerisch", "idyllisch", "traumhaft", "perfekt"
-- Vermutungen: "scheint zu sein", "könnte", "vielleicht"
-- Vage Beschreibungen: "ein toller Moment", "eine schöne Aussicht"
-- Instagram-Sprache: "vibes", "aesthetic", "goals"
+VERBOTEN:
+- Bewertende Adjektive: "schön", "toll", "perfekt", "idyllisch", "malerisch"
+- Vermutungen: "scheint", "könnte", "wahrscheinlich", "vielleicht"
+- Interpretationen: "genießt die Aussicht", "fühlt sich frei"
+- Instagram-Sprache: "vibes", "aesthetic", "mood", "goals"
 
-BEISPIEL SCHLECHT: 
-"Ein wunderschöner Sonnenuntergang am Strand mit perfekter Stimmung"
-
-BEISPIEL GUT: 
-"Strand um 18 Uhr. Bewölkt, also kein Sonnenuntergang zu sehen. Van parkt 10m vom Wasser. Windig, 12°C. Einsam, nur 2 andere Vans in der Bucht."
-
-Beschreibe jetzt das Bild - ehrlich und authentisch.`
+BEISPIEL:
+"Strand bei Dämmerung. Ein Fahrzeug am Wasser, Schiebetür offen. Eine Person sitzt auf der Kante, Hund daneben. Bewölkt, Wind erkennbar an der Vegetation. Keine anderen Fahrzeuge sichtbar."`
 }

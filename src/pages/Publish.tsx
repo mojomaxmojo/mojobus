@@ -3534,6 +3534,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
+  const [articleLength, setArticleLength] = useState<'short' | 'medium' | 'long'>('medium');
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -3565,6 +3566,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       formData.append('category', category || '');
       formData.append('tags', JSON.stringify(tags));
       formData.append('country', selectedCountry || '');
+      formData.append('articleLength', articleLength);
 
       const response = await fetch('/api/generate-article', {
         method: 'POST',
@@ -3992,6 +3994,38 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Artikellänge Auswahl - Über dem Titelbild */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Artikellänge:</span>
+            <div className="flex gap-1">
+              {([
+                { value: 'short', label: 'Kurz', words: '200-400' },
+                { value: 'medium', label: 'Mittel', words: '500-1000' },
+                { value: 'long', label: 'Lang', words: '1000-2500' }
+              ] as const).map((len) => (
+                <button
+                  key={len.value}
+                  type="button"
+                  onClick={() => setArticleLength(len.value)}
+                  className={`h-5 px-2 text-xs rounded transition-colors ${
+                    articleLength === len.value
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {articleLength === len.value && '✓ '}{len.label} <span className="opacity-70">({len.words})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {articleLength === 'short' && '📖 Ein Moment. Vielleicht zwei. Wie ein Tagebucheintrag.'}
+            {articleLength === 'medium' && '📖 Mehrere Momente die zusammengehören. Eine Geschichte mit Raum zum Atmen.'}
+            {articleLength === 'long' && '📖 Langform. Szenen, Abschweifungen, Atmosphäre. Wie ein Kapitel aus einem Buch.'}
+          </p>
+        </div>
+
         {/* Title Image - Move to top */}
         <div className="space-y-2">
           <Label htmlFor="article-image">Titelbild</Label>

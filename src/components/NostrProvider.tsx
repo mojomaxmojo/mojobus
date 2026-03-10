@@ -4,6 +4,7 @@ import { NostrContext } from '@nostrify/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useAuthorRelays } from '@/hooks/useAuthorRelays';
+import { NRelayAuth } from '@/lib/NRelayAuth';
 
 interface NostrProviderProps {
   children: React.ReactNode;
@@ -89,6 +90,12 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   if (!pool.current) {
     pool.current = new NPool({
       open(url: string) {
+        // Use NRelayAuth for private relays that require authentication
+        if (url.includes('/private') || url.includes('auth')) {
+          console.log('[NostrProvider] Using authenticated relay for:', url);
+          return new NRelayAuth(url);
+        }
+        // Use normal relay for public relays
         return new NRelay1(url);
       },
       reqRouter(filters) {
@@ -160,10 +167,7 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   const createQueryFunction = () => {
     return {
       query: async (filters: any[], signal?: AbortSignal) => {
-        const abortSignal = AbortSignal.any([
-          signal!,
-          AbortSignal.timeout(readQueryTimeout.current) // READ timeout (FAST preset)
-        ]);
+        const abortSignal = AbortSignal.timeout(readQueryTimeout.current);
 
         console.log('[NostrProvider] Executing query with timeout:', readQueryTimeout.current);
 
