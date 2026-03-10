@@ -110,7 +110,7 @@ FORMATIERUNG:
 - Keine Überschriften. Keine Listen. Kein Fettdruck.
 - Weißraum ist Teil des Texts.
 
-LÄNGE: 50-150 Wörter. Eher kürzer. Foster quatscht nicht. Bei einem Medien-Post schon gar nicht.
+LÄNGE: 30-100 Wörter. Eher kürzer. Foster quatscht nicht. Bei einem Medien-Post schon gar nicht.
 HASHTAGS: 4-6 am Ende.${allTags.length > 0 ? ` Nutze wenn passend: #${allTags.slice(0, 6).join(' #')}` : ` Inklusive #${lifestyleConfig.keywords[0]}`}
 SPRACHE: Deutsch. Knapp. Englische Wörter wenn sie besser passen.
 
