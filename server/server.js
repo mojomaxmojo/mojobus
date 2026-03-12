@@ -17,6 +17,7 @@ import {
   generateNotePrompt,
   generatePlacePrompt,
   getMediaImageAnalysisPrompt,
+  getMediaVideoAnalysisPrompt,
   getTripImageAnalysisPrompt,
   getArticleImageAnalysisPrompt,
   getNoteImageAnalysisPrompt,
@@ -92,7 +93,7 @@ const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife'
         model: 'claude-sonnet-4-6',
         max_tokens: maxTokens,
         temperature,
-        system: `Du schreibst wie Foster Huntington. Erste Person. Kurze Sätze. Keine Überschriften, kein Fettdruck, keine Listen. Keine Leseransprache, keine Tipps, keine Ausrufezeichen. Nur Fließtext.`,
+        system: `Du schreibst wie Foster Huntington. Erste Person. Kurze Sätze. Keine Überschriften, kein Fettdruck, keine Listen. Keine Leseransprache, keine Tipps, keine Ausrufezeichen.`,
         messages: [{ role: 'user', content: prompt }]
       }, {
         headers: {
@@ -114,7 +115,7 @@ const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife'
         messages: [
           {
             role: 'system',
-            content: 'Du schreibst wie Foster Huntington. Erste Person. Kurze Sätze. Keine Überschriften, kein Fettdruck, keine Listen. Keine Leseransprache, keine Tipps, keine Ausrufezeichen. Nur Fließtext.'
+            content: 'Du schreibst wie Foster Huntington. Erste Person. Kurze Sätze. Keine Überschriften, kein Fettdruck, keine Listen. Keine Leseransprache, keine Tipps, keine Ausrufezeichen.'
           },
           { role: 'user', content: prompt }
         ],
@@ -138,7 +139,7 @@ const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife'
 
 
 // ===== API FÜR MEDIEN ARTIKEL GENERIERUNG =====
-// Generiert authentische Vanlife-Artikel im Foster Huntington Stil
+// Generiert authentische Artikel im Foster Huntington Stil
 // Verwendet in: Medien-Tab der Publish-Seite
 app.post('/api/generate-media-article', upload.array('images', 10), async (req, res) => {
   if (!validateApiKey()) {
@@ -169,32 +170,76 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
   console.log(`[KI] Kontext: Kategorie=${mainCategory}, SubTags=${subCategories.length}, DetailTags=${detailedTags.length}, ManualTags=${manualTags.length}`)
 
     try {
-      // ===== BILD ANALYSE FÜR MEDIEN ARTIKEL =====
+      // ===== BILD UND VIDEO ANALYSE FÜR MEDIEN ARTIKEL =====
       // Prompt: siehe src/config/prompts/media.ts
       const lifestyleConfig = getLifestyleConfig(lifestyle)
-      const imageDescriptions = await Promise.all(images.map(async (img) => {
-      const base64 = img.buffer.toString('base64')
-      console.log(`[KI] Analysiere Bild, Größe: ${(img.size / 1024).toFixed(1)}KB`)
+      
+      // Trenne Bilder und Videos
+      const imageFiles = images.filter(img => img.mimetype.startsWith('image/'))
+      const videoFiles = images.filter(img => img.mimetype.startsWith('video/'))
+      
+      console.log(`[KI] Medien-Analyse: ${imageFiles.length} Bilder, ${videoFiles.length} Videos`)
+      
+      // ===== BILD ANALYSE =====
+      const imageDescriptions = await Promise.all(imageFiles.map(async (img) => {
+        const base64 = img.buffer.toString('base64')
+        console.log(`[KI] Analysiere Bild, Größe: ${(img.size / 1024).toFixed(1)}KB`)
 
-      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{
-          role: 'user',
-          content: [
-             { type: 'text', text: getMediaImageAnalysisPrompt(lifestyleConfig) },
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
-          ]
-        }],
-        max_tokens: 150,
-        temperature: 0.7
-      }, {
-        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-        timeout: 30000
-      })
-      return visionResponse.data.choices[0].message.content
-    }))
+        const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: getMediaImageAnalysisPrompt(lifestyleConfig) },
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+            ]
+          }],
+          max_tokens: 150,
+          temperature: 0.7
+        }, {
+          headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+          timeout: 30000
+        })
+        return visionResponse.data.choices[0].message.content
+      }))
+      
+      // ===== VIDEO ANALYSE FÜR MEDIEN ARTIKEL =====
+      // Verwendet OpenRouter API mit Google Gemini 2.5 Flash (kostengünstig)
+      const videoDescriptions = await Promise.all(videoFiles.map(async (video) => {
+        const base64 = video.buffer.toString('base64')
+        console.log(`[KI] Analysiere Video, Größe: ${(video.size / 1024 / 1024).toFixed(2)}MB, Typ: ${video.mimetype}`)
+        
+        // OpenRouter API für Video-Analyse
+        const videoResponse = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+          model: 'google/gemini-2.5-flash',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: getMediaVideoAnalysisPrompt(lifestyleConfig) },
+              { 
+                type: 'video_url', 
+                video_url: { 
+                  url: `data:${video.mimetype};base64,${base64}` 
+                } 
+              }
+            ]
+          }],
+          max_tokens: 300,
+          temperature: 0.7
+        }, {
+          headers: { 
+            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000 // Videos brauchen mehr Zeit
+        })
+        return videoResponse.data.choices[0].message.content
+      }))
+      
+      // Kombiniere Bild- und Video-Beschreibungen
+      const allDescriptions = [...imageDescriptions, ...videoDescriptions]
 
-    console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
+    console.log(`[KI] ${allDescriptions.length} Medien analysiert (${imageDescriptions.length} Bilder, ${videoDescriptions.length} Videos)`)
 
     // ===== FOSTER HUNTINGTON STIL PROMPT =====
     // Generiert mit: generateMediaPrompt() - importiert aus src/config/prompts/media.js
@@ -203,7 +248,7 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
       description,
       location,
       text,
-      imageDescriptions,
+      imageDescriptions: allDescriptions,
       lifestyleConfig,
       mainCategory,
       subCategories,
@@ -230,7 +275,8 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
       hashtags: uniqueHashtags.join(' '),
       model,
       lifestyle,
-      imageDescriptions // Für Frontend-Debugging
+      imageDescriptions: allDescriptions, // Bild- und Video-Beschreibungen kombiniert
+      videoDescriptions: videoDescriptions.length > 0 ? videoDescriptions : undefined // Separat für Frontend-Debugging
     })
   } catch (error) {
     console.error('[KI] Fehler bei Media-Artikel-Generierung:', error.response?.data || error.message)
@@ -610,6 +656,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     groqApiKey: process.env.GROQ_API_KEY ? 'configured' : 'missing',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY ? 'configured' : 'missing',
+    openrouterApiKey: process.env.OPENROUTER_API_KEY ? 'configured' : 'missing',
     timestamp: new Date().toISOString()
   })
 })
@@ -618,4 +665,5 @@ app.listen(PORT, () => {
   console.log(`[Server] Backend läuft auf Port ${PORT}`)
   console.log(`[Server] GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
   console.log(`[Server] ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
+  console.log(`[Server] OPENROUTER_API_KEY: ${process.env.OPENROUTER_API_KEY ? '✓ Konfiguriert (für Video-Analyse)' : '✗ Fehlt (Video-Analyse nicht verfügbar)'}`)
 })

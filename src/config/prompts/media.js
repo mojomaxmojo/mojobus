@@ -128,3 +128,35 @@ VERBOTEN:
 BEISPIEL:
 "Strand bei Dämmerung. Fahrzeug am Wasser, Schiebetür offen. Person auf der Kante, Hund daneben. Bewölkt, windig."`
 }
+
+/**
+ * Video-Analyse-Prompt für Medien-Tab
+ *
+ * Analysiert Videos und extrahiert Szenenbeschreibungen für Content-Generierung.
+ * Sachlich. Kurz. Fakten. Keine Interpretation.
+ * Verwendet OpenRouter API mit Google Gemini 2.5 Flash (kostengünstig).
+ */
+export const getMediaVideoAnalysisPrompt = (lifestyleConfig) => {
+  return `Analysiere dieses Video sachlich für einen ${lifestyleConfig.vehicle}-Post.
+
+BESCHREIBE (nur was sichtbar ist):
+- Szenen: Welche Orte, Settings, Umgebungen werden gezeigt
+- Aktionen: Was passiert, Bewegungen, Aktivitäten
+- Objekte: Fahrzeuge, Ausrüstung, markante Gegenstände
+- Personen/Tiere: Anzahl, Aktivitäten (sachlich)
+- Atmosphäre: Wetter, Licht, Tageszeit (wenn erkennbar)
+- Details: Besonderheiten, Ausrüstung, Marken (nur wenn klar erkennbar)
+
+FORMAT: 3-5 kurze Sätze. Präzise. Chronologisch.
+NUR beschreiben was du SIEHST.
+
+VERBOTEN:
+- Bewertende Adjektive: "schön", "toll", "perfekt", "idyllisch", "atemberaubend"
+- Vermutungen: "scheint", "könnte", "wahrscheinlich", "vielleicht"
+- Interpretationen: "genießt", "fühlt sich frei", "wirkt entspannt"
+- Gefühle/Emotionen zuschreiben
+- Marketing-Sprache: "einzigartig", "magisch", "unvergesslich"
+
+BEISPIEL:
+"Morgens, Küste. Fahrzeug steht auf Sand, Türen offen. Person bereitet Kaffee auf Campingkocher. Hund läuft am Wasser. Bewölkt, windig. Nachmittags: Fahrzeug auf Parkplatz, Person liest im Liegestuhl. Abends: Lagerfeuer, Sterne sichtbar."`
+}

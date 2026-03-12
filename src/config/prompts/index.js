@@ -20,10 +20,11 @@ export * from './place.js'
 export const promptConfigs = {
   media: {
     name: 'Medien',
-    description: 'Für MediaUploadForm - Artikel mit Bildern',
+    description: 'Für MediaUploadForm - Artikel mit Bildern und Videos',
     file: 'media',
     generatePrompt: 'generateMediaPrompt',
-    imageAnalysisPrompt: 'getMediaImageAnalysisPrompt'
+    imageAnalysisPrompt: 'getMediaImageAnalysisPrompt',
+    videoAnalysisPrompt: 'getMediaVideoAnalysisPrompt'
   },
   trips: {
     name: 'Trips',
