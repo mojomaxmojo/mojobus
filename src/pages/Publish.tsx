@@ -434,10 +434,11 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
            console.warn(`[Media EXIF] Failed to read EXIF from ${file.name}:`, exifError);
            preview = URL.createObjectURL(file);
          }
-      } else {
-        // Für Mobil oder Nicht-Bilder: Einfache Preview
-        preview = mediaType === 'image' ? URL.createObjectURL(file) : undefined;
-      }
+       } else {
+         // Für Mobil oder Nicht-Bilder: Einfache Preview
+         // Bilder und Videos bekommen eine Preview
+         preview = (mediaType === 'image' || mediaType === 'video') ? URL.createObjectURL(file) : undefined;
+       }
 
       const newFile: MediaFile = {
         id: Math.random().toString(36).substr(2, 9),
@@ -847,21 +848,32 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
            </CardHeader>
            <CardContent>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-               {files.map(file => (
-                 <div key={file.id} className="relative group border rounded-lg overflow-hidden">
-                   {file.preview ? (
-                     <img
-                       src={file.preview}
-                       alt={file.name}
-                       className="w-full h-32 object-cover rounded"
-                     />
-                   ) : (
-                     <div className="w-full h-32 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
-                       {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
-                       {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
-                       {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
-                     </div>
-                   )}
+                {files.map(file => (
+                  <div key={file.id} className="relative group border rounded-lg overflow-hidden">
+                    {file.preview ? (
+                      file.type === 'video' ? (
+                        // Video-Vorschau mit Controls
+                        <video
+                          src={file.preview}
+                          controls
+                          className="w-full h-32 object-cover rounded"
+                          preload="metadata"
+                        />
+                      ) : (
+                        // Bild-Vorschau
+                        <img
+                          src={file.preview}
+                          alt={file.name}
+                          className="w-full h-32 object-cover rounded"
+                        />
+                      )
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
+                        {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
+                        {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
+                        {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
+                      </div>
+                    )}
                    <div className="p-2 space-y-1">
                      <div className="text-sm">
                        <p className="font-medium truncate">{file.name}</p>
