@@ -1,0 +1,10 @@
+# Git Mailmap für MojoBus
+# Ordnet verschiedene Git-Autoren einer Hauptidentität zu
+# Format: Haupt-Name <Haupt-Email> Alter-Name <Alter-Email>
+
+# MojoMax ist der Hauptautor
+mojomaxmojo <mojo@mojomail.me> shakespeare.diy <assistant@shakespeare.diy>
+mojomaxmojo <mojo@mojomail.me> cmm-user <morpheuss@zoho.com>
+
+# Optional: Auch für leere/nicht erkannte Autoren
+mojomaxmojo <mojo@mojomail.me> <>
