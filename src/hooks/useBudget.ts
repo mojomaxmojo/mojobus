@@ -362,14 +362,18 @@ export function useBudget() {
         } else {
           // Ausgabe
           const expense = Math.abs(amount);
-          stats.totalExpenses += expense;
-          monthlyData[monthKey].expenses += expense;
+          
+          // Gesundheit wird NICHT zum Budget-Total addiert
+          if (entry.category !== 'gesundheit') {
+            stats.totalExpenses += expense;
+            monthlyData[monthKey].expenses += expense;
 
-          // Kategorie-Breakdown
-          if (!stats.categoryBreakdown[entry.category]) {
-            stats.categoryBreakdown[entry.category] = 0;
+            // Kategorie-Breakdown (ohne Gesundheit)
+            if (!stats.categoryBreakdown[entry.category]) {
+              stats.categoryBreakdown[entry.category] = 0;
+            }
+            stats.categoryBreakdown[entry.category] += expense;
           }
-          stats.categoryBreakdown[entry.category] += expense;
         }
       });
 

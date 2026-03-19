@@ -40,7 +40,9 @@ export function BudgetStats({ stats, isLoading, allEntries }: BudgetStatsProps) 
         return date.getFullYear() === selectedYear && date.getMonth() === month;
       }) || [];
       
-      const expenses = monthEntries.reduce((sum, e) => sum + Math.abs(e.amount), 0);
+      const expenses = monthEntries
+        .filter(e => e.category !== 'gesundheit')
+        .reduce((sum, e) => sum + Math.abs(e.amount), 0);
       
       data.push({
         month,
