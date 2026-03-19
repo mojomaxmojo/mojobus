@@ -21,25 +21,25 @@ export const DEFAULT_CATEGORIES: BudgetCategory[] = [
     color: 'text-blue-600 bg-blue-50',
     type: 'expense',
   },
-  {
-    id: 'gesundheit',
-    name: 'Gesundheit',
-    icon: '💊',
-    color: 'text-red-600 bg-red-50',
-    type: 'expense',
-  },
-  {
+{
     id: 'wohnen',
-    name: 'Wohnen/Miete',
+    name: 'Stellplatzkosten',
     icon: '🏠',
     color: 'text-purple-600 bg-purple-50',
     type: 'expense',
   },
   {
     id: 'strom',
-    name: 'Strom',
+    name: 'Heizung',
     icon: '💡',
     color: 'text-yellow-600 bg-yellow-50',
+    type: 'expense',
+  },
+  {
+    id: 'vitamine',
+    name: 'Vitamine',
+    icon: '🍊',
+    color: 'text-orange-500 bg-orange-50',
     type: 'expense',
   },
   {
@@ -75,6 +75,13 @@ export const DEFAULT_CATEGORIES: BudgetCategory[] = [
     name: 'Kleidung',
     icon: '👕',
     color: 'text-orange-600 bg-orange-50',
+    type: 'expense',
+  },
+{
+    id: 'gesundheit',
+    name: 'Gesundheit',
+    icon: '💊',
+    color: 'text-red-600 bg-red-50',
     type: 'expense',
   },
   {
