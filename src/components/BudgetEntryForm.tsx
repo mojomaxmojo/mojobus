@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BudgetEntry } from '@/types/budget';
+import { DEFAULT_CATEGORIES } from '@/config/budget';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,22 +14,6 @@ import {
 } from '@/components/ui/select';
 import { CalendarIcon, Gauge, Droplets } from 'lucide-react';
 import { format } from 'date-fns';
-
-// Haushaltskategorien (muss mit DEFAULT_CATEGORIES in config/budget.ts übereinstimmen)
-const BUDGET_CATEGORIES = [
-  { id: 'lebensmittel', name: 'Lebensmittel', icon: '🛒' },
-  { id: 'diesel', name: 'Diesel/Tankstoff', icon: '⛽' },
-  { id: 'gesundheit', name: 'Gesundheit', icon: '💊' },
-  { id: 'vitamine', name: 'Vitamine', icon: '🍊' },
-  { id: 'wohnen', name: 'Stellplatzkosten', icon: '🏠' },
-  { id: 'strom', name: 'Heizung', icon: '💡' },
-  { id: 'internet', name: 'Internet/Telefon', icon: '📱' },
-  { id: 'versicherung', name: 'Versicherung', icon: '🛡️' },
-  { id: 'reparatur', name: 'Reparatur', icon: '🔧' },
-  { id: 'freizeit', name: 'Freizeit', icon: '🎉' },
-  { id: 'kleidung', name: 'Kleidung', icon: '👕' },
-  { id: 'sonstiges', name: 'Sonstiges', icon: '📦' },
-];
 
 interface BudgetEntryFormProps {
   entry?: BudgetEntry;
@@ -177,7 +162,7 @@ export function BudgetEntryForm({ entry, onSubmit, onCancel, isSubmitting }: Bud
             <SelectValue placeholder="Kategorie wählen" />
           </SelectTrigger>
           <SelectContent>
-            {BUDGET_CATEGORIES.map((cat) => (
+            {DEFAULT_CATEGORIES.map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
                 <span className="flex items-center gap-2">
                   <span>{cat.icon}</span>
