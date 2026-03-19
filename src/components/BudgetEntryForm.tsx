@@ -14,13 +14,14 @@ import {
 import { CalendarIcon, Gauge, Droplets } from 'lucide-react';
 import { format } from 'date-fns';
 
-// Einfache Haushaltskategorien
+// Haushaltskategorien (muss mit DEFAULT_CATEGORIES in config/budget.ts übereinstimmen)
 const BUDGET_CATEGORIES = [
   { id: 'lebensmittel', name: 'Lebensmittel', icon: '🛒' },
   { id: 'diesel', name: 'Diesel/Tankstoff', icon: '⛽' },
   { id: 'gesundheit', name: 'Gesundheit', icon: '💊' },
-  { id: 'wohnen', name: 'Wohnen/Miete', icon: '🏠' },
-  { id: 'strom', name: 'Strom', icon: '💡' },
+  { id: 'vitamine', name: 'Vitamine', icon: '🍊' },
+  { id: 'wohnen', name: 'Stellplatzkosten', icon: '🏠' },
+  { id: 'strom', name: 'Heizung', icon: '💡' },
   { id: 'internet', name: 'Internet/Telefon', icon: '📱' },
   { id: 'versicherung', name: 'Versicherung', icon: '🛡️' },
   { id: 'reparatur', name: 'Reparatur', icon: '🔧' },
