@@ -8,6 +8,7 @@
  */
 
 export * from './lifestyles.js'
+export { detectGenderFromPubkey, detectGenderFromNpub } from './lifestyles.js'
 export * from './media.js'
 export * from './trips.js'
 export * from './articles.js'
