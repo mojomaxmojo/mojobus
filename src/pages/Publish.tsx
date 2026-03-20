@@ -191,7 +191,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [date, setDate] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [customTags, setCustomTags] = useState<string>('');
+  const [customTags, setCustomTags] = useState('');
   const [location, setLocation] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [detailedTags, setDetailedTags] = useState<string[]>([]);
@@ -205,6 +205,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutateAsync: publishEvent } = useNostrPublish();
+  const { gender } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
   const navigate = useNavigate();
 
   // KI-Artikelgenerierung (Foster Huntington Stil)
@@ -238,6 +239,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       // Erweiterte Kontext-Felder für noch bessere KI-Generierung
       formData.append('manualTags', JSON.stringify(manualTags));
       formData.append('additionalImageUrls', additionalImagesUrlInput || '');
+      formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
 
       const response = await fetch('/api/generate-media-article', {
         method: 'POST',
@@ -1580,6 +1582,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
+  const { gender } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
   const navigate = useNavigate();
 
   // KI-Notiz generieren (Foster Huntington Stil)
@@ -1603,6 +1606,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       formData.append('text', tags.join(' ') || '');
       formData.append('lifestyle', lifestyle);
       formData.append('country', selectedCountry || '');
+      formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
 
       const response = await fetch('/api/generate-note', {
         method: 'POST',
@@ -2518,11 +2522,12 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
    const [selectedCountry, setSelectedCountry] = useState<string>('');
    const [isUploading, setIsUploading] = useState(false);
    const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
-   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
-   const { toast } = useToast();
-   const { mutateAsync: publishEvent } = useNostrPublish();
-   const { mutateAsync: uploadFile } = useUploadFile();
-   const navigate = useNavigate();
+    const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+    const { toast } = useToast();
+    const { mutateAsync: publishEvent } = useNostrPublish();
+    const { mutateAsync: uploadFile } = useUploadFile();
+    const { gender } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
+    const navigate = useNavigate();
 
    // KI-Platz-Beschreibung generieren (Foster Huntington Stil)
    const generatePlaceWithAI = async () => {
@@ -2548,13 +2553,14 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         }
         formData.append('lifestyle', lifestyle);
 
-        // Zusätzliche Kontext-Felder für bessere KI-Generierung
-        formData.append('category', category || '');
-        formData.append('facilities', JSON.stringify(facilities));
-        formData.append('bestFor', JSON.stringify(bestFor));
-        formData.append('country', selectedCountry || '');
+         // Zusätzliche Kontext-Felder für bessere KI-Generierung
+         formData.append('category', category || '');
+         formData.append('facilities', JSON.stringify(facilities));
+         formData.append('bestFor', JSON.stringify(bestFor));
+         formData.append('country', selectedCountry || '');
+         formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
 
-        const response = await fetch('/api/generate-place', {
+         const response = await fetch('/api/generate-place', {
          method: 'POST',
          body: formData
        });
@@ -3550,6 +3556,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
+  const { gender } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
   const navigate = useNavigate();
 
   // KI-Artikel generieren (Foster Huntington Stil)
@@ -3579,6 +3586,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       formData.append('tags', JSON.stringify(tags));
       formData.append('country', selectedCountry || '');
       formData.append('articleLength', articleLength);
+      formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
 
       const response = await fetch('/api/generate-article', {
         method: 'POST',

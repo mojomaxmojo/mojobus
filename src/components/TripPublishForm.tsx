@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/useToast';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useTrip } from '@/hooks/useTrips';
 import { GpsEditor } from '@/components/GpsEditor';
 import { GpsStatusIndicator } from '@/components/GpsStatusIndicator';
@@ -325,7 +326,8 @@ export function TripPublishForm() {
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: publishEvent } = useNostrPublish();
-  
+  const { gender } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
+
   // KI-Artikelgenerierung für Trips
   const generateArticleWithAI = async () => {
     if (stations.length === 0) {
@@ -363,6 +365,7 @@ export function TripPublishForm() {
       formData.append('tripType', tripData.tripType || ''); // Trip-Typ
       formData.append('country', tripData.country || ''); // Land
       formData.append('tripLength', tripLength); // Trip-Länge
+      formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
       formData.append('stationDescriptions', JSON.stringify(
         stations.map(s => ({
           location: s.location || s.title,

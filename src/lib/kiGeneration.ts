@@ -1,17 +1,25 @@
 /**
  * KI-Generierung Utility Functions
- * 
+ *
  * Zentrale Funktionen für alle Tabs:
  * - Medien
  * - Trips
  * - Berichte (article)
  * - Plätze (place)
  * - Note
+ *
+ * Gender-Support:
+ * - 'neutral' → Keine geschlechtsspezifischen Marker
+ * - 'male' → Männliche Perspektive (Mojo)
+ * - 'female' → Weibliche Perspektive (Susanne)
  */
 
-import { type LifestyleType } from '@/config/prompts/lifestyles';
+import { type LifestyleType, type GenderType } from '@/config/prompts/lifestyles';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+// Re-export für einfachen Import
+export type { GenderType };
 
 interface GenerateOptions {
   lifestyle: LifestyleType;
@@ -20,6 +28,7 @@ interface GenerateOptions {
   description?: string;
   location?: string;
   text?: string;
+  gender?: GenderType;
 }
 
 interface GenerateMediaOptions extends GenerateOptions {
@@ -71,6 +80,7 @@ export async function generateMediaArticle(options: GenerateMediaOptions): Promi
   if (options.text) formData.append('text', options.text);
   formData.append('lifestyle', options.lifestyle);
   formData.append('model', options.model || 'llama4');
+  formData.append('gender', options.gender || 'neutral');
 
   const response = await fetch(`${API_BASE}/api/generate-media-article`, {
     method: 'POST',
@@ -108,6 +118,7 @@ export async function generateTripArticle(options: GenerateTripOptions): Promise
   if (options.endDate) formData.append('endDate', options.endDate);
   formData.append('lifestyle', options.lifestyle);
   formData.append('model', options.model || 'llama4');
+  formData.append('gender', options.gender || 'neutral');
 
   const response = await fetch(`${API_BASE}/api/generate-trip`, {
     method: 'POST',
@@ -143,6 +154,7 @@ export async function generateArticle(options: GenerateArticleOptions): Promise<
   if (options.text) formData.append('text', options.text);
   formData.append('lifestyle', options.lifestyle);
   formData.append('model', options.model || 'llama4');
+  formData.append('gender', options.gender || 'neutral');
 
   const response = await fetch(`${API_BASE}/api/generate-article`, {
     method: 'POST',
@@ -181,6 +193,7 @@ export async function generatePlaceDescription(options: GeneratePlaceOptions): P
   }
   formData.append('lifestyle', options.lifestyle);
   formData.append('model', options.model || 'llama4');
+  formData.append('gender', options.gender || 'neutral');
 
   const response = await fetch(`${API_BASE}/api/generate-place`, {
     method: 'POST',
@@ -216,6 +229,7 @@ export async function generateNote(options: GenerateNoteOptions): Promise<{
   if (options.text) formData.append('text', options.text);
   formData.append('lifestyle', options.lifestyle);
   formData.append('model', options.model || 'llama4');
+  formData.append('gender', options.gender || 'neutral');
 
   const response = await fetch(`${API_BASE}/api/generate-note`, {
     method: 'POST',

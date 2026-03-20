@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url'
 // Bei Änderungen: NUR dort ändern, nicht hier!
 import {
   getLifestyleConfig,
+  getGenderPromptAddition,
   generateMediaPrompt,
   generateTripPrompt,
   generateArticlePrompt,
@@ -152,6 +153,7 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
   const location = sanitizeInput(req.body.location) || 'Unbekannt'
   const model = req.body.model || 'llama4' // Modell-Auswahl
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife' // Lifestyle-Typ
+  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
   const images = req.files
 
   // Zusätzliche Kontext-Felder für bessere KI-Generierung
@@ -255,7 +257,8 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
       detailedTags,
       additionalImageUrls,
       manualTags,
-      country
+      country,
+      gender
     })
 
     // Artikel generieren – MEDIEN: max 150 Tokens (35-50 Wörter + Hashtags)
@@ -308,6 +311,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
   const endDate = sanitizeInput(req.body.endDate) || ''
   const model = req.body.model || 'llama4' // Modell-Auswahl
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife' // Lifestyle-Typ
+  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
   const images = req.files
 
   // Zusätzliche Kontext-Felder
@@ -364,7 +368,8 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       lifestyleConfig,
       tripType,
       stationDescriptions,
-      tripLength
+      tripLength,
+      gender
     })
 
     // Trips: maxTokens abhängig von tripLength
@@ -422,6 +427,7 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   const text = sanitizeInput(req.body.text) || 'Bericht'
   const model = req.body.model || 'llama4'
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
+  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
   const images = req.files
 
   // Zusätzliche Kontext-Felder
@@ -473,7 +479,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       category,
       tags,
       country,
-      articleLength
+      articleLength,
+      gender
     })
 
     // Berichte: maxTokens abhängig von articleLength
@@ -512,7 +519,14 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
   const gps_lon = sanitizeInput(req.body.gps_lon) || ''
   const model = req.body.model || 'llama4'
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
+  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
   const images = req.files
+
+  // Zusätzliche Kontext-Felder
+  const category = sanitizeInput(req.body.category) || ''
+  const facilities = safelyParseJSON(req.body.facilities) || []
+  const bestFor = safelyParseJSON(req.body.bestFor) || []
+  const country = sanitizeInput(req.body.country) || ''
 
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
@@ -552,7 +566,12 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
       gps_lat,
       gps_lon,
       imageDescriptions,
-      lifestyleConfig
+      lifestyleConfig,
+      category,
+      facilities,
+      bestFor,
+      country,
+      gender
     })
 
     // Plätze: max 250 Tokens (80-150 Wörter + Hashtags)
@@ -582,13 +601,17 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
 
-  const title = sanitizeInput(req.body.title) || 'Notiz'
+   const title = sanitizeInput(req.body.title) || 'Notiz'
   const description = sanitizeInput(req.body.description) || ''
   const location = sanitizeInput(req.body.location) || 'Unbekannt'
   const text = sanitizeInput(req.body.text) || ''
   const model = req.body.model || 'llama4'
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
+  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
   const images = req.files
+
+  // Zusätzliche Kontext-Felder
+  const country = sanitizeInput(req.body.country) || ''
 
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
@@ -627,7 +650,9 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
       location,
       text,
       imageDescriptions,
-      lifestyleConfig
+      lifestyleConfig,
+      country,
+      gender
     })
 
     // Notizen: max 120 Tokens (20-80 Wörter + Hashtags)

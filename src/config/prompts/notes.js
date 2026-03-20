@@ -13,7 +13,7 @@
  * Es ist was es ist.
  */
 
-import { fosterHuntingtonStyle } from './lifestyles.js'
+import { fosterHuntingtonStyle, getGenderPromptAddition } from './lifestyles.js'
 
 /**
  * Generiert den Foster Huntington Prompt für Notizen
@@ -28,8 +28,12 @@ export const generateNotePrompt = (params) => {
     text,
     imageDescriptions,
     lifestyleConfig,
-    country
+    country,
+    gender = 'neutral'
   } = params
+
+  // Gender-Prompt-Zusatz holen
+  const genderAddition = getGenderPromptAddition(gender)
 
   // Kontext kompakt zusammenbauen
   let contextLines = [
@@ -54,6 +58,7 @@ export const generateNotePrompt = (params) => {
   }
 
   return `Du schreibst wie Foster Huntington. Eine Notiz für die ${lifestyleConfig.community}.
+${genderAddition}
 
 DAS WICHTIGSTE: Eine Notiz ist KEIN Artikel. Kein Medien-Post. Kein Bericht.
 Es ist ein Gedanke. Ein Fragment. Wie eine Nachricht an dich selbst.

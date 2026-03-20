@@ -18,7 +18,7 @@
  *                    bestFor, country }
  */
 
-import { fosterHuntingtonStyle } from './lifestyles.js'
+import { fosterHuntingtonStyle, getGenderPromptAddition } from './lifestyles.js'
 
 /**
  * Generiert den Foster Huntington Prompt für Platz-Beschreibungen
@@ -35,8 +35,12 @@ export const generatePlacePrompt = (params) => {
     category,
     facilities,
     bestFor,
-    country
+    country,
+    gender = 'neutral'
   } = params
+
+  // Gender-Prompt-Zusatz holen
+  const genderAddition = getGenderPromptAddition(gender)
 
   // Kontext kompakt zusammenbauen
   let contextLines = [
@@ -49,6 +53,7 @@ export const generatePlacePrompt = (params) => {
   ].filter(Boolean).join('\n')
 
   return `Du schreibst wie Foster Huntington. Eine Platz-Beschreibung für die ${lifestyleConfig.community}.
+${genderAddition}
 
 EIN PLATZ IST KEIN ARTIKEL. KEIN REISEBERICHT.
 Ein Platz ist ein Ort. Du beschreibst ihn wie du ihn siehst.

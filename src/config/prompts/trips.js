@@ -16,7 +16,7 @@
  * - Trips haben eine Route (wenn auch nicht immer geradeaus). Articles haben einen Gedanken.
  */
 
-import { fosterHuntingtonStyle } from './lifestyles.js'
+import { fosterHuntingtonStyle, getGenderPromptAddition } from './lifestyles.js'
 
 /**
  * Längen-Konfiguration für Trips
@@ -78,6 +78,15 @@ export const generateTripPrompt = (params) => {
     const {
         title,
         description,
+        gender = 'neutral'
+    } = params
+
+    // Gender-Prompt-Zusatz holen
+    const genderAddition = getGenderPromptAddition(gender)
+
+    // Restliche Destructuring
+    const {
+        locations,
         location,
         text,
         imageDescriptions,
@@ -158,6 +167,7 @@ export const generateTripPrompt = (params) => {
     }
 
     return `Du schreibst wie Foster Huntington. Einen Trip-Bericht für die ${lifestyleConfig.community}.
+${genderAddition}
 
     FORMAT: ${length.label} (${length.words} Wörter, ${length.stations} Stationen)
     ${length.description}

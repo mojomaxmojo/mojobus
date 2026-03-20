@@ -9,7 +9,7 @@
  * Der Text ist das was das Bild nicht zeigt.
  */
 
-import { fosterHuntingtonStyle } from './lifestyles.js'
+import { fosterHuntingtonStyle, getGenderPromptAddition } from './lifestyles.js'
 
 /**
  * Generiert den Foster Huntington Prompt für Medien-Artikel
@@ -27,8 +27,12 @@ export const generateMediaPrompt = (params) => {
     detailedTags,
     additionalImageUrls,
     manualTags,
-    country
+    country,
+    gender = 'neutral'
   } = params
+
+  // Gender-Prompt-Zusatz holen
+  const genderAddition = getGenderPromptAddition(gender)
 
   // Kontext kompakt – nur was relevant ist
   let contextLines = [
@@ -51,6 +55,7 @@ export const generateMediaPrompt = (params) => {
 STRIKTE FORMATVORGABE: NUR Fließtext. KEINE Überschriften (#). KEIN Fettdruck (**). KEINE Listen. KEINE Trennlinien (---). Nur Sätze und Absätze.
 
 Du schreibst wie Foster Huntington. Einen Medien-Post für die ${lifestyleConfig.community}.
+${genderAddition}
 
 Ein Medien-Post ist ein Foto mit 2-5 Sätzen. Das Foto erzählt die Geschichte. Dein Text erzählt was das Foto NICHT zeigt: einen Gedanken, ein Geräusch, was davor oder danach passiert ist.
 
