@@ -15,9 +15,13 @@
  * Aber ihre Erfahrung unterwegs ist manchmal eine andere.
  */
 
+import { AUTHOR_RELAY_CONFIG } from '@/config/relays';
+
 // ============================================================
 // GENDER-KONFIGURATION
 // ============================================================
+
+export type GenderType = 'neutral' | 'male' | 'female';
 
 export const genderConfig = {
   neutral: {
@@ -66,13 +70,13 @@ WAS SICH NICHT ÄNDERT:
 - Der Humor. Genauso leise.
 - Keine Ausrufezeichen. Nie.`
   }
-};
+} as const;
 
 // ============================================================
 // LIFESTYLE-TYPEN
 // ============================================================
 
-export const lifestyleTypes = ['vanlife', 'rvlife', 'beachlife', 'wohnmobil', 'perpetual-travelers'];
+export type LifestyleType = 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers';
 
 // ============================================================
 // BEISPIEL-TEXTE PRO LIFESTYLE UND GENDER
@@ -85,7 +89,7 @@ export const lifestyleTypes = ['vanlife', 'rvlife', 'beachlife', 'wohnmobil', 'p
  * Die weiblichen Beispiele sind NICHT "weicher" oder "emotionaler".
  * Sie sind genauso knapp. Aber die Erfahrung ist manchmal anders.
  */
-export const lifestyleExamples = {
+export const lifestyleExamples: Record<LifestyleType, Record<GenderType, { example1: string; example2: string; example3: string }>> = {
   vanlife: {
     neutral: {
       example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hund. Ich mache die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
@@ -181,7 +185,7 @@ export const lifestyleExamples = {
 // BASIS-LIFESTYLE-DATEN
 // ============================================================
 
-const lifestyleBase = {
+const lifestyleBase: Record<LifestyleType, { vehicle: string; community: string; keywords: string[] }> = {
   vanlife: {
     vehicle: 'Van',
     community: 'Vanlife-Community',
@@ -276,11 +280,14 @@ export const fosterHuntingtonStyle = {
 /**
  * Lifestyle-Konfiguration abrufen MIT Gender-Support
  *
- * @param {string} lifestyle - 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'
- * @param {string} gender - 'neutral' | 'male' | 'female' (default: 'neutral')
- * @returns {Object} Vollständige Lifestyle-Config mit passenden Beispielen
+ * @param lifestyle - 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'
+ * @param gender - 'neutral' | 'male' | 'female' (default: 'neutral')
+ * @returns Vollständige Lifestyle-Config mit passenden Beispielen
  */
-export function getLifestyleConfig(lifestyle = 'vanlife', gender = 'neutral') {
+export function getLifestyleConfig(
+  lifestyle: LifestyleType = 'vanlife',
+  gender: GenderType = 'neutral'
+) {
   const base = lifestyleBase[lifestyle] || lifestyleBase.vanlife;
   const examples = lifestyleExamples[lifestyle] || lifestyleExamples.vanlife;
   const genderExamples = examples[gender] || examples.neutral;
@@ -297,20 +304,51 @@ export function getLifestyleConfig(lifestyle = 'vanlife', gender = 'neutral') {
  * Gender-Prompt-Zusatz abrufen
  * Wird in allen Content-Prompts eingefügt
  *
- * @param {string} gender - 'neutral' | 'male' | 'female'
- * @returns {string} Prompt-Text für Gender-Kontext
+ * @param gender - 'neutral' | 'male' | 'female'
+ * @returns Prompt-Text für Gender-Kontext
  */
-export function getGenderPromptAddition(gender = 'neutral') {
+export function getGenderPromptAddition(gender: GenderType = 'neutral'): string {
   const config = genderConfig[gender] || genderConfig.neutral;
   return config.promptAddition;
 }
 
 /**
+ * Erkennt Gender basierend auf Pubkey
+ * Mojo = male, Susanne = female
+ *
+ * @param pubkey - Der Nostr Pubkey (hex)
+ * @returns 'male' | 'female' | 'neutral'
+ */
+export function detectGenderFromPubkey(pubkey?: string): GenderType {
+  if (!pubkey) return 'neutral';
+
+  if (pubkey === AUTHOR_RELAY_CONFIG.mojo.pubkey) return 'male';
+  if (pubkey === AUTHOR_RELAY_CONFIG.susanne.pubkey) return 'female';
+
+  return 'neutral';
+}
+
+/**
+ * Erkennt Gender basierend auf npub
+ *
+ * @param npub - Die Nostr npub
+ * @returns 'male' | 'female' | 'neutral'
+ */
+export function detectGenderFromNpub(npub?: string): GenderType {
+  if (!npub) return 'neutral';
+
+  if (npub === AUTHOR_RELAY_CONFIG.mojo.npub) return 'male';
+  if (npub === AUTHOR_RELAY_CONFIG.susanne.npub) return 'female';
+
+  return 'neutral';
+}
+
+/**
  * Alle verfügbaren Lifestyles als Array
  */
-export function getAvailableLifestyles() {
+export function getAvailableLifestyles(): { value: LifestyleType; label: string; vehicle: string }[] {
   return Object.entries(lifestyleBase).map(([key, config]) => ({
-    value: key,
+    value: key as LifestyleType,
     label: config.community,
     vehicle: config.vehicle
   }));
@@ -319,8 +357,8 @@ export function getAvailableLifestyles() {
 /**
  * Gender-Optionen für UI-Dropdown
  */
-export const genderOptions = Object.entries(genderConfig).map(([key, config]) => ({
-  value: key,
+export const genderOptions: { value: GenderType; label: string }[] = Object.entries(genderConfig).map(([key, config]) => ({
+  value: key as GenderType,
   label: config.label
 }));
 
@@ -333,10 +371,10 @@ export const lifestyles = Object.fromEntries(
     key,
     {
       ...base,
-      ...lifestyleExamples[key].neutral
+      ...lifestyleExamples[key as LifestyleType].neutral
     }
   ])
-);
+) as Record<LifestyleType, typeof lifestyleBase[LifestyleType] & typeof lifestyleExamples[LifestyleType]['neutral']>;
 
 // Default Export
 export default {
@@ -346,6 +384,8 @@ export default {
   fosterHuntingtonStyle,
   getLifestyleConfig,
   getGenderPromptAddition,
+  detectGenderFromPubkey,
+  detectGenderFromNpub,
   getAvailableLifestyles,
   genderOptions,
   lifestyles

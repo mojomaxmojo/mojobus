@@ -15,7 +15,7 @@
  * wie tief die Abschweifungen gehen.
  */
 
-import { fosterHuntingtonStyle } from './lifestyles.js'
+import { fosterHuntingtonStyle, getGenderPromptAddition } from './lifestyles.js'
 
 /**
  * Längen-Konfiguration
@@ -84,8 +84,12 @@ export const generateArticlePrompt = (params) => {
         category,
         tags,
         country,
-        articleLength = 'long'
+        articleLength = 'long',
+        gender = 'neutral'
     } = params
+
+    // Gender-Prompt-Zusatz holen
+    const genderAddition = getGenderPromptAddition(gender)
 
     // Längen-Config holen
     const length = lengthConfig[articleLength] || lengthConfig.long
@@ -145,6 +149,7 @@ export const generateArticlePrompt = (params) => {
     }
 
     return `Du schreibst wie Foster Huntington. Einen ${length.label}form-Artikel für die ${lifestyleConfig.community}.
+${genderAddition}
 
     FORMAT: ${length.label} (${length.words} Wörter)
     ${length.description}

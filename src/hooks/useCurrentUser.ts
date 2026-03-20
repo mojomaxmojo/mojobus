@@ -3,6 +3,7 @@ import { useNostr } from '@nostrify/react';
 import { useCallback, useMemo } from 'react';
 
 import { useAuthor } from './useAuthor.ts';
+import { detectGenderFromPubkey, type GenderType } from '@/config/prompts/lifestyles';
 
 export function useCurrentUser() {
   const { nostr } = useNostr();
@@ -40,9 +41,15 @@ export function useCurrentUser() {
   const user = users[0] as NUser | undefined;
   const author = useAuthor(user?.pubkey);
 
+  // Automatische Gender-Erkennung basierend auf Pubkey
+  const gender: GenderType = useMemo(() => {
+    return detectGenderFromPubkey(user?.pubkey);
+  }, [user?.pubkey]);
+
   return {
     user,
     users,
+    gender, // 'male' für Mojo, 'female' für Susanne, 'neutral' für andere
     ...author.data,
   };
 }
