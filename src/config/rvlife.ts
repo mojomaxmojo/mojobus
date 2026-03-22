@@ -7,7 +7,7 @@ import { ArticleCategory } from '@/config/types';
 
 export const RV_LIFE_CONFIG = {
   // Automatische Tags für alle RV Life Inhalte
-  autoTags: ['rv-life', 'wohnmobil', 'rvlife', 'camper'],
+  autoTags: ['rv-life', 'wohnmobil', 'rvlife', 'camper', 'lifestyle'],
 
   // Untermenüpunkte
   categories: {
