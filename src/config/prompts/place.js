@@ -30,7 +30,8 @@ export const generatePlacePrompt = (params) => {
     location,
     gps_lat,
     gps_lon,
-    imageDescriptions,
+    imageObjects,      // neu: [{url, description}]
+    imageDescriptions, // legacy fallback
     lifestyleConfig,
     category,
     facilities,
@@ -40,6 +41,11 @@ export const generatePlacePrompt = (params) => {
     price,
     gender = 'neutral'
   } = params
+
+  // Normalisieren
+  const images = imageObjects
+    ? imageObjects
+    : (imageDescriptions || []).map(desc => ({ url: null, description: desc }))
 
   // Gender-Prompt-Zusatz holen
   const genderAddition = getGenderPromptAddition(gender)
@@ -108,8 +114,19 @@ BESCHREIBE: "${title}"${description ? `\n"${description}"` : ''}
 
 ${contextLines}
 
-BILD-EINDRÜCKE (nutze sie als Kontext, nicht nacherzählen):
-${imageDescriptions.map((desc, i) => `${i + 1}. ${desc}`).join('\n')}
+BILDER ALS KONTEXT:
+${images.map((img, i) => {
+  const num = i + 1
+  const placeholder = img.url ? `[BILD_${num}]` : `(Titelbild ${num} – kein Platzhalter)`
+  return `${num}. ${placeholder} – ${img.description}`
+}).join('\n')}
+
+${images.some(img => img.url) ? `BILDPLATZIERUNG:
+Setze [BILD_N] Platzhalter an einer inhaltlich passenden Stelle im Text ein.
+Der Platzhalter steht ALLEIN in einer eigenen Zeile zwischen zwei Absätzen.
+Nicht in einem Satz, nicht am Ende nach den Hashtags.
+Platz-Beschreibungen sind kurz – maximal 1-2 Platzhalter wenn sie wirklich passen.
+Wenn kein Platzhalter passt: weglassen.` : ''}
 
 REGELN:
 - Erfinde KEINE Infos die nicht aus dem Input kommen. Keine Entfernungen, keine Öffnungszeiten – außer der User hat sie genannt.

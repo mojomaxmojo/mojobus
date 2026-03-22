@@ -79,7 +79,8 @@ export const generateArticlePrompt = (params) => {
         description,
         location,
         text,
-        imageDescriptions,
+        imageObjects,      // neu: [{url, description}] – url kann null sein (Titelbild)
+        imageDescriptions, // legacy fallback
         lifestyleConfig,
         category,
         tags,
@@ -87,6 +88,11 @@ export const generateArticlePrompt = (params) => {
         articleLength = 'long',
         gender = 'neutral'
     } = params
+
+    // Normalisieren: imageObjects bevorzugen, imageDescriptions als Fallback
+    const images = imageObjects
+        ? imageObjects
+        : (imageDescriptions || []).map(desc => ({ url: null, description: desc }))
 
     // Gender-Prompt-Zusatz holen
     const genderAddition = getGenderPromptAddition(gender)
@@ -198,8 +204,30 @@ ${genderAddition}
 
     ${contextLines}
 
-    BILD-EINDRÜCKE (nutze sie als visuelle Anker für Szenen):
-    ${imageDescriptions.map((desc, i) => `${i + 1}. ${desc}`).join('\n')}
+    BILDER ALS VISUELLE ANKER:
+    ${images.map((img, i) => {
+        const num = i + 1
+        const placeholder = img.url ? `[BILD_${num}]` : `(Titelbild ${num} – kein Platzhalter)`
+        return `${num}. ${placeholder} – ${img.description}`
+    }).join('\n')}
+
+    BILDPLATZIERUNG – WICHTIG:
+    ${images.some(img => img.url) ? `
+    Du hast Bilder mit Platzhaltern ([BILD_1], [BILD_2] etc.).
+    Setze diese Platzhalter an passenden Stellen im Text ein – dort wo das Bild inhaltlich zu einer Szene passt.
+    Der Platzhalter steht ALLEIN in einer eigenen Zeile, zwischen zwei Absätzen.
+    Nicht mitten in einen Satz. Nicht am Anfang. Nicht am Ende nach den Hashtags.
+
+    BEISPIEL wie Platzhalter im Text stehen:
+    "Der Van stand wo die Straße aufhört. Nichts dahinter außer Wasser.
+
+    [BILD_1]
+
+    Am nächsten Morgen Nebel. Die Kirche noch da, der Rest verschwunden."
+
+    Wenn ein Bild inhaltlich nirgendwo passt: lass den Platzhalter weg.
+    Lieber kein Platzhalter als ein falscher.` : `
+    Alle Bilder sind Titelbilder ohne Platzhalter. Beschreibe nur den Text.`}
 
     ${text ? `WAS DER AUTOR SAGT (HÖCHSTE PRIORITÄT – das ist passiert, bau den Artikel darauf):\n"${text}"` : ''}
     ${inputGuidance}
