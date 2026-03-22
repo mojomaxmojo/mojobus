@@ -2926,7 +2926,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         correctedPreviewUrl = URL.createObjectURL(file);
       }
 
-      // Setze die korrigierte Preview als Anzeige-URL
+      // Setze die korrigierte Preview als Anzeige-URL (nur temporär)
       if (correctedPreviewUrl) {
         setImage(correctedPreviewUrl);
       }
@@ -2934,9 +2934,13 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       // Speichere das File für KI-Generierung
       setImageFile(file);
 
-      // Upload des Original-File (für Speicherung)
+      // Upload des Original-File → echte Blossom-URL holen und speichern
       const [urlTag] = await uploadFile(file);
-      // Speichere die Upload-URL für spätere Verwendung (aber zeige die korrigierte Preview)
+      const uploadedUrl = urlTag[1]; // Blossom-URL: https://blossom.../hash
+      if (uploadedUrl) {
+        setImage(uploadedUrl); // Überschreibt blob:// mit der echten URL
+        console.log(`[Place Upload] Titelbild hochgeladen: ${uploadedUrl}`);
+      }
 
       // Extract GPS from title image
       try {
@@ -3960,14 +3964,18 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         correctedPreviewUrl = URL.createObjectURL(file);
       }
 
-      // Setze die korrigierte Preview als Anzeige-URL
+      // Setze die korrigierte Preview als Anzeige-URL (nur temporär)
       if (correctedPreviewUrl) {
         setImage(correctedPreviewUrl);
       }
 
-      // Upload des Original-Files (für Speicherung)
+      // Upload des Original-Files → echte Blossom-URL holen und speichern
       const [urlTag] = await uploadFile(file);
-      // Speichere die Upload-URL für spätere Verwendung (aber zeige die korrigierte Preview)
+      const uploadedUrl = urlTag[1]; // Blossom-URL: https://blossom.../hash
+      if (uploadedUrl) {
+        setImage(uploadedUrl); // Überschreibt blob:// mit der echten URL
+        console.log(`[Article Upload] Titelbild hochgeladen: ${uploadedUrl}`);
+      }
 
       // Extract GPS from title image
       try {
