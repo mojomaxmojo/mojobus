@@ -340,7 +340,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
         messages: [{
           role: 'user',
           content: [
-             { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength) },
+             { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength, tripType) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -367,7 +367,8 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       imageDescriptions,
       lifestyleConfig,
       tripType,
-      stationDescriptions,
+      stationDescriptions, // [{location, description}] – wird in trips.js als stationDescriptions gelesen
+      stations: locations,  // string[] – Fallback wenn keine Beschreibungen
       tripLength,
       gender
     })

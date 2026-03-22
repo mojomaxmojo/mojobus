@@ -19,6 +19,92 @@
 import { fosterHuntingtonStyle, getGenderPromptAddition } from './lifestyles.js'
 
 /**
+ * Trip-Type Konfiguration
+ *
+ * Definiert pro Trip-Typ:
+ * - vehicle:    Was trägt/bewegt den Menschen (ersetzt lifestyleConfig.vehicle im Prompt)
+ * - movement:   Wie bewegt man sich (fahren → gehen, treten, rudern...)
+ * - senses:     Typische Sinneseindrücke dieser Fortbewegungsart
+ * - rhythm:     Wie fühlt sich die Bewegung an
+ * - gear:       Typische Ausrüstung / Gegenstände
+ * - avoid:      Was in diesem Kontext NICHT vorkommt (z.B. kein Van bei Wandern)
+ */
+const tripTypeConfig = {
+    spaziergang: {
+        vehicle: 'Schuhe',
+        movement: 'Gehen. Schritt für Schritt. Kein Motor. Nur Beine.',
+        senses: 'Asphalt unter den Sohlen, Wind im Gesicht, das Geräusch der eigenen Schritte',
+        rhythm: 'Langsam. Der Gedanke kommt mit dem Schritt. Oder dagegen.',
+        gear: 'Jacke, Schuhe, vielleicht ein Kaffee to go',
+        avoid: 'Kein Van, kein Motor, kein Fahrzeug – zu Fuß unterwegs'
+    },
+    wandern: {
+        vehicle: 'Rucksack',
+        movement: 'Aufstieg. Abstieg. Pfad. Manchmal kein Pfad.',
+        senses: 'Schwere Beine bergauf, Geräusch von Schotter, Geruch von Harz und Erde, der Moment wo der Rücken den Rucksack spürt',
+        rhythm: 'Der Berg gibt das Tempo vor. Nicht du.',
+        gear: 'Rucksack, Wanderschuhe, Stöcke, Wasserflasche, Riegel',
+        avoid: 'Kein Van, kein Motor – auf eigenen Beinen durch die Landschaft'
+    },
+    radfahren: {
+        vehicle: 'Fahrrad',
+        movement: 'Treten. Rollen. Bergab: nichts tun und trotzdem fliegen.',
+        senses: 'Wind der gegen die Brust drückt, Kette die läuft, Vibration von Kopfsteinpflaster, Oberschenkel die brennen',
+        rhythm: 'Das Treten gibt den Puls vor. Bergauf langsam. Bergab: Augen zu.',
+        gear: 'Fahrrad, Sattel, Flickzeug, Gepäckträger, Trinkflasche',
+        avoid: 'Kein Van, kein Motorfahrzeug – auf dem Rad unterwegs'
+    },
+    roadtrip: {
+        vehicle: 'Auto',
+        movement: 'Fahren. Kurven. Geraden. Tankstellen.',
+        senses: 'Asphalt der unter den Reifen rauscht, Klimaanlage, Radioempfang der kommt und geht, Raststätten die alle gleich riechen',
+        rhythm: 'Autobahn: kurz kurz kurz. Landstraße: langsamer, der Blick schweift.',
+        gear: 'Auto, Navi, Snacks, Playlist, Sonnenbrille',
+        avoid: 'Kein Van-Innenraum, kein Bett im Fahrzeug – klassischer Roadtrip'
+    },
+    eisenbahn: {
+        vehicle: 'Zug',
+        movement: 'Sitzen und ankommen. Die Landschaft zieht vorbei, man selbst bleibt still.',
+        senses: 'Rütteln des Waggons, Schienen-Rhythmus, Geruch von Polstern und anderen Menschen, Fenster beschlägt',
+        rhythm: 'Der Zug entscheidet. Du sitzt. Du schaust. Du wartest auf den nächsten Bahnhof.',
+        gear: 'Ticket, Rucksack, Buch, Kopfhörer, Brotdose',
+        avoid: 'Kein eigenes Fahrzeug, kein Lenken – Zugreisender'
+    },
+    boot: {
+        vehicle: 'Boot',
+        movement: 'Gleiten. Wellen. Der Motor oder der Wind – einer von beiden.',
+        senses: 'Salzwasser, Schaukeln, Geruch von Diesel oder Segeltuch, Horizont der sich mit den Wellen hebt und senkt',
+        rhythm: 'Das Meer gibt den Takt. Nicht die Straße.',
+        gear: 'Boot, Schwimmweste, Seil, Anker, Seekarte',
+        avoid: 'Kein Asphalt, kein Van – auf dem Wasser unterwegs'
+    },
+    flug: {
+        vehicle: 'Flugzeug',
+        movement: 'Warten. Einsteigen. Fliegen. Ankommen wo alles anders ist.',
+        senses: 'Druckabfall beim Start, Ohren die sich nicht entscheiden, Klima-Luft die austrocknet, Wolken von oben',
+        rhythm: 'Lange Stille über den Wolken. Dann: neue Zeitzone, neues Licht, neue Sprache.',
+        gear: 'Koffer, Rucksack, Boarding Pass, Kopfhörer, Nackenkissen',
+        avoid: 'Kein bodenständiges Fahrzeug – geflogen'
+    },
+    laufen: {
+        vehicle: 'Laufschuhe',
+        movement: 'Laufen. Atem. Schritt. Wieder Atem.',
+        senses: 'Herzschlag, Schweiß, Asphalt oder Waldweg, Lunge die mehr will als die Beine geben',
+        rhythm: 'Der Körper gibt das Tempo vor. Oder der Wille dagegen.',
+        gear: 'Laufschuhe, kurze Hose, Uhr die alles misst, Kopfhörer oder Stille',
+        avoid: 'Kein Fahrzeug – zu Fuß und schnell'
+    },
+    klettern: {
+        vehicle: 'Kletterschuhe',
+        movement: 'Griff für Griff. Tritt für Tritt. Der Fels entscheidet wo der nächste Zug ist.',
+        senses: 'Kreide an den Händen, rauer Fels, Seilzug, Schwindel wenn man nach unten schaut – oder nicht schaut',
+        rhythm: 'Langsam. Jeder Zug überlegt. Dann: der Moment wo es fließt.',
+        gear: 'Kletterschuhe, Gurt, Seil, Chalk, Karabiner',
+        avoid: 'Kein Fahrzeug – vertikal unterwegs'
+    }
+}
+
+/**
  * Längen-Konfiguration für Trips
  */
 const tripLengthConfig = {
@@ -95,6 +181,8 @@ export const generateTripPrompt = (params) => {
         tags,
         country,
         stations,
+        stationDescriptions,
+        tripType,
         route,
         duration,
         tripLength = 'medium'
@@ -103,8 +191,15 @@ export const generateTripPrompt = (params) => {
     // Längen-Config holen
     const length = tripLengthConfig[tripLength] || tripLengthConfig.medium
 
+    // Trip-Type Kontext auflösen
+    const tripTypeMeta = tripType && tripTypeConfig[tripType] ? tripTypeConfig[tripType] : null
+
+    // Fahrzeug: tripType überschreibt lifestyleConfig.vehicle wenn vorhanden
+    const effectiveVehicle = tripTypeMeta ? tripTypeMeta.vehicle : lifestyleConfig.vehicle
+
     // Kontext kompakt zusammenbauen
     let contextLines = [
+        tripType && `Art der Reise: ${tripType}`,
         category && `Kategorie: ${category}`,
         country && `Region: ${country}`,
         location && `Startort: ${location}${country ? ', ' + country : ''}`,
@@ -113,9 +208,15 @@ export const generateTripPrompt = (params) => {
         tags && tags.length > 0 && `Themen: ${tags.join(', ')}`
     ].filter(Boolean).join('\n')
 
-    // Stationen aufbereiten
+    // Stationen aufbereiten – unterstützt beide Formate:
+    // stations: string[] (einfache Ortsnamen)
+    // stationDescriptions: [{location, description}] (mit User-Beschreibungen)
     let stationInfo = ''
-    if (stations && stations.length > 0) {
+    if (stationDescriptions && stationDescriptions.length > 0) {
+        stationInfo = `\nSTATIONEN MIT BESCHREIBUNGEN (vom User – das sind echte Erlebnisse, höchste Priorität):\n${stationDescriptions.map((s, i) =>
+            `${i + 1}. ${s.location}${s.description ? `\n   → "${s.description}"` : ''}`
+        ).join('\n')}`
+    } else if (stations && stations.length > 0) {
         stationInfo = `\nSTATIONEN (vom User angegeben – das sind echte Orte, verwende sie):\n${stations.map((s, i) => `${i + 1}. ${s}`).join('\n')}`
     }
 
@@ -157,13 +258,28 @@ export const generateTripPrompt = (params) => {
     } else if (hasModerateInput) {
         inputGuidance = `
         DER AUTOR HAT ETWAS GESCHRIEBEN. Nutze es als Skelett.
-        Baue Atmosphäre drumherum: die Straße, das Licht, das Geräusch des Motors.
+        Baue Atmosphäre drumherum: ${tripTypeMeta ? tripTypeMeta.senses : 'die Straße, das Licht, das Geräusch des Motors'}.
         Aber erfinde keine Orte oder Erlebnisse die er nicht genannt hat.`
     } else {
         inputGuidance = `
         WENIG TEXT-INPUT. Das ist okay.
         Schreibe aus Titel, Bildern und Stationen heraus. Atmosphärisch. Beobachtend.
-        Die Route als Gefühl statt als GPS-Track. Bleib vage wo dir Infos fehlen.`
+        ${tripTypeMeta ? `Typische Eindrücke: ${tripTypeMeta.senses}.` : 'Die Route als Gefühl statt als GPS-Track.'} Bleib vage wo dir Infos fehlen.`
+    }
+
+    // Trip-Type spezifischer Prompt-Block
+    let tripTypeBlock = ''
+    if (tripTypeMeta) {
+        tripTypeBlock = `
+    ART DER REISE: ${tripType.toUpperCase()}
+    ${tripTypeMeta.avoid.toUpperCase()}.
+    - Fortbewegung: ${tripTypeMeta.movement}
+    - Sinneseindrücke dieser Reiseart: ${tripTypeMeta.senses}
+    - Rhythmus: ${tripTypeMeta.rhythm}
+    - Typische Gegenstände/Ausrüstung: ${tripTypeMeta.gear}
+
+    WICHTIG: Der Text riecht und klingt nach ${tripType}. Nicht nach Vanlife.
+    Kein Van, kein Lenkrad, keine Schiebetür – außer der User hat das explizit erwähnt.`
     }
 
     return `Du schreibst wie Foster Huntington. Einen Trip-Bericht für die ${lifestyleConfig.community}.
@@ -171,6 +287,7 @@ ${genderAddition}
 
     FORMAT: ${length.label} (${length.words} Wörter, ${length.stations} Stationen)
     ${length.description}
+    ${tripTypeBlock}
 
     EIN TRIP IST NICHT EIN ARTIKEL:
     - Ein Trip hat BEWEGUNG. Du fährst. Orte wechseln. Die Straße ist Teil der Geschichte.
@@ -203,7 +320,10 @@ ${genderAddition}
 
     FOSTER'S THEMEN${tripLength !== 'short' ? ' (in längeren Trips hast du Raum für mehrere)' : ''}:
     ${fosterHuntingtonStyle.themes.map(t => `- ${t}`).join('\n')}
-    - Zusätzlich bei Trips: die Straße als Ort. Das Fahren als Zustand. Ankommen und nicht ankommen wollen.
+    - Zusätzlich bei Trips: ${tripTypeMeta
+        ? `die ${tripTypeMeta.vehicle} als Ort. ${tripTypeMeta.movement} als Zustand. Ankommen und nicht ankommen wollen.`
+        : 'die Straße als Ort. Das Fahren als Zustand. Ankommen und nicht ankommen wollen.'
+    }
 
     WAS FOSTER NIE TUN WÜRDE – EGAL BEI WELCHER LÄNGE:
     ${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
@@ -233,7 +353,7 @@ ${genderAddition}
     - Wenn der User Stationen nennt: verwende sie als Anker. Aber mach keine Liste daraus.
     - Wenn der User eine Route nennt: sie ist das Rückgrat. Aber beschreibe sie nicht wie ein Navi.
     - Probleme/Herausforderungen nur wenn sie aus dem Kontext kommen
-    - Das Fahrzeug (${lifestyleConfig.vehicle}) gehört in den Text: Geräusche, Macken, wie es sich anfühlt drin zu sitzen
+    - Das Fortbewegungsmittel (${effectiveVehicle}) gehört in den Text: Geräusche, Macken, wie es sich anfühlt
     - Jede Station braucht ein konkretes Bild: etwas das man sieht, hört, riecht, fühlt
 
     WIE STATIONEN FLIESSEN (nicht auflisten):
@@ -245,7 +365,7 @@ ${genderAddition}
     "Porto war Regen und enge Gassen und Kaffee der zu stark war. Drei Tage. Dann Süden.
     Die Autobahn nach Lissabon: gerade, lang, heiß. Leon hechelt. Ich mach das Fenster auf und es hilft nicht."
 
-    → Die Stationen fließen INEINANDER. Das Fahren verbindet. Keine Überschriften, keine Nummern.
+    → Die Stationen fließen INEINANDER. ${tripTypeMeta ? tripTypeMeta.movement.split('.')[0] : 'Das Fahren'} verbindet. Keine Überschriften, keine Nummern.
 
     STRUKTUR: ${length.structureNote}
 
@@ -270,29 +390,55 @@ ${genderAddition}
 /**
  * Bild-Analyse-Prompt für Trip-Tab
  * Detail-Level passt sich der Trip-Länge an.
+ * tripType passt den Fokus der Analyse an (Fahrzeug vs. Person zu Fuß vs. Fahrrad etc.)
  */
-export const getTripImageAnalysisPrompt = (lifestyleConfig, tripLength = 'medium') => {
+export const getTripImageAnalysisPrompt = (lifestyleConfig, tripLength = 'medium', tripType = '') => {
     const isLong = tripLength === 'long' || tripLength === 'medium'
+    const tripTypeMeta = tripType && tripTypeConfig[tripType] ? tripTypeConfig[tripType] : null
 
-    const basePrompt = `Beschreibe dieses Bild sachlich für einen ${lifestyleConfig.vehicle}-Trip-Bericht.
+    // Fokus-Beschreibung je nach Trip-Type
+    const vehicleFocus = tripTypeMeta
+        ? `${tripTypeMeta.vehicle} (${tripType})`
+        : lifestyleConfig.vehicle
 
-    FOKUS: Wo ist das? Was passiert? Ist das Fahrzeug unterwegs oder steht es?
+    // Was soll die Analyse hervorheben?
+    const focusHint = tripTypeMeta
+        ? `FOKUS: Wo ist das? Was passiert? Ist die Person unterwegs, in Bewegung, pausierend? Sichtbar: ${tripTypeMeta.gear}.`
+        : `FOKUS: Wo ist das? Was passiert? Ist das Fahrzeug unterwegs oder steht es?`
+
+    // Hauptobjekte je nach Trip-Type
+    const mainObjects = tripTypeMeta
+        ? `Personen, ${tripTypeMeta.vehicle}, Tiere, Landschaft, Weg/Pfad/Gelände`
+        : `Fahrzeug, Personen, Tiere, Landschaft, Straße`
+
+    const basePrompt = `Beschreibe dieses Bild sachlich für einen ${vehicleFocus}-Trip-Bericht.
+
+    ${focusHint}
 
     NENNE (nur was sichtbar ist):
-    - Was: Fahrzeug, Personen, Tiere, Landschaft, Straße
+    - Was: ${mainObjects}
     - Wo: Umgebung, Vegetation, Bebauung, erkennbare Region
     - Wann: Tageszeit, Wetter, Licht, Jahreszeit (wenn erkennbar)
-    - Situation: Fahrt? Pause? Übernachtung? Ankunft?`
+    - Situation: Unterwegs? Pause? Ankunft? Aufstieg/Abstieg?`
 
     const longAdditions = isLong ? `
     - Atmosphäre: Weite/Enge, leer/belebt, hell/dunkel
-    - Straße/Weg: Asphalt, Schotter, Zustand, Breite
-    - Kleine Details: Aufkleber, Beladung, offene Türen, Kochstelle
-    - Umgebung: Hintergrund, andere Fahrzeuge, Gebäude, Horizont` : ''
+    - Weg/Untergrund: Asphalt, Schotter, Pfad, Gras, Fels, Wasser
+    - Kleine Details: Ausrüstung, Kleidung, Gesten, Körperhaltung
+    - Umgebung: Hintergrund, andere Personen/Fahrzeuge, Gebäude, Horizont` : ''
 
     const format = isLong
-    ? 'FORMAT: 3-5 sachliche Sätze. Detailliert – mehr Kontext für längere Texte.'
-    : 'FORMAT: 2-3 sachliche Sätze. Kompakt.'
+        ? 'FORMAT: 3-5 sachliche Sätze. Detailliert – mehr Kontext für längere Texte.'
+        : 'FORMAT: 2-3 sachliche Sätze. Kompakt.'
+
+    // Beispiel je nach Trip-Type
+    const example = tripTypeMeta
+        ? (isLong
+            ? `"Person mit Rucksack auf Bergpfad, Schotter, steil. Kiefernwald links, Felsen rechts. Bewölkt, diffuses Licht. Wanderstöcke sichtbar. Keine anderen Personen. Aufstieg erkennbar an Körperhaltung."`
+            : `"Person auf Wanderweg. Berglandschaft, Felsen. Rucksack sichtbar. Bewölkt."`)
+        : (isLong
+            ? `"Van auf Küstenstraße, Asphalt, einspurig. Klippen rechts, Meer links. Bewölkt, Wind erkennbar an Gras am Straßenrand. Schiebetür halb offen, Gaskocher sichtbar. Keine anderen Fahrzeuge. Nachmittag, diffuses Licht."`
+            : `"Van am Straßenrand. Schotterweg, Küste im Hintergrund. Bewölkt. Schiebetür offen."`)
 
     return `${basePrompt}${longAdditions}
 
@@ -303,9 +449,7 @@ export const getTripImageAnalysisPrompt = (lifestyleConfig, tripLength = 'medium
     VERBOTEN: scheint, könnte, wahrscheinlich, vielleicht.
 
     BEISPIEL:
-    ${isLong
-        ? '"Van auf Küstenstraße, Asphalt, einspurig. Klippen rechts, Meer links. Bewölkt, Wind erkennbar an Gras am Straßenrand. Schiebetür halb offen, Gaskocher sichtbar. Keine anderen Fahrzeuge. Nachmittag, diffuses Licht."'
-        : '"Van am Straßenrand. Schotterweg, Küste im Hintergrund. Bewölkt. Schiebetür offen."'}`
+    ${example}`
 }
 
 /**
