@@ -2656,14 +2656,26 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
 
        const data = await response.json();
        if (data.description) {
-         setDescription(data.description);
+         // [BILD_N] Platzhalter durch echte Markdown-Bilder ersetzen
+         const imageObjects: Array<{ url: string | null; description: string }> =
+           data.imageObjects || [];
+
+         const finalDescription = imageObjects.length > 0
+           ? resolveBildPlaceholders(data.description, imageObjects)
+           : data.description;
+
+         setDescription(finalDescription);
+
          if (data.hashtags) {
            const newTags = data.hashtags.split(' ').filter((t: string) => !manualTags.includes(t));
            setManualTags([...manualTags, ...newTags]);
          }
+
+         const urlImageCount = imageObjects.filter((img: { url: string | null }) => img.url !== null).length;
          toast({
            title: 'Erfolg!',
-           description: `KI-Beschreibung generiert mit ${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'} – ${data.imageDescriptions?.length || 0} Bild(er) analysiert.`
+           description: `KI-Beschreibung generiert mit ${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}`
+             + (urlImageCount > 0 ? ` – ${urlImageCount} Bild(er) im Text platziert.` : '.')
          });
        }
      } catch (error) {
@@ -3667,6 +3679,63 @@ Beschreibe hier den Ort, was macht ihn besonders...
   );
 }
 
+/**
+ * Ersetzt [BILD_N] Platzhalter im KI-generierten Text durch echte Markdown-Bilder.
+ *
+ * - Bilder mit url=null (Titelbilder) bekommen keinen Platzhalter → überspringen
+ * - Bilder mit url → [BILD_N] wird durch ![](url) ersetzt
+ * - Fallback: Bilder für die kein Platzhalter im Text vorkommt → ans Ende anhängen
+ *
+ * @param text       KI-generierter Text mit [BILD_1], [BILD_2] etc.
+ * @param imageObjects [{url: string|null, description: string}]
+ * @returns          Text mit eingesetzten Markdown-Bildern
+ */
+function resolveBildPlaceholders(
+  text: string,
+  imageObjects: Array<{ url: string | null; description: string }>
+): string {
+  let result = text
+
+  // Nur Bilder mit echten URLs – Titelbilder (url=null) überspringen
+  const urlImages = imageObjects
+    .map((img, i) => ({ ...img, num: i + 1 }))
+    .filter(img => img.url !== null)
+
+  const orphaned: string[] = [] // Bilder ohne Platzhalter im Text
+
+  for (const img of urlImages) {
+    const placeholder = `[BILD_${img.num}]`
+    const markdownImg = `\n\n![](${img.url})\n\n`
+
+    if (result.includes(placeholder)) {
+      // Platzhalter im Text gefunden → ersetzen
+      result = result.replace(placeholder, markdownImg)
+    } else {
+      // KI hat Platzhalter vergessen → Fallback: am Ende anhängen
+      orphaned.push(`![](${img.url})`)
+    }
+  }
+
+  // Verwaiste Bilder ans Ende (vor Hashtags)
+  if (orphaned.length > 0) {
+    // Hashtag-Zeilen ans Ende stellen, Bilder davor
+    const lines = result.split('\n')
+    const lastHashtagIdx = lines.reduce(
+      (last, line, i) => line.trim().match(/^#\w+/) ? i : last,
+      -1
+    )
+    if (lastHashtagIdx > 0) {
+      // Hashtags gefunden → Bilder davor einfügen
+      lines.splice(lastHashtagIdx, 0, '', ...orphaned, '')
+      result = lines.join('\n')
+    } else {
+      result = result.trimEnd() + '\n\n' + orphaned.join('\n\n')
+    }
+  }
+
+  return result
+}
+
 // Article Form Component
 function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [title, setTitle] = useState('');
@@ -3757,29 +3826,13 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
       const data = await response.json();
       if (data.article) {
-        // Bilder aus dem alten Content retten (vor dem Überschreiben)
-        // Format im Markdown: ![alttext](https://url)
-        const existingImageMatches = content.match(/!\[.*?\]\((https?:\/\/[^)]+)\)/g) || [];
+        // [BILD_N] Platzhalter durch echte Markdown-Bilder ersetzen
+        const imageObjects: Array<{ url: string | null; description: string }> =
+          data.imageObjects || [];
 
-        // KI-Text: Hashtags am Ende entfernen – die kommen in den Tags-State
-        // Hashtags stehen typisch in der letzten Zeile: "#vanlife #roadtrip ..."
-        const articleWithoutHashtags = data.article
-          .split('\n')
-          .filter((line: string) => !line.trim().match(/^(#\w+\s*)+$/))
-          .join('\n')
-          .trimEnd();
-
-        // Bilder wieder anhängen wenn vorhanden – nach dem KI-Text, vor den Hashtags
-        const imageBlock = existingImageMatches.length > 0
-          ? '\n\n' + existingImageMatches.join('\n\n')
-          : '';
-
-        // Hashtags aus data.article extrahieren und als eigene Zeile ans Ende
-        const hashtagLine = data.article.match(/(#\w+(\s+#\w+)*)\s*$/)?.[0] || '';
-
-        const finalContent = articleWithoutHashtags
-          + imageBlock
-          + (hashtagLine ? '\n\n' + hashtagLine : '');
+        const finalContent = imageObjects.length > 0
+          ? resolveBildPlaceholders(data.article, imageObjects)
+          : data.article;
 
         setContent(finalContent);
 
@@ -3787,10 +3840,12 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
           const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
           setTags([...tags, ...newTags]);
         }
+
+        const urlImageCount = imageObjects.filter((img: { url: string | null }) => img.url !== null).length;
         toast({
           title: 'Erfolg!',
-          description: `KI-Artikel generiert mit ${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'} – ${data.imageDescriptions?.length || 0} Bild(er) analysiert.`
-            + (existingImageMatches.length > 0 ? ` ${existingImageMatches.length} Bild(er) wiederhergestellt.` : '')
+          description: `KI-Artikel generiert mit ${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}`
+            + (urlImageCount > 0 ? ` – ${urlImageCount} Bild(er) im Text platziert.` : '.')
         });
       }
     } catch (error) {

@@ -518,9 +518,17 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       console.log(`[KI] ${markdownImageDescriptions.length} Markdown-Bilder analysiert`)
     }
 
-    // Alle Bildbeschreibungen zusammenführen: Titelbild zuerst, dann Markdown-Bilder
-    const imageDescriptions = [...uploadedImageDescriptions, ...markdownImageDescriptions]
-    console.log(`[KI] Gesamt ${imageDescriptions.length} Bildbeschreibungen für Prompt`)
+    // Alle Bilder als Objekte {url, description} zusammenführen:
+    // Titelbild(er) haben keine öffentliche URL (Buffer-Upload) → url: null
+    // Markdown-Bilder haben eine öffentliche Blossom-URL → url: string
+    const imageObjects = [
+      ...uploadedImageDescriptions.map(desc => ({ url: null, description: desc })),
+      ...markdownUrlsToAnalyze.map((url, i) => ({
+        url,
+        description: markdownImageDescriptions[i] || ''
+      })).filter(obj => obj.description)
+    ]
+    console.log(`[KI] Gesamt ${imageObjects.length} Bilder für Prompt (${uploadedImageDescriptions.length} Titel, ${markdownImageDescriptions.length} Markdown)`)
 
     // Foster Huntington Prompt für Berichte - importiert aus src/config/prompts/articles.js
     const prompt = generateArticlePrompt({
@@ -528,7 +536,7 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       description,
       location,
       text,
-      imageDescriptions,
+      imageObjects,  // neu: [{url, description}] statt imageDescriptions[]
       lifestyleConfig,
       category,
       tags,
@@ -552,7 +560,7 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       hashtags: uniqueHashtags.join(' '),
       lifestyle,
       articleLength,
-      imageDescriptions // Für Frontend-Feedback: wie viele Bilder analysiert wurden
+      imageObjects // [{url, description}] – Frontend ersetzt [BILD_N] mit den URLs
     })
   } catch (error) {
     console.error('[KI] Fehler bei Bericht-Generierung:', error.response?.data || error.message)
@@ -675,13 +683,21 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
         .then(results => results.filter(r => r.status === 'fulfilled').map(r => r.value))
       : []
 
-    // Alle Bildbeschreibungen zusammenführen
-    const imageDescriptions = [
-      ...uploadedImageDescriptions,
-      ...additionalImageDescriptions,
-      ...markdownImageDescriptions
+    // Alle Bilder als Objekte {url, description} zusammenführen
+    // Titelbild hat keine öffentliche URL → url: null
+    // Zusatz- und Markdown-Bilder haben öffentliche URLs
+    const imageObjects = [
+      ...uploadedImageDescriptions.map(desc => ({ url: null, description: desc })),
+      ...additionalUrlsToAnalyze.map((url, i) => ({
+        url,
+        description: additionalImageDescriptions[i] || ''
+      })).filter(obj => obj.description),
+      ...markdownUrlsToAnalyze.map((url, i) => ({
+        url,
+        description: markdownImageDescriptions[i] || ''
+      })).filter(obj => obj.description)
     ]
-    console.log(`[KI] Gesamt ${imageDescriptions.length} Bildbeschreibungen für Platz-Prompt`)
+    console.log(`[KI] Gesamt ${imageObjects.length} Bilder für Platz-Prompt`)
 
     // Foster Huntington Prompt für Plätze - importiert aus src/config/prompts/place.js
     const prompt = generatePlacePrompt({
@@ -690,7 +706,7 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
       location,
       gps_lat,
       gps_lon,
-      imageDescriptions,
+      imageObjects,  // neu: [{url, description}] statt imageDescriptions[]
       lifestyleConfig,
       category,
       facilities,
@@ -714,7 +730,7 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
       description: description_text,
       hashtags: uniqueHashtags.join(' '),
       lifestyle,
-      imageDescriptions
+      imageObjects // [{url, description}] – Frontend ersetzt [BILD_N] mit den URLs
     })
   } catch (error) {
     console.error('[KI] Fehler bei Platz-Generierung:', error.response?.data || error.message)
