@@ -3757,7 +3757,32 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
       const data = await response.json();
       if (data.article) {
-        setContent(data.article);
+        // Bilder aus dem alten Content retten (vor dem Überschreiben)
+        // Format im Markdown: ![alttext](https://url)
+        const existingImageMatches = content.match(/!\[.*?\]\((https?:\/\/[^)]+)\)/g) || [];
+
+        // KI-Text: Hashtags am Ende entfernen – die kommen in den Tags-State
+        // Hashtags stehen typisch in der letzten Zeile: "#vanlife #roadtrip ..."
+        const articleWithoutHashtags = data.article
+          .split('\n')
+          .filter((line: string) => !line.trim().match(/^(#\w+\s*)+$/))
+          .join('\n')
+          .trimEnd();
+
+        // Bilder wieder anhängen wenn vorhanden – nach dem KI-Text, vor den Hashtags
+        const imageBlock = existingImageMatches.length > 0
+          ? '\n\n' + existingImageMatches.join('\n\n')
+          : '';
+
+        // Hashtags aus data.article extrahieren und als eigene Zeile ans Ende
+        const hashtagLine = data.article.match(/(#\w+(\s+#\w+)*)\s*$/)?.[0] || '';
+
+        const finalContent = articleWithoutHashtags
+          + imageBlock
+          + (hashtagLine ? '\n\n' + hashtagLine : '');
+
+        setContent(finalContent);
+
         if (data.hashtags) {
           const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
           setTags([...tags, ...newTags]);
@@ -3765,6 +3790,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         toast({
           title: 'Erfolg!',
           description: `KI-Artikel generiert mit ${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'} – ${data.imageDescriptions?.length || 0} Bild(er) analysiert.`
+            + (existingImageMatches.length > 0 ? ` ${existingImageMatches.length} Bild(er) wiederhergestellt.` : '')
         });
       }
     } catch (error) {
