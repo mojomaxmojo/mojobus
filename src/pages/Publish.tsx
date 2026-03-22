@@ -4673,7 +4673,8 @@ Schreibe deinen Artikel hier...
                 {[
                   { id: 'kueche-essen', emoji: '🍳', name: 'Küche & Essen' },
                   { id: 'ausstattung', emoji: '🏠', name: 'Ausstattung' },
-                  { id: 'freeliving', emoji: '🕊️', name: 'Freeliving' }
+                  { id: 'freeliving', emoji: '🕊️', name: 'Freeliving' },
+                  { id: 'lifestyle', emoji: '✨', name: 'Lifestyle' }
                 ].map(rvCat => (
                   <Badge
                     key={rvCat.id}

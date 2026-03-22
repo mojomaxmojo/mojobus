@@ -272,7 +272,7 @@ function Articles() {
                             🚐 RV Life
                           </h3>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
-                            Küche & Essen, Ausstattung, Freeliving
+                            Küche & Essen, Ausstattung, Freeliving, Lifestyle
                           </p>
                         </div>
                         <svg className="h-4 w-4 text-gray-400 group-hover:text-ocean-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
