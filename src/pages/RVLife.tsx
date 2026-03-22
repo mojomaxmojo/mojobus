@@ -12,7 +12,7 @@ import { useAuthor } from '@/hooks/useAuthor';
 import { genUserName } from '@/lib/genUserName';
 import { getAuthorRelayConfigByPubkey } from '@/config/relays';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
-import { Search, Calendar, User, Home, ChefHat, Compass, Truck } from 'lucide-react';
+import { Search, Calendar, User, Home, ChefHat, Compass, Truck, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { getListThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
@@ -72,6 +72,7 @@ export function RVLife() {
       case 'Cooking': return ChefHat;
       case 'Home': return Home;
       case 'Compass': return Compass;
+      case 'Sparkles': return Sparkles;
       default: return Truck;
     }
   };

@@ -172,6 +172,12 @@ export function Header() {
                         Freeliving
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/artikel/rvlife/lifestyle" className="flex items-center gap-2">
+                        <span>✨</span>
+                        Lifestyle
+                      </Link>
+                    </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />

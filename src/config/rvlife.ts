@@ -76,6 +76,28 @@ export const RV_LIFE_CONFIG = {
         'Freiheit und Unabhängigkeit auf vier Rädern',
         'Minimalismus im Wohnmobil'
       ]
+    },
+    lifestyle: {
+      id: 'lifestyle',
+      name: 'Lifestyle',
+      description: 'Lebensstil, Wellness, Mode und persönliche Entwicklung im Vanlife',
+      icon: 'Sparkles',
+      emoji: '✨',
+      path: '/artikel/rvlife/lifestyle',
+      tags: {
+        primary: ['lifestyle', 'wellness', 'mode', 'fashion'],
+        optional: ['gesundheit', 'fitness', 'yoga', 'meditation', 'selbstfindung', 'mindfulness', 'work-life-balance', 'persoenlichkeitsentwicklung', 'achtsamkeit', 'ernaehrung', 'selbstfuersorge']
+      },
+      color: {
+        light: 'text-pink-600',
+        dark: 'text-pink-400',
+        bg: 'bg-pink-100 dark:bg-pink-900'
+      },
+      examples: [
+        'Morgenroutine im Wohnmobil',
+        'Yoga und Meditation unterwegs',
+        'Capsule Wardrobe für Vanlife'
+      ]
     }
   }
 } as const;
@@ -126,6 +148,20 @@ export const RV_LIFE_ARTICLE_CATEGORIES: ArticleCategory[] = [
     },
     autoTags: ['rv-life', 'wohnmobil', 'rvlife', 'camper', 'freeliving', 'nomad'],
     priority: 10
+  },
+  {
+    id: 'rvlife-lifestyle',
+    name: 'Lifestyle',
+    description: 'Lebensstil, Wellness, Mode und persönliche Entwicklung im Vanlife',
+    icon: 'Sparkles',
+    emoji: '✨',
+    isRVLife: true,
+    tags: {
+      primary: ['rvlife', 'lifestyle', 'wellness'],
+      optional: ['mode', 'fashion', 'gesundheit', 'fitness', 'yoga', 'meditation']
+    },
+    autoTags: ['rv-life', 'wohnmobil', 'rvlife', 'camper', 'lifestyle', 'wellness'],
+    priority: 11
   }
 ];
 
