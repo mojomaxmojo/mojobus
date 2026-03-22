@@ -340,7 +340,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
         messages: [{
           role: 'user',
           content: [
-             { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength) },
+             { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength, tripType) },
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
           ]
         }],
@@ -367,7 +367,8 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       imageDescriptions,
       lifestyleConfig,
       tripType,
-      stationDescriptions,
+      stationDescriptions, // [{location, description}] – wird in trips.js als stationDescriptions gelesen
+      stations: locations,  // string[] – Fallback wenn keine Beschreibungen
       tripLength,
       gender
     })
@@ -424,7 +425,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   const title = sanitizeInput(req.body.title) || 'Mein Bericht'
   const description = sanitizeInput(req.body.description) || ''
   const location = sanitizeInput(req.body.location) || 'Unbekannt'
-  const text = sanitizeInput(req.body.text) || 'Bericht'
+  // text NICHT durch sanitizeInput kürzen – der User-Text kann länger als 500 Zeichen sein
+  const text = (req.body.text || '').trim()
   const model = req.body.model || 'llama4'
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
   const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
@@ -435,38 +437,90 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   const tags = safelyParseJSON(req.body.tags) || []
   const country = sanitizeInput(req.body.country) || ''
   const articleLength = sanitizeInput(req.body.articleLength) || 'medium'
+  // Bild-URLs aus dem MilkdownEditor-Markdown (bereits hochgeladen, öffentlich erreichbar)
+  const markdownImageUrls = safelyParseJSON(req.body.markdownImageUrls) || []
 
-  if (!images || images.length === 0) {
+  // Mindestens Titelbild ODER Markdown-Bilder erforderlich
+  if ((!images || images.length === 0) && markdownImageUrls.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Bericht: "${title}", Bilder: ${images.length}, Modell: ${model}, Lifestyle: ${lifestyle}, Länge: ${articleLength}`)
+  console.log(`[KI] Generiere Bericht: "${title}", Titel-Bilder: ${images?.length || 0}, Markdown-Bilder: ${markdownImageUrls.length}, Modell: ${model}, Lifestyle: ${lifestyle}, Länge: ${articleLength}`)
+  console.log(`[KI] Text-Länge: ${text.length} Zeichen`)
   if (category) console.log(`[KI] Kategorie: ${category}`)
   if (tags.length > 0) console.log(`[KI] Tags: ${tags.join(', ')}`)
 
+  // Hilfsfunktion: Bild-URL downloaden → Base64
+  const fetchImageAsBase64 = async (url) => {
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 15000,
+      maxContentLength: 10 * 1024 * 1024 // max 10MB
+    })
+    return Buffer.from(response.data).toString('base64')
+  }
+
+  // Hilfsfunktion: einzelnes Bild analysieren (Base64 → Beschreibung)
+  const analyzeImageBase64 = async (base64, mimeType = 'image/jpeg') => {
+    const lifestyleConfig = getLifestyleConfig(lifestyle)
+    const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: getArticleImageAnalysisPrompt(lifestyleConfig, articleLength) },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
+        ]
+      }],
+      max_tokens: 150,
+      temperature: 0.7
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+      timeout: 30000
+    })
+    return visionResponse.data.choices[0].message.content
+  }
+
   try {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
-    
-    // Bilder analysieren
-    const imageDescriptions = await Promise.all(images.map(async (img) => {
-      const base64 = img.buffer.toString('base64')
-      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: getArticleImageAnalysisPrompt(lifestyleConfig, articleLength) },
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
-          ]
-        }],
-        max_tokens: 150,
-        temperature: 0.7
-      }, {
-        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-        timeout: 30000
-      })
-      return visionResponse.data.choices[0].message.content
-    }))
+
+    // ===== TITELBILD(ER) analysieren (hochgeladene Files) =====
+    const uploadedImageDescriptions = images && images.length > 0
+      ? await Promise.all(images.map(async (img) => {
+          const base64 = img.buffer.toString('base64')
+          const mimeType = img.mimetype || 'image/jpeg'
+          console.log(`[KI] Analysiere Titelbild, Größe: ${(img.size / 1024).toFixed(1)}KB`)
+          return analyzeImageBase64(base64, mimeType)
+        }))
+      : []
+
+    // ===== MARKDOWN-BILDER analysieren (URLs von Blossom) =====
+    // Max 5 Bilder aus dem Editor analysieren – mehr bringt wenig, kostet aber Zeit
+    const markdownUrlsToAnalyze = markdownImageUrls.slice(0, 5)
+    const markdownImageDescriptions = markdownUrlsToAnalyze.length > 0
+      ? await Promise.allSettled(markdownUrlsToAnalyze.map(async (url, index) => {
+          console.log(`[KI] Lade Markdown-Bild ${index + 1}/${markdownUrlsToAnalyze.length}: ${url.substring(0, 60)}...`)
+          const base64 = await fetchImageAsBase64(url)
+          // MIME-Type aus URL ableiten
+          const mimeType = url.match(/\.(png)$/i) ? 'image/png'
+            : url.match(/\.(webp)$/i) ? 'image/webp'
+            : url.match(/\.(gif)$/i) ? 'image/gif'
+            : 'image/jpeg'
+          return analyzeImageBase64(base64, mimeType)
+        }))
+        .then(results => results
+          .filter(r => r.status === 'fulfilled')
+          .map(r => r.value)
+        )
+      : []
+
+    if (markdownImageDescriptions.length > 0) {
+      console.log(`[KI] ${markdownImageDescriptions.length} Markdown-Bilder analysiert`)
+    }
+
+    // Alle Bildbeschreibungen zusammenführen: Titelbild zuerst, dann Markdown-Bilder
+    const imageDescriptions = [...uploadedImageDescriptions, ...markdownImageDescriptions]
+    console.log(`[KI] Gesamt ${imageDescriptions.length} Bildbeschreibungen für Prompt`)
 
     // Foster Huntington Prompt für Berichte - importiert aus src/config/prompts/articles.js
     const prompt = generateArticlePrompt({
@@ -497,7 +551,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       article,
       hashtags: uniqueHashtags.join(' '),
       lifestyle,
-      articleLength
+      articleLength,
+      imageDescriptions // Für Frontend-Feedback: wie viele Bilder analysiert wurden
     })
   } catch (error) {
     console.error('[KI] Fehler bei Bericht-Generierung:', error.response?.data || error.message)
@@ -513,50 +568,120 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
   }
 
   const title = sanitizeInput(req.body.title) || 'Mein Platz'
-  const description = sanitizeInput(req.body.description) || ''
+  // description NICHT kürzen – MilkdownEditor kann langen Text enthalten
+  const description = (req.body.description || '').trim()
   const location = sanitizeInput(req.body.location) || 'Unbekannt'
   const gps_lat = sanitizeInput(req.body.gps_lat) || ''
   const gps_lon = sanitizeInput(req.body.gps_lon) || ''
   const model = req.body.model || 'llama4'
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
-  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
+  const gender = sanitizeInput(req.body.gender) || 'neutral'
   const images = req.files
 
-  // Zusätzliche Kontext-Felder
+  // Kontext-Felder
   const category = sanitizeInput(req.body.category) || ''
   const facilities = safelyParseJSON(req.body.facilities) || []
   const bestFor = safelyParseJSON(req.body.bestFor) || []
   const country = sanitizeInput(req.body.country) || ''
+  const rating = sanitizeInput(req.body.rating) || ''
+  const price = sanitizeInput(req.body.price) || ''
+  // Zusätzliche Bild-URLs: hochgeladene Zusatzbilder + Markdown-Bilder aus description
+  const additionalImageUrls = safelyParseJSON(req.body.additionalImageUrls) || []
+  const markdownImageUrls = safelyParseJSON(req.body.markdownImageUrls) || []
 
-  if (!images || images.length === 0) {
+  // Mindestens Titelbild ODER andere Bilder erforderlich
+  const hasUploadedImages = images && images.length > 0
+  const hasExtraImages = additionalImageUrls.length > 0 || markdownImageUrls.length > 0
+  if (!hasUploadedImages && !hasExtraImages) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Platz-Beschreibung: "${title}", Bilder: ${images.length}, GPS: ${gps_lat},${gps_lon}, Lifestyle: ${lifestyle}`)
+  console.log(`[KI] Generiere Platz-Beschreibung: "${title}", Titel-Bilder: ${images?.length || 0}, Zusatz-Bilder: ${additionalImageUrls.length}, Markdown-Bilder: ${markdownImageUrls.length}, GPS: ${gps_lat},${gps_lon}, Lifestyle: ${lifestyle}, Modell: ${model}`)
+  if (rating) console.log(`[KI] Bewertung: ${rating} Sterne`)
+  if (price) console.log(`[KI] Preis: ${price}`)
+
+  // Hilfsfunktion: URL → Base64
+  const fetchImageAsBase64 = async (url) => {
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 15000,
+      maxContentLength: 10 * 1024 * 1024
+    })
+    return Buffer.from(response.data).toString('base64')
+  }
+
+  // Hilfsfunktion: Base64 → Bildbeschreibung
+  const analyzeImageBase64 = async (base64, mimeType = 'image/jpeg') => {
+    const lifestyleConfig = getLifestyleConfig(lifestyle)
+    const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: getPlaceImageAnalysisPrompt(lifestyleConfig) },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
+        ]
+      }],
+      max_tokens: 150,
+      temperature: 0.7
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+      timeout: 30000
+    })
+    return visionResponse.data.choices[0].message.content
+  }
 
   try {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
-    
-    // Bilder analysieren
-    const imageDescriptions = await Promise.all(images.map(async (img) => {
-      const base64 = img.buffer.toString('base64')
-      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: getPlaceImageAnalysisPrompt(lifestyleConfig) },
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
-          ]
-        }],
-        max_tokens: 150,
-        temperature: 0.7
-      }, {
-        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-        timeout: 30000
-      })
-      return visionResponse.data.choices[0].message.content
-    }))
+
+    // ===== TITELBILD(ER) analysieren =====
+    const uploadedImageDescriptions = hasUploadedImages
+      ? await Promise.all(images.map(async (img) => {
+          const base64 = img.buffer.toString('base64')
+          const mimeType = img.mimetype || 'image/jpeg'
+          console.log(`[KI] Analysiere Titelbild, Größe: ${(img.size / 1024).toFixed(1)}KB`)
+          return analyzeImageBase64(base64, mimeType)
+        }))
+      : []
+
+    // ===== ZUSATZBILDER analysieren (hochgeladene URLs) =====
+    // Max 3 Zusatzbilder – Platz-Beschreibung ist kurz, mehr Bilder bringen wenig
+    const additionalUrlsToAnalyze = additionalImageUrls.slice(0, 3)
+    const additionalImageDescriptions = additionalUrlsToAnalyze.length > 0
+      ? await Promise.allSettled(additionalUrlsToAnalyze.map(async (url, index) => {
+          console.log(`[KI] Lade Zusatzbild ${index + 1}/${additionalUrlsToAnalyze.length}: ${url.substring(0, 60)}...`)
+          const base64 = await fetchImageAsBase64(url)
+          const mimeType = url.match(/\.(png)$/i) ? 'image/png'
+            : url.match(/\.(webp)$/i) ? 'image/webp'
+            : 'image/jpeg'
+          return analyzeImageBase64(base64, mimeType)
+        }))
+        .then(results => results.filter(r => r.status === 'fulfilled').map(r => r.value))
+      : []
+
+    // ===== MARKDOWN-BILDER aus description analysieren =====
+    // Max 3 Markdown-Bilder – zusammen mit Zusatzbildern max 6 Bilder total
+    const remainingSlots = Math.max(0, 3 - additionalImageDescriptions.length)
+    const markdownUrlsToAnalyze = markdownImageUrls.slice(0, remainingSlots)
+    const markdownImageDescriptions = markdownUrlsToAnalyze.length > 0
+      ? await Promise.allSettled(markdownUrlsToAnalyze.map(async (url, index) => {
+          console.log(`[KI] Lade Markdown-Bild ${index + 1}/${markdownUrlsToAnalyze.length}: ${url.substring(0, 60)}...`)
+          const base64 = await fetchImageAsBase64(url)
+          const mimeType = url.match(/\.(png)$/i) ? 'image/png'
+            : url.match(/\.(webp)$/i) ? 'image/webp'
+            : 'image/jpeg'
+          return analyzeImageBase64(base64, mimeType)
+        }))
+        .then(results => results.filter(r => r.status === 'fulfilled').map(r => r.value))
+      : []
+
+    // Alle Bildbeschreibungen zusammenführen
+    const imageDescriptions = [
+      ...uploadedImageDescriptions,
+      ...additionalImageDescriptions,
+      ...markdownImageDescriptions
+    ]
+    console.log(`[KI] Gesamt ${imageDescriptions.length} Bildbeschreibungen für Platz-Prompt`)
 
     // Foster Huntington Prompt für Plätze - importiert aus src/config/prompts/place.js
     const prompt = generatePlacePrompt({
@@ -571,22 +696,25 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
       facilities,
       bestFor,
       country,
+      rating,
+      price,
       gender
     })
 
-    // Plätze: max 250 Tokens (80-150 Wörter + Hashtags)
+    // Plätze: max 300 Tokens (80-150 Wörter + Hashtags)
     const description_text = await generateWithModel(prompt, model, lifestyle, {
-      maxTokens: 250,
+      maxTokens: 300,
       temperature: 0.75
     })
-    
+
     const hashtags = description_text.match(/#\w+/g) || []
     const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
 
     res.json({
       description: description_text,
       hashtags: uniqueHashtags.join(' '),
-      lifestyle
+      lifestyle,
+      imageDescriptions
     })
   } catch (error) {
     console.error('[KI] Fehler bei Platz-Generierung:', error.response?.data || error.message)
@@ -601,13 +729,14 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
 
-   const title = sanitizeInput(req.body.title) || 'Notiz'
+  const title = sanitizeInput(req.body.title) || ''
   const description = sanitizeInput(req.body.description) || ''
-  const location = sanitizeInput(req.body.location) || 'Unbekannt'
-  const text = sanitizeInput(req.body.text) || ''
+  const location = sanitizeInput(req.body.location) || ''
+  // text NICHT kürzen – User-Notiztext kann relevant lang sein
+  const text = (req.body.text || '').trim()
   const model = req.body.model || 'llama4'
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
-  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
+  const gender = sanitizeInput(req.body.gender) || 'neutral'
   const images = req.files
 
   // Zusätzliche Kontext-Felder
@@ -617,7 +746,7 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Notiz: "${title}", Bilder: ${images.length}, Lifestyle: ${lifestyle}`)
+  console.log(`[KI] Generiere Notiz: "${title || '(kein Titel)'}", Text: ${text.length} Zeichen, Bilder: ${images.length}, Lifestyle: ${lifestyle}, Modell: ${model}`)
 
   try {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
