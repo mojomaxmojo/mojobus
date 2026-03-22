@@ -2523,44 +2523,81 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
    const [isUploading, setIsUploading] = useState(false);
    const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
     const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+    const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
     const { toast } = useToast();
     const { mutateAsync: publishEvent } = useNostrPublish();
     const { mutateAsync: uploadFile } = useUploadFile();
     const { gender } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
     const navigate = useNavigate();
 
+   // Hilfsfunktion: Bild-URLs aus Markdown extrahieren (gleiche Logik wie ArticleForm)
+   const extractPlaceImageUrls = (markdown: string): string[] => {
+     const regex = /!\[.*?\]\((https?:\/\/[^)]+)\)/g;
+     const urls: string[] = [];
+     let match;
+     while ((match = regex.exec(markdown)) !== null) {
+       urls.push(match[1]);
+     }
+     return [...new Set(urls)];
+   };
+
    // KI-Platz-Beschreibung generieren (Foster Huntington Stil)
    const generatePlaceWithAI = async () => {
-     if (!imageFile) {
+     const markdownImageUrls = extractPlaceImageUrls(description);
+     const hasAnyImage = imageFile || additionalImages.length > 0 || markdownImageUrls.length > 0;
+
+     if (!hasAnyImage) {
        toast({
          title: 'Bild erforderlich',
-         description: 'Bitte lade zuerst ein Titelbild hoch.',
+         description: 'Lade ein Titelbild hoch, füge Zusatzbilder hinzu oder binde Bilder im Editor ein.',
          variant: 'destructive'
        });
        return;
      }
 
      setIsGeneratingDescription(true);
-      try {
-        const formData = new FormData();
-        formData.append('images', imageFile);
-        formData.append('title', name);
-        formData.append('description', description);
-        formData.append('location', location);
-        if (coordinates.lat && coordinates.lng) {
-          formData.append('gps_lat', coordinates.lat);
-          formData.append('gps_lon', coordinates.lng);
-        }
-        formData.append('lifestyle', lifestyle);
+     try {
+       const formData = new FormData();
 
-         // Zusätzliche Kontext-Felder für bessere KI-Generierung
-         formData.append('category', category || '');
-         formData.append('facilities', JSON.stringify(facilities));
-         formData.append('bestFor', JSON.stringify(bestFor));
-         formData.append('country', selectedCountry || '');
-         formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
+       // Titelbild (optional wenn andere Bilder vorhanden)
+       if (imageFile) {
+         formData.append('images', imageFile);
+       }
 
-         const response = await fetch('/api/generate-place', {
+       formData.append('title', name);
+       formData.append('description', description); // Vollständig – kein 500-Zeichen-Limit
+       formData.append('location', location);
+
+       if (coordinates.lat && coordinates.lng) {
+         formData.append('gps_lat', coordinates.lat);
+         formData.append('gps_lon', coordinates.lng);
+       }
+
+       formData.append('lifestyle', lifestyle);
+       formData.append('model', selectedModel);
+
+       // Alle Kontext-Felder
+       formData.append('category', category || '');
+       formData.append('facilities', JSON.stringify(facilities));
+       formData.append('bestFor', JSON.stringify(bestFor));
+       formData.append('country', selectedCountry || '');
+       formData.append('gender', gender || 'neutral');
+       formData.append('rating', rating.toString());
+       formData.append('price', price || '');
+
+       // Zusatzbilder (hochgeladene URLs)
+       if (additionalImages.length > 0) {
+         formData.append('additionalImageUrls', JSON.stringify(additionalImages));
+         console.log(`[KI] ${additionalImages.length} Zusatzbild-URL(s) mitgeschickt`);
+       }
+
+       // Markdown-Bilder aus dem Editor
+       if (markdownImageUrls.length > 0) {
+         formData.append('markdownImageUrls', JSON.stringify(markdownImageUrls));
+         console.log(`[KI] ${markdownImageUrls.length} Markdown-Bild-URL(s) aus Editor mitgeschickt`);
+       }
+
+       const response = await fetch('/api/generate-place', {
          method: 'POST',
          body: formData
        });
@@ -2574,7 +2611,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
          }
          toast({
            title: 'Erfolg!',
-           description: `KI-Beschreibung generiert (${data.lifestyle})`
+           description: `KI-Beschreibung generiert mit ${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'} – ${data.imageDescriptions?.length || 0} Bild(er) analysiert.`
          });
        }
      } catch (error) {
@@ -3367,7 +3404,7 @@ Beschreibe hier den Ort, was macht ihn besonders...
             <Sparkles className="h-5 w-5 text-ocean-500" />
             <h3 className="font-semibold">KI-Beschreibung generieren (Optional)</h3>
           </div>
-          
+
           <div className="space-y-2">
             <Label>Lifestyle</Label>
             <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
@@ -3386,29 +3423,75 @@ Beschreibe hier den Ort, was macht ihn besonders...
               Foster Huntington Stil - ehrlich, direkt, authentisch
             </p>
           </div>
-          
+
+          {/* KI-Modell Auswahl */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div
+                className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'llama4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                onClick={() => setSelectedModel('llama4')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🚀</span>
+                  <div>
+                    <p className="font-medium text-sm">Llama 4 Scout</p>
+                    <p className="text-xs text-muted-foreground">Schnell & Günstig</p>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <p>✅ 1-2 Sekunden</p>
+                  <p>💰 ~$0.005 pro Artikel</p>
+                  <p>⭐ Gute Qualität</p>
+                </div>
+              </div>
+              <div
+                className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'claude' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                onClick={() => setSelectedModel('claude')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🤖</span>
+                  <div>
+                    <p className="font-medium text-sm">Claude Sonnet 4.6</p>
+                    <p className="text-xs text-muted-foreground">Neueste Premium Qualität</p>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <p>⏱️ 3-6 Sekunden</p>
+                  <p>💰 ~$0.015 pro Artikel</p>
+                  <p>⭐⭐⭐⭐ Neueste menschliche Texte</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <Button
             type="button"
             variant="outline"
             onClick={generatePlaceWithAI}
-            disabled={isGeneratingDescription || !imageFile}
-            className="w-full"
+            disabled={isGeneratingDescription || (!imageFile && additionalImages.length === 0 && extractPlaceImageUrls(description).length === 0)}
+            className="w-full mt-2"
           >
             {isGeneratingDescription ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generiere Beschreibung...
+                Generiere mit {selectedModel === 'claude' ? 'Claude 4.6' : 'Llama 4'}...
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                KI-Beschreibung generieren ({lifestyle})
+                KI-Beschreibung generieren ({selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'})
               </>
             )}
           </Button>
-          {!imageFile && (
+          {!imageFile && additionalImages.length === 0 && extractPlaceImageUrls(description).length === 0 && (
             <p className="text-xs text-muted-foreground">
-              💡 Lade zuerst ein Titelbild hoch, um die KI-Generierung zu nutzen.
+              💡 Lade ein Titelbild hoch, füge Zusatzbilder hinzu oder binde Bilder im Editor ein.
+            </p>
+          )}
+          {(!imageFile) && (additionalImages.length > 0 || extractPlaceImageUrls(description).length > 0) && (
+            <p className="text-xs text-muted-foreground">
+              🖼️ {additionalImages.length + extractPlaceImageUrls(description).length} Bild(er) werden analysiert.
             </p>
           )}
         </div>

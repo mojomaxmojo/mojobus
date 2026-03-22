@@ -36,11 +36,23 @@ export const generatePlacePrompt = (params) => {
     facilities,
     bestFor,
     country,
+    rating,
+    price,
     gender = 'neutral'
   } = params
 
   // Gender-Prompt-Zusatz holen
   const genderAddition = getGenderPromptAddition(gender)
+
+  // Bewertung lesbar machen: 4 → "4/5 Sternen"
+  const ratingText = rating && rating !== '0'
+    ? `${rating}/5 Sternen`
+    : null
+
+  // Preis lesbar machen
+  const priceText = price && price.trim()
+    ? price.trim()
+    : null
 
   // Kontext kompakt zusammenbauen
   let contextLines = [
@@ -48,6 +60,8 @@ export const generatePlacePrompt = (params) => {
     country && `Region: ${country}`,
     location && `Ort: ${location}${country ? ', ' + country : ''}`,
     gps_lat && gps_lon && `GPS: ${gps_lat}, ${gps_lon}`,
+    ratingText && `Bewertung: ${ratingText}`,
+    priceText && `Preis/Kosten: ${priceText}`,
     facilities && facilities.length > 0 && `Einrichtungen: ${facilities.join(', ')}`,
     bestFor && bestFor.length > 0 && `Geeignet für: ${bestFor.join(', ')}`
   ].filter(Boolean).join('\n')
@@ -98,7 +112,9 @@ BILD-EINDRÜCKE (nutze sie als Kontext, nicht nacherzählen):
 ${imageDescriptions.map((desc, i) => `${i + 1}. ${desc}`).join('\n')}
 
 REGELN:
-- Erfinde KEINE Infos die nicht aus dem Input kommen. Keine Preise, keine Entfernungen, keine Öffnungszeiten – außer der User hat sie genannt.
+- Erfinde KEINE Infos die nicht aus dem Input kommen. Keine Entfernungen, keine Öffnungszeiten – außer der User hat sie genannt.
+- Wenn Preis/Kosten angegeben: einbauen wie Foster es sagen würde. "Kostenlos. Kein Schild, kein Automat." oder "Fünf Euro, Kasse beim Eingang, niemand fragt nach der Quittung."
+- Wenn Bewertung angegeben (z.B. 4/5): NICHT als Zahl nennen. Sondern: hohe Bewertung = zeige warum. Niedrige Bewertung = zeige den Haken.
 - Nachteile erwähnen wenn sie aus dem Kontext erkennbar sind. Aber nicht erfinden.
 - Jeder Platz hat was Gutes und was weniger. Zeig beides. Ohne zu werten.
 - Ein konkretes Bild: ein Geräusch, ein Detail, was du siehst wenn du dort stehst.
