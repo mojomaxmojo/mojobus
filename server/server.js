@@ -729,13 +729,14 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
 
-   const title = sanitizeInput(req.body.title) || 'Notiz'
+  const title = sanitizeInput(req.body.title) || ''
   const description = sanitizeInput(req.body.description) || ''
-  const location = sanitizeInput(req.body.location) || 'Unbekannt'
-  const text = sanitizeInput(req.body.text) || ''
+  const location = sanitizeInput(req.body.location) || ''
+  // text NICHT kürzen – User-Notiztext kann relevant lang sein
+  const text = (req.body.text || '').trim()
   const model = req.body.model || 'llama4'
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
-  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
+  const gender = sanitizeInput(req.body.gender) || 'neutral'
   const images = req.files
 
   // Zusätzliche Kontext-Felder
@@ -745,7 +746,7 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Notiz: "${title}", Bilder: ${images.length}, Lifestyle: ${lifestyle}`)
+  console.log(`[KI] Generiere Notiz: "${title || '(kein Titel)'}", Text: ${text.length} Zeichen, Bilder: ${images.length}, Lifestyle: ${lifestyle}, Modell: ${model}`)
 
   try {
     const lifestyleConfig = getLifestyleConfig(lifestyle)

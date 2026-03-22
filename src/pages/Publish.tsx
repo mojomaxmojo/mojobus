@@ -1578,6 +1578,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [editingGpsImage, setEditingGpsImage] = useState<number | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [isGeneratingNote, setIsGeneratingNote] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
@@ -1599,14 +1600,19 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
     setIsGeneratingNote(true);
     try {
       const formData = new FormData();
+
+      // Alle Bilder senden
       imageFiles.forEach((file) => {
         formData.append('images', file);
       });
+
+      // content = was der User in die Textarea geschrieben hat (HÖCHSTE PRIORITÄT für KI)
+      formData.append('text', content || '');
       formData.append('location', location);
-      formData.append('text', tags.join(' ') || '');
-      formData.append('lifestyle', lifestyle);
       formData.append('country', selectedCountry || '');
-      formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
+      formData.append('lifestyle', lifestyle);
+      formData.append('model', selectedModel);
+      formData.append('gender', gender || 'neutral');
 
       const response = await fetch('/api/generate-note', {
         method: 'POST',
@@ -1622,7 +1628,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
         }
         toast({
           title: 'Erfolg!',
-          description: `KI-Notiz generiert (${data.lifestyle})`
+          description: `KI-Notiz generiert mit ${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}`
         });
       }
     } catch (error) {
@@ -2092,7 +2098,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
             <Sparkles className="h-5 w-5 text-ocean-500" />
             <h3 className="font-semibold">KI-Notiz generieren (Optional)</h3>
           </div>
-          
+
           <div className="space-y-2">
             <Label>Lifestyle</Label>
             <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
@@ -2111,26 +2117,72 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
               Foster Huntington Stil - ehrlich, direkt, authentisch
             </p>
           </div>
-          
+
+          {/* KI-Modell Auswahl */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div
+                className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'llama4' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                onClick={() => setSelectedModel('llama4')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🚀</span>
+                  <div>
+                    <p className="font-medium text-sm">Llama 4 Scout</p>
+                    <p className="text-xs text-muted-foreground">Schnell & Günstig</p>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <p>✅ 1-2 Sekunden</p>
+                  <p>💰 ~$0.005 pro Notiz</p>
+                  <p>⭐ Gute Qualität</p>
+                </div>
+              </div>
+              <div
+                className={`p-3 border rounded-lg cursor-pointer transition-all ${selectedModel === 'claude' ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950' : 'hover:border-gray-300'}`}
+                onClick={() => setSelectedModel('claude')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🤖</span>
+                  <div>
+                    <p className="font-medium text-sm">Claude Sonnet 4.6</p>
+                    <p className="text-xs text-muted-foreground">Neueste Premium Qualität</p>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <p>⏱️ 3-6 Sekunden</p>
+                  <p>💰 ~$0.015 pro Notiz</p>
+                  <p>⭐⭐⭐⭐ Neueste menschliche Texte</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <Button
             type="button"
             variant="outline"
             onClick={generateNoteWithAI}
             disabled={isGeneratingNote || imageFiles.length === 0}
-            className="w-full"
+            className="w-full mt-2"
           >
             {isGeneratingNote ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Generiere Notiz...
+                Generiere mit {selectedModel === 'claude' ? 'Claude 4.6' : 'Llama 4'}...
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                KI-Notiz generieren ({lifestyle})
+                KI-Notiz generieren ({selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'})
               </>
             )}
           </Button>
+          {content.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              📝 Dein Text ({content.length} Zeichen) wird als Grundlage verwendet.
+            </p>
+          )}
           {imageFiles.length === 0 && (
             <p className="text-xs text-muted-foreground">
               💡 Lade zuerst Bilder hoch, um die KI-Generierung zu nutzen.
