@@ -425,7 +425,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   const title = sanitizeInput(req.body.title) || 'Mein Bericht'
   const description = sanitizeInput(req.body.description) || ''
   const location = sanitizeInput(req.body.location) || 'Unbekannt'
-  const text = sanitizeInput(req.body.text) || 'Bericht'
+  // text NICHT durch sanitizeInput kürzen – der User-Text kann länger als 500 Zeichen sein
+  const text = (req.body.text || '').trim()
   const model = req.body.model || 'llama4'
   const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
   const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
@@ -436,38 +437,90 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   const tags = safelyParseJSON(req.body.tags) || []
   const country = sanitizeInput(req.body.country) || ''
   const articleLength = sanitizeInput(req.body.articleLength) || 'medium'
+  // Bild-URLs aus dem MilkdownEditor-Markdown (bereits hochgeladen, öffentlich erreichbar)
+  const markdownImageUrls = safelyParseJSON(req.body.markdownImageUrls) || []
 
-  if (!images || images.length === 0) {
+  // Mindestens Titelbild ODER Markdown-Bilder erforderlich
+  if ((!images || images.length === 0) && markdownImageUrls.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
-  console.log(`[KI] Generiere Bericht: "${title}", Bilder: ${images.length}, Modell: ${model}, Lifestyle: ${lifestyle}, Länge: ${articleLength}`)
+  console.log(`[KI] Generiere Bericht: "${title}", Titel-Bilder: ${images?.length || 0}, Markdown-Bilder: ${markdownImageUrls.length}, Modell: ${model}, Lifestyle: ${lifestyle}, Länge: ${articleLength}`)
+  console.log(`[KI] Text-Länge: ${text.length} Zeichen`)
   if (category) console.log(`[KI] Kategorie: ${category}`)
   if (tags.length > 0) console.log(`[KI] Tags: ${tags.join(', ')}`)
 
+  // Hilfsfunktion: Bild-URL downloaden → Base64
+  const fetchImageAsBase64 = async (url) => {
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 15000,
+      maxContentLength: 10 * 1024 * 1024 // max 10MB
+    })
+    return Buffer.from(response.data).toString('base64')
+  }
+
+  // Hilfsfunktion: einzelnes Bild analysieren (Base64 → Beschreibung)
+  const analyzeImageBase64 = async (base64, mimeType = 'image/jpeg') => {
+    const lifestyleConfig = getLifestyleConfig(lifestyle)
+    const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: getArticleImageAnalysisPrompt(lifestyleConfig, articleLength) },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
+        ]
+      }],
+      max_tokens: 150,
+      temperature: 0.7
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+      timeout: 30000
+    })
+    return visionResponse.data.choices[0].message.content
+  }
+
   try {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
-    
-    // Bilder analysieren
-    const imageDescriptions = await Promise.all(images.map(async (img) => {
-      const base64 = img.buffer.toString('base64')
-      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: getArticleImageAnalysisPrompt(lifestyleConfig, articleLength) },
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
-          ]
-        }],
-        max_tokens: 150,
-        temperature: 0.7
-      }, {
-        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-        timeout: 30000
-      })
-      return visionResponse.data.choices[0].message.content
-    }))
+
+    // ===== TITELBILD(ER) analysieren (hochgeladene Files) =====
+    const uploadedImageDescriptions = images && images.length > 0
+      ? await Promise.all(images.map(async (img) => {
+          const base64 = img.buffer.toString('base64')
+          const mimeType = img.mimetype || 'image/jpeg'
+          console.log(`[KI] Analysiere Titelbild, Größe: ${(img.size / 1024).toFixed(1)}KB`)
+          return analyzeImageBase64(base64, mimeType)
+        }))
+      : []
+
+    // ===== MARKDOWN-BILDER analysieren (URLs von Blossom) =====
+    // Max 5 Bilder aus dem Editor analysieren – mehr bringt wenig, kostet aber Zeit
+    const markdownUrlsToAnalyze = markdownImageUrls.slice(0, 5)
+    const markdownImageDescriptions = markdownUrlsToAnalyze.length > 0
+      ? await Promise.allSettled(markdownUrlsToAnalyze.map(async (url, index) => {
+          console.log(`[KI] Lade Markdown-Bild ${index + 1}/${markdownUrlsToAnalyze.length}: ${url.substring(0, 60)}...`)
+          const base64 = await fetchImageAsBase64(url)
+          // MIME-Type aus URL ableiten
+          const mimeType = url.match(/\.(png)$/i) ? 'image/png'
+            : url.match(/\.(webp)$/i) ? 'image/webp'
+            : url.match(/\.(gif)$/i) ? 'image/gif'
+            : 'image/jpeg'
+          return analyzeImageBase64(base64, mimeType)
+        }))
+        .then(results => results
+          .filter(r => r.status === 'fulfilled')
+          .map(r => r.value)
+        )
+      : []
+
+    if (markdownImageDescriptions.length > 0) {
+      console.log(`[KI] ${markdownImageDescriptions.length} Markdown-Bilder analysiert`)
+    }
+
+    // Alle Bildbeschreibungen zusammenführen: Titelbild zuerst, dann Markdown-Bilder
+    const imageDescriptions = [...uploadedImageDescriptions, ...markdownImageDescriptions]
+    console.log(`[KI] Gesamt ${imageDescriptions.length} Bildbeschreibungen für Prompt`)
 
     // Foster Huntington Prompt für Berichte - importiert aus src/config/prompts/articles.js
     const prompt = generateArticlePrompt({
@@ -498,7 +551,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       article,
       hashtags: uniqueHashtags.join(' '),
       lifestyle,
-      articleLength
+      articleLength,
+      imageDescriptions // Für Frontend-Feedback: wie viele Bilder analysiert wurden
     })
   } catch (error) {
     console.error('[KI] Fehler bei Bericht-Generierung:', error.response?.data || error.message)
