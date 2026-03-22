@@ -3040,7 +3040,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
         .replace(/<p><strong>Preis:<\/strong>.*?<\/p>/gis, '')
         .replace(/<h2[^>]*>Bilder<\/h2>.*?(?=<h[2-6]>|<p><strong>|$)/gis, '');
 
-      const descriptionMarkdown = htmlToMarkdown(cleanDescription).trim();
+      const descriptionMarkdown = cleanDescription.trim();
       if (descriptionMarkdown) {
         content += `${descriptionMarkdown}\n\n`;
       }
@@ -4215,7 +4215,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
     publishEvent({
       kind: 30023, // Long-form article
-      content: htmlToMarkdown(content).trim(), // Konvertiere HTML zu Markdown für Nostr
+      content: content.trim(), // MilkdownEditor liefert bereits Markdown
       tags: finalTags
     });
 
@@ -4784,7 +4784,11 @@ Schreibe deinen Artikel hier...
           </div>
         </div>
 
-        <Button onClick={handleSubmit} className="w-full" disabled={!title.trim() || !content.trim()}>
+        <Button
+          onClick={handleSubmit}
+          className="w-full"
+          disabled={!title.trim() || !content.trim()}
+        >
           <FileText className="h-4 w-4 mr-2" />
           Berichte veroeffentlichen
         </Button>
