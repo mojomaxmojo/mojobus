@@ -28,7 +28,6 @@ const ContentEditorMinimal = lazy(() => import("./components/ContentEditorMinima
 const Profile = lazy(() => import("./pages/Profile").then(m => ({ default: m.Profile })));
 const Settings = lazy(() => import("./pages/Settings").then(m => ({ default: m.Settings })));
 const ServiceWorkerSettings = lazy(() => import("./pages/ServiceWorkerSettings").then(m => ({ default: m.ServiceWorkerSettings })));
-const NIP89SetupPage = lazy(() => import("./pages/NIP89SetupPage").then(m => ({ default: m.NIP89SetupPage })));
 const NIP19Page = lazy(() => import("./pages/NIP19Page").then(m => ({ default: m.NIP19Page })));
 const BudgetPage = lazy(() => import("./pages/BudgetPage").then(m => ({ default: m.BudgetPage })));
 const NotFound = lazy(() => import("./pages/NotFound").then(m => ({ default: m.default })));
@@ -65,7 +64,6 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/service-worker" element={<ServiceWorkerSettings />} />
-              <Route path="/settings/nostr-handler" element={<NIP89SetupPage />} />
               <Route path="/budget" element={<BudgetPage />} />
                <Route path="/veroeffentlichen" element={<Publish />} />
                <Route path="/veroeffentlichen/modern" element={<ContentEditorMinimal />} />
