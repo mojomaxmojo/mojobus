@@ -109,34 +109,96 @@ export function NoteView({ eventId }: NoteViewProps) {
   const position = locationTag?.[1] || '';
   const { lat, lng, isGPS } = position ? parsePosition(position) : { lat: null, lng: null, isGPS: false };
 
-  // Dynamic SEO Meta Tags
+  const authorName = author.data?.metadata?.name || author.data?.metadata?.display_name || genUserName(note?.pubkey || '');
+
+  // Dynamic SEO Meta Tags mit JSON-LD
   useHead(() => {
     if (!note) return {};
 
-    const authorName = author.data?.metadata?.name || 'Mojo';
     const title = `Note von ${authorName}`;
     const description = `${note.content.substring(0, 160)}${note.content.length > 160 ? '...' : ''}`;
     const tags = extractNoteTags(note);
-    const keywords = ['perpetual traveler', 'vanlife', 'offgrid', 'note', 'blog', ...tags];
+    const keywords = [
+      'vanlife', 'wohnmobil', 'camping', 'reisen', 'nomadenleben',
+      'offgrid', 'camper', 'reiseblog', 'microblog', ...tags.slice(0, 10)
+    ];
+    
+    const canonicalUrl = `https://mojobus.org/${nip19.noteEncode(eventId)}`;
+    const pubDate = new Date(note.created_at * 1000).toISOString();
+    const authorNpub = nip19.npubEncode(note.pubkey);
+
+    // JSON-LD fuer Notes (BlogPosting)
+    const jsonLd: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      'headline': title,
+      'description': description,
+      'author': {
+        '@type': 'Person',
+        'name': authorName,
+        'url': `https://mojobus.org/${authorNpub}`,
+      },
+      'publisher': {
+        '@type': 'Organization',
+        'name': 'MojoBus',
+        'url': 'https://mojobus.org',
+        'logo': {
+          '@type': 'ImageObject',
+          'url': 'https://mojobus.org/mojobuslogo.png',
+          'width': 512,
+          'height': 512
+        }
+      },
+      'datePublished': pubDate,
+      'keywords': keywords.join(', '),
+      'url': canonicalUrl,
+    };
+
+    // Breadcrumb Schema
+    const breadcrumbLd = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://mojobus.org' },
+        { '@type': 'ListItem', 'position': 2, 'name': 'Notes', 'item': 'https://mojobus.org/notes' },
+        { '@type': 'ListItem', 'position': 3, 'name': title, 'item': canonicalUrl }
+      ]
+    };
+
+    // Extrahiere erstes Bild aus Note fuer OG Image
+    const images = extractNoteImages(note);
+    const ogImage = images[0] || 'https://mojobus.org/mojobuslogo.png';
 
     return {
-      title: `${title} - MojoBus Perpetual Travelers Blog`,
+      title: `${title} - MojoBus`,
       meta: [
         { name: 'description', content: description },
         { name: 'keywords', content: keywords.join(', ') },
         { property: 'og:title', content: `${title} - MojoBus` },
         { property: 'og:description', content: description },
         { property: 'og:type', content: 'article' },
-        { property: 'og:image', content: 'https://mojobus.org/mojobuslogo.png' },
+        { property: 'og:url', content: canonicalUrl },
+        { property: 'og:site_name', content: 'MojoBus Perpetual Travelers' },
+        { property: 'og:locale', content: 'de_DE' },
+        { property: 'og:image', content: ogImage },
+        { property: 'og:image:alt', content: `Note von ${authorName}` },
         { property: 'article:author', content: authorName },
-        { property: 'article:published_time', content: new Date(note.created_at * 1000).toISOString() },
-        { property: 'article:tag', content: tags },
+        { property: 'article:published_time', content: pubDate },
+        ...tags.slice(0, 5).map(tag => ({ property: 'article:tag', content: tag })),
         { name: 'twitter:title', content: `${title} - MojoBus` },
         { name: 'twitter:description', content: description },
-        { name: 'twitter:card', content: 'summary' },
+        { name: 'twitter:card', content: images.length > 0 ? 'summary_large_image' : 'summary' },
+        { name: 'twitter:image', content: ogImage },
+        { name: 'robots', content: 'index, follow' },
+        { name: 'language', content: 'de-DE' },
       ],
       link: [
-        { rel: 'canonical', href: `https://mojobus.org/${nip19.noteEncode(eventId)}` }
+        { rel: 'canonical', href: canonicalUrl },
+        { rel: 'author', href: `https://mojobus.org/${authorNpub}` }
+      ],
+      script: [
+        { type: 'application/ld+json', innerHTML: JSON.stringify(jsonLd) },
+        { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumbLd) }
       ]
     };
   });
