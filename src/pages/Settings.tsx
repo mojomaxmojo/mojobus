@@ -39,7 +39,9 @@ import {
   Zap,
   Shield,
   Gauge,
-  Database
+  Database,
+  Globe,
+  ExternalLink,
 } from '@/lib/icons';
 
 export function Settings() {
@@ -432,6 +434,27 @@ export function Settings() {
                           </Button>
                         </div>
                       </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* NIP-89 App Handler */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                      <div className="flex items-start gap-3">
+                        <Globe className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                        <div>
+                          <div className="font-medium text-sm">NIP-89 App Handler</div>
+                          <div className="text-xs text-muted-foreground">
+                            MojoBus als offiziellen Nostr Content-Handler registrieren
+                          </div>
+                        </div>
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="shrink-0 ml-3">
+                        <Link to="/settings/nostr-handler">
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                          Setup
+                        </Link>
+                      </Button>
                     </div>
 
                     <Button variant="destructive" onClick={logout} className="w-full">
