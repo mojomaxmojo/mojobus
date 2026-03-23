@@ -200,37 +200,155 @@ export function ArticleView({ naddr }: ArticleViewProps) {
   // Check if current user is author
   const isAuthor = user?.pubkey === naddr.pubkey;
 
-  // Dynamic SEO Meta Tags
+  // Dynamic SEO Meta Tags mit JSON-LD Structured Data
   useHead(() => {
     if (!article) return {};
 
     const metadata = extractArticleMetadata(article);
     const title = metadata.title || 'Artikel';
-    const description = metadata.summary || `Perpetual Travelers Artikel von ${author.data?.metadata?.name || 'Mojo'}`;
-    const keywords = ['perpetual traveler', 'vanlife', 'offgrid', 'reisen', 'blog'];
+    const currentAuthorName = author.data?.metadata?.name || author.data?.metadata?.display_name || genUserName(naddr.pubkey);
+    const description = metadata.summary || `Perpetual Travelers Artikel von ${currentAuthorName}`;
     const tags = article.tags.filter(([name]) => name === 't').map(([, value]) => value);
-    keywords.push(...tags);
+    
+    // SEO-Keywords strategisch aufbauen
+    const baseKeywords = [
+      'vanlife', 'wohnmobil', 'camping', 'reisen', 'nomadenleben',
+      'offgrid', 'camper', 'reiseblog', 'perpetual travelers'
+    ];
+    // Wichtigste Tags zuerst (max 10 fuer Keywords)
+    const seoTags = tags.slice(0, 8).map(tag => 
+      tag.toLowerCase().replace(/-/g, ' ')
+    );
+    const keywords = [...new Set([...baseKeywords, ...seoTags])];
+    
+    const canonicalUrl = `https://mojobus.org/${nip19.naddrEncode(naddr)}`;
+    const pubDate = new Date(metadata.publishedAt * 1000).toISOString();
+    const modifiedDate = new Date(article.created_at * 1000).toISOString();
+    
+    const authorNpub = nip19.npubEncode(naddr.pubkey);
+    
+    // Artikel-Kategorie aus Tags ableiten
+    const articleSection = tags.find(t => 
+      ['diy', 'rvlife', 'lifestyle', 'kueche', 'ausstattung', 'freeliving', 'leon'].includes(t.toLowerCase())
+    ) || 'Blog';
+
+    // JSON-LD Article Schema fuer Google Rich Snippets
+    const jsonLd: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      'headline': title,
+      'description': description,
+      'author': {
+        '@type': 'Person',
+        'name': currentAuthorName,
+        'url': `https://mojobus.org/${authorNpub}`,
+      },
+      'publisher': {
+        '@type': 'Organization',
+        'name': 'MojoBus',
+        'url': 'https://mojobus.org',
+        'logo': {
+          '@type': 'ImageObject',
+          'url': 'https://mojobus.org/mojobuslogo.png',
+          'width': 512,
+          'height': 512
+        }
+      },
+      'datePublished': pubDate,
+      'dateModified': modifiedDate,
+      'articleSection': articleSection,
+      'keywords': keywords.join(', '),
+      'url': canonicalUrl,
+    };
+    
+    // Optionale Image Eigenschaften
+    if (metadata.image) {
+      jsonLd.image = {
+        '@type': 'ImageObject',
+        'url': metadata.image,
+        'width': 1200,
+        'height': 630
+      };
+    }
+    if (author.data?.metadata?.picture) {
+      (jsonLd.author as Record<string, unknown>).image = {
+        '@type': 'ImageObject',
+        'url': author.data.metadata.picture
+      };
+    }
+
+    // Breadcrumb Schema fuer Navigation
+    const breadcrumbLd = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        {
+          '@type': 'ListItem',
+          'position': 1,
+          'name': 'Home',
+          'item': 'https://mojobus.org'
+        },
+        {
+          '@type': 'ListItem',
+          'position': 2,
+          'name': 'Artikel',
+          'item': 'https://mojobus.org/artikel'
+        },
+        {
+          '@type': 'ListItem',
+          'position': 3,
+          'name': title,
+          'item': canonicalUrl
+        }
+      ]
+    };
+
+    const metaEntries: Array<{name?: string; property?: string; content: string}> = [
+      { name: 'description', content: description },
+      { name: 'keywords', content: keywords.join(', ') },
+      { property: 'og:title', content: `${title} - MojoBus` },
+      { property: 'og:description', content: description },
+      { property: 'og:type', content: 'article' },
+      { property: 'og:url', content: canonicalUrl },
+      { property: 'og:site_name', content: 'MojoBus Perpetual Travelers' },
+      { property: 'og:locale', content: 'de_DE' },
+      { property: 'og:image', content: metadata.image || 'https://mojobus.org/mojobuslogo.png' },
+      { property: 'og:image:alt', content: title },
+      ...(metadata.image ? [
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:image:type', content: 'image/jpeg' }
+      ] : []),
+      { property: 'article:author', content: currentAuthorName },
+      { property: 'article:published_time', content: pubDate },
+      { property: 'article:modified_time', content: modifiedDate },
+      { property: 'article:section', content: articleSection },
+      ...tags.slice(0, 5).map(tag => ({ property: 'article:tag', content: tag })),
+      { name: 'twitter:title', content: `${title} - MojoBus` },
+      { name: 'twitter:description', content: description },
+      { name: 'twitter:card', content: metadata.image ? 'summary_large_image' : 'summary' },
+      { name: 'twitter:image', content: metadata.image || 'https://mojobus.org/mojobuslogo.png' },
+      { name: 'twitter:image:alt', content: title },
+      { name: 'robots', content: 'index, follow, max-image-preview:large' },
+      { name: 'language', content: 'German' },
+    ];
 
     return {
-      title: `${title} - MojoBus Perpetual Travelers Blog`,
-      meta: [
-        { name: 'description', content: description },
-        { name: 'keywords', content: keywords.join(', ') },
-        { property: 'og:title', content: `${title} - MojoBus` },
-        { property: 'og:description', content: description },
-        { property: 'og:type', content: 'article' },
-        { property: 'og:image', content: metadata.image || 'https://mojobus.org/mojobuslogo.png' },
-        { property: 'og:image:alt', content: title },
-        { property: 'article:author', content: author.data?.metadata?.name || 'Mojo' },
-        { property: 'article:published_time', content: new Date(metadata.publishedAt * 1000).toISOString() },
-        { property: 'article:tag', content: tags },
-        { name: 'twitter:title', content: `${title} - MojoBus` },
-        { name: 'twitter:description', content: description },
-        { name: 'twitter:card', content: metadata.image ? 'summary_large_image' : 'summary' },
-        { name: 'twitter:image', content: metadata.image || 'https://mojobus.org/mojobuslogo.png' },
-      ],
+      title: `${title} - MojoBus Blog`,
+      meta: metaEntries,
       link: [
-        { rel: 'canonical', href: `https://mojobus.org/${nip19.naddrEncode(naddr)}` }
+        { rel: 'canonical', href: canonicalUrl },
+        { rel: 'author', href: `https://mojobus.org/${authorNpub}`, title: authorName }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(jsonLd)
+        },
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(breadcrumbLd)
+        }
       ]
     };
   });
