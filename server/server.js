@@ -428,7 +428,6 @@ app.post('/api/generate-video', async (req, res) => {
     lifestyle,
     tags,
     duration = '10',
-    quality = '720p',
     aspectRatio = '16:9'
   } = req.body
 
@@ -436,14 +435,12 @@ app.post('/api/generate-video', async (req, res) => {
     return res.status(400).json({ error: 'imageUrl (Titelbild) ist erforderlich.' })
   }
 
-  // ── Runway Gen-4 Turbo verfügbare Kombinationen bei ppq.ai ──────────────
-  // 720p: 5s + 10s  (16:9 und 9:16)
-  // 1080p: NUR 5s   (16:9 und 9:16) — 10s bei 1080p nicht verfügbar!
-  // → Automatische Korrektur: 1080p + 10s → 720p + 10s
-  const resolvedQuality = (quality === '1080p' && String(duration) === '10') ? '720p' : quality
-  if (resolvedQuality !== quality) {
-    console.log(`[Video] Qualität korrigiert: ${quality}+${duration}s → ${resolvedQuality}+${duration}s (1080p nur bei 5s verfügbar)`)
-  }
+  // ── Kling 2.5 Turbo I2V bei ppq.ai ──────────────────────────────────────
+  // Modell: kling-2.5-turbo-i2v
+  // Dauer:  5s ($0.23) oder 10s ($0.46)
+  // Kein quality-Parameter — wird ignoriert
+  // aspect_ratio: 16:9 oder 9:16
+  const resolvedDuration = ['5', '10'].includes(String(duration)) ? String(duration) : '10'
 
   // Video-Prompt automatisch aus Artikeldaten aufbauen
   const lifestyleMap = {
@@ -472,17 +469,16 @@ app.post('/api/generate-video', async (req, res) => {
     '. High quality, cinematic, 4K look'
   ].join('').replace(/\s+/g, ' ').trim()
 
-  console.log(`[Video] Starte Runway Gen-4 Turbo: "${title || 'Kein Titel'}", ${duration}s, ${resolvedQuality}, ${aspectRatio}`)
+  console.log(`[Video] Starte Kling 2.5 Turbo I2V: "${title || 'Kein Titel'}", ${resolvedDuration}s, ${aspectRatio}`)
   console.log(`[Video] Prompt: ${videoPrompt.slice(0, 120)}...`)
 
-  // Exakte Parameter die an ppq.ai gehen — für Debugging
+  // Exakte Parameter die an ppq.ai gehen
   const ppqPayload = {
-    model: 'runway-gen4',
+    model: 'kling-2.5-turbo-i2v',
     prompt: videoPrompt,
     image_url: imageUrl,
     aspect_ratio: aspectRatio,
-    duration: String(duration),
-    quality: resolvedQuality
+    duration: resolvedDuration
   }
   console.log('[Video] ppq.ai Payload:', JSON.stringify(ppqPayload))
 
@@ -505,7 +501,7 @@ app.post('/api/generate-video', async (req, res) => {
       status: job.status,
       estimatedCost: job.estimated_cost,
       prompt: videoPrompt,
-      sentParams: { duration: String(duration), quality: resolvedQuality, aspectRatio }
+      sentParams: { duration: resolvedDuration, aspectRatio }
     })
 
   } catch (error) {
@@ -1018,12 +1014,11 @@ app.post('/api/debug-video', async (req, res) => {
 
   try {
     const response = await axios.post('https://api.ppq.ai/v1/videos', {
-      model: 'runway-gen4',
-      prompt: 'Cinematic travel video, vanlife, smooth camera movement',
+      model: 'kling-2.5-turbo-i2v',
+      prompt: 'Cinematic travel video, vanlife, smooth camera movement, golden light',
       image_url: req.body.imageUrl || 'https://picsum.photos/800/450',
       aspect_ratio: '16:9',
-      duration: '5',
-      quality: '720p'
+      duration: '10'
     }, {
       headers: {
         'Content-Type': 'application/json',

@@ -3768,7 +3768,6 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [videoJobId, setVideoJobId] = useState<string | null>(null);
   const [videoProgress, setVideoProgress] = useState<'idle' | 'submitting' | 'processing' | 'completed' | 'failed'>('idle');
   const [videoDuration, setVideoDuration] = useState<'5' | '10'>('10');
-  const [videoQuality, setVideoQuality] = useState<'720p' | '1080p'>('720p');
   const [videoAspect, setVideoAspect] = useState<'16:9' | '9:16'>('16:9');
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
@@ -3814,7 +3813,6 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
           lifestyle,
           tags,
           duration: videoDuration,
-          quality: videoQuality,
           aspectRatio: videoAspect
         })
       });
@@ -3830,7 +3828,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
       toast({
         title: '🎬 Video wird generiert...',
-        description: `Job gestartet (${videoDuration}s, ${videoQuality}, ${videoAspect}). Bitte warten ~30–90 Sek...`
+        description: `Job gestartet (${videoDuration}s, ${videoAspect}). Bitte warten ~60–120 Sek...`
       });
 
       // Schritt 2: Polling über eigenen Server alle 6 Sekunden, max. 3 Minuten
@@ -4750,7 +4748,7 @@ Schreibe deinen Artikel hier...
               <Video className="h-5 w-5 text-purple-500" />
               <h3 className="font-semibold">🎬 Video generieren</h3>
               <span className="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full font-medium">
-                Runway Gen-4 Turbo
+                Kling 2.5 Turbo I2V
               </span>
             </div>
             {/* An/Abwahl Button */}
@@ -4779,7 +4777,7 @@ Schreibe deinen Artikel hier...
 
           {/* Kurzbeschreibung immer sichtbar */}
           <p className="text-xs text-muted-foreground">
-            Erstellt aus deinem <strong>Titelbild</strong> + <strong>Artikeldaten</strong> automatisch ein 10-Sek. Video ($0.17 via ppq.ai).
+            Erstellt aus deinem <strong>Titelbild</strong> + <strong>Artikeldaten</strong> ein Video via ppq.ai · 5s = $0.23 · 10s = $0.46
           </p>
 
           {/* Erweiterter Bereich nur wenn aktiviert */}
@@ -4787,7 +4785,8 @@ Schreibe deinen Artikel hier...
             <div className="space-y-4 pt-2 border-t border-muted">
 
                   {/* Einstellungen: Dauer / Qualität / Format */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Einstellungen: Dauer + Format (2 Spalten) */}
+              <div className="grid grid-cols-2 gap-3">
                 {/* Dauer */}
                 <div className="space-y-1">
                   <Label className="text-xs">Dauer</Label>
@@ -4807,30 +4806,6 @@ Schreibe deinen Artikel hier...
                       </button>
                     ))}
                   </div>
-                </div>
-
-                {/* Qualität */}
-                <div className="space-y-1">
-                  <Label className="text-xs">Qualität</Label>
-                  <div className="flex gap-1">
-                    {(['720p', '1080p'] as const).map(q => (
-                      <button
-                        key={q}
-                        type="button"
-                        onClick={() => setVideoQuality(q)}
-                        className={`flex-1 py-1 text-xs rounded border transition-colors ${
-                          videoQuality === q
-                            ? 'bg-purple-600 text-white border-purple-600'
-                            : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400'
-                        }`}
-                      >
-                        {q}{q === '1080p' ? ' (5s)' : ''}
-                      </button>
-                    ))}
-                  </div>
-                  {videoQuality === '1080p' && videoDuration === '10' && (
-                    <p className="text-xs text-amber-500">⚠️ 1080p nur bei 5s — wird auto auf 720p gesetzt</p>
-                  )}
                 </div>
 
                 {/* Format */}
@@ -4855,29 +4830,15 @@ Schreibe deinen Artikel hier...
                 </div>
               </div>
 
-              {/* Kosten-Info */}
-              {/* ppq.ai Runway Gen-4 Turbo Preise:
-                  720p  5s  = $0.0690
-                  720p  10s = $0.1725
-                  1080p 5s  = $0.1725  (1080p NUR 5s verfügbar!)
-                  1080p 10s → wird automatisch auf 720p 10s korrigiert */}
+              {/* Kosten-Info — Kling 2.5 Turbo I2V */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/50 rounded p-2">
                 <span>💰</span>
                 <span>
-                  Geschätzte Kosten:{' '}
+                  Kosten:{' '}
                   <strong className="text-purple-600">
-                    ${videoDuration === '5'
-                      ? (videoQuality === '1080p' ? '0.1725' : '0.0690')
-                      : '0.1725'
-                    }
+                    ${videoDuration === '5' ? '0.23' : '0.46'}
                   </strong>
-                  {' '}· Runway Gen-4 Turbo ·{' '}
-                  {videoDuration}s{' '}
-                  {videoQuality === '1080p' && videoDuration === '10' ? '720p ⚠️auto' : videoQuality}{' '}
-                  {videoAspect}
-                  {videoQuality === '1080p' && videoDuration === '10' && (
-                    <span className="text-amber-500 ml-1">(1080p nur bei 5s)</span>
-                  )}
+                  {' '}· Kling 2.5 Turbo I2V · {videoDuration}s · {videoAspect}
                 </span>
               </div>
 
@@ -4920,7 +4881,7 @@ Schreibe deinen Artikel hier...
                 ) : (
                   <>
                     <Video className="h-4 w-4 mr-2" />
-                    🎬 Video generieren mit Runway Gen-4 Turbo
+                    🎬 Video generieren mit Kling 2.5 Turbo
                   </>
                 )}
               </Button>
