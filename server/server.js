@@ -495,17 +495,40 @@ app.post('/api/generate-video', async (req, res) => {
     })
 
   } catch (error) {
-    const errMsg = error.response?.data?.error || error.response?.data?.message || error.message
-    console.error('[Video] Fehler beim Einreichen:', errMsg)
+    // Vollständige ppq.ai Antwort loggen für Debugging
+    const rawData = error.response?.data
+    const httpStatus = error.response?.status
 
-    if (error.response?.status === 401) {
-      res.status(401).json({ error: 'PPQ_API_KEY ungültig oder abgelaufen.' })
-    } else if (error.response?.status === 402) {
-      res.status(402).json({ error: 'Nicht genug Guthaben auf ppq.ai Account.' })
-    } else if (error.response?.status === 429) {
-      res.status(429).json({ error: 'API-Limit erreicht. Bitte kurz warten.' })
+    console.error('[Video] HTTP Status:', httpStatus)
+    console.error('[Video] ppq.ai Antwort (raw):', JSON.stringify(rawData, null, 2))
+    console.error('[Video] Axios Fehler:', error.message)
+
+    // Fehlertext sicher extrahieren (kein [object Object])
+    let errMsg = error.message
+    if (rawData) {
+      if (typeof rawData === 'string') {
+        errMsg = rawData
+      } else if (typeof rawData.error === 'string') {
+        errMsg = rawData.error
+      } else if (typeof rawData.message === 'string') {
+        errMsg = rawData.message
+      } else if (typeof rawData.detail === 'string') {
+        errMsg = rawData.detail
+      } else {
+        errMsg = JSON.stringify(rawData)
+      }
+    }
+
+    if (httpStatus === 401) {
+      res.status(401).json({ error: 'PPQ_API_KEY ungültig oder abgelaufen.', detail: errMsg })
+    } else if (httpStatus === 402) {
+      res.status(402).json({ error: 'Nicht genug Guthaben auf ppq.ai Account.', detail: errMsg })
+    } else if (httpStatus === 429) {
+      res.status(429).json({ error: 'API-Limit erreicht. Bitte kurz warten.', detail: errMsg })
+    } else if (httpStatus === 422) {
+      res.status(422).json({ error: `Ungültige Parameter für ppq.ai: ${errMsg}`, detail: errMsg })
     } else {
-      res.status(500).json({ error: `Video-Job fehlgeschlagen: ${errMsg}` })
+      res.status(500).json({ error: `Video-Job fehlgeschlagen (HTTP ${httpStatus || 'no-response'}): ${errMsg}` })
     }
   }
 })
@@ -554,8 +577,16 @@ app.get('/api/video-status/:jobId', async (req, res) => {
     }
 
   } catch (error) {
-    const errMsg = error.response?.data?.error || error.message
-    console.error(`[Video] Polling-Fehler für ${jobId}:`, errMsg)
+    const rawData = error.response?.data
+    const httpStatus = error.response?.status
+    let errMsg = error.message
+    if (rawData) {
+      errMsg = typeof rawData === 'string' ? rawData
+        : typeof rawData.error === 'string' ? rawData.error
+        : typeof rawData.message === 'string' ? rawData.message
+        : JSON.stringify(rawData)
+    }
+    console.error(`[Video] Polling-Fehler für ${jobId} (HTTP ${httpStatus}):`, errMsg)
     res.status(500).json({ error: `Status-Abfrage fehlgeschlagen: ${errMsg}` })
   }
 })
@@ -962,6 +993,41 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
   } catch (error) {
     console.error('[KI] Fehler bei Notiz-Generierung:', error.response?.data || error.message)
     res.status(500).json({ error: 'Fehler bei Generierung. Versuche es erneut.' })
+  }
+})
+
+// ===== DEBUG: ppq.ai Video-API direkter Test =====
+// Nur für Debugging – zeigt rohe ppq.ai Antwort
+app.post('/api/debug-video', async (req, res) => {
+  const ppqKey = process.env.PPQ_API_KEY
+  if (!ppqKey) return res.status(500).json({ error: 'PPQ_API_KEY fehlt' })
+
+  try {
+    const response = await axios.post('https://api.ppq.ai/v1/videos', {
+      model: 'runway-gen4',
+      prompt: 'Cinematic travel video, vanlife, smooth camera movement',
+      image_url: req.body.imageUrl || 'https://picsum.photos/800/450',
+      aspect_ratio: '16:9',
+      duration: '5',
+      quality: '720p'
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ppqKey}`
+      },
+      timeout: 30000
+    })
+    console.log('[Debug] ppq.ai Erfolg:', JSON.stringify(response.data))
+    res.json({ ok: true, data: response.data })
+  } catch (error) {
+    const rawData = error.response?.data
+    console.error('[Debug] ppq.ai Fehler raw:', JSON.stringify(rawData))
+    res.status(error.response?.status || 500).json({
+      ok: false,
+      httpStatus: error.response?.status,
+      rawResponse: rawData,
+      axiosMessage: error.message
+    })
   }
 })
 
