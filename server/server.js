@@ -407,12 +407,157 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
   }
 })
 
-// API für Video-Generierung (Platzhalter)
-app.post('/api/generate-video', (req, res) => {
-  const { article, imageUrls } = req.body
-  console.log(`[KI] Video-Generierung angefordert: ${imageUrls?.length || 0} Bilder`)
-  // Hier ffmpeg-Logik einfügen
-  res.json({ videoUrl: 'placeholder.mp4' })
+// ===== API FÜR RUNWAY GEN-4 TURBO VIDEO-GENERIERUNG =====
+// Tab: "Berichte" in /veroeffentlichen
+// PPQ_API_KEY muss als Umgebungsvariable gesetzt sein
+// Prompt wird automatisch aus Artikeldaten aufgebaut
+
+app.post('/api/generate-video', async (req, res) => {
+  const ppqKey = process.env.PPQ_API_KEY
+  if (!ppqKey) {
+    console.error('[Video] PPQ_API_KEY fehlt in Umgebungsvariablen')
+    return res.status(500).json({ error: 'PPQ_API_KEY nicht konfiguriert auf dem Server.' })
+  }
+
+  const {
+    imageUrl,       // Titelbild-URL → Start-Frame
+    title,
+    summary,
+    location,
+    country,
+    lifestyle,
+    tags,
+    duration = '10',
+    quality = '1080p',
+    aspectRatio = '16:9'
+  } = req.body
+
+  if (!imageUrl) {
+    return res.status(400).json({ error: 'imageUrl (Titelbild) ist erforderlich.' })
+  }
+
+  // Video-Prompt automatisch aus Artikeldaten aufbauen
+  const lifestyleMap = {
+    vanlife: 'vanlife, van life on wheels, road trip',
+    rvlife: 'RV life, recreational vehicle adventure',
+    beachlife: 'beach life, surf and sun lifestyle',
+    wohnmobil: 'motorhome, camper van travel',
+    'perpetual-travelers': 'perpetual travel, nomadic lifestyle'
+  }
+  const lifestyleText = lifestyleMap[lifestyle] || 'travel'
+  const locationText = location ? `, ${location}` : ''
+  const countryText = country ? `, ${country}` : ''
+  const titleText = title ? `. ${title}` : ''
+  const summaryText = summary ? ` ${summary.slice(0, 120)}` : ''
+  const tagsText = Array.isArray(tags) && tags.length > 0 ? `. ${tags.slice(0, 5).join(', ')}` : ''
+
+  const videoPrompt = [
+    'Cinematic travel video,',
+    lifestyleText,
+    locationText,
+    countryText,
+    titleText,
+    summaryText,
+    '. Smooth camera movement, golden light, authentic atmosphere',
+    tagsText,
+    '. High quality, cinematic, 4K look'
+  ].join('').replace(/\s+/g, ' ').trim()
+
+  console.log(`[Video] Starte Runway Gen-4 Turbo: "${title || 'Kein Titel'}", ${duration}s, ${quality}, ${aspectRatio}`)
+  console.log(`[Video] Prompt: ${videoPrompt.slice(0, 120)}...`)
+
+  try {
+    // Schritt 1: Job bei ppq.ai einreichen
+    const submitRes = await axios.post('https://api.ppq.ai/v1/videos', {
+      model: 'runway-gen4',
+      prompt: videoPrompt,
+      image_url: imageUrl,
+      aspect_ratio: aspectRatio,
+      duration: String(duration),
+      quality
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ppqKey}`
+      },
+      timeout: 30000
+    })
+
+    const job = submitRes.data
+    console.log(`[Video] Job eingereicht: ${job.id}, Status: ${job.status}`)
+
+    // Job-ID zurückgeben – Frontend pollt dann /api/video-status/:id
+    res.json({
+      jobId: job.id,
+      status: job.status,
+      estimatedCost: job.estimated_cost,
+      prompt: videoPrompt
+    })
+
+  } catch (error) {
+    const errMsg = error.response?.data?.error || error.response?.data?.message || error.message
+    console.error('[Video] Fehler beim Einreichen:', errMsg)
+
+    if (error.response?.status === 401) {
+      res.status(401).json({ error: 'PPQ_API_KEY ungültig oder abgelaufen.' })
+    } else if (error.response?.status === 402) {
+      res.status(402).json({ error: 'Nicht genug Guthaben auf ppq.ai Account.' })
+    } else if (error.response?.status === 429) {
+      res.status(429).json({ error: 'API-Limit erreicht. Bitte kurz warten.' })
+    } else {
+      res.status(500).json({ error: `Video-Job fehlgeschlagen: ${errMsg}` })
+    }
+  }
+})
+
+// ===== VIDEO STATUS POLLING =====
+// Frontend pollt alle 6 Sekunden bis status === 'completed' oder 'failed'
+app.get('/api/video-status/:jobId', async (req, res) => {
+  const ppqKey = process.env.PPQ_API_KEY
+  if (!ppqKey) {
+    return res.status(500).json({ error: 'PPQ_API_KEY nicht konfiguriert.' })
+  }
+
+  const { jobId } = req.params
+  if (!jobId || !jobId.startsWith('gen_')) {
+    return res.status(400).json({ error: 'Ungültige Job-ID.' })
+  }
+
+  try {
+    const pollRes = await axios.get(`https://api.ppq.ai/v1/videos/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${ppqKey}` },
+      timeout: 15000
+    })
+
+    const data = pollRes.data
+    console.log(`[Video] Status für ${jobId}: ${data.status}`)
+
+    if (data.status === 'completed' && data.data?.url) {
+      res.json({
+        status: 'completed',
+        videoUrl: data.data.url,
+        cost: data.cost,
+        jobId
+      })
+    } else if (data.status === 'failed') {
+      res.json({
+        status: 'failed',
+        error: data.error || 'Video-Generierung fehlgeschlagen.',
+        jobId
+      })
+    } else {
+      // Noch in Bearbeitung
+      res.json({
+        status: data.status || 'processing',
+        jobId
+      })
+    }
+
+  } catch (error) {
+    const errMsg = error.response?.data?.error || error.message
+    console.error(`[Video] Polling-Fehler für ${jobId}:`, errMsg)
+    res.status(500).json({ error: `Status-Abfrage fehlgeschlagen: ${errMsg}` })
+  }
 })
 
 // ===== API FÜR BERICHT/ARTIKEL GENERIERUNG =====
@@ -827,6 +972,7 @@ app.get('/api/health', (req, res) => {
     groqApiKey: process.env.GROQ_API_KEY ? 'configured' : 'missing',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY ? 'configured' : 'missing',
     openrouterApiKey: process.env.OPENROUTER_API_KEY ? 'configured' : 'missing',
+    ppqApiKey: process.env.PPQ_API_KEY ? 'configured' : 'missing',
     timestamp: new Date().toISOString()
   })
 })
@@ -836,4 +982,5 @@ app.listen(PORT, () => {
   console.log(`[Server] GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
   console.log(`[Server] ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
   console.log(`[Server] OPENROUTER_API_KEY: ${process.env.OPENROUTER_API_KEY ? '✓ Konfiguriert (für Video-Analyse)' : '✗ Fehlt (Video-Analyse nicht verfügbar)'}`)
+  console.log(`[Server] PPQ_API_KEY: ${process.env.PPQ_API_KEY ? '✓ Konfiguriert (Runway Gen-4 Video)' : '✗ Fehlt (Video-Generierung nicht verfügbar)'}`)
 })

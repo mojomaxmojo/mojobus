@@ -3770,7 +3770,6 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [videoDuration, setVideoDuration] = useState<'5' | '10'>('10');
   const [videoQuality, setVideoQuality] = useState<'720p' | '1080p'>('1080p');
   const [videoAspect, setVideoAspect] = useState<'16:9' | '9:16'>('16:9');
-  const [ppqApiKey, setPpqApiKey] = useState(() => localStorage.getItem('ppq_api_key') || '');
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -3789,43 +3788,12 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     return [...new Set(urls)]; // Duplikate entfernen
   };
 
-  // ── Runway Gen-4 Turbo Video-Generator ──────────────────────────────────
+  // ── Runway Gen-4 Turbo Video-Generator (via eigener Server) ────────────
   const generateVideoWithRunway = async () => {
-    if (!ppqApiKey.trim()) {
-      toast({ title: 'API-Key fehlt', description: 'Bitte zuerst deinen ppq.ai API-Key eintragen.', variant: 'destructive' });
-      return;
-    }
     if (!image) {
       toast({ title: 'Kein Titelbild', description: 'Lade zuerst ein Titelbild hoch – es wird als Start-Frame verwendet.', variant: 'destructive' });
       return;
     }
-
-    // Video-Prompt aus vorhandenen Artikeldaten aufbauen
-    const lifestyleMap: Record<string, string> = {
-      vanlife: 'vanlife, van life on wheels, road trip',
-      rvlife: 'RV life, recreational vehicle adventure',
-      beachlife: 'beach life, surf and sun lifestyle',
-      wohnmobil: 'motorhome, camper van travel',
-      'perpetual-travelers': 'perpetual travel, nomadic lifestyle'
-    };
-    const lifestyleText = lifestyleMap[lifestyle] || 'travel';
-    const locationText = location ? `, ${location}` : '';
-    const countryText = selectedCountry ? `, ${selectedCountry}` : '';
-    const titleText = title ? title : '';
-    const summaryText = summary ? ` ${summary.slice(0, 120)}` : '';
-    const tagsText = tags.slice(0, 5).join(', ');
-
-    const videoPrompt = [
-      `Cinematic travel video,`,
-      lifestyleText,
-      locationText,
-      countryText,
-      titleText ? `. ${titleText}` : '',
-      summaryText,
-      `. Smooth camera movement, golden light, authentic atmosphere`,
-      tagsText ? `. ${tagsText}` : '',
-      `. High quality, cinematic, 4K look`
-    ].join('').replace(/\s+/g, ' ').trim();
 
     setIsGeneratingVideo(true);
     setVideoProgress('submitting');
@@ -3833,55 +3801,52 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     setVideoJobId(null);
 
     try {
-      // Schritt 1: Job einreichen
-      const submitRes = await fetch('https://api.ppq.ai/v1/videos', {
+      // Schritt 1: Job über eigenen Server einreichen (PPQ_API_KEY liegt auf VPS)
+      const submitRes = await fetch('/api/generate-video', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ppqApiKey.trim()}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'runway-gen4',
-          prompt: videoPrompt,
-          image_url: image,
-          aspect_ratio: videoAspect,
+          imageUrl: image,
+          title,
+          summary,
+          location,
+          country: selectedCountry,
+          lifestyle,
+          tags,
           duration: videoDuration,
-          quality: videoQuality
+          quality: videoQuality,
+          aspectRatio: videoAspect
         })
       });
 
+      const submitData = await submitRes.json();
       if (!submitRes.ok) {
-        const errData = await submitRes.json().catch(() => ({}));
-        throw new Error(errData?.error || `HTTP ${submitRes.status}`);
+        throw new Error(submitData?.error || `HTTP ${submitRes.status}`);
       }
 
-      const job = await submitRes.json();
-      const jobId = job.id;
+      const jobId = submitData.jobId;
       setVideoJobId(jobId);
       setVideoProgress('processing');
 
       toast({
         title: '🎬 Video wird generiert...',
-        description: `Job gestartet (${videoDuration}s, ${videoQuality}, ${videoAspect}). Bitte warten...`
+        description: `Job gestartet (${videoDuration}s, ${videoQuality}, ${videoAspect}). Bitte warten ~30–90 Sek...`
       });
 
-      // Schritt 2: Polling alle 6 Sekunden, max. 3 Minuten
+      // Schritt 2: Polling über eigenen Server alle 6 Sekunden, max. 3 Minuten
       let attempts = 0;
       const maxAttempts = 30;
       const poll = async (): Promise<void> => {
         if (attempts >= maxAttempts) {
-          throw new Error('Timeout: Video-Generierung dauert zu lange.');
+          throw new Error('Timeout: Video-Generierung dauert zu lange (max. 3 Min.)');
         }
         attempts++;
 
-        const pollRes = await fetch(`https://api.ppq.ai/v1/videos/${jobId}`, {
-          headers: { 'Authorization': `Bearer ${ppqApiKey.trim()}` }
-        });
-
+        const pollRes = await fetch(`/api/video-status/${jobId}`);
         const pollData = await pollRes.json();
 
-        if (pollData.status === 'completed' && pollData.data?.url) {
-          setGeneratedVideoUrl(pollData.data.url);
+        if (pollData.status === 'completed' && pollData.videoUrl) {
+          setGeneratedVideoUrl(pollData.videoUrl);
           setVideoProgress('completed');
           toast({
             title: '✅ Video fertig!',
@@ -3891,7 +3856,6 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         } else if (pollData.status === 'failed') {
           throw new Error(pollData.error || 'Video-Generierung fehlgeschlagen.');
         } else {
-          // Noch in Bearbeitung — weiter warten
           await new Promise(r => setTimeout(r, 6000));
           return poll();
         }
@@ -4774,33 +4738,7 @@ Schreibe deinen Artikel hier...
           {videoEnabled && (
             <div className="space-y-4 pt-2 border-t border-muted">
 
-              {/* ppq.ai API-Key */}
-              <div className="space-y-1">
-                <Label className="text-xs font-medium flex items-center gap-1">
-                  ppq.ai API-Key
-                  <a
-                    href="https://ppq.ai"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-500 hover:underline text-xs ml-1"
-                  >
-                    → Holen (ab $0.10)
-                  </a>
-                </Label>
-                <Input
-                  type="password"
-                  placeholder="ppq_xxxxxxxxxxxx"
-                  value={ppqApiKey}
-                  onChange={e => {
-                    setPpqApiKey(e.target.value);
-                    localStorage.setItem('ppq_api_key', e.target.value);
-                  }}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">Wird lokal gespeichert, nie übertragen.</p>
-              </div>
-
-              {/* Einstellungen: Dauer / Qualität / Format */}
+                  {/* Einstellungen: Dauer / Qualität / Format */}
               <div className="grid grid-cols-3 gap-3">
                 {/* Dauer */}
                 <div className="space-y-1">
@@ -4891,17 +4829,23 @@ Schreibe deinen Artikel hier...
                 </div>
               )}
 
+              {/* Server-Info */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 rounded p-2">
+                <span>🔒</span>
+                <span>PPQ_API_KEY läuft sicher auf dem VPS-Server — kein Key im Browser nötig.</span>
+              </div>
+
               {/* Generieren Button */}
               <Button
                 type="button"
                 onClick={generateVideoWithRunway}
-                disabled={isGeneratingVideo || !image || !ppqApiKey.trim()}
+                disabled={isGeneratingVideo || !image}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {isGeneratingVideo ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {videoProgress === 'submitting' ? 'Job wird eingereicht...' : 'Video wird generiert (~30-90 Sek.)...'}
+                    {videoProgress === 'submitting' ? 'Job wird eingereicht...' : 'Video wird generiert (~30–90 Sek.)...'}
                   </>
                 ) : (
                   <>
@@ -4914,11 +4858,6 @@ Schreibe deinen Artikel hier...
               {!image && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
                   ⚠️ Lade zuerst ein Titelbild hoch — es wird als Start-Frame verwendet.
-                </p>
-              )}
-              {!ppqApiKey.trim() && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  ⚠️ ppq.ai API-Key erforderlich.
                 </p>
               )}
 
