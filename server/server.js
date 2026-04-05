@@ -475,16 +475,20 @@ app.post('/api/generate-video', async (req, res) => {
   console.log(`[Video] Starte Runway Gen-4 Turbo: "${title || 'Kein Titel'}", ${duration}s, ${resolvedQuality}, ${aspectRatio}`)
   console.log(`[Video] Prompt: ${videoPrompt.slice(0, 120)}...`)
 
+  // Exakte Parameter die an ppq.ai gehen — für Debugging
+  const ppqPayload = {
+    model: 'runway-gen4',
+    prompt: videoPrompt,
+    image_url: imageUrl,
+    aspect_ratio: aspectRatio,
+    duration: String(duration),
+    quality: resolvedQuality
+  }
+  console.log('[Video] ppq.ai Payload:', JSON.stringify(ppqPayload))
+
   try {
     // Schritt 1: Job bei ppq.ai einreichen
-    const submitRes = await axios.post('https://api.ppq.ai/v1/videos', {
-      model: 'runway-gen4',
-      prompt: videoPrompt,
-      image_url: imageUrl,
-      aspect_ratio: aspectRatio,
-      duration: String(duration),
-      quality: resolvedQuality
-    }, {
+    const submitRes = await axios.post('https://api.ppq.ai/v1/videos', ppqPayload, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${ppqKey}`
@@ -493,14 +497,15 @@ app.post('/api/generate-video', async (req, res) => {
     })
 
     const job = submitRes.data
-    console.log(`[Video] Job eingereicht: ${job.id}, Status: ${job.status}`)
+    console.log('[Video] ppq.ai Job-Antwort vollständig:', JSON.stringify(job))
 
     // Job-ID zurückgeben – Frontend pollt dann /api/video-status/:id
     res.json({
       jobId: job.id,
       status: job.status,
       estimatedCost: job.estimated_cost,
-      prompt: videoPrompt
+      prompt: videoPrompt,
+      sentParams: { duration: String(duration), quality: resolvedQuality, aspectRatio }
     })
 
   } catch (error) {
