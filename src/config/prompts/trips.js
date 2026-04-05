@@ -55,12 +55,12 @@ const tripTypeConfig = {
         avoid: 'Kein Van, kein Motorfahrzeug – auf dem Rad unterwegs'
     },
     roadtrip: {
-        vehicle: 'Auto',
+        vehicle: 'Fahrzeug',
         movement: 'Fahren. Kurven. Geraden. Tankstellen.',
-        senses: 'Asphalt der unter den Reifen rauscht, Klimaanlage, Radioempfang der kommt und geht, Raststätten die alle gleich riechen',
+        senses: 'Asphalt der unter den Reifen rauscht, Radioempfang der kommt und geht, Raststätten die alle gleich riechen, das Geräusch des Motors bergauf',
         rhythm: 'Autobahn: kurz kurz kurz. Landstraße: langsamer, der Blick schweift.',
-        gear: 'Auto, Navi, Snacks, Playlist, Sonnenbrille',
-        avoid: 'Kein Van-Innenraum, kein Bett im Fahrzeug – klassischer Roadtrip'
+        gear: 'Fahrzeug, Karte oder Navi, Snacks, Playlist, Sonnenbrille',
+        avoid: 'Keine Van-spezifischen Details – es geht ums Fahren, nicht ums Fahrzeug-Modell'
     },
     eisenbahn: {
         vehicle: 'Zug',
@@ -227,22 +227,22 @@ export const generateTripPrompt = (params) => {
 
         SO KLINGT EIN LÄNGERER FOSTER-TRIP:
         ---
-        Losgefahren um sechs. Kein Grund. Die Straße war da und ich war wach und manchmal reicht das.
+        Losgefahren um sechs. Kein Grund. Die Straße war da und wir waren wach und manchmal reicht das.
 
-        Die ersten Stunden: Autobahn. Leitplanken. Tankstellen die alle gleich aussehen. Leon schläft auf dem Beifahrersitz. Er wacht nur auf bei Raststätten. Pavlov hätte seine Freude.
+        Die ersten Stunden: Autobahn. Leitplanken. Tankstellen die alle gleich aussehen. Susanne schläft. Der Hund schläft. Ich fahre. Der Bus braucht bergauf länger als früher – oder die Berge werden steiler. Beides möglich.
 
-        Dann die Küste. Ich merk es bevor ich es seh. Die Luft ändert sich. Salz. Wind der anders drückt. Der Van fährt seitlich, nur ein bisschen, aber ich merk es am Lenkrad.
+        Dann die Küste. Ich merk es bevor ich es seh. Die Luft ändert sich. Salz. Wind der anders drückt. Der Bus fährt seitlich, nur ein bisschen, aber ich merk es am Lenkrad. Kenn ich.
 
-        Erster Stopp: ein Parkplatz über dem Meer. Keine Ahnung wie der heißt. Kein Schild. Nur Asphalt und dann Klippe und dann Wasser. Ich stehe am Rand und da unten schlägt es weiß gegen den Fels und es ist so laut dass ich nicht denken kann. Gut. Manchmal will ich nicht denken.
+        Erster Stopp: ein Platz über dem Meer. Keine Ahnung wie der heißt. War kein Schild da als wir das letzte Mal hier waren, ist auch jetzt keins. Asphalt, dann Klippe, dann Wasser. Susanne ist schon draußen bevor der Motor aus ist.
 
-        Weitergefahren. Immer an der Küste. Die Straße wird schmaler und die Orte werden kleiner und irgendwann sind es keine Orte mehr sondern nur noch Häuser die zufällig nebeneinander stehen.
+        Weitergefahren. Immer an der Küste. Die Straße wird schmaler und die Orte werden kleiner und irgendwann sind es keine Orte mehr sondern nur noch Häuser die zufällig nebeneinander stehen. Wir kennen das hier. Das macht es nicht langweiliger.
 
-        Der Platz für die Nacht: hinter einer Kirche. Kein Witz. Kleine weiße Kirche, Parkplatz dahinter, Blick aufs Meer. Kein Mensch. Kein Auto. Nur ich und Leon und die Kirche und das Geräusch das Wellen machen wenn niemand zuhört.
+        Der Platz für die Nacht: hinter der Kirche. Kein Witz. Kleine weiße Kirche, Platz dahinter, Blick aufs Meer. Kein Mensch. Kein anderes Fahrzeug. Nur wir und der Hund und das Geräusch das Wellen machen wenn niemand zuhört.
 
-        Kaffee am nächsten Morgen mit Blick auf nichts. Nebel. Alles weg. Die Kirche noch da, der Rest: verschwunden. Als hätte jemand die Welt ausgeschaltet und vergessen das Meer leiser zu drehen.
+        Kaffee am nächsten Morgen mit Blick auf nichts. Nebel. Alles weg. Die Kirche noch da, der Rest verschwunden. Als hätte jemand die Welt ausgeschaltet und vergessen das Meer leiser zu drehen.
         ---
 
-        → Beachte: Stationen sind da (Autobahn → Küste → Parkplatz → Kirchenparkplatz). Aber keine Liste. Eine fließende Bewegung. Das Fahren selbst ist Teil der Erzählung.`
+        → Beachte: Stationen sind da (Autobahn → Küste → Platz → Kirchenparkplatz). Aber keine Liste. Eine fließende Bewegung. Das Fahren ist Teil der Erzählung. "Wir" erzählt – kein Kitsch, nur zwei Menschen in einem Bus.`
     }
 
     // Input-Stärke einschätzen
@@ -321,9 +321,11 @@ ${genderAddition}
     FOSTER'S THEMEN${tripLength !== 'short' ? ' (in längeren Trips hast du Raum für mehrere)' : ''}:
     ${fosterHuntingtonStyle.themes.map(t => `- ${t}`).join('\n')}
     - Zusätzlich bei Trips: ${tripTypeMeta
-        ? `die ${tripTypeMeta.vehicle} als Ort. ${tripTypeMeta.movement} als Zustand. Ankommen und nicht ankommen wollen.`
-        : 'die Straße als Ort. Das Fahren als Zustand. Ankommen und nicht ankommen wollen.'
+        ? `die ${tripTypeMeta.vehicle} als Ort. ${tripTypeMeta.movement} als Zustand. Ankommen ohne Drama.`
+        : 'die Straße als Ort. Das Fahren als Zustand. Ankommen ohne Drama – einfach da. Motor aus. Kennen wir.'
     }
+    - Wiederholte Orte: wir waren hier schon. Was hat sich verändert. Was ist gleich geblieben. Beides beiläufig.
+    - Das Fahrzeug über die Jahre: Geräusche die neu sind, Geräusche die bleiben, Dinge die man nicht mehr merkt weil sie immer da waren.
 
     WAS FOSTER NIE TUN WÜRDE – EGAL BEI WELCHER LÄNGE:
     ${fosterHuntingtonStyle.avoid.map(a => `- ${a}`).join('\n')}
@@ -334,6 +336,8 @@ ${genderAddition}
     - Aufzählungen: "Unsere Stationen waren: 1. ... 2. ... 3. ..."
     - Das Erlebnis labeln: "Das war der schönste Moment der Reise"
     - Motivations-Sätze: "Einfach mal machen!", "Das Leben ist eine Reise"
+    - Ankunfts-Dramaturgie: "Endlich waren wir da", "Nach langer Fahrt erreichten wir...", "Es war ein weiter Weg aber..." – ankommen ohne Aufhebens
+    - Erstaunen das nicht echt ist: "Wir konnten es kaum glauben", "Wir standen sprachlos" – wenn man dieselbe Küste zum dritten Mal sieht, kennt man sie
     - Ausrufezeichen. Nie.
 
     SCHREIBE ÜBER: "${title}"${description ? `\n"${description}"` : ''}
@@ -437,8 +441,8 @@ export const getTripImageAnalysisPrompt = (lifestyleConfig, tripLength = 'medium
             ? `"Person mit Rucksack auf Bergpfad, Schotter, steil. Kiefernwald links, Felsen rechts. Bewölkt, diffuses Licht. Wanderstöcke sichtbar. Keine anderen Personen. Aufstieg erkennbar an Körperhaltung."`
             : `"Person auf Wanderweg. Berglandschaft, Felsen. Rucksack sichtbar. Bewölkt."`)
         : (isLong
-            ? `"Van auf Küstenstraße, Asphalt, einspurig. Klippen rechts, Meer links. Bewölkt, Wind erkennbar an Gras am Straßenrand. Schiebetür halb offen, Gaskocher sichtbar. Keine anderen Fahrzeuge. Nachmittag, diffuses Licht."`
-            : `"Van am Straßenrand. Schotterweg, Küste im Hintergrund. Bewölkt. Schiebetür offen."`)
+            ? `"Großer Oldtimer-Bus auf Küstenstraße, Asphalt, einspurig. Klippen rechts, Meer links. Bewölkt, Wind erkennbar an Gras am Straßenrand. Tür offen, Gaskocher sichtbar. Keine anderen Fahrzeuge. Nachmittag, diffuses Licht. Zwei Personen außerhalb des Fahrzeugs."`
+            : `"Bus am Straßenrand. Schotterweg, Küste im Hintergrund. Bewölkt. Tür offen."`)
 
     return `${basePrompt}${longAdditions}
 

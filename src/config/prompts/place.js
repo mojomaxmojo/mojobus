@@ -82,9 +82,9 @@ Praktische Infos gehören dazu – aber beiläufig, nicht als Liste.
 
 SO KLINGT DAS:
 ---
-"Schotterplatz hinter einer Tankstelle. Klingt schlimmer als es ist. Zehn Meter weiter fängt der Strand an. Kein Wasser, kein Strom, kein Mensch nach acht. Nachts höre ich nur Wellen und den Generator vom Nachbarn der um zehn ausgeht."
+"Schotterplatz hinter einer Tankstelle. Klingt schlimmer als es ist. Zehn Meter weiter fängt der Strand an. Kein Wasser, kein Strom, kein Mensch nach acht. Nachts nur Wellen und der Generator vom Nachbarn der um zehn ausgeht."
 ---
-"Feldweg, dann nochmal Feldweg, dann ein Parkplatz der keiner ist. Gras durch den Asphalt. Drei Vans passen hin, vielleicht vier wenn einer klein ist. Morgens kommt ein Bauer mit Traktor. Er nickt. Ich nicke. Das wars an sozialer Interaktion."
+"Feldweg, dann nochmal Feldweg, dann ein Platz der keiner ist. Gras durch den Asphalt. Ein Bus wie unserer passt rein wenn der Boden fest ist. Heute ist er fest. Morgens kommt ein Bauer mit Traktor. Er nickt. Wir nicken. Das wars an sozialer Interaktion."
 ---
 
 FOSTER'S STIMME:
@@ -106,7 +106,7 @@ NICHT SO:
 "Einrichtungen: kein Wasser, kein Strom. Zufahrt: Schotter, 2km. Eignung: Van, Bulli."
 
 SONDERN SO:
-"Kein Wasser. Nächster Ort fünf Kilometer, kleiner Laden, hat aber nicht immer auf. Die Zufahrt ist Schotter, die letzten hundert Meter holprig. Mit nem großen Wohnmobil wird das eng."
+"Kein Wasser. Nächster Ort fünf Kilometer, kleiner Laden, hat aber nicht immer auf. Die Zufahrt ist Schotter, die letzten hundert Meter holprig. Mit einem großen Bus wird das eng – oder auch nicht, kommt auf den Fahrer an."
 
 → Die Info ist da. Aber sie klingt wie ein Mensch der erzählt, nicht wie ein Formular.
 
@@ -158,11 +158,11 @@ export const getPlaceImageAnalysisPrompt = (lifestyleConfig) => {
   return `Beschreibe dieses Bild sachlich für eine ${lifestyleConfig.vehicle}-Platzbeschreibung.
 
 NENNE (nur was sichtbar ist):
-- Boden: Asphalt, Schotter, Gras, Sand, Zustand
-- Größe: Platz für wie viele Fahrzeuge (geschätzt)
+- Boden: Asphalt, Schotter, Gras, Sand, Zustand (fest/weich/uneben)
+- Größe: Platz für wie viele Fahrzeuge (geschätzt), Relevanz für große Fahrzeuge (10m+)
 - Umgebung: Natur, Bebauung, Strand, Wald, Straße
 - Infrastruktur: Wasserhahn, Mülleimer, Toiletten, Strom (wenn sichtbar)
-- Zufahrt: erkennbare Straße, Breite, Zustand
+- Zufahrt: erkennbare Straße, Breite, Zustand – relevant für große schwere Fahrzeuge
 
 FORMAT: 2-3 sachliche Sätze. Präzise.
 NUR beschreiben was du SIEHST.
@@ -173,5 +173,5 @@ VERBOTEN:
 - Werbesprache: "traumhaft gelegen", "perfekter Spot"
 
 BEISPIEL:
-"Schotterplatz, ebenerdig, Platz für ca. 5 Fahrzeuge. Keine sichtbare Infrastruktur. 50m zum Wasser, Vegetation niedrig. Zufahrt einspurig, Asphalt."`
+"Schotterplatz, ebenerdig, Platz für ca. 3-4 große Fahrzeuge. Keine sichtbare Infrastruktur. 50m zum Wasser, Vegetation niedrig. Zufahrt einspurig, Asphalt, Breite ausreichend für Fahrzeuge bis 10m."`
 }

@@ -115,20 +115,20 @@ export const generateArticlePrompt = (params) => {
 
         UND SO KLINGT FOSTER IN LÄNGERER FORM:
         ---
-        Ich bin losgefahren ohne Grund. Oder mit zu vielen Gründen, was auf das Gleiche rauskommt. Der Van stand gepackt seit einer Woche. Irgendwann muss ich einfach den Schlüssel drehen.
+        Wir kennen diesen Ort. Oder wir glauben es. Susanne sagt, letztes Mal war die Bäckerei noch offen. Das war vor zwei Jahren. Vielleicht drei. Die Bäckerei ist zu. Die Tür hat eine neue Farbe.
 
-        Die ersten hundert Kilometer: nichts. Autobahn, Tankstelle, Autobahn. Das Radio geht nicht mehr seit Portugal. Stille also. Leon auf dem Beifahrersitz, Nase am Fenster.
+        Der Bus steht auf demselben Platz. Gras durch den Asphalt. Mehr als damals. Der Bus passt noch rein. Passt immer noch.
 
-        Dann die Abfahrt. Irgendeine Nummer, irgendein Ort. Du biegst ab weil die Straße schmaler wird und schmalere Straßen meistens besser sind. Nicht immer. Aber meistens.
+        Ich mach Kaffee. Nicht weil ich Kaffee will. Weil es das Ritual ist. Motor aus, Kaffee machen, sitzen. Dann sind wir da. Susanne sitzt schon.
 
-        Der Platz am Ende der Straße war kein Platz. Nur ein Stück Erde wo die Straße aufhört. Gras, ein paar Steine, dahinter Wasser. Kein Schild. Kein Mensch. Das Geräusch wenn der Motor aus ist und die Welt wieder anfängt.
+        Das Geräusch wenn der Motor aus ist. Die Welt fängt wieder an. Zuerst Wind. Dann Vögel. Dann das Knacken der Karosserie wenn der Motor sich abkühlt. Sechsunddreißig Jahre. Das Knacken ist immer gleich.
 
-        Ich hab den Stuhl rausgestellt und Kaffee gemacht. Nicht weil ich Kaffee wollte. Weil es ein Ritual ist. Ankommen, Kaffee machen, sitzen. Dann bin ich da.
+        Der Hund gräbt ein Loch. Dann noch eins. Dann legt er sich in das erste. Hunde haben das System besser verstanden. Du kommst an. Du gräbst dein Loch. Du legst dich rein. Fertig.
 
-        Leon hat ein Loch gegraben. Dann noch eins. Dann hat er sich in das erste gelegt. Hunde haben das System besser verstanden als wir. Du kommst an. Du gräbst dein Loch. Du legst dich rein. Fertig.
+        Wir sitzen bis es dunkel wird. Reden nicht viel. Das Meer ist da. Es war gestern auch da. Es wird morgen auch da sein. Das reicht.
         ---
 
-        → Beachte: Kurze Sätze BLEIBEN kurz. Aber es gibt MEHR davon. Mehr Beobachtungen. Mehr Raum für den Hund, den Kaffee, das Geräusch. Jeder Absatz ist eine eigene Szene.`
+        → Beachte: Kurze Sätze BLEIBEN kurz. Aber es gibt MEHR davon. Mehr Beobachtungen. Mehr Raum für das Geräusch, den Kaffee, den Hund, das Schweigen zwischen zwei Menschen. Jeder Absatz eine eigene Szene.`
     }
 
     // Input-Stärke einschätzen für dynamische Anweisung
@@ -219,7 +219,7 @@ ${genderAddition}
     Nicht mitten in einen Satz. Nicht am Anfang. Nicht am Ende nach den Hashtags.
 
     BEISPIEL wie Platzhalter im Text stehen:
-    "Der Van stand wo die Straße aufhört. Nichts dahinter außer Wasser.
+    "Der Bus stand wo die Straße aufhört. Nichts dahinter außer Wasser.
 
     [BILD_1]
 
@@ -297,7 +297,7 @@ export const getArticleImageAnalysisPrompt = (lifestyleConfig, articleLength = '
 
     BEISPIEL:
     ${isLong
-        ? '"Innenraum eines ausgebauten Vans. Holzverkleidung an den Wänden, Bett im hinteren Bereich mit grauer Decke. Auf der Küchenzeile links: Gaskocher, Bialetti, offenes Buch. Schiebetür offen, draußen Wiese und Nebel. Morgens oder abends, diffuses Licht. Ein Hund liegt auf dem Bett, mittelgroß, braun."'
+        ? '"Innenraum eines großen Oldtimer-Busses. Holzverkleidung an den Wänden, Bett im hinteren Bereich mit grauer Decke. Auf der Küchenzeile links: Gaskocher, Bialetti, offenes Buch. Tür offen, draußen Wiese und Nebel. Morgens oder abends, diffuses Licht. Ein Hund liegt auf dem Bett, mittelgroß, braun. Zwei Tassen auf dem Tisch."'
         : '"Solarpanel auf Fahrzeugdach. Kabel lose, nicht befestigt. Bewölkter Himmel. Eine Person arbeitet mit Schraubendreher am Anschluss."'}`
 }
 

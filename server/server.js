@@ -93,7 +93,7 @@ const safelyParseJSON = (str) => {
 // - generatePlacePrompt() → Plätze-Tab (place.js)
 
 // ===== KI-MODELL FUNKTION =====
-const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'vanlife', options = {}) => {
+const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'mojobus', options = {}) => {
   const startTime = Date.now()
   const lifestyleConfig = getLifestyleConfig(lifestyle)
 
@@ -170,8 +170,8 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
   const text = sanitizeInput(req.body.text) || 'Abenteuer Reise Freiheit'
   const location = sanitizeInput(req.body.location) || 'Unbekannt'
   const model = req.body.model || 'llama4' // Modell-Auswahl
-  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife' // Lifestyle-Typ
-  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'mojobus' // Lifestyle-Typ
+  const gender = sanitizeInput(req.body.gender) || 'couple' // Gender: neutral/male/female/couple
   const images = req.files
 
   // Zusätzliche Kontext-Felder für bessere KI-Generierung
@@ -328,8 +328,8 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
   const startDate = sanitizeInput(req.body.startDate) || ''
   const endDate = sanitizeInput(req.body.endDate) || ''
   const model = req.body.model || 'llama4' // Modell-Auswahl
-  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife' // Lifestyle-Typ
-  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'mojobus' // Lifestyle-Typ
+  const gender = sanitizeInput(req.body.gender) || 'couple' // Gender: neutral/male/female/couple
   const images = req.files
 
   // Zusätzliche Kontext-Felder
@@ -462,6 +462,7 @@ app.post('/api/generate-video', async (req, res) => {
 
   // Video-Prompt automatisch aus Artikeldaten aufbauen
   const lifestyleMap = {
+    mojobus: 'vintage US bus life, oldtimer bus on the road, slow travel couple',
     vanlife: 'vanlife, van life on wheels, road trip',
     rvlife: 'RV life, recreational vehicle adventure',
     beachlife: 'beach life, surf and sun lifestyle',
@@ -654,6 +655,7 @@ const ASPECT_SIZES = {
 
 // ── Lifestyle → ElevenLabs Musik-Prompt ───────────────────────────────────
 const LIFESTYLE_MUSIC_PROMPTS = {
+  mojobus:             'vintage americana, slow road trip blues, diesel engine hum, open highway, worn guitar, warm and weathered',
   vanlife:             'chill acoustic guitar, road trip vibes, slow tempo, warm sunset atmosphere, indie folk',
   rvlife:              'americana country folk, open road, relaxed tempo, guitar and harmonica',
   beachlife:           'tropical chill, reggae influence, ocean waves, summer vibes, laid back',
@@ -688,7 +690,7 @@ async function downloadImage(url, destPath) {
 
 // ── ElevenLabs Musik generieren via ppq.ai ────────────────────────────────
 async function generateElevenLabsMusic(lifestyle, durationSeconds, ppqKey) {
-  const prompt = LIFESTYLE_MUSIC_PROMPTS[lifestyle] || LIFESTYLE_MUSIC_PROMPTS['vanlife']
+  const prompt = LIFESTYLE_MUSIC_PROMPTS[lifestyle] || LIFESTYLE_MUSIC_PROMPTS['mojobus']
   console.log(`[Slideshow] ElevenLabs Musik generieren: "${prompt}"`)
 
   const response = await axios.post('https://api.ppq.ai/v1/audio/generations', {
@@ -919,7 +921,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
   const {
     imageUrls,                    // Array von Bild-URLs
     musicMode = 'local',          // 'local' | 'elevenlabs'
-    lifestyle = 'vanlife',
+    lifestyle = 'mojobus',
     aspectRatio = '16:9',
     imageDuration = 4,            // Sekunden pro Bild
   } = req.body
@@ -1047,8 +1049,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   // text NICHT durch sanitizeInput kürzen – der User-Text kann länger als 500 Zeichen sein
   const text = (req.body.text || '').trim()
   const model = req.body.model || 'llama4'
-  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
-  const gender = sanitizeInput(req.body.gender) || 'neutral' // Gender: neutral/male/female
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'mojobus'
+  const gender = sanitizeInput(req.body.gender) || 'couple' // Gender: neutral/male/female/couple
   const images = req.files
 
   // Zusätzliche Kontext-Felder
@@ -1201,8 +1203,8 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
   const gps_lat = sanitizeInput(req.body.gps_lat) || ''
   const gps_lon = sanitizeInput(req.body.gps_lon) || ''
   const model = req.body.model || 'llama4'
-  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
-  const gender = sanitizeInput(req.body.gender) || 'neutral'
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'mojobus'
+  const gender = sanitizeInput(req.body.gender) || 'couple'
   const images = req.files
 
   // Kontext-Felder
@@ -1370,8 +1372,8 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
   // text NICHT kürzen – User-Notiztext kann relevant lang sein
   const text = (req.body.text || '').trim()
   const model = req.body.model || 'llama4'
-  const lifestyle = sanitizeInput(req.body.lifestyle) || 'vanlife'
-  const gender = sanitizeInput(req.body.gender) || 'neutral'
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'mojobus'
+  const gender = sanitizeInput(req.body.gender) || 'couple'
   const images = req.files
 
   // Zusätzliche Kontext-Felder
@@ -1448,7 +1450,7 @@ app.post('/api/debug-video', async (req, res) => {
   try {
     const response = await axios.post('https://api.ppq.ai/v1/videos', {
       model: 'kling-2.5-turbo-i2v',
-      prompt: 'Cinematic travel video, vanlife, smooth camera movement, golden light',
+      prompt: 'Cinematic travel video, vintage bus road trip, smooth camera movement, golden light',
       image_url: req.body.imageUrl || 'https://picsum.photos/800/450',
       aspect_ratio: '16:9',
       duration: '10'

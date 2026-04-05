@@ -12,6 +12,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import exifr from 'exifr';
+import { SlideshowBlock } from '@/components/SlideshowBlock';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -1750,6 +1751,13 @@ export function TripPublishForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Slideshow */}
+      <SlideshowBlock
+        imageUrls={stations.map(s => s.preview).filter(Boolean)}
+        lifestyle={lifestyle}
+        title={tripData.title || 'trip'}
+      />
 
       {/* Navigation */}
       <div className="flex justify-between">

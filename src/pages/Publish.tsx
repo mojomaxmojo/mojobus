@@ -30,6 +30,7 @@ import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
 import { MilkdownEditor } from '@/components/MilkdownEditor';
 import { TripPublishForm } from '@/components/TripPublishForm';
+import { SlideshowBlock } from '@/components/SlideshowBlock';
 import { Progress } from '@/components/ui/progress';
 import { extractGpsFromImage, formatCoordinatesSimple, reverseGeocode, mapCountryCode, type GpsData, type GpsStatus, type LocationData } from '@/lib/gpsExtraction';
 import exifr from 'exifr';
@@ -1528,6 +1529,13 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             </Card>
           )}
 
+          {/* Slideshow */}
+          <SlideshowBlock
+            imageUrls={imageUrls}
+            lifestyle={lifestyle}
+            title={title || 'medien'}
+          />
+
           <Button
             onClick={handleSubmit}
             className="w-full"
@@ -2508,6 +2516,13 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
           selectedCountry={selectedCountry}
           onCountryChange={setSelectedCountry}
           placeholder="Land auswaehlen"
+        />
+
+        {/* Slideshow */}
+        <SlideshowBlock
+          imageUrls={imageUrls}
+          lifestyle={lifestyle}
+          title={content.slice(0, 40) || 'note'}
         />
 
         <div className="flex items-center justify-between">
@@ -3673,6 +3688,13 @@ Beschreibe hier den Ort, was macht ihn besonders...
             </div>
           )}
         </div>
+
+        {/* Slideshow */}
+        <SlideshowBlock
+          imageUrls={[...(image ? [image] : []), ...additionalImages]}
+          lifestyle="vanlife"
+          title={name || 'ort'}
+        />
 
         <Button onClick={handleSubmit} className="w-full" disabled={!name.trim()}>
           <Map className="h-4 w-4 mr-2" />
@@ -5068,7 +5090,13 @@ Schreibe deinen Artikel hier...
         {/* ── Ende Video-Generator ─────────────────────────────────────────── */}
 
         {/* ── 🎞️ Slideshow Generator ────────────────────────────────────── */}
-        <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+        <SlideshowBlock
+          imageUrls={[...(image ? [image] : []), ...extractImageUrlsFromMarkdown(content)]}
+          lifestyle={lifestyle}
+          title={title || 'bericht'}
+        />
+        {/* ALT — wird nicht mehr angezeigt, ersetzt durch SlideshowBlock */}
+        <div className="hidden">
           {/* Header mit An/Abwahl Toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -5284,7 +5312,7 @@ Schreibe deinen Artikel hier...
             </div>
           )}
         </div>
-        {/* ── Ende Slideshow-Generator ──────────────────────────────────── */}
+        {/* ── Ende Slideshow-Generator (alt, hidden) ───────────────────── */}
 
         {/* Automatisch generierte Tags anzeigen */}
         {(isDIYCategory || isLeonCategory || isRVLifeCategory) && (

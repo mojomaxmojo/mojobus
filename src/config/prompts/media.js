@@ -131,7 +131,7 @@ VERBOTEN:
 - Interpretationen: "genießt", "fühlt sich frei"
 
 BEISPIEL:
-"Strand bei Dämmerung. Fahrzeug am Wasser, Schiebetür offen. Person auf der Kante, Hund daneben. Bewölkt, windig."`
+"Strand bei Dämmerung. Großer Bus am Wasser, Tür offen. Zwei Personen und ein Hund davor. Bewölkt, windig."}`
 }
 
 /**
@@ -163,5 +163,5 @@ VERBOTEN:
 - Marketing-Sprache: "einzigartig", "magisch", "unvergesslich"
 
 BEISPIEL:
-"Morgens, Küste. Fahrzeug steht auf Sand, Türen offen. Person bereitet Kaffee auf Campingkocher. Hund läuft am Wasser. Bewölkt, windig. Nachmittags: Fahrzeug auf Parkplatz, Person liest im Liegestuhl. Abends: Lagerfeuer, Sterne sichtbar."`
+"Morgens, Küste. Großer Bus steht auf Schotter, Tür offen. Zwei Personen bereiten Kaffee auf Campingkocher vor. Hund läuft am Wasser. Bewölkt, windig. Nachmittags: Bus auf Feldweg geparkt, Person liest außerhalb im Liegestuhl. Abends: Lagerfeuer, Sterne sichtbar."}`
 }
