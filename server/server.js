@@ -886,20 +886,16 @@ async function runSlideshowJob(jobId, params) {
 
     await execFileAsync(FFMPEG, ffmpegArgs, { timeout: 300000 }) // max 5 Min.
 
-    updateJob({ status: 'uploading', progress: 85 })
     console.log(`[Slideshow] ffmpeg fertig: ${outputPath}`)
 
-    // ── Schritt 4: Video-Datei lesen + Base64 für Rückgabe ────────────────
-    // Wir geben den Pfad zurück — Blossom-Upload passiert im Frontend
-    const videoBuffer = fs.readFileSync(outputPath)
-    const videoBase64 = videoBuffer.toString('base64')
-    const videoSizeMB = (videoBuffer.length / 1024 / 1024).toFixed(2)
+    const videoSizeMB = (fs.statSync(outputPath).size / 1024 / 1024).toFixed(2)
     console.log(`[Slideshow] Video: ${videoSizeMB}MB`)
 
+    // Video bleibt auf Disk — Frontend downloadet via /api/slideshow-download/:jobId
     updateJob({
       status: 'completed',
       progress: 100,
-      videoBase64,
+      outputPath,   // Disk-Pfad für Download-Endpoint
       videoSizeMB,
       imageCount: imagePaths.length,
       musicUsed: musicPath ? path.basename(musicPath) : null,
@@ -910,10 +906,11 @@ async function runSlideshowJob(jobId, params) {
     console.error(`[Slideshow] Job ${jobId} fehlgeschlagen:`, err.message)
     updateJob({ status: 'failed', error: err.message })
   } finally {
-    // Temp-Ordner nach 10 Min. aufräumen
+    // Temp-Ordner nach 15 Min. aufräumen (genug Zeit für Download + Blossom-Upload)
     setTimeout(() => {
       try { fs.rmSync(jobDir, { recursive: true, force: true }) } catch {}
-    }, 10 * 60 * 1000)
+      slideshowJobs.delete(jobId)
+    }, 15 * 60 * 1000)
   }
 }
 
@@ -980,31 +977,53 @@ app.get('/api/slideshow-status/:jobId', (req, res) => {
   const job = slideshowJobs.get(jobId)
 
   if (!job) {
-    return res.status(404).json({ error: 'Job nicht gefunden.' })
+    return res.status(404).json({ error: 'Job nicht gefunden oder bereits abgelaufen.' })
   }
 
   if (job.status === 'completed') {
-    // Base64 Video zurückgeben
     res.json({
       status: 'completed',
       progress: 100,
-      videoBase64: job.videoBase64,
       videoSizeMB: job.videoSizeMB,
       imageCount: job.imageCount,
       musicUsed: job.musicUsed,
-      totalDuration: job.totalDuration
+      totalDuration: job.totalDuration,
+      downloadUrl: `/api/slideshow-download/${jobId}`  // Frontend lädt hier herunter
     })
-    // Job nach Abruf aus Memory entfernen (Base64 ist groß)
-    setTimeout(() => slideshowJobs.delete(jobId), 60000)
   } else if (job.status === 'failed') {
     res.json({ status: 'failed', error: job.error })
     slideshowJobs.delete(jobId)
   } else {
+    // Noch in Arbeit — Status + Phase zurückgeben
     res.json({
       status: job.status,
       progress: job.progress
     })
   }
+})
+
+// ── GET /api/slideshow-download/:jobId ───────────────────────────────────
+// Liefert das fertige MP4 direkt als Datei-Stream
+app.get('/api/slideshow-download/:jobId', (req, res) => {
+  const { jobId } = req.params
+  const job = slideshowJobs.get(jobId)
+
+  if (!job || job.status !== 'completed' || !job.outputPath) {
+    return res.status(404).json({ error: 'Video nicht gefunden oder noch nicht fertig.' })
+  }
+  if (!fs.existsSync(job.outputPath)) {
+    return res.status(410).json({ error: 'Video bereits gelöscht (15 Min. Limit).' })
+  }
+
+  const filename = `slideshow-${jobId}.mp4`
+  console.log(`[Slideshow] Download: ${filename} (${job.videoSizeMB}MB)`)
+
+  res.setHeader('Content-Type', 'video/mp4')
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+  res.setHeader('Content-Length', fs.statSync(job.outputPath).size)
+
+  const stream = fs.createReadStream(job.outputPath)
+  stream.pipe(res)
 })
 
 // Alte Jobs alle 30 Min. aufräumen (Memory Leak Prevention)

@@ -3988,12 +3988,14 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
         setSlideshowProgress(pollData.progress || 0);
 
-        if (pollData.status === 'completed' && pollData.videoBase64) {
-          // Base64 → Blob → Object URL für Preview
-          const blob = await (await fetch(`data:video/mp4;base64,${pollData.videoBase64}`)).blob();
-
-          // Zu Blossom hochladen
+        if (pollData.status === 'completed' && pollData.downloadUrl) {
+          // Video direkt vom Server downloaden (kein Base64)
           toast({ title: '📤 Lade zu Blossom hoch...', description: `${pollData.videoSizeMB}MB · ${pollData.imageCount} Bilder` });
+
+          const videoRes = await fetch(pollData.downloadUrl);
+          if (!videoRes.ok) throw new Error(`Download fehlgeschlagen: ${videoRes.status}`);
+          const blob = await videoRes.blob();
+
           const safeTitle = (title || 'slideshow').replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40);
           const videoFile = new File([blob], `${safeTitle}-slideshow.mp4`, { type: 'video/mp4' });
           const blossomTags = await uploadFile(videoFile);
@@ -4002,9 +4004,10 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
           setSlideshowVideoUrl(blossomUrl);
           setSlideshowStatus('completed');
+          setSlideshowProgress(100);
           toast({
-            title: '✅ Slideshow fertig!',
-            description: `${pollData.totalDuration}s Video · Musik: ${pollData.musicUsed || 'keine'} · auf Blossom gespeichert`
+            title: '✅ Slideshow auf Blossom gespeichert!',
+            description: `${pollData.totalDuration}s · ${pollData.imageCount} Bilder · Musik: ${pollData.musicUsed || 'keine'}`
           });
           return;
 
