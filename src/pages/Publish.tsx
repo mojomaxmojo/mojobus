@@ -3846,12 +3846,60 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         const pollData = await pollRes.json();
 
         if (pollData.status === 'completed' && pollData.videoUrl) {
-          setGeneratedVideoUrl(pollData.videoUrl);
-          setVideoProgress('completed');
+          const ppqUrl = pollData.videoUrl;
+          const cost = pollData.cost;
+
           toast({
-            title: '✅ Video fertig!',
-            description: `Kosten: ~$${pollData.cost?.toFixed(4) || '–'}. Video kann jetzt in den Artikel eingebettet werden.`
+            title: '🎬 Video fertig! Lade zu Blossom hoch...',
+            description: `Kosten: ~$${cost?.toFixed(4) || '–'}. Wird permanent gespeichert...`
           });
+
+          // ── Automatisch zu Blossom hochladen ──────────────────────────
+          // ppq.ai URLs laufen nach 24h ab → permanent auf Blossom speichern
+          try {
+            // 1. Video von ppq.ai als Blob downloaden (via CORS-Proxy falls nötig)
+            setVideoProgress('processing'); // Zeige noch "läuft" während Upload
+            const videoRes = await fetch(ppqUrl);
+            if (!videoRes.ok) throw new Error(`Video-Download fehlgeschlagen: ${videoRes.status}`);
+            const videoBlob = await videoRes.blob();
+
+            // 2. Blob → File (mp4)
+            const safeTitle = (title || 'video').replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40);
+            const videoFile = new File(
+              [videoBlob],
+              `${safeTitle}-runway-gen4.mp4`,
+              { type: 'video/mp4' }
+            );
+
+            console.log(`[Video] Lade ${(videoFile.size / 1024 / 1024).toFixed(2)}MB zu Blossom hoch...`);
+
+            // 3. Zu Blossom hochladen (gleicher Hook wie Bilder)
+            const blossomTags = await uploadFile(videoFile);
+            const blossomUrl = blossomTags.find(
+              (tag: string[]) => Array.isArray(tag) && tag[0] === 'url'
+            )?.[1];
+
+            if (!blossomUrl) throw new Error('Keine Blossom-URL erhalten');
+
+            console.log(`[Video] Blossom Upload erfolgreich: ${blossomUrl}`);
+            setGeneratedVideoUrl(blossomUrl);
+            setVideoProgress('completed');
+            toast({
+              title: '✅ Video auf Blossom gespeichert!',
+              description: `Permanent verfügbar · Kosten: ~$${cost?.toFixed(4) || '–'}`
+            });
+
+          } catch (uploadErr: any) {
+            // Blossom-Upload fehlgeschlagen → trotzdem ppq.ai URL verwenden (temporär)
+            console.warn('[Video] Blossom-Upload fehlgeschlagen, verwende ppq.ai URL:', uploadErr.message);
+            setGeneratedVideoUrl(ppqUrl);
+            setVideoProgress('completed');
+            toast({
+              title: '⚠️ Video fertig (temporäre URL)',
+              description: `Blossom-Upload fehlgeschlagen: ${uploadErr.message}. URL läuft in 24h ab!`,
+              variant: 'destructive'
+            });
+          }
           return;
         } else if (pollData.status === 'failed') {
           throw new Error(pollData.error || 'Video-Generierung fehlgeschlagen.');
@@ -4862,7 +4910,12 @@ Schreibe deinen Artikel hier...
                 {isGeneratingVideo ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {videoProgress === 'submitting' ? 'Job wird eingereicht...' : 'Video wird generiert (~30–90 Sek.)...'}
+                    {videoProgress === 'submitting'
+                      ? 'Job wird eingereicht...'
+                      : videoProgress === 'processing' && videoJobId
+                        ? 'Video wird generiert (~30–90 Sek.)...'
+                        : 'Zu Blossom hochladen...'
+                    }
                   </>
                 ) : (
                   <>
@@ -4883,7 +4936,11 @@ Schreibe deinen Artikel hier...
                 <div className="space-y-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                   <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
                     <CheckCircle className="h-4 w-4" />
-                    <span className="font-medium text-sm">Video erfolgreich generiert!</span>
+                    <span className="font-medium text-sm">
+                      {generatedVideoUrl.includes('ppq.ai')
+                        ? '⚠️ Video generiert (temporäre URL — 24h)'
+                        : '✅ Video auf Blossom gespeichert (permanent)'}
+                    </span>
                   </div>
                   <video
                     src={generatedVideoUrl}
