@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Route, Sparkles } from '@/lib/icons';
+import { FileText, MessageSquare, Map, Upload, UploadCloud, ImageIcon, Video, Music, File as FileIcon, Camera, MapPin, Calendar, Tag, Battery, Sun, Wrench, Hammer, Cpu, Mountain, Lightbulb, Dog, Trees, Droplets, Waves, Eye, Loader2, CheckCircle, Route, Sparkles } from '@/lib/icons';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -139,7 +139,7 @@ const mediaTypes = [
   { type: 'image', label: 'Bilder', icon: ImageIcon, extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'], accept: 'image/*' },
   { type: 'video', label: 'Videos', icon: Video, extensions: ['mp4', 'mov', 'webm'], accept: 'video/*' },
   { type: 'audio', label: 'Audio', icon: Music, extensions: ['mp3', 'wav', 'm4a'], accept: 'audio/*' },
-  { type: 'document', label: 'Dokumente', icon: File, extensions: ['pdf', 'kml', 'gpx'], accept: '.pdf,.kml,.gpx' }
+  { type: 'document', label: 'Dokumente', icon: FileIcon, extensions: ['pdf', 'kml', 'gpx'], accept: '.pdf,.kml,.gpx' }
 ];
 
 // Media Categories - TODO: Move to config file
@@ -873,7 +873,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                       <div className="w-full h-32 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
                         {file.type === 'video' && <Video className="h-8 w-8 text-gray-400" />}
                         {file.type === 'audio' && <Music className="h-8 w-8 text-gray-400" />}
-                        {file.type === 'document' && <File className="h-8 w-8 text-gray-400" />}
+                        {file.type === 'document' && <FileIcon className="h-8 w-8 text-gray-400" />}
                       </div>
                     )}
                    <div className="p-2 space-y-1">
