@@ -3761,7 +3761,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [articleLength, setArticleLength] = useState<'short' | 'medium' | 'long'>('medium');
-  // Video-Generator State
+  // Kling Video-Generator State
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
@@ -3769,6 +3769,17 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [videoProgress, setVideoProgress] = useState<'idle' | 'submitting' | 'processing' | 'completed' | 'failed'>('idle');
   const [videoDuration, setVideoDuration] = useState<'5' | '10'>('10');
   const [videoAspect, setVideoAspect] = useState<'16:9' | '9:16'>('16:9');
+
+  // Slideshow-Generator State
+  const [slideshowEnabled, setSlideshowEnabled] = useState(false);
+  const [slideshowMusicMode, setSlideshowMusicMode] = useState<'local' | 'elevenlabs'>('local');
+  const [slideshowAspect, setSlideshowAspect] = useState<'16:9' | '9:16' | '1:1'>('16:9');
+  const [slideshowImgDuration, setSlideshowImgDuration] = useState<3 | 4 | 5>(4);
+  const [isGeneratingSlideshow, setIsGeneratingSlideshow] = useState(false);
+  const [slideshowJobId, setSlideshowJobId] = useState<string | null>(null);
+  const [slideshowProgress, setSlideshowProgress] = useState(0);
+  const [slideshowStatus, setSlideshowStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
+  const [slideshowVideoUrl, setSlideshowVideoUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -3927,6 +3938,98 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     const videoMarkdown = `\n\n<video src="${generatedVideoUrl}" controls autoplay muted loop style="width:100%;border-radius:8px;"></video>\n\n`;
     setContent(prev => prev + videoMarkdown);
     toast({ title: '✅ Video eingebettet', description: 'Das Video wurde am Ende des Artikels eingefügt.' });
+  };
+
+  // ── Slideshow Generator ────────────────────────────────────────────────
+  const generateSlideshow = async () => {
+    // Alle Bilder sammeln: Titelbild + Markdown-Bilder
+    const markdownUrls = extractImageUrlsFromMarkdown(content);
+    const allImages = [...(image ? [image] : []), ...markdownUrls];
+
+    if (allImages.length === 0) {
+      toast({ title: 'Keine Bilder', description: 'Lade ein Titelbild hoch oder füge Bilder in den Artikel ein.', variant: 'destructive' });
+      return;
+    }
+
+    setIsGeneratingSlideshow(true);
+    setSlideshowStatus('running');
+    setSlideshowProgress(0);
+    setSlideshowVideoUrl(null);
+    setSlideshowJobId(null);
+
+    try {
+      // Job starten
+      const res = await fetch('/api/generate-slideshow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrls: allImages,
+          musicMode: slideshowMusicMode,
+          lifestyle,
+          aspectRatio: slideshowAspect,
+          imageDuration: slideshowImgDuration,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      setSlideshowJobId(data.jobId);
+      toast({
+        title: '🎬 Slideshow wird erstellt...',
+        description: `${data.imageCount} Bilder · ${data.totalDuration}s · Musik: ${slideshowMusicMode === 'elevenlabs' ? 'KI ($0.50)' : 'Lokal (gratis)'}`
+      });
+
+      // Polling alle 3 Sekunden
+      let attempts = 0;
+      const poll = async (): Promise<void> => {
+        if (attempts++ > 100) throw new Error('Timeout nach 5 Minuten.');
+        const pollRes = await fetch(`/api/slideshow-status/${data.jobId}`);
+        const pollData = await pollRes.json();
+
+        setSlideshowProgress(pollData.progress || 0);
+
+        if (pollData.status === 'completed' && pollData.videoBase64) {
+          // Base64 → Blob → Object URL für Preview
+          const blob = await (await fetch(`data:video/mp4;base64,${pollData.videoBase64}`)).blob();
+
+          // Zu Blossom hochladen
+          toast({ title: '📤 Lade zu Blossom hoch...', description: `${pollData.videoSizeMB}MB · ${pollData.imageCount} Bilder` });
+          const safeTitle = (title || 'slideshow').replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40);
+          const videoFile = new File([blob], `${safeTitle}-slideshow.mp4`, { type: 'video/mp4' });
+          const blossomTags = await uploadFile(videoFile);
+          const blossomUrl = blossomTags.find((t: string[]) => t[0] === 'url')?.[1];
+          if (!blossomUrl) throw new Error('Keine Blossom-URL erhalten.');
+
+          setSlideshowVideoUrl(blossomUrl);
+          setSlideshowStatus('completed');
+          toast({
+            title: '✅ Slideshow fertig!',
+            description: `${pollData.totalDuration}s Video · Musik: ${pollData.musicUsed || 'keine'} · auf Blossom gespeichert`
+          });
+          return;
+
+        } else if (pollData.status === 'failed') {
+          throw new Error(pollData.error || 'Slideshow fehlgeschlagen.');
+        } else {
+          await new Promise(r => setTimeout(r, 3000));
+          return poll();
+        }
+      };
+      await poll();
+
+    } catch (err: any) {
+      setSlideshowStatus('failed');
+      toast({ title: 'Slideshow Fehler', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsGeneratingSlideshow(false);
+    }
+  };
+
+  const embedSlideshowInArticle = () => {
+    if (!slideshowVideoUrl) return;
+    const videoMd = `\n\n<video src="${slideshowVideoUrl}" controls autoplay muted loop style="width:100%;border-radius:8px;"></video>\n\n`;
+    setContent(prev => prev + videoMd);
+    toast({ title: '✅ Slideshow eingebettet' });
   };
 
   // KI-Artikel generieren (Foster Huntington Stil)
@@ -4960,6 +5063,225 @@ Schreibe deinen Artikel hier...
           )}
         </div>
         {/* ── Ende Video-Generator ─────────────────────────────────────────── */}
+
+        {/* ── 🎞️ Slideshow Generator ────────────────────────────────────── */}
+        <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+          {/* Header mit An/Abwahl Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Video className="h-5 w-5 text-emerald-500" />
+              <h3 className="font-semibold">🎞️ Slideshow generieren</h3>
+              <span className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-medium">
+                ffmpeg · Ken Burns · Deep Pan
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setSlideshowEnabled(v => !v); if (slideshowEnabled) { setSlideshowVideoUrl(null); setSlideshowStatus('idle'); } }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+                slideshowEnabled
+                  ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
+                  : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-emerald-400 hover:text-emerald-600'
+              }`}
+            >
+              {slideshowEnabled
+                ? <><span className="w-2 h-2 rounded-full bg-white inline-block" />Aktiv</>
+                : <><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />Inaktiv</>
+              }
+            </button>
+          </div>
+
+          {/* Bilder-Vorschau immer sichtbar */}
+          {(() => {
+            const imgs = [...(image ? [image] : []), ...extractImageUrlsFromMarkdown(content)];
+            return (
+              <p className="text-xs text-muted-foreground">
+                {imgs.length > 0
+                  ? <>🖼️ <strong>{imgs.length} Bild{imgs.length !== 1 ? 'er' : ''}</strong> verfügbar · {imgs.length * slideshowImgDuration}s Slideshow · Ken Burns + Deep Pan Effekte</>
+                  : '⚠️ Noch keine Bilder — lade ein Titelbild hoch oder füge Bilder in den Artikel ein.'}
+              </p>
+            );
+          })()}
+
+          {/* Erweiterter Bereich nur wenn aktiviert */}
+          {slideshowEnabled && (
+            <div className="space-y-4 pt-2 border-t border-muted">
+
+              {/* 🎵 Musik-Schalter */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">🎵 Musik</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSlideshowMusicMode('local')}
+                    className={`p-3 rounded-lg border text-left transition-all ${
+                      slideshowMusicMode === 'local'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                    }`}
+                  >
+                    <div className="font-medium text-sm">🎸 Lokal</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Fertige Chill-Tracks</div>
+                    <div className="text-xs font-medium text-emerald-600 mt-1">$0.00 — kostenlos</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSlideshowMusicMode('elevenlabs')}
+                    className={`p-3 rounded-lg border text-left transition-all ${
+                      slideshowMusicMode === 'elevenlabs'
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                    }`}
+                  >
+                    <div className="font-medium text-sm">🤖 KI-Musik</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">ElevenLabs · Lifestyle-passend</div>
+                    <div className="text-xs font-medium text-amber-600 mt-1">$0.50 via ppq.ai</div>
+                  </button>
+                </div>
+                {slideshowMusicMode === 'elevenlabs' && (
+                  <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 rounded p-2">
+                    🎵 Musik-Stil wird automatisch aus dem gewählten Lifestyle (<strong>{lifestyle}</strong>) generiert.
+                  </p>
+                )}
+                {slideshowMusicMode === 'local' && (
+                  <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 rounded p-2">
+                    🎸 Zufälliger Chill-Track aus <code>server/music/</code> — lifestyle-passend wenn vorhanden.
+                  </p>
+                )}
+              </div>
+
+              {/* Einstellungen: Format + Bild-Dauer */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Format */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Format</Label>
+                  <div className="flex gap-1">
+                    {(['16:9', '9:16', '1:1'] as const).map(a => (
+                      <button key={a} type="button" onClick={() => setSlideshowAspect(a)}
+                        className={`flex-1 py-1 text-xs rounded border transition-colors ${
+                          slideshowAspect === a
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-300 dark:border-gray-600 hover:border-emerald-400'
+                        }`}
+                      >{a}</button>
+                    ))}
+                  </div>
+                </div>
+                {/* Sekunden pro Bild */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Sek. pro Bild</Label>
+                  <div className="flex gap-1">
+                    {([3, 4, 5] as const).map(d => (
+                      <button key={d} type="button" onClick={() => setSlideshowImgDuration(d)}
+                        className={`flex-1 py-1 text-xs rounded border transition-colors ${
+                          slideshowImgDuration === d
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-300 dark:border-gray-600 hover:border-emerald-400'
+                        }`}
+                      >{d}s</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bilder + Kosten Info */}
+              {(() => {
+                const imgs = [...(image ? [image] : []), ...extractImageUrlsFromMarkdown(content)];
+                const totalSec = imgs.length * slideshowImgDuration;
+                return (
+                  <div className="space-y-1 text-xs bg-gray-50 dark:bg-gray-800/50 rounded p-2">
+                    <div className="flex justify-between">
+                      <span>🖼️ Bilder: <strong>{imgs.length}</strong></span>
+                      <span>⏱️ Länge: <strong>{totalSec}s</strong></span>
+                      <span>💰 Kosten: <strong className="text-emerald-600">${slideshowMusicMode === 'elevenlabs' ? '0.50' : '0.00'}</strong></span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      Effekte: Zoom In · Zoom Out · Pan L→R · Pan R→L · Deep Pan ↑↓ · Diagonal
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Server Info */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 rounded p-2">
+                <span>🔒</span>
+                <span>ffmpeg läuft auf dem VPS — kein Upload nötig, direkt zu Blossom.</span>
+              </div>
+
+              {/* Generieren Button */}
+              <Button
+                type="button"
+                onClick={generateSlideshow}
+                disabled={isGeneratingSlideshow || (image ? false : extractImageUrlsFromMarkdown(content).length === 0)}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isGeneratingSlideshow ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {slideshowProgress > 0 ? `${slideshowProgress}% — ` : ''}
+                    {slideshowProgress < 32 ? 'Bilder herunterladen...'
+                      : slideshowProgress < 40 ? (slideshowMusicMode === 'elevenlabs' ? 'KI-Musik generieren...' : 'Musik laden...')
+                      : slideshowProgress < 85 ? 'ffmpeg rendert Slideshow...'
+                      : 'Zu Blossom hochladen...'}
+                  </>
+                ) : (
+                  <>
+                    <Video className="h-4 w-4 mr-2" />
+                    🎞️ Slideshow generieren
+                  </>
+                )}
+              </Button>
+
+              {/* Fortschrittsbalken */}
+              {isGeneratingSlideshow && slideshowProgress > 0 && (
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${slideshowProgress}%` }}
+                  />
+                </div>
+              )}
+
+              {/* Ergebnis */}
+              {slideshowStatus === 'completed' && slideshowVideoUrl && (
+                <div className="space-y-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="font-medium text-sm">✅ Slideshow auf Blossom gespeichert!</span>
+                  </div>
+                  <video src={slideshowVideoUrl} controls autoPlay muted loop
+                    className="w-full rounded-lg max-h-56 object-cover" />
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" onClick={embedSlideshowInArticle}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                      <Video className="h-3 w-3 mr-1" />In Artikel einbetten
+                    </Button>
+                    <Button type="button" size="sm" variant="outline"
+                      onClick={() => window.open(slideshowVideoUrl, '_blank')}>
+                      Öffnen
+                    </Button>
+                    <Button type="button" size="sm" variant="outline"
+                      onClick={() => { setSlideshowVideoUrl(null); setSlideshowStatus('idle'); setSlideshowProgress(0); }}>
+                      Neu
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Fehler */}
+              {slideshowStatus === 'failed' && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg text-sm text-red-700 dark:text-red-300">
+                  ❌ Slideshow fehlgeschlagen. Prüfe ob ffmpeg + Musik-Ordner auf dem VPS vorhanden sind.
+                  <Button type="button" size="sm" variant="outline" className="mt-2 w-full"
+                    onClick={() => setSlideshowStatus('idle')}>
+                    Erneut versuchen
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {/* ── Ende Slideshow-Generator ──────────────────────────────────── */}
 
         {/* Automatisch generierte Tags anzeigen */}
         {(isDIYCategory || isLeonCategory || isRVLifeCategory) && (

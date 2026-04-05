@@ -5,6 +5,24 @@ import axios from 'axios'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
+import { execFile, spawn } from 'child_process'
+import { promisify } from 'util'
+import crypto from 'crypto'
+import os from 'os'
+const execFileAsync = promisify(execFile)
+
+// ── ffmpeg Pfade (AlmaLinux custom build) ──────────────────────────────────
+const FFMPEG  = process.env.FFMPEG_PATH  || '/opt/bin/ffmpeg'
+const FFPROBE = process.env.FFPROBE_PATH || '/opt/bin/ffprobe'
+const MUSIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'music')
+const TMP_DIR   = path.join(os.tmpdir(), 'slideshow')
+
+// Temp-Ordner beim Start anlegen
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true })
+
+// In-Memory Job-Store für Slideshow-Jobs
+const slideshowJobs = new Map()
+// { jobId: { status, progress, videoUrl, error, created } }
 
 // ===== PROMPTS AUS src/config/prompts/ IMPORTIEREN =====
 // Alle Prompts sind zentral in src/config/prompts/ definiert
@@ -600,6 +618,402 @@ app.get('/api/video-status/:jobId', async (req, res) => {
     res.status(500).json({ error: `Status-Abfrage fehlgeschlagen: ${errMsg}` })
   }
 })
+
+// ===== SLIDESHOW GENERATOR =====
+// Erstellt aus Artikel-Bildern ein Video mit Ken Burns / Deep Pan Effekten
+// Musik: lokal (server/music/) oder ElevenLabs via ppq.ai
+// ffmpeg: /opt/bin/ffmpeg
+
+// ── Ken Burns / Deep Pan Effekte ──────────────────────────────────────────
+// Jedes Bild bekommt einen anderen Effekt — abwechselnd, nie langweilig
+const ZOOM_PAN_EFFECTS = [
+  // Zoom In Mitte (klassisch)
+  (d, fps) => `zoompan=z='min(zoom+0.0015,1.5)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
+  // Zoom Out Mitte
+  (d, fps) => `zoompan=z='if(eq(on,1),1.5,max(zoom-0.0015,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
+  // Pan Links → Rechts
+  (d, fps) => `zoompan=z='1.3':x='iw/2-(iw/zoom/2)+on/${d * fps}*(iw-(iw/1.3))':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
+  // Pan Rechts → Links
+  (d, fps) => `zoompan=z='1.3':x='iw-(iw/zoom)-on/${d * fps}*(iw-(iw/1.3))':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
+  // Deep Pan Oben → Unten (cineastisch)
+  (d, fps) => `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='0+on/${d * fps}*(ih-(ih/1.4))':d=${d * fps}:s=1920x1080:fps=${fps}`,
+  // Deep Pan Unten → Oben
+  (d, fps) => `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='ih-(ih/zoom)-on/${d * fps}*(ih-(ih/1.4))':d=${d * fps}:s=1920x1080:fps=${fps}`,
+  // Zoom In + Pan Diagonal (dramatisch)
+  (d, fps) => `zoompan=z='min(zoom+0.001,1.4)':x='on/${d * fps}*(iw/4)':y='on/${d * fps}*(ih/4)':d=${d * fps}:s=1920x1080:fps=${fps}`,
+  // Zoom Out + Pan Diagonal
+  (d, fps) => `zoompan=z='if(eq(on,1),1.4,max(zoom-0.001,1.0))':x='iw/2-(iw/zoom/2)':y='ih-(ih/zoom)-on/${d * fps}*(ih/4)':d=${d * fps}:s=1920x1080:fps=${fps}`,
+]
+
+// ── Aspect Ratio → ffmpeg Größe ────────────────────────────────────────────
+const ASPECT_SIZES = {
+  '16:9': '1920x1080',
+  '9:16': '1080x1920',
+  '1:1':  '1080x1080',
+}
+
+// ── Lifestyle → ElevenLabs Musik-Prompt ───────────────────────────────────
+const LIFESTYLE_MUSIC_PROMPTS = {
+  vanlife:             'chill acoustic guitar, road trip vibes, slow tempo, warm sunset atmosphere, indie folk',
+  rvlife:              'americana country folk, open road, relaxed tempo, guitar and harmonica',
+  beachlife:           'tropical chill, reggae influence, ocean waves, summer vibes, laid back',
+  wohnmobil:           'european cafe music, accordion, relaxed journey, soft piano',
+  'perpetual-travelers': 'world music ambient, travel vibes, ethnic instruments, meditative journey',
+}
+
+// ── Lokale Musik nach Lifestyle wählen ────────────────────────────────────
+function getLocalMusicFile(lifestyle) {
+  if (!fs.existsSync(MUSIC_DIR)) return null
+  const files = fs.readdirSync(MUSIC_DIR).filter(f => f.endsWith('.mp3') || f.endsWith('.m4a') || f.endsWith('.ogg'))
+  if (files.length === 0) return null
+
+  // Erst lifestyle-spezifisch suchen
+  const styleFiles = files.filter(f => f.toLowerCase().includes(lifestyle))
+  const pool = styleFiles.length > 0 ? styleFiles : files
+
+  // Zufällig aus Pool wählen
+  return path.join(MUSIC_DIR, pool[Math.floor(Math.random() * pool.length)])
+}
+
+// ── Bild von URL downloaden ────────────────────────────────────────────────
+async function downloadImage(url, destPath) {
+  const response = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 30000,
+    headers: { 'User-Agent': 'MojoBus-Slideshow/1.0' }
+  })
+  fs.writeFileSync(destPath, response.data)
+  return destPath
+}
+
+// ── ElevenLabs Musik generieren via ppq.ai ────────────────────────────────
+async function generateElevenLabsMusic(lifestyle, durationSeconds, ppqKey) {
+  const prompt = LIFESTYLE_MUSIC_PROMPTS[lifestyle] || LIFESTYLE_MUSIC_PROMPTS['vanlife']
+  console.log(`[Slideshow] ElevenLabs Musik generieren: "${prompt}"`)
+
+  const response = await axios.post('https://api.ppq.ai/v1/audio/generations', {
+    model: 'elevenlabs-music-v1',
+    prompt,
+    duration_seconds: Math.min(durationSeconds + 4, 180) // +4s für Fade, max 180s
+  }, {
+    headers: {
+      'Authorization': `Bearer ${ppqKey}`,
+      'Content-Type': 'application/json'
+    },
+    timeout: 60000
+  })
+
+  // URL aus Antwort extrahieren
+  const musicUrl = response.data?.data?.[0]?.url || response.data?.url || response.data?.audio_url
+  if (!musicUrl) throw new Error('Keine Musik-URL von ElevenLabs erhalten: ' + JSON.stringify(response.data))
+
+  return musicUrl
+}
+
+// ── ffmpeg filter_complex für Slideshow aufbauen ──────────────────────────
+function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDuration = 1.0) {
+  const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
+  const [w, h] = size.split('x').map(Number)
+  const filterSize = `${w}x${h}`
+
+  let filters = []
+  let overlayChain = ''
+
+  for (let i = 0; i < imageCount; i++) {
+    const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
+    const zpFilter = effect(imageDuration, fps).replace('1920x1080', filterSize)
+
+    // Scale → pad → zoompan für jedes Bild
+    filters.push(
+      `[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
+      `crop=${w}:${h},` +
+      `${zpFilter},` +
+      `setsar=1[v${i}]`
+    )
+  }
+
+  // Crossfade-Kette aufbauen
+  if (imageCount === 1) {
+    overlayChain = '[v0]'
+  } else {
+    let lastLabel = '[v0]'
+    for (let i = 1; i < imageCount; i++) {
+      const offset = i * imageDuration - fadeDuration
+      const outLabel = i === imageCount - 1 ? '[vout]' : `[xf${i}]`
+      filters.push(
+        `${lastLabel}[v${i}]xfade=transition=fade:duration=${fadeDuration}:offset=${offset.toFixed(2)}${outLabel}`
+      )
+      lastLabel = `[xf${i}]`
+    }
+    if (imageCount === 1) overlayChain = '[v0]'
+  }
+
+  return filters.join('; ')
+}
+
+// ── Hauptfunktion: Slideshow Job asynchron ausführen ──────────────────────
+async function runSlideshowJob(jobId, params) {
+  const { imageUrls, musicMode, lifestyle, aspectRatio, imageDuration, ppqKey } = params
+  const fps = 30
+  const fadeDuration = 1.0
+  const totalDuration = imageUrls.length * imageDuration
+  const jobDir = path.join(TMP_DIR, jobId)
+
+  const updateJob = (update) => {
+    const current = slideshowJobs.get(jobId) || {}
+    slideshowJobs.set(jobId, { ...current, ...update })
+  }
+
+  try {
+    fs.mkdirSync(jobDir, { recursive: true })
+    updateJob({ status: 'downloading', progress: 5 })
+    console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
+
+    // ── Schritt 1: Bilder downloaden ─────────────────────────────────────
+    const imagePaths = []
+    for (let i = 0; i < imageUrls.length; i++) {
+      const ext = imageUrls[i].includes('.png') ? 'png' : 'jpg'
+      const imgPath = path.join(jobDir, `img_${i}.${ext}`)
+      try {
+        await downloadImage(imageUrls[i], imgPath)
+        imagePaths.push(imgPath)
+        console.log(`[Slideshow] Bild ${i + 1}/${imageUrls.length} heruntergeladen`)
+        updateJob({ progress: 5 + Math.round((i + 1) / imageUrls.length * 25) })
+      } catch (err) {
+        console.warn(`[Slideshow] Bild ${i} fehlgeschlagen, überspringe: ${err.message}`)
+      }
+    }
+
+    if (imagePaths.length === 0) throw new Error('Kein einziges Bild konnte heruntergeladen werden.')
+    if (imagePaths.length === 1) {
+      // Mit nur 1 Bild kein xfade möglich
+      console.log('[Slideshow] Nur 1 Bild — kein Crossfade')
+    }
+
+    updateJob({ status: 'music', progress: 32 })
+
+    // ── Schritt 2: Musik besorgen ─────────────────────────────────────────
+    let musicPath = null
+
+    if (musicMode === 'elevenlabs' && ppqKey) {
+      try {
+        console.log('[Slideshow] ElevenLabs Musik generieren...')
+        const musicUrl = await generateElevenLabsMusic(lifestyle, totalDuration, ppqKey)
+        musicPath = path.join(jobDir, 'music.mp3')
+        await downloadImage(musicUrl, musicPath) // gleiche Download-Funktion
+        console.log(`[Slideshow] ElevenLabs Musik heruntergeladen: ${musicPath}`)
+      } catch (err) {
+        console.warn('[Slideshow] ElevenLabs fehlgeschlagen, fallback auf lokal:', err.message)
+        musicPath = getLocalMusicFile(lifestyle)
+      }
+    } else {
+      musicPath = getLocalMusicFile(lifestyle)
+    }
+
+    if (musicPath) console.log(`[Slideshow] Musik: ${path.basename(musicPath)}`)
+    else console.log('[Slideshow] Kein Musik-File gefunden — Video ohne Ton')
+
+    updateJob({ status: 'rendering', progress: 40 })
+
+    // ── Schritt 3: ffmpeg Slideshow bauen ─────────────────────────────────
+    const outputPath = path.join(jobDir, 'slideshow.mp4')
+    const n = imagePaths.length
+    const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
+    const [w, h] = size.split('x').map(Number)
+
+    // ffmpeg Input-Args: alle Bilder + optional Musik
+    const inputArgs = []
+    for (const imgPath of imagePaths) {
+      inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
+    }
+    if (musicPath) inputArgs.push('-i', musicPath)
+
+    const audioIndex = n // Musik ist der n-te Input (0-basiert)
+
+    // Filter Complex aufbauen
+    let filterLines = []
+    for (let i = 0; i < n; i++) {
+      const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
+      const zpFilter = effect(imageDuration, fps).replace('1920x1080', `${w}x${h}`)
+      filterLines.push(
+        `[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
+        `crop=${w}:${h},setsar=1,` +
+        `${zpFilter}[v${i}]`
+      )
+    }
+
+    // Crossfade Kette
+    if (n === 1) {
+      filterLines.push(`[v0]copy[vout]`)
+    } else {
+      let lastLabel = '[v0]'
+      for (let i = 1; i < n; i++) {
+        const offset = (i * imageDuration - fadeDuration).toFixed(2)
+        const outLabel = i === n - 1 ? '[vout]' : `[xf${i}]`
+        filterLines.push(`${lastLabel}[v${i}]xfade=transition=fade:duration=${fadeDuration}:offset=${offset}${outLabel}`)
+        lastLabel = outLabel === '[vout]' ? '[vout]' : `[xf${i}]`
+      }
+    }
+
+    // Audio: fade out in letzten 2 Sekunden
+    if (musicPath) {
+      const fadeStart = Math.max(0, totalDuration - 2)
+      filterLines.push(
+        `[${audioIndex}:a]atrim=0:${totalDuration},` +
+        `afade=t=out:st=${fadeStart}:d=2[aout]`
+      )
+    }
+
+    const filterComplex = filterLines.join('; ')
+
+    // ffmpeg Ausgabe-Args
+    const outputArgs = musicPath
+      ? ['-map', '[vout]', '-map', '[aout]', '-c:v', 'libx264', '-preset', 'fast',
+         '-crf', '23', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart',
+         '-t', String(totalDuration), outputPath]
+      : ['-map', '[vout]', '-c:v', 'libx264', '-preset', 'fast',
+         '-crf', '23', '-movflags', '+faststart',
+         '-t', String(totalDuration), outputPath]
+
+    const ffmpegArgs = [
+      '-y',           // Overwrite
+      ...inputArgs,
+      '-filter_complex', filterComplex,
+      ...outputArgs
+    ]
+
+    console.log(`[Slideshow] ffmpeg starten: ${FFMPEG} ${ffmpegArgs.slice(0, 8).join(' ')}...`)
+
+    await execFileAsync(FFMPEG, ffmpegArgs, { timeout: 300000 }) // max 5 Min.
+
+    updateJob({ status: 'uploading', progress: 85 })
+    console.log(`[Slideshow] ffmpeg fertig: ${outputPath}`)
+
+    // ── Schritt 4: Video-Datei lesen + Base64 für Rückgabe ────────────────
+    // Wir geben den Pfad zurück — Blossom-Upload passiert im Frontend
+    const videoBuffer = fs.readFileSync(outputPath)
+    const videoBase64 = videoBuffer.toString('base64')
+    const videoSizeMB = (videoBuffer.length / 1024 / 1024).toFixed(2)
+    console.log(`[Slideshow] Video: ${videoSizeMB}MB`)
+
+    updateJob({
+      status: 'completed',
+      progress: 100,
+      videoBase64,
+      videoSizeMB,
+      imageCount: imagePaths.length,
+      musicUsed: musicPath ? path.basename(musicPath) : null,
+      totalDuration
+    })
+
+  } catch (err) {
+    console.error(`[Slideshow] Job ${jobId} fehlgeschlagen:`, err.message)
+    updateJob({ status: 'failed', error: err.message })
+  } finally {
+    // Temp-Ordner nach 10 Min. aufräumen
+    setTimeout(() => {
+      try { fs.rmSync(jobDir, { recursive: true, force: true }) } catch {}
+    }, 10 * 60 * 1000)
+  }
+}
+
+// ── POST /api/generate-slideshow ──────────────────────────────────────────
+app.post('/api/generate-slideshow', async (req, res) => {
+  const {
+    imageUrls,                    // Array von Bild-URLs
+    musicMode = 'local',          // 'local' | 'elevenlabs'
+    lifestyle = 'vanlife',
+    aspectRatio = '16:9',
+    imageDuration = 4,            // Sekunden pro Bild
+  } = req.body
+
+  if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+    return res.status(400).json({ error: 'imageUrls Array erforderlich (min. 1 Bild).' })
+  }
+  if (imageUrls.length > 15) {
+    return res.status(400).json({ error: 'Maximal 15 Bilder pro Slideshow.' })
+  }
+
+  const ppqKey = process.env.PPQ_API_KEY
+  if (musicMode === 'elevenlabs' && !ppqKey) {
+    return res.status(400).json({ error: 'PPQ_API_KEY fehlt für ElevenLabs Musik.' })
+  }
+
+  // Job-ID generieren
+  const jobId = 'sl_' + crypto.randomBytes(8).toString('hex')
+  const totalDuration = Math.min(imageUrls.length, 15) * imageDuration
+  const estimatedCost = musicMode === 'elevenlabs' ? 0.50 : 0.00
+
+  // Job registrieren
+  slideshowJobs.set(jobId, {
+    status: 'pending',
+    progress: 0,
+    created: Date.now()
+  })
+
+  console.log(`[Slideshow] Neuer Job: ${jobId}, ${imageUrls.length} Bilder, ${musicMode}, ${aspectRatio}`)
+
+  // Job asynchron starten (nicht awaiten!)
+  runSlideshowJob(jobId, {
+    imageUrls: imageUrls.slice(0, 15),
+    musicMode,
+    lifestyle,
+    aspectRatio,
+    imageDuration: Math.min(Math.max(imageDuration, 2), 8), // 2-8s pro Bild
+    ppqKey
+  })
+
+  // Sofort Job-ID zurückgeben
+  res.json({
+    jobId,
+    status: 'pending',
+    imageCount: Math.min(imageUrls.length, 15),
+    totalDuration,
+    estimatedCost,
+    musicMode
+  })
+})
+
+// ── GET /api/slideshow-status/:jobId ─────────────────────────────────────
+app.get('/api/slideshow-status/:jobId', (req, res) => {
+  const { jobId } = req.params
+  const job = slideshowJobs.get(jobId)
+
+  if (!job) {
+    return res.status(404).json({ error: 'Job nicht gefunden.' })
+  }
+
+  if (job.status === 'completed') {
+    // Base64 Video zurückgeben
+    res.json({
+      status: 'completed',
+      progress: 100,
+      videoBase64: job.videoBase64,
+      videoSizeMB: job.videoSizeMB,
+      imageCount: job.imageCount,
+      musicUsed: job.musicUsed,
+      totalDuration: job.totalDuration
+    })
+    // Job nach Abruf aus Memory entfernen (Base64 ist groß)
+    setTimeout(() => slideshowJobs.delete(jobId), 60000)
+  } else if (job.status === 'failed') {
+    res.json({ status: 'failed', error: job.error })
+    slideshowJobs.delete(jobId)
+  } else {
+    res.json({
+      status: job.status,
+      progress: job.progress
+    })
+  }
+})
+
+// Alte Jobs alle 30 Min. aufräumen (Memory Leak Prevention)
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000
+  for (const [id, job] of slideshowJobs.entries()) {
+    if (job.created < cutoff) slideshowJobs.delete(id)
+  }
+}, 30 * 60 * 1000)
 
 // ===== API FÜR BERICHT/ARTIKEL GENERIERUNG =====
 // Tab: "Berichte" in /veroeffentlichen
