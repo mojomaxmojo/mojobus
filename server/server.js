@@ -428,12 +428,21 @@ app.post('/api/generate-video', async (req, res) => {
     lifestyle,
     tags,
     duration = '10',
-    quality = '1080p',
+    quality = '720p',
     aspectRatio = '16:9'
   } = req.body
 
   if (!imageUrl) {
     return res.status(400).json({ error: 'imageUrl (Titelbild) ist erforderlich.' })
+  }
+
+  // ── Runway Gen-4 Turbo verfügbare Kombinationen bei ppq.ai ──────────────
+  // 720p: 5s + 10s  (16:9 und 9:16)
+  // 1080p: NUR 5s   (16:9 und 9:16) — 10s bei 1080p nicht verfügbar!
+  // → Automatische Korrektur: 1080p + 10s → 720p + 10s
+  const resolvedQuality = (quality === '1080p' && String(duration) === '10') ? '720p' : quality
+  if (resolvedQuality !== quality) {
+    console.log(`[Video] Qualität korrigiert: ${quality}+${duration}s → ${resolvedQuality}+${duration}s (1080p nur bei 5s verfügbar)`)
   }
 
   // Video-Prompt automatisch aus Artikeldaten aufbauen
@@ -463,7 +472,7 @@ app.post('/api/generate-video', async (req, res) => {
     '. High quality, cinematic, 4K look'
   ].join('').replace(/\s+/g, ' ').trim()
 
-  console.log(`[Video] Starte Runway Gen-4 Turbo: "${title || 'Kein Titel'}", ${duration}s, ${quality}, ${aspectRatio}`)
+  console.log(`[Video] Starte Runway Gen-4 Turbo: "${title || 'Kein Titel'}", ${duration}s, ${resolvedQuality}, ${aspectRatio}`)
   console.log(`[Video] Prompt: ${videoPrompt.slice(0, 120)}...`)
 
   try {
@@ -474,7 +483,7 @@ app.post('/api/generate-video', async (req, res) => {
       image_url: imageUrl,
       aspect_ratio: aspectRatio,
       duration: String(duration),
-      quality
+      quality: resolvedQuality
     }, {
       headers: {
         'Content-Type': 'application/json',

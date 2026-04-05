@@ -3768,7 +3768,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [videoJobId, setVideoJobId] = useState<string | null>(null);
   const [videoProgress, setVideoProgress] = useState<'idle' | 'submitting' | 'processing' | 'completed' | 'failed'>('idle');
   const [videoDuration, setVideoDuration] = useState<'5' | '10'>('10');
-  const [videoQuality, setVideoQuality] = useState<'720p' | '1080p'>('1080p');
+  const [videoQuality, setVideoQuality] = useState<'720p' | '1080p'>('720p');
   const [videoAspect, setVideoAspect] = useState<'16:9' | '9:16'>('16:9');
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
@@ -4776,10 +4776,13 @@ Schreibe deinen Artikel hier...
                             : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400'
                         }`}
                       >
-                        {q}
+                        {q}{q === '1080p' ? ' (5s)' : ''}
                       </button>
                     ))}
                   </div>
+                  {videoQuality === '1080p' && videoDuration === '10' && (
+                    <p className="text-xs text-amber-500">⚠️ 1080p nur bei 5s — wird auto auf 720p gesetzt</p>
+                  )}
                 </div>
 
                 {/* Format */}
@@ -4805,14 +4808,28 @@ Schreibe deinen Artikel hier...
               </div>
 
               {/* Kosten-Info */}
+              {/* ppq.ai Runway Gen-4 Turbo Preise:
+                  720p  5s  = $0.0690
+                  720p  10s = $0.1725
+                  1080p 5s  = $0.1725  (1080p NUR 5s verfügbar!)
+                  1080p 10s → wird automatisch auf 720p 10s korrigiert */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/50 rounded p-2">
                 <span>💰</span>
                 <span>
                   Geschätzte Kosten:{' '}
                   <strong className="text-purple-600">
-                    ${videoDuration === '10' ? (videoQuality === '1080p' ? '0.1725' : '0.1725') : (videoQuality === '1080p' ? '0.1725' : '0.0690')}
+                    ${videoDuration === '5'
+                      ? (videoQuality === '1080p' ? '0.1725' : '0.0690')
+                      : '0.1725'
+                    }
                   </strong>
-                  {' '}· Runway Gen-4 Turbo · {videoDuration}s {videoQuality} {videoAspect}
+                  {' '}· Runway Gen-4 Turbo ·{' '}
+                  {videoDuration}s{' '}
+                  {videoQuality === '1080p' && videoDuration === '10' ? '720p ⚠️auto' : videoQuality}{' '}
+                  {videoAspect}
+                  {videoQuality === '1080p' && videoDuration === '10' && (
+                    <span className="text-amber-500 ml-1">(1080p nur bei 5s)</span>
+                  )}
                 </span>
               </div>
 
