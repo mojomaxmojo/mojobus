@@ -3761,6 +3761,16 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [articleLength, setArticleLength] = useState<'short' | 'medium' | 'long'>('medium');
+  // Video-Generator State
+  const [videoEnabled, setVideoEnabled] = useState(false);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [videoJobId, setVideoJobId] = useState<string | null>(null);
+  const [videoProgress, setVideoProgress] = useState<'idle' | 'submitting' | 'processing' | 'completed' | 'failed'>('idle');
+  const [videoDuration, setVideoDuration] = useState<'5' | '10'>('10');
+  const [videoQuality, setVideoQuality] = useState<'720p' | '1080p'>('1080p');
+  const [videoAspect, setVideoAspect] = useState<'16:9' | '9:16'>('16:9');
+  const [ppqApiKey, setPpqApiKey] = useState(() => localStorage.getItem('ppq_api_key') || '');
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -3777,6 +3787,136 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       urls.push(match[1]);
     }
     return [...new Set(urls)]; // Duplikate entfernen
+  };
+
+  // ── Runway Gen-4 Turbo Video-Generator ──────────────────────────────────
+  const generateVideoWithRunway = async () => {
+    if (!ppqApiKey.trim()) {
+      toast({ title: 'API-Key fehlt', description: 'Bitte zuerst deinen ppq.ai API-Key eintragen.', variant: 'destructive' });
+      return;
+    }
+    if (!image) {
+      toast({ title: 'Kein Titelbild', description: 'Lade zuerst ein Titelbild hoch – es wird als Start-Frame verwendet.', variant: 'destructive' });
+      return;
+    }
+
+    // Video-Prompt aus vorhandenen Artikeldaten aufbauen
+    const lifestyleMap: Record<string, string> = {
+      vanlife: 'vanlife, van life on wheels, road trip',
+      rvlife: 'RV life, recreational vehicle adventure',
+      beachlife: 'beach life, surf and sun lifestyle',
+      wohnmobil: 'motorhome, camper van travel',
+      'perpetual-travelers': 'perpetual travel, nomadic lifestyle'
+    };
+    const lifestyleText = lifestyleMap[lifestyle] || 'travel';
+    const locationText = location ? `, ${location}` : '';
+    const countryText = selectedCountry ? `, ${selectedCountry}` : '';
+    const titleText = title ? title : '';
+    const summaryText = summary ? ` ${summary.slice(0, 120)}` : '';
+    const tagsText = tags.slice(0, 5).join(', ');
+
+    const videoPrompt = [
+      `Cinematic travel video,`,
+      lifestyleText,
+      locationText,
+      countryText,
+      titleText ? `. ${titleText}` : '',
+      summaryText,
+      `. Smooth camera movement, golden light, authentic atmosphere`,
+      tagsText ? `. ${tagsText}` : '',
+      `. High quality, cinematic, 4K look`
+    ].join('').replace(/\s+/g, ' ').trim();
+
+    setIsGeneratingVideo(true);
+    setVideoProgress('submitting');
+    setGeneratedVideoUrl(null);
+    setVideoJobId(null);
+
+    try {
+      // Schritt 1: Job einreichen
+      const submitRes = await fetch('https://api.ppq.ai/v1/videos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${ppqApiKey.trim()}`
+        },
+        body: JSON.stringify({
+          model: 'runway-gen4',
+          prompt: videoPrompt,
+          image_url: image,
+          aspect_ratio: videoAspect,
+          duration: videoDuration,
+          quality: videoQuality
+        })
+      });
+
+      if (!submitRes.ok) {
+        const errData = await submitRes.json().catch(() => ({}));
+        throw new Error(errData?.error || `HTTP ${submitRes.status}`);
+      }
+
+      const job = await submitRes.json();
+      const jobId = job.id;
+      setVideoJobId(jobId);
+      setVideoProgress('processing');
+
+      toast({
+        title: '🎬 Video wird generiert...',
+        description: `Job gestartet (${videoDuration}s, ${videoQuality}, ${videoAspect}). Bitte warten...`
+      });
+
+      // Schritt 2: Polling alle 6 Sekunden, max. 3 Minuten
+      let attempts = 0;
+      const maxAttempts = 30;
+      const poll = async (): Promise<void> => {
+        if (attempts >= maxAttempts) {
+          throw new Error('Timeout: Video-Generierung dauert zu lange.');
+        }
+        attempts++;
+
+        const pollRes = await fetch(`https://api.ppq.ai/v1/videos/${jobId}`, {
+          headers: { 'Authorization': `Bearer ${ppqApiKey.trim()}` }
+        });
+
+        const pollData = await pollRes.json();
+
+        if (pollData.status === 'completed' && pollData.data?.url) {
+          setGeneratedVideoUrl(pollData.data.url);
+          setVideoProgress('completed');
+          toast({
+            title: '✅ Video fertig!',
+            description: `Kosten: ~$${pollData.cost?.toFixed(4) || '–'}. Video kann jetzt in den Artikel eingebettet werden.`
+          });
+          return;
+        } else if (pollData.status === 'failed') {
+          throw new Error(pollData.error || 'Video-Generierung fehlgeschlagen.');
+        } else {
+          // Noch in Bearbeitung — weiter warten
+          await new Promise(r => setTimeout(r, 6000));
+          return poll();
+        }
+      };
+
+      await poll();
+
+    } catch (err: any) {
+      setVideoProgress('failed');
+      toast({
+        title: 'Video-Fehler',
+        description: err?.message || 'Unbekannter Fehler beim Video generieren.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
+
+  // Video-URL in den Artikeltext einbetten
+  const embedVideoInArticle = () => {
+    if (!generatedVideoUrl) return;
+    const videoMarkdown = `\n\n<video src="${generatedVideoUrl}" controls autoplay muted loop style="width:100%;border-radius:8px;"></video>\n\n`;
+    setContent(prev => prev + videoMarkdown);
+    toast({ title: '✅ Video eingebettet', description: 'Das Video wurde am Ende des Artikels eingefügt.' });
   };
 
   // KI-Artikel generieren (Foster Huntington Stil)
@@ -4589,6 +4729,263 @@ Schreibe deinen Artikel hier...
             </p>
           )}
         </div>
+
+        {/* ── 🎬 Runway Gen-4 Turbo Video-Generator ────────────────────────── */}
+        <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+          {/* Header mit An/Abwahl Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Video className="h-5 w-5 text-purple-500" />
+              <h3 className="font-semibold">🎬 Video generieren</h3>
+              <span className="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full font-medium">
+                Runway Gen-4 Turbo
+              </span>
+            </div>
+            {/* An/Abwahl Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setVideoEnabled(v => !v);
+                if (videoEnabled) {
+                  setGeneratedVideoUrl(null);
+                  setVideoProgress('idle');
+                }
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+                videoEnabled
+                  ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
+                  : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400 hover:text-purple-600'
+              }`}
+            >
+              {videoEnabled ? (
+                <><span className="w-2 h-2 rounded-full bg-white inline-block" />Aktiv</>
+              ) : (
+                <><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />Inaktiv</>
+              )}
+            </button>
+          </div>
+
+          {/* Kurzbeschreibung immer sichtbar */}
+          <p className="text-xs text-muted-foreground">
+            Erstellt aus deinem <strong>Titelbild</strong> + <strong>Artikeldaten</strong> automatisch ein 10-Sek. Video ($0.17 via ppq.ai).
+          </p>
+
+          {/* Erweiterter Bereich nur wenn aktiviert */}
+          {videoEnabled && (
+            <div className="space-y-4 pt-2 border-t border-muted">
+
+              {/* ppq.ai API-Key */}
+              <div className="space-y-1">
+                <Label className="text-xs font-medium flex items-center gap-1">
+                  ppq.ai API-Key
+                  <a
+                    href="https://ppq.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-500 hover:underline text-xs ml-1"
+                  >
+                    → Holen (ab $0.10)
+                  </a>
+                </Label>
+                <Input
+                  type="password"
+                  placeholder="ppq_xxxxxxxxxxxx"
+                  value={ppqApiKey}
+                  onChange={e => {
+                    setPpqApiKey(e.target.value);
+                    localStorage.setItem('ppq_api_key', e.target.value);
+                  }}
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">Wird lokal gespeichert, nie übertragen.</p>
+              </div>
+
+              {/* Einstellungen: Dauer / Qualität / Format */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Dauer */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Dauer</Label>
+                  <div className="flex gap-1">
+                    {(['5', '10'] as const).map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setVideoDuration(d)}
+                        className={`flex-1 py-1 text-xs rounded border transition-colors ${
+                          videoDuration === d
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400'
+                        }`}
+                      >
+                        {d}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Qualität */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Qualität</Label>
+                  <div className="flex gap-1">
+                    {(['720p', '1080p'] as const).map(q => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => setVideoQuality(q)}
+                        className={`flex-1 py-1 text-xs rounded border transition-colors ${
+                          videoQuality === q
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400'
+                        }`}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Format */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Format</Label>
+                  <div className="flex gap-1">
+                    {(['16:9', '9:16'] as const).map(a => (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => setVideoAspect(a)}
+                        className={`flex-1 py-1 text-xs rounded border transition-colors ${
+                          videoAspect === a
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400'
+                        }`}
+                      >
+                        {a}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Kosten-Info */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/50 rounded p-2">
+                <span>💰</span>
+                <span>
+                  Geschätzte Kosten:{' '}
+                  <strong className="text-purple-600">
+                    ${videoDuration === '10' ? (videoQuality === '1080p' ? '0.1725' : '0.1725') : (videoQuality === '1080p' ? '0.1725' : '0.0690')}
+                  </strong>
+                  {' '}· Runway Gen-4 Turbo · {videoDuration}s {videoQuality} {videoAspect}
+                </span>
+              </div>
+
+              {/* Was in den Prompt fließt */}
+              {(image || title || location) && (
+                <div className="text-xs text-muted-foreground bg-purple-50 dark:bg-purple-900/20 rounded p-2 space-y-0.5">
+                  <p className="font-medium text-purple-700 dark:text-purple-300 mb-1">📋 Wird für Video-Prompt verwendet:</p>
+                  {image && <p>🖼️ Titelbild → Start-Frame</p>}
+                  {title && <p>📝 Titel: „{title.slice(0, 50)}{title.length > 50 ? '…' : ''}"</p>}
+                  {location && <p>📍 Location: {location}</p>}
+                  {selectedCountry && <p>🌍 Land: {selectedCountry}</p>}
+                  {tags.length > 0 && <p>🏷️ Tags: {tags.slice(0, 5).join(', ')}</p>}
+                  <p>🎬 Stil: {lifestyle}</p>
+                </div>
+              )}
+
+              {/* Generieren Button */}
+              <Button
+                type="button"
+                onClick={generateVideoWithRunway}
+                disabled={isGeneratingVideo || !image || !ppqApiKey.trim()}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {isGeneratingVideo ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {videoProgress === 'submitting' ? 'Job wird eingereicht...' : 'Video wird generiert (~30-90 Sek.)...'}
+                  </>
+                ) : (
+                  <>
+                    <Video className="h-4 w-4 mr-2" />
+                    🎬 Video generieren mit Runway Gen-4 Turbo
+                  </>
+                )}
+              </Button>
+
+              {!image && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Lade zuerst ein Titelbild hoch — es wird als Start-Frame verwendet.
+                </p>
+              )}
+              {!ppqApiKey.trim() && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ ppq.ai API-Key erforderlich.
+                </p>
+              )}
+
+              {/* Ergebnis: Video Preview + Einbetten */}
+              {videoProgress === 'completed' && generatedVideoUrl && (
+                <div className="space-y-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="font-medium text-sm">Video erfolgreich generiert!</span>
+                  </div>
+                  <video
+                    src={generatedVideoUrl}
+                    controls
+                    autoPlay
+                    muted
+                    loop
+                    className="w-full rounded-lg max-h-48 object-cover"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={embedVideoInArticle}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Video className="h-3 w-3 mr-1" />
+                      In Artikel einbetten
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(generatedVideoUrl, '_blank')}
+                    >
+                      Öffnen
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setGeneratedVideoUrl(null); setVideoProgress('idle'); }}
+                    >
+                      Neu
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Fehler */}
+              {videoProgress === 'failed' && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+                  ❌ Video-Generierung fehlgeschlagen. API-Key prüfen und erneut versuchen.
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 w-full"
+                    onClick={() => setVideoProgress('idle')}
+                  >
+                    Erneut versuchen
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {/* ── Ende Video-Generator ─────────────────────────────────────────── */}
 
         {/* Automatisch generierte Tags anzeigen */}
         {(isDIYCategory || isLeonCategory || isRVLifeCategory) && (
