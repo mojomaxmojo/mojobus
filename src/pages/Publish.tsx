@@ -201,7 +201,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
-  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1588,7 +1588,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [isGeneratingNote, setIsGeneratingNote] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
-  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -2115,9 +2115,10 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
                 <SelectValue placeholder="Wähle deinen Lifestyle" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="mojobus">🚌 Mojobus - Mojo &amp; Susanne, US-Oldtimer</SelectItem>
                 <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
                 <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
+                <SelectItem value="beachlife">🏖️ Beachlife - Strand &amp; Surf Lifestyle</SelectItem>
                 <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
                 <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
               </SelectContent>
@@ -3496,9 +3497,10 @@ Beschreibe hier den Ort, was macht ihn besonders...
                 <SelectValue placeholder="Wähle deinen Lifestyle" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="mojobus">🚌 Mojobus - Mojo &amp; Susanne, US-Oldtimer</SelectItem>
                 <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
                 <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
+                <SelectItem value="beachlife">🏖️ Beachlife - Strand &amp; Surf Lifestyle</SelectItem>
                 <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
                 <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
               </SelectContent>
@@ -3781,7 +3783,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [publishedAt, setPublishedAt] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
-  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [articleLength, setArticleLength] = useState<'short' | 'medium' | 'long'>('medium');
   // Kling Video-Generator State
@@ -4785,9 +4787,10 @@ Schreibe deinen Artikel hier...
                 <SelectValue placeholder="Wähle deinen Lifestyle" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="mojobus">🚌 Mojobus - Mojo &amp; Susanne, US-Oldtimer</SelectItem>
                 <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
                 <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
+                <SelectItem value="beachlife">🏖️ Beachlife - Strand &amp; Surf Lifestyle</SelectItem>
                 <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
                 <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
               </SelectContent>
