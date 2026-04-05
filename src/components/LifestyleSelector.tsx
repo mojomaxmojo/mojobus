@@ -2,7 +2,7 @@
  * Lifestyle Selector Component
  * 
  * Ermöglicht die Auswahl des Lifestyles für KI-generierte Inhalte
- * Unterstützt: vanlife, rvlife, beachlife, wohnmobil, perpetual-travelers
+ * Unterstützt: mojobus, vanlife, rvlife, beachlife, wohnmobil, perpetual-travelers
  */
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,6 +17,11 @@ interface LifestyleSelectorProps {
 }
 
 const lifestyleOptions = [
+  {
+    value: 'mojobus' as LifestyleType,
+    label: '🚌 Mojobus',
+    description: 'Mojo & Susanne – US-Oldtimer unterwegs'
+  },
   {
     value: 'vanlife' as LifestyleType,
     label: '🚐 Vanlife',

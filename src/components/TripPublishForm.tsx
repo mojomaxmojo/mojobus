@@ -320,7 +320,7 @@ export function TripPublishForm() {
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
-  const [lifestyle, setLifestyle] = useState<'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('vanlife');
+  const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
   const [tripLength, setTripLength] = useState<'short' | 'medium' | 'long'>('medium');
 
   // Hooks
@@ -1361,9 +1361,10 @@ export function TripPublishForm() {
                   <SelectValue placeholder="Wähle deinen Lifestyle" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="mojobus">🚌 Mojobus - Mojo &amp; Susanne, US-Oldtimer</SelectItem>
                   <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
                   <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                  <SelectItem value="beachlife">🏖️ Beachlife - Strand & Surf Lifestyle</SelectItem>
+                  <SelectItem value="beachlife">🏖️ Beachlife - Strand &amp; Surf Lifestyle</SelectItem>
                   <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
                   <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
                 </SelectContent>
