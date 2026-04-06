@@ -3,7 +3,7 @@
  * Verwendet in: MediaUploadForm, NoteForm, PlaceForm, ArticleForm, TripPublishForm
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Video, Loader2, CheckCircle } from '@/lib/icons';
@@ -37,6 +37,23 @@ export function SlideshowBlock({
     duration: number;
     music: string | null;
   } | null>(null);
+  const [localMusicAvailable, setLocalMusicAvailable] = useState<boolean | null>(null);
+  const [localMusicFiles, setLocalMusicFiles] = useState<string[]>([]);
+  const [musicDir, setMusicDir] = useState<string>('');
+
+  // Musik-Status beim Aktivieren einmalig abrufen
+  useEffect(() => {
+    if (enabled && localMusicAvailable === null) {
+      fetch('/api/slideshow-music-status')
+        .then(r => r.json())
+        .then(data => {
+          setLocalMusicAvailable(data.available);
+          setLocalMusicFiles(data.files || []);
+          setMusicDir(data.musicDir || '');
+        })
+        .catch(() => setLocalMusicAvailable(false));
+    }
+  }, [enabled, localMusicAvailable]);
 
   const totalSec = imageUrls.length * imgDuration;
 
@@ -216,52 +233,84 @@ export function SlideshowBlock({
           <div className="space-y-2">
             <Label className="text-xs font-medium">🎵 Musik</Label>
             <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  {
-                    mode: 'local' as const,
-                    icon: '🎸',
-                    label: 'Lokal',
-                    sub: 'Fertige Chill-Tracks',
-                    price: '$0.00 — kostenlos',
-                    priceClass: 'text-emerald-600',
-                  },
-                  {
-                    mode: 'elevenlabs' as const,
-                    icon: '🤖',
-                    label: 'KI-Musik',
-                    sub: 'ElevenLabs · Lifestyle-passend',
-                    price: '$0.50 via ppq.ai',
-                    priceClass: 'text-amber-600',
-                  },
-                ] as const
-              ).map(({ mode, icon, label, sub, price, priceClass }) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setMusicMode(mode)}
-                  className={`p-3 rounded-lg border text-left transition-all ${
-                    musicMode === mode
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
-                  }`}
-                >
-                  <div className="font-medium text-sm">
-                    {icon} {label}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {sub}
-                  </div>
-                  <div className={`text-xs font-medium mt-1 ${priceClass}`}>
-                    {price}
-                  </div>
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => setMusicMode('local')}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  musicMode === 'local'
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                }`}
+              >
+                <div className="font-medium text-sm">
+                  🎸 Lokal
+                  {localMusicAvailable === false && (
+                    <span className="ml-1 text-xs text-amber-500">⚠️</span>
+                  )}
+                  {localMusicAvailable === true && (
+                    <span className="ml-1 text-xs text-emerald-500">✓ {localMusicFiles.length} Track{localMusicFiles.length !== 1 ? 's' : ''}</span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {localMusicAvailable === true
+                    ? `${localMusicFiles.slice(0, 2).join(', ')}${localMusicFiles.length > 2 ? '...' : ''}`
+                    : 'Fertige Chill-Tracks'}
+                </div>
+                <div className="text-xs font-medium mt-1 text-emerald-600">
+                  $0.00 — kostenlos
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMusicMode('elevenlabs')}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  musicMode === 'elevenlabs'
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                }`}
+              >
+                <div className="font-medium text-sm">🤖 KI-Musik</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  ElevenLabs · Lifestyle-passend
+                </div>
+                <div className="text-xs font-medium mt-1 text-amber-600">
+                  $0.50 via ppq.ai
+                </div>
+              </button>
             </div>
+
+            {/* Warnung: keine lokale Musik */}
+            {musicMode === 'local' && localMusicAvailable === false && (
+              <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-1.5">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                  ⚠️ Keine lokalen Musik-Dateien gefunden
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Das Video wird ohne Musik (Stille) generiert.
+                </p>
+                <p className="text-xs text-muted-foreground font-mono bg-white dark:bg-gray-900 rounded px-2 py-1 break-all">
+                  {musicDir || 'server/music/'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Lege <strong>.mp3</strong>, <strong>.m4a</strong> oder <strong>.ogg</strong> Dateien in diesen Ordner auf dem VPS. Dann wird automatisch ein zufälliger Track verwendet.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Oder wähle <strong>KI-Musik</strong> für automatisch generierte Musik (~$0.50).
+                </p>
+              </div>
+            )}
+
+            {/* Info: lokale Musik vorhanden */}
+            {musicMode === 'local' && localMusicAvailable === true && (
+              <p className="text-xs text-muted-foreground bg-emerald-50 dark:bg-emerald-900/20 rounded p-2">
+                🎵 Zufälliger Track aus <strong>{localMusicFiles.length}</strong> verfügbaren Dateien.
+              </p>
+            )}
+
+            {/* Info: ElevenLabs */}
             {musicMode === 'elevenlabs' && (
               <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 rounded p-2">
-                🎵 Musik-Stil wird aus Lifestyle{' '}
-                <strong>{lifestyle}</strong> generiert.
+                🎵 Musik-Stil passend zu <strong>{lifestyle}</strong> wird von ElevenLabs generiert.
               </p>
             )}
           </div>
