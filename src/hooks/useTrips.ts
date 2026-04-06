@@ -95,6 +95,8 @@ export interface Trip {
   waypoints: TripWaypoint[];
   /** All photos */
   photos: string[];
+  /** Slideshow video URL (optional) */
+  video?: string;
   /** Full event object */
   event: NostrEvent;
 }
@@ -167,6 +169,9 @@ function parseTripEvent(event: NostrEvent): Trip | null {
   // Must have at least 1 photo
   if (photos.length === 0) return null;
 
+  // Get slideshow video URL (optional)
+  const video = event.tags.find(([name]) => name === 'video')?.[1];
+
   // Generate naddr
   let naddr: string | undefined;
   try {
@@ -195,6 +200,7 @@ function parseTripEvent(event: NostrEvent): Trip | null {
     distanceUnit,
     waypoints,
     photos,
+    video,
     event,
   };
 }

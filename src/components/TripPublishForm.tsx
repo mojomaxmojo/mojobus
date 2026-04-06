@@ -323,6 +323,7 @@ export function TripPublishForm() {
   const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
   const [tripLength, setTripLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [aiGeneratedCaptions, setAiGeneratedCaptions] = useState<Set<string>>(new Set()); // station.ids mit KI-Caption
+  const [slideshowVideoUrl, setSlideshowVideoUrl] = useState<string | null>(null); // Fertige Blossom-URL der Slideshow
 
   // Hooks
   const { toast } = useToast();
@@ -1049,6 +1050,12 @@ export function TripPublishForm() {
       const countryTags = getCountryTag(tripData.country);
       countryTags.forEach(tag => tags.push(['t', tag]));
       tags.push(['country', tripData.country]);
+    }
+
+    // Slideshow-Video URL einbinden (wenn generiert)
+    if (slideshowVideoUrl) {
+      tags.push(['video', slideshowVideoUrl]);
+      console.log('[Trip Publish] Slideshow-Video wird eingebunden:', slideshowVideoUrl);
     }
     
     // Publish
@@ -1807,10 +1814,27 @@ export function TripPublishForm() {
 
       {/* Slideshow */}
       <SlideshowBlock
-        imageUrls={stations.map(s => s.preview).filter(Boolean)}
+        imageUrls={stations.map(s => s.uploadedUrl || s.preview).filter(Boolean)}
         lifestyle={lifestyle}
         title={tripData.title || 'trip'}
+        onVideoReady={(url) => {
+          setSlideshowVideoUrl(url);
+          toast({
+            title: '🎞️ Slideshow gespeichert',
+            description: 'Video wird beim Veröffentlichen automatisch eingebunden.',
+          });
+        }}
       />
+
+      {/* Slideshow-Video Vorschau wenn fertig */}
+      {slideshowVideoUrl && (
+        <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 space-y-2">
+          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+            ✅ Slideshow-Video wird beim Trip gespeichert:
+          </p>
+          <p className="text-xs font-mono text-muted-foreground break-all">{slideshowVideoUrl}</p>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between">
