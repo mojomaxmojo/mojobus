@@ -457,6 +457,77 @@ export const getTripImageAnalysisPrompt = (lifestyleConfig, tripLength = 'medium
 }
 
 /**
+ * Generiert einen kurzen Foster-Caption für ein einzelnes Bild einer Station
+ *
+ * @param {Object} params
+ * @param {string} params.imageDescription - Sachliche Bildanalyse (vom Vision-Modell)
+ * @param {string} params.stationTitle - Titel der Station (z.B. "Porto", "Ankunft am Hafen")
+ * @param {string} params.stationLocation - Ort der Station
+ * @param {string} params.userDescription - Was der User selbst geschrieben hat (Priorität)
+ * @param {string} params.tripTitle - Titel des gesamten Trips (Kontext)
+ * @param {Object} params.lifestyleConfig - Lifestyle-Konfiguration
+ * @param {string} params.gender - 'neutral' | 'male' | 'female' | 'couple'
+ * @param {number} params.stationIndex - Position im Trip (0-basiert)
+ * @param {number} params.totalStations - Gesamtzahl Stationen
+ */
+export const generateTripCaptionPrompt = (params) => {
+    const {
+        imageDescription,
+        stationTitle,
+        stationLocation,
+        userDescription,
+        tripTitle,
+        lifestyleConfig,
+        gender = 'neutral',
+        stationIndex = 0,
+        totalStations = 1
+    } = params
+
+    const genderAddition = getGenderPromptAddition(gender)
+
+    const positionHint = totalStations > 1
+        ? stationIndex === 0
+            ? 'Das ist der Anfang des Trips.'
+            : stationIndex === totalStations - 1
+                ? 'Das ist der letzte Stop des Trips.'
+                : `Das ist Station ${stationIndex + 1} von ${totalStations}.`
+        : ''
+
+    return `Du schreibst wie Foster Huntington. Ein kurzer Bildtext für eine Reisestation.
+${genderAddition}
+
+KONTEXT:
+- Trip: "${tripTitle || 'Unterwegs'}"
+- Station: ${stationTitle || stationLocation || `Station ${stationIndex + 1}`}${stationLocation ? ` (${stationLocation})` : ''}
+- ${positionHint}
+
+WAS AUF DEM BILD ZU SEHEN IST (sachlich, nicht nacherzählen):
+${imageDescription}
+
+${userDescription ? `WAS BEREITS GESCHRIEBEN WURDE (HÖCHSTE PRIORITÄT – baue darauf auf):\n"${userDescription}"\n` : ''}
+
+SCHREIBE: 20-100 Wörter. Ein Moment. Kein Absatz-Aufbau nötig.
+
+FOSTER'S REGELN FÜR BILDTEXTE:
+- Nicht das Bild beschreiben – der Leser sieht es
+- Was war davor oder danach? Was hat man gedacht? Was hat man gerochen?
+- Erste Person ("ich" oder "wir"). Kein "man", kein "du".
+- Kurze Sätze. Manche ohne Verb.
+- Kein Ausrufezeichen. Keine Motivation. Keine Bewertung.
+- Englische Wörter wenn sie besser sitzen: "stop", "spot", "on the road"
+
+BEISPIELE für die richtige Länge und den richtigen Ton:
+→ "Die Bäckerei kannte uns schon. Dritter Morgen, gleicher Tisch, gleicher Kaffee. Susanne hatte den Weg gefunden ohne Karte."
+→ "Motor aus. Das Klicken der Karosserie. Dann nur Wasser."
+→ "Wir sind zweimal vorbeigefahren bevor wir gehalten haben. Beim dritten Mal: rein. War richtig."
+
+LÄNGE: 20-100 Wörter. Kein Hashtag. Kein Fazit.
+SPRACHE: Deutsch. Knapp. Poetisch-nüchtern.
+
+Schreib den Text. Nur den Text. Keine Einleitung, keine Erklärung.`
+}
+
+/**
  * Exportiere tripLengthConfig für UI-Dropdown
  */
 export const tripLengthOptions = Object.entries(tripLengthConfig).map(([key, config]) => ({

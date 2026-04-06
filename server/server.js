@@ -32,6 +32,7 @@ import {
   getGenderPromptAddition,
   generateMediaPrompt,
   generateTripPrompt,
+  generateTripCaptionPrompt,
   generateArticlePrompt,
   generateNotePrompt,
   generatePlacePrompt,
@@ -376,7 +377,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
 
     // ===== FOSTER HUNTINGTON TRIP PROMPT =====
     // Generiert mit: generateTripPrompt() - importiert aus src/config/prompts/trips.js
-    const prompt = generateTripPrompt({
+    const summaryPrompt = generateTripPrompt({
       title,
       description,
       locations,
@@ -391,13 +392,43 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       gender
     })
 
-    // Trips: maxTokens abhängig von tripLength
-    const tripMaxTokens = tripLength === 'short' ? 500 : tripLength === 'medium' ? 1400 : 2500
-    const article = await generateWithModel(prompt, model, lifestyle, {
-      maxTokens: tripMaxTokens,
-      temperature: 0.8
+    // ===== BILD-CAPTIONS PRO STATION (20-100 Wörter) =====
+    // Jedes Bild bekommt parallel einen eigenen kurzen Foster-Text
+    const captionPrompts = imageDescriptions.map((imgDesc, index) => {
+      const stationDesc = stationDescriptions[index] || {}
+      return generateTripCaptionPrompt({
+        imageDescription: imgDesc,
+        stationTitle: stationDesc.location || locations[index] || `Station ${index + 1}`,
+        stationLocation: stationDesc.location || locations[index] || '',
+        userDescription: stationDesc.description || '',
+        tripTitle: title,
+        lifestyleConfig,
+        gender,
+        stationIndex: index,
+        totalStations: imageDescriptions.length
+      })
     })
-    console.log(`[KI] Trip-Artikel generiert: ${article.length} Zeichen (maxTokens: ${tripMaxTokens})`)
+
+    // Trips: maxTokens für Summary abhängig von tripLength
+    const tripMaxTokens = tripLength === 'short' ? 500 : tripLength === 'medium' ? 1400 : 2500
+
+    // Summary + alle Captions parallel generieren
+    console.log(`[KI] Generiere Summary + ${captionPrompts.length} Bild-Captions parallel...`)
+    const [article, ...captions] = await Promise.all([
+      generateWithModel(summaryPrompt, model, lifestyle, {
+        maxTokens: tripMaxTokens,
+        temperature: 0.8
+      }),
+      ...captionPrompts.map(captionPrompt =>
+        generateWithModel(captionPrompt, model, lifestyle, {
+          maxTokens: 180,  // 100 Wörter ≈ 130-150 Tokens, etwas Puffer
+          temperature: 0.85
+        })
+      )
+    ])
+
+    console.log(`[KI] Trip-Artikel generiert: ${article.length} Zeichen`)
+    console.log(`[KI] ${captions.length} Bild-Captions generiert`)
 
     // Hashtags extrahieren
     const hashtags = article.match(/#\w+/g) || []
@@ -405,6 +436,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
 
     res.json({
       article,
+      captions,           // Array: ein kurzer Text pro Bild
       imageDescriptions,
       hashtags: uniqueHashtags.join(' '),
       lifestyle,
