@@ -31,6 +31,7 @@ export function SlideshowBlock({
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoInfo, setVideoInfo] = useState<{
     sizeMB: string;
@@ -82,6 +83,21 @@ export function SlideshowBlock({
     setProgress(0);
     setVideoUrl(null);
     setVideoInfo(null);
+    setErrorMessage(null);
+
+    // Hilfsfunktion: Response sicher als JSON parsen – zeigt echten Fehlertext wenn kein JSON
+    const safeJson = async (response: Response) => {
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        // Server hat kein JSON gesendet (z.B. nginx 502, HTML-Fehlerseite, leere Antwort)
+        const preview = text.slice(0, 200).replace(/<[^>]+>/g, '').trim();
+        throw new Error(
+          `Server-Fehler HTTP ${response.status}: ${preview || 'Keine Antwort'}`
+        );
+      }
+    };
 
     try {
       const res = await fetch('/api/generate-slideshow', {
@@ -95,21 +111,33 @@ export function SlideshowBlock({
           imageDuration: imgDuration,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || `Server HTTP ${res.status}`);
 
       toast({
         title: '🎞️ Slideshow wird erstellt...',
         description: `${data.imageCount} Bilder · ${data.totalDuration}s · ${
-          musicMode === 'elevenlabs' ? 'KI-Musik ($0.50)' : 'Lokale Musik (gratis)'
+          musicMode === 'elevenlabs' ? 'KI-Musik ($0.50)' : 'Lokale Musik'
         }`,
       });
 
       let attempts = 0;
       const poll = async (): Promise<void> => {
         if (attempts++ > 120) throw new Error('Timeout nach 6 Minuten.');
-        const pollRes = await fetch(`/api/slideshow-status/${data.jobId}`);
-        const pollData = await pollRes.json();
+        
+        let pollData: any;
+        try {
+          const pollRes = await fetch(`/api/slideshow-status/${data.jobId}`);
+          pollData = await safeJson(pollRes);
+        } catch (pollErr: any) {
+          // Einzelner Poll-Fehler → kurz warten, nochmal versuchen (max 3x)
+          if (attempts < 3) {
+            await new Promise((r) => setTimeout(r, 3000));
+            return poll();
+          }
+          throw pollErr;
+        }
+
         setProgress(pollData.progress || 0);
 
         if (pollData.status === 'completed' && pollData.downloadUrl) {
@@ -120,7 +148,7 @@ export function SlideshowBlock({
 
           const videoRes = await fetch(pollData.downloadUrl);
           if (!videoRes.ok)
-            throw new Error(`Download fehlgeschlagen: ${videoRes.status}`);
+            throw new Error(`Download fehlgeschlagen: HTTP ${videoRes.status}`);
           const blob = await videoRes.blob();
 
           const safeName = title
@@ -161,9 +189,12 @@ export function SlideshowBlock({
       await poll();
     } catch (err: any) {
       setStatus('failed');
+      console.error('[Slideshow] Fehler:', err.message);
+      const errMsg = err.message || 'Unbekannter Fehler';
+      setErrorMessage(errMsg);
       toast({
         title: 'Slideshow Fehler',
-        description: err.message,
+        description: errMsg.length > 150 ? errMsg.slice(0, 147) + '...' : errMsg,
         variant: 'destructive',
       });
     } finally {
@@ -403,6 +434,25 @@ export function SlideshowBlock({
                 className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
+            </div>
+          )}
+
+          {/* Fehler-Anzeige mit echtem Fehlertext */}
+          {status === 'failed' && errorMessage && (
+            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 space-y-2">
+              <p className="text-xs font-medium text-red-700 dark:text-red-300">❌ Fehler beim Generieren</p>
+              <p className="text-xs text-red-600 dark:text-red-400 font-mono break-all">
+                {errorMessage}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => { setStatus('idle'); setErrorMessage(null); }}
+                className="text-xs h-7"
+              >
+                Erneut versuchen
+              </Button>
             </div>
           )}
 
