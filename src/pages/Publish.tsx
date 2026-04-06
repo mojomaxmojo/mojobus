@@ -3786,6 +3786,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [articleLength, setArticleLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]); // 3 KI-Titel-Vorschläge
   // Kling Video-Generator State
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
@@ -4121,6 +4122,16 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
         setContent(finalContent);
 
+        // Zusammenfassung automatisch ins Summary-Feld
+        if (data.summary) {
+          setSummary(data.summary);
+        }
+
+        // 3 Titel-Vorschläge speichern
+        if (data.titleSuggestions && data.titleSuggestions.length > 0) {
+          setTitleSuggestions(data.titleSuggestions);
+        }
+
         if (data.hashtags) {
           const newTags = data.hashtags.split(' ').filter((t: string) => !tags.includes(t));
           setTags([...tags, ...newTags]);
@@ -4128,9 +4139,9 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
         const urlImageCount = imageObjects.filter((img: { url: string | null }) => img.url !== null).length;
         toast({
-          title: 'Erfolg!',
-          description: `KI-Artikel generiert mit ${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}`
-            + (urlImageCount > 0 ? ` – ${urlImageCount} Bild(er) im Text platziert.` : '.')
+          title: 'Fertig!',
+          description: `Artikel + Zusammenfassung + 3 Titel generiert (${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'})`
+            + (urlImageCount > 0 ? ` – ${urlImageCount} Bild(er) platziert.` : '.')
         });
       }
     } catch (error) {
@@ -4702,18 +4713,51 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
           <Input
             id="article-title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); setTitleSuggestions([]); }}
             placeholder="Einprägsamer Titel für deinen Artikel..."
           />
+          {/* KI-Titel-Vorschläge */}
+          {titleSuggestions.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-muted-foreground font-medium">✨ KI-Vorschläge – klicken zum Übernehmen:</p>
+              <div className="flex flex-col gap-1.5">
+                {titleSuggestions.map((suggestion, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => { setTitle(suggestion); setTitleSuggestions([]); }}
+                    className="text-left px-3 py-2 text-sm rounded-lg border border-ocean-200 dark:border-ocean-800 bg-ocean-50 dark:bg-ocean-950/50 hover:bg-ocean-100 dark:hover:bg-ocean-900 text-ocean-900 dark:text-ocean-100 transition-colors group"
+                  >
+                    <span className="text-xs text-ocean-400 dark:text-ocean-500 mr-2 group-hover:text-ocean-600">{i + 1}.</span>
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setTitleSuggestions([])}
+                className="text-xs text-muted-foreground hover:text-foreground underline mt-1"
+              >
+                Vorschläge ausblenden
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="article-summary">Zusammenfassung</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="article-summary">Zusammenfassung</Label>
+            {summary && (
+              <span className="text-xs text-muted-foreground">
+                {summary.trim().split(/\s+/).filter(Boolean).length} Wörter
+              </span>
+            )}
+          </div>
           <Textarea
             id="article-summary"
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            placeholder="Kurze Zusammenfassung (1-2 Sätze)..."
+            placeholder="Kurze Zusammenfassung (wird nach KI-Generierung automatisch befüllt)..."
             rows={2}
           />
         </div>

@@ -322,6 +322,7 @@ export function TripPublishForm() {
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
   const [tripLength, setTripLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [aiGeneratedCaptions, setAiGeneratedCaptions] = useState<Set<string>>(new Set()); // station.ids mit KI-Caption
 
   // Hooks
   const { toast } = useToast();
@@ -386,26 +387,34 @@ export function TripPublishForm() {
       const data = await response.json();
       
       if (data.article) {
-        // Artikel in Trip-Summary einfügen
+        // Zusammenfassung in Trip-Summary einfügen
         setTripData(prev => ({
           ...prev,
           summary: data.article
         }));
-        
-        // Hashtags hinzufügen
-        if (data.hashtags) {
-          const newTags = data.hashtags.split(' ').filter(Boolean);
-          console.log('[KI] Generated hashtags:', newTags);
+
+        // Bild-Captions in die jeweiligen Stationen einfügen
+        if (data.captions && data.captions.length > 0) {
+          const newAiIds = new Set<string>();
+          setStations(prev => prev.map((station, index) => {
+            const caption = data.captions[index];
+            if (caption) {
+              newAiIds.add(station.id);
+              return { ...station, description: caption };
+            }
+            return station;
+          }));
+          setAiGeneratedCaptions(newAiIds);
+          console.log(`[KI] ${data.captions.length} Bild-Captions in Stationen eingefügt`);
         }
 
         setGeneratingProgress(100);
         
         toast({
-          title: 'Erfolg!',
-          description: `KI-Artikel generiert mit ${data.model === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}! ${data.imageDescriptions?.length || 0} Stationen analysiert.`
+          title: 'Fertig!',
+          description: `Zusammenfassung + ${data.captions?.length || 0} Bild-Texte generiert (${selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'})`
         });
         
-        // Kurze Verzögerung für UI-Feedback
         setTimeout(() => {
           setGeneratingProgress(0);
         }, 1000);
@@ -1344,13 +1353,20 @@ export function TripPublishForm() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="trip-summary">Kurzbeschreibung</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="trip-summary">Zusammenfassung</Label>
+              {tripData.summary && (
+                <span className="text-xs text-muted-foreground">
+                  {tripData.summary.trim().split(/\s+/).filter(Boolean).length} Wörter
+                </span>
+              )}
+            </div>
             <Textarea
               id="trip-summary"
               value={tripData.summary}
               onChange={(e) => setTripData(prev => ({ ...prev, summary: e.target.value }))}
-              placeholder="Eine kurze Beschreibung deiner Reise..."
-              rows={2}
+              placeholder="Langer Foster-Text für die Reise – oder KI generieren lassen..."
+              rows={6}
             />
 
             {/* Lifestyle Auswahl für KI-Generierung */}
@@ -1448,45 +1464,56 @@ export function TripPublishForm() {
               </div>
             </div>
             
-            {/* KI-Artikel generieren Button */}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={generateArticleWithAI}
-              disabled={isGeneratingArticle || stations.length === 0}
-              className="mt-2 w-full"
-            >
-              {isGeneratingArticle ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {generatingProgress < 100 
-                    ? `Generiere Artikel (${selectedModel === 'claude' ? 'Claude 4.6' : 'Llama 4'})... ${Math.round(generatingProgress)}%`
-                    : 'Artikel wird eingefügt...'
-                  }
-                </>
-              ) : (
-                <>
-                  <span className="mr-2">🗺️</span>
-                  KI-Reisebericht generieren ({stations.length} Stationen)
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    mit {selectedModel === 'claude' ? 'Claude Sonnet 4.6' : 'Llama 4 Scout'}
-                  </span>
-                </>
-              )}
-            </Button>
-            
-            {/* Fortschrittsanzeige */}
-            {isGeneratingArticle && generatingProgress > 0 && (
-              <div className="mt-2 space-y-2">
-                <Progress value={generatingProgress} className="h-2" />
-                <p className="text-xs text-muted-foreground text-center">
-                  {generatingProgress < 10 && 'Starte Generierung...'}
-                  {generatingProgress >= 10 && generatingProgress < 90 && `Analysiere ${stations.length} Bilder...`}
-                  {generatingProgress >= 90 && generatingProgress < 100 && 'Generiere Artikel...'}
-                  {generatingProgress >= 100 && 'Fertig! Artikel eingefügt.'}
-                </p>
+            {/* KI-Generierung Button */}
+            <div className="mt-2 rounded-lg border border-dashed border-ocean-300 dark:border-ocean-700 bg-ocean-50/50 dark:bg-ocean-950/30 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-ocean-700 dark:text-ocean-300">
+                <span>🤖</span>
+                <span>KI generiert beides gleichzeitig:</span>
               </div>
-            )}
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">📝</span>
+                  <div>
+                    <div className="font-medium text-foreground">Zusammenfassung</div>
+                    <div>Langer Foster-Text für den Trip</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">🖼️</span>
+                  <div>
+                    <div className="font-medium text-foreground">{stations.length}× Bild-Text</div>
+                    <div>20–100 Wörter pro Bild</div>
+                  </div>
+                </div>
+              </div>
+              <Button
+                type="button"
+                onClick={generateArticleWithAI}
+                disabled={isGeneratingArticle || stations.length === 0}
+                className="w-full"
+              >
+                {isGeneratingArticle ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {generatingProgress < 10 && 'Starte...'}
+                    {generatingProgress >= 10 && generatingProgress < 90 && `Bilder analysieren (${stations.length})...`}
+                    {generatingProgress >= 90 && generatingProgress < 100 && 'Texte werden generiert...'}
+                    {generatingProgress >= 100 && '✓ Fertig!'}
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-2">✨</span>
+                    Zusammenfassung + Bild-Texte generieren
+                    <span className="ml-2 text-xs opacity-70">
+                      {selectedModel === 'claude' ? 'Claude 4.6' : 'Llama 4'}
+                    </span>
+                  </>
+                )}
+              </Button>
+              {isGeneratingArticle && generatingProgress > 0 && (
+                <Progress value={generatingProgress} className="h-1.5" />
+              )}
+            </div>
           </div>
           
           {/* Trip Type Select - Pflichtfeld */}
@@ -1604,12 +1631,37 @@ export function TripPublishForm() {
                   </div>
                   
                   {/* Description */}
-                  <Textarea
-                    value={station.description}
-                    onChange={(e) => updateStation(station.id, 'description', e.target.value)}
-                    placeholder="Beschreibe diese Station..."
-                    rows={2}
-                  />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground">Bildtext</Label>
+                      {aiGeneratedCaptions.has(station.id) && (
+                        <span className="text-xs bg-ocean-100 dark:bg-ocean-900 text-ocean-700 dark:text-ocean-300 px-1.5 py-0.5 rounded font-medium">
+                          ✨ KI-Text – bearbeitbar
+                        </span>
+                      )}
+                    </div>
+                    <Textarea
+                      value={station.description}
+                      onChange={(e) => {
+                        updateStation(station.id, 'description', e.target.value);
+                        // KI-Badge entfernen sobald User editiert
+                        if (aiGeneratedCaptions.has(station.id)) {
+                          setAiGeneratedCaptions(prev => {
+                            const next = new Set(prev);
+                            next.delete(station.id);
+                            return next;
+                          });
+                        }
+                      }}
+                      placeholder="Kurzer Text zu diesem Bild (oder KI generieren lassen)..."
+                      rows={3}
+                    />
+                    {station.description && (
+                      <p className="text-xs text-muted-foreground text-right">
+                        {station.description.trim().split(/\s+/).filter(Boolean).length} Wörter
+                      </p>
+                    )}
+                  </div>
                   
                   {/* Date */}
                   <Input

@@ -32,7 +32,10 @@ import {
   getGenderPromptAddition,
   generateMediaPrompt,
   generateTripPrompt,
+  generateTripCaptionPrompt,
   generateArticlePrompt,
+  generateArticleSummaryPrompt,
+  generateArticleTitlesPrompt,
   generateNotePrompt,
   generatePlacePrompt,
   getMediaImageAnalysisPrompt,
@@ -376,7 +379,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
 
     // ===== FOSTER HUNTINGTON TRIP PROMPT =====
     // Generiert mit: generateTripPrompt() - importiert aus src/config/prompts/trips.js
-    const prompt = generateTripPrompt({
+    const summaryPrompt = generateTripPrompt({
       title,
       description,
       locations,
@@ -391,13 +394,43 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       gender
     })
 
-    // Trips: maxTokens abhängig von tripLength
-    const tripMaxTokens = tripLength === 'short' ? 500 : tripLength === 'medium' ? 1400 : 2500
-    const article = await generateWithModel(prompt, model, lifestyle, {
-      maxTokens: tripMaxTokens,
-      temperature: 0.8
+    // ===== BILD-CAPTIONS PRO STATION (20-100 Wörter) =====
+    // Jedes Bild bekommt parallel einen eigenen kurzen Foster-Text
+    const captionPrompts = imageDescriptions.map((imgDesc, index) => {
+      const stationDesc = stationDescriptions[index] || {}
+      return generateTripCaptionPrompt({
+        imageDescription: imgDesc,
+        stationTitle: stationDesc.location || locations[index] || `Station ${index + 1}`,
+        stationLocation: stationDesc.location || locations[index] || '',
+        userDescription: stationDesc.description || '',
+        tripTitle: title,
+        lifestyleConfig,
+        gender,
+        stationIndex: index,
+        totalStations: imageDescriptions.length
+      })
     })
-    console.log(`[KI] Trip-Artikel generiert: ${article.length} Zeichen (maxTokens: ${tripMaxTokens})`)
+
+    // Trips: maxTokens für Summary abhängig von tripLength
+    const tripMaxTokens = tripLength === 'short' ? 500 : tripLength === 'medium' ? 1400 : 2500
+
+    // Summary + alle Captions parallel generieren
+    console.log(`[KI] Generiere Summary + ${captionPrompts.length} Bild-Captions parallel...`)
+    const [article, ...captions] = await Promise.all([
+      generateWithModel(summaryPrompt, model, lifestyle, {
+        maxTokens: tripMaxTokens,
+        temperature: 0.8
+      }),
+      ...captionPrompts.map(captionPrompt =>
+        generateWithModel(captionPrompt, model, lifestyle, {
+          maxTokens: 180,  // 100 Wörter ≈ 130-150 Tokens, etwas Puffer
+          temperature: 0.85
+        })
+      )
+    ])
+
+    console.log(`[KI] Trip-Artikel generiert: ${article.length} Zeichen`)
+    console.log(`[KI] ${captions.length} Bild-Captions generiert`)
 
     // Hashtags extrahieren
     const hashtags = article.match(/#\w+/g) || []
@@ -405,6 +438,7 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
 
     res.json({
       article,
+      captions,           // Array: ein kurzer Text pro Bild
       imageDescriptions,
       hashtags: uniqueHashtags.join(' '),
       lifestyle,
@@ -1168,20 +1202,64 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
 
     // Berichte: maxTokens abhängig von articleLength
     const articleMaxTokens = articleLength === 'short' ? 500 : articleLength === 'medium' ? 1200 : 2500
+
+    // Schritt 1: Artikel generieren
+    console.log(`[KI] Generiere Artikel (${articleLength}, max ${articleMaxTokens} Tokens)...`)
     const article = await generateWithModel(prompt, model, lifestyle, {
       maxTokens: articleMaxTokens,
       temperature: 0.8
     })
-    
+    console.log(`[KI] Artikel fertig: ${article.length} Zeichen`)
+
+    // Schritt 2: Summary + 3 Titel-Vorschläge parallel aus dem fertigen Artikel generieren
+    const summaryPromptText = generateArticleSummaryPrompt({
+      articleText: article,
+      title,
+      lifestyleConfig,
+      gender
+    })
+    const titlesPromptText = generateArticleTitlesPrompt({
+      articleText: article,
+      currentTitle: title,
+      lifestyleConfig,
+      gender
+    })
+
+    console.log(`[KI] Generiere Summary + Titel-Vorschläge parallel...`)
+    const [summaryRaw, titlesRaw] = await Promise.all([
+      generateWithModel(summaryPromptText, model, lifestyle, {
+        maxTokens: 80,
+        temperature: 0.7
+      }),
+      generateWithModel(titlesPromptText, model, lifestyle, {
+        maxTokens: 80,
+        temperature: 0.9  // etwas mehr Variation für Titel
+      })
+    ])
+
+    // Titel parsen: eine Zeile = ein Titel, max 3
+    const titleSuggestions = titlesRaw
+      .split('\n')
+      .map(l => l.trim().replace(/^[-–•*\d.]+\s*/, '').replace(/^["']|["']$/g, ''))
+      .filter(l => l.length > 2 && l.length < 80)
+      .slice(0, 3)
+
+    const summary = summaryRaw.trim().replace(/^["']|["']$/g, '')
+
+    console.log(`[KI] Summary: "${summary.substring(0, 60)}..."`)
+    console.log(`[KI] Titel-Vorschläge: ${JSON.stringify(titleSuggestions)}`)
+
     const hashtags = article.match(/#\w+/g) || []
     const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
 
     res.json({
       article,
+      summary,             // Kurzfassung (1-2 Sätze) → geht ins Summary-Feld
+      titleSuggestions,    // 3 Titel-Vorschläge → klickbar im Frontend
       hashtags: uniqueHashtags.join(' '),
       lifestyle,
       articleLength,
-      imageObjects // [{url, description}] – Frontend ersetzt [BILD_N] mit den URLs
+      imageObjects
     })
   } catch (error) {
     console.error('[KI] Fehler bei Bericht-Generierung:', error.response?.data || error.message)

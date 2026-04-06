@@ -302,6 +302,80 @@ export const getArticleImageAnalysisPrompt = (lifestyleConfig, articleLength = '
 }
 
 /**
+ * Generiert eine kurze Zusammenfassung (1-2 Sätze) aus dem fertigen Artikel-Text
+ *
+ * @param {string} articleText - Der generierte Artikel
+ * @param {string} title - Titel des Artikels
+ * @param {Object} lifestyleConfig - Lifestyle-Konfiguration
+ * @param {string} gender - 'neutral' | 'male' | 'female' | 'couple'
+ */
+export const generateArticleSummaryPrompt = ({ articleText, title, lifestyleConfig, gender = 'neutral' }) => {
+    const genderAddition = getGenderPromptAddition(gender)
+
+    return `Schreibe eine Zusammenfassung für diesen Artikel. 1-2 Sätze. Maximal 30 Wörter.
+
+ARTIKEL-TITEL: "${title}"
+
+ARTIKEL:
+${articleText.slice(0, 800)}${articleText.length > 800 ? '...' : ''}
+
+REGELN:
+- 1-2 Sätze. Nicht mehr.
+- Kein Spoiler – nicht die beste Pointe verraten
+- Kein "In diesem Artikel..." oder "Der Autor beschreibt..."
+- Foster-Stil: knapp, direkt, konkret. Kein Adjektiv-Aufwand.
+- Kein Ausrufezeichen. Keine Frage.
+${genderAddition ? `\n${genderAddition}` : ''}
+
+BEISPIELE:
+→ "Drei Tage an der Algarve. Kein Plan, kein Campground, nur die Straße und was danach kommt."
+→ "Der Motor macht Geräusche seit Lissabon. Wir fahren trotzdem weiter."
+→ "Portugiesische Westküste im November. Was passiert wenn man zu lange an einem Ort bleibt."
+
+Nur die Zusammenfassung. Keine Anführungszeichen drum.`
+}
+
+/**
+ * Generiert 3 Titel-Vorschläge aus dem fertigen Artikel
+ *
+ * @param {string} articleText - Der generierte Artikel
+ * @param {string} currentTitle - Bisheriger Titel (als Kontext / Fallback)
+ * @param {Object} lifestyleConfig - Lifestyle-Konfiguration
+ * @param {string} gender - 'neutral' | 'male' | 'female' | 'couple'
+ */
+export const generateArticleTitlesPrompt = ({ articleText, currentTitle, lifestyleConfig, gender = 'neutral' }) => {
+    const genderAddition = getGenderPromptAddition(gender)
+
+    return `Schlage 3 Titel für diesen Artikel vor.
+
+BISHERIGER TITEL (als Orientierung, NICHT kopieren): "${currentTitle}"
+
+ARTIKEL (Anfang):
+${articleText.slice(0, 600)}${articleText.length > 600 ? '...' : ''}
+
+REGELN FÜR GUTE FOSTER-TITEL:
+- Kurz. 2-6 Wörter. Manchmal nur 3.
+- Kein Clickbait. Kein "10 Gründe warum..."
+- Keine Fragen: "Warum wir...", "Wie man..."
+- Keine Adjektive die nichts sagen: "Unvergesslich", "Magisch", "Wunderschön"
+- Konkret oder lakonisch – beides funktioniert
+- Darf englische Wörter enthalten wenn sie besser sitzen
+- Ortsname + Stimmung funktioniert gut: "Algarve im November"
+- Fragment ist erlaubt: "Motor aus. Stille." (als Titel)
+${genderAddition ? `\n${genderAddition}` : ''}
+
+BEISPIELE guter Foster-Titel:
+→ "Drei Tage Schotter"
+→ "Küste, November, kein Plan"
+→ "Die Pumpe macht Geräusche"
+→ "Porto im Regen"
+→ "Alles dauert länger bergauf"
+→ "Irgendwo hinter Sagres"
+
+Gib NUR die 3 Titel aus. Einen pro Zeile. Keine Nummerierung, keine Anführungszeichen, keine Erklärung.`
+}
+
+/**
  * Exportiere lengthConfig für UI-Dropdown etc.
  */
 export const articleLengthOptions = Object.entries(lengthConfig).map(([key, config]) => ({
