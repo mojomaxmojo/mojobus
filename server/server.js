@@ -919,17 +919,17 @@ async function runSlideshowJob(jobId, params) {
     // Audio: immer einen Audio-Track bauen (Musik oder Stille)
     const fadeStart = Math.max(0, totalDuration - 2)
     if (musicPath) {
-      // Echte Musik: trim auf Video-Länge + fade out
+      // Echte Musik-Datei: trim auf Video-Länge + fade out
       filterLines.push(
         `[${n}:a]atrim=0:${totalDuration},` +
         `afade=t=out:st=${fadeStart}:d=2[aout]`
       )
     } else {
-      // Stille: lavfi anullsrc generiert leeren Audio-Stream
+      // Kein Musik-File: lavfi anullsrc als separater -i Input
+      // Wird als letzter Input NACH den Bildern hinzugefügt
+      inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
       filterLines.push(
-        `anullsrc=r=44100:cl=stereo,` +
-        `atrim=0:${totalDuration},` +
-        `afade=t=out:st=${fadeStart}:d=2[aout]`
+        `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
       )
     }
 
