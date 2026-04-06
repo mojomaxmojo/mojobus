@@ -830,24 +830,38 @@ async function runSlideshowJob(jobId, params) {
 
     // ── Schritt 2: Musik besorgen ─────────────────────────────────────────
     let musicPath = null
+    let musicSource = 'none'  // 'elevenlabs' | 'local' | 'silent'
 
     if (musicMode === 'elevenlabs' && ppqKey) {
       try {
         console.log('[Slideshow] ElevenLabs Musik generieren...')
         const musicUrl = await generateElevenLabsMusic(lifestyle, totalDuration, ppqKey)
         musicPath = path.join(jobDir, 'music.mp3')
-        await downloadImage(musicUrl, musicPath) // gleiche Download-Funktion
+        await downloadImage(musicUrl, musicPath)
+        musicSource = 'elevenlabs'
         console.log(`[Slideshow] ElevenLabs Musik heruntergeladen: ${musicPath}`)
       } catch (err) {
-        console.warn('[Slideshow] ElevenLabs fehlgeschlagen, fallback auf lokal:', err.message)
+        console.warn('[Slideshow] ElevenLabs fehlgeschlagen, versuche lokal:', err.message)
         musicPath = getLocalMusicFile(lifestyle)
+        if (musicPath) {
+          musicSource = 'local'
+          console.log(`[Slideshow] Fallback auf lokale Musik: ${path.basename(musicPath)}`)
+        }
       }
     } else {
       musicPath = getLocalMusicFile(lifestyle)
+      if (musicPath) {
+        musicSource = 'local'
+      }
     }
 
-    if (musicPath) console.log(`[Slideshow] Musik: ${path.basename(musicPath)}`)
-    else console.log('[Slideshow] Kein Musik-File gefunden — Video ohne Ton')
+    if (musicPath) {
+      console.log(`[Slideshow] Musik (${musicSource}): ${path.basename(musicPath)}`)
+    } else {
+      musicSource = 'silent'
+      console.log('[Slideshow] Kein Musik-File gefunden — verwende ffmpeg lavfi Stille als Audio-Track')
+      console.log(`[Slideshow] HINWEIS: Lege MP3-Dateien in ${MUSIC_DIR} ab um lokale Musik zu aktivieren`)
+    }
 
     updateJob({ status: 'rendering', progress: 40 })
 
@@ -857,17 +871,28 @@ async function runSlideshowJob(jobId, params) {
     const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
     const [w, h] = size.split('x').map(Number)
 
-    // ffmpeg Input-Args: alle Bilder + optional Musik
+    // ffmpeg Input-Args aufbauen
+    // Bilder als Loop-Inputs
     const inputArgs = []
     for (const imgPath of imagePaths) {
       inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
     }
-    if (musicPath) inputArgs.push('-i', musicPath)
 
-    const audioIndex = n // Musik ist der n-te Input (0-basiert)
+    // Audio-Input: echte Musik-Datei ODER lavfi-Stille als Fallback
+    let audioInputLabel = null
+    if (musicPath) {
+      inputArgs.push('-i', musicPath)
+      audioInputLabel = `[${n}:a]`   // n-ter Input = Musik-Datei
+    } else {
+      // lavfi anullsrc: synthetische Stille – immer verfügbar in ffmpeg
+      // Kein extra -i nötig, wird direkt im filter_complex definiert
+      audioInputLabel = null  // wird unten als anullsrc in filterLines gebaut
+    }
 
     // Filter Complex aufbauen
     let filterLines = []
+
+    // Video-Filter: Scale + Crop + Ken Burns pro Bild
     for (let i = 0; i < n; i++) {
       const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
       const zpFilter = effect(imageDuration, fps).replace('1920x1080', `${w}x${h}`)
@@ -878,7 +903,7 @@ async function runSlideshowJob(jobId, params) {
       )
     }
 
-    // Crossfade Kette
+    // Video Crossfade-Kette
     if (n === 1) {
       filterLines.push(`[v0]copy[vout]`)
     } else {
@@ -891,25 +916,38 @@ async function runSlideshowJob(jobId, params) {
       }
     }
 
-    // Audio: fade out in letzten 2 Sekunden
+    // Audio: immer einen Audio-Track bauen (Musik oder Stille)
+    const fadeStart = Math.max(0, totalDuration - 2)
     if (musicPath) {
-      const fadeStart = Math.max(0, totalDuration - 2)
+      // Echte Musik: trim auf Video-Länge + fade out
       filterLines.push(
-        `[${audioIndex}:a]atrim=0:${totalDuration},` +
+        `[${n}:a]atrim=0:${totalDuration},` +
+        `afade=t=out:st=${fadeStart}:d=2[aout]`
+      )
+    } else {
+      // Stille: lavfi anullsrc generiert leeren Audio-Stream
+      filterLines.push(
+        `anullsrc=r=44100:cl=stereo,` +
+        `atrim=0:${totalDuration},` +
         `afade=t=out:st=${fadeStart}:d=2[aout]`
       )
     }
 
     const filterComplex = filterLines.join('; ')
 
-    // ffmpeg Ausgabe-Args
-    const outputArgs = musicPath
-      ? ['-map', '[vout]', '-map', '[aout]', '-c:v', 'libx264', '-preset', 'fast',
-         '-crf', '23', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart',
-         '-t', String(totalDuration), outputPath]
-      : ['-map', '[vout]', '-c:v', 'libx264', '-preset', 'fast',
-         '-crf', '23', '-movflags', '+faststart',
-         '-t', String(totalDuration), outputPath]
+    // ffmpeg Output-Args: immer mit Audio-Track (-map [aout])
+    const outputArgs = [
+      '-map', '[vout]',
+      '-map', '[aout]',
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '23',
+      '-c:a', 'aac',
+      '-b:a', musicPath ? '192k' : '64k',
+      '-movflags', '+faststart',
+      '-t', String(totalDuration),
+      outputPath
+    ]
 
     const ffmpegArgs = [
       '-y',           // Overwrite
@@ -934,7 +972,8 @@ async function runSlideshowJob(jobId, params) {
       outputPath,   // Disk-Pfad für Download-Endpoint
       videoSizeMB,
       imageCount: imagePaths.length,
-      musicUsed: musicPath ? path.basename(musicPath) : null,
+      musicUsed: musicPath ? path.basename(musicPath) : (musicSource === 'silent' ? 'keine (Stille)' : null),
+      musicSource,
       totalDuration
     })
 
@@ -1004,6 +1043,24 @@ app.post('/api/generate-slideshow', async (req, res) => {
     totalDuration,
     estimatedCost,
     musicMode
+  })
+})
+
+// ── GET /api/slideshow-music-status ──────────────────────────────────────
+// Prüft ob lokale Musik-Files vorhanden sind
+app.get('/api/slideshow-music-status', (req, res) => {
+  const exists = fs.existsSync(MUSIC_DIR)
+  const files = exists
+    ? fs.readdirSync(MUSIC_DIR).filter(f => f.endsWith('.mp3') || f.endsWith('.m4a') || f.endsWith('.ogg'))
+    : []
+  res.json({
+    musicDir: MUSIC_DIR,
+    available: files.length > 0,
+    fileCount: files.length,
+    files: files.slice(0, 10), // max 10 anzeigen
+    hint: files.length === 0
+      ? `Lege MP3-Dateien in ${MUSIC_DIR} ab um lokale Musik zu aktivieren`
+      : null
   })
 })
 
