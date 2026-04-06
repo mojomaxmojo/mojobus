@@ -13,6 +13,7 @@ export * from './media.js'
 export * from './trips.js'
 export { generateTripCaptionPrompt } from './trips.js'
 export * from './articles.js'
+export { generateArticleSummaryPrompt, generateArticleTitlesPrompt } from './articles.js'
 export * from './notes.js'
 export * from './place.js'
 

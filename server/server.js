@@ -34,6 +34,8 @@ import {
   generateTripPrompt,
   generateTripCaptionPrompt,
   generateArticlePrompt,
+  generateArticleSummaryPrompt,
+  generateArticleTitlesPrompt,
   generateNotePrompt,
   generatePlacePrompt,
   getMediaImageAnalysisPrompt,
@@ -1200,20 +1202,64 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
 
     // Berichte: maxTokens abhängig von articleLength
     const articleMaxTokens = articleLength === 'short' ? 500 : articleLength === 'medium' ? 1200 : 2500
+
+    // Schritt 1: Artikel generieren
+    console.log(`[KI] Generiere Artikel (${articleLength}, max ${articleMaxTokens} Tokens)...`)
     const article = await generateWithModel(prompt, model, lifestyle, {
       maxTokens: articleMaxTokens,
       temperature: 0.8
     })
-    
+    console.log(`[KI] Artikel fertig: ${article.length} Zeichen`)
+
+    // Schritt 2: Summary + 3 Titel-Vorschläge parallel aus dem fertigen Artikel generieren
+    const summaryPromptText = generateArticleSummaryPrompt({
+      articleText: article,
+      title,
+      lifestyleConfig,
+      gender
+    })
+    const titlesPromptText = generateArticleTitlesPrompt({
+      articleText: article,
+      currentTitle: title,
+      lifestyleConfig,
+      gender
+    })
+
+    console.log(`[KI] Generiere Summary + Titel-Vorschläge parallel...`)
+    const [summaryRaw, titlesRaw] = await Promise.all([
+      generateWithModel(summaryPromptText, model, lifestyle, {
+        maxTokens: 80,
+        temperature: 0.7
+      }),
+      generateWithModel(titlesPromptText, model, lifestyle, {
+        maxTokens: 80,
+        temperature: 0.9  // etwas mehr Variation für Titel
+      })
+    ])
+
+    // Titel parsen: eine Zeile = ein Titel, max 3
+    const titleSuggestions = titlesRaw
+      .split('\n')
+      .map(l => l.trim().replace(/^[-–•*\d.]+\s*/, '').replace(/^["']|["']$/g, ''))
+      .filter(l => l.length > 2 && l.length < 80)
+      .slice(0, 3)
+
+    const summary = summaryRaw.trim().replace(/^["']|["']$/g, '')
+
+    console.log(`[KI] Summary: "${summary.substring(0, 60)}..."`)
+    console.log(`[KI] Titel-Vorschläge: ${JSON.stringify(titleSuggestions)}`)
+
     const hashtags = article.match(/#\w+/g) || []
     const uniqueHashtags = [...new Set(hashtags.map(tag => tag.replace('#', '')))]
 
     res.json({
       article,
+      summary,             // Kurzfassung (1-2 Sätze) → geht ins Summary-Feld
+      titleSuggestions,    // 3 Titel-Vorschläge → klickbar im Frontend
       hashtags: uniqueHashtags.join(' '),
       lifestyle,
       articleLength,
-      imageObjects // [{url, description}] – Frontend ersetzt [BILD_N] mit den URLs
+      imageObjects
     })
   } catch (error) {
     console.error('[KI] Fehler bei Bericht-Generierung:', error.response?.data || error.message)
