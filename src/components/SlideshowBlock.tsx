@@ -14,12 +14,15 @@ interface SlideshowBlockProps {
   imageUrls: string[];
   lifestyle?: string;
   title?: string;
+  /** Wird aufgerufen wenn das Video fertig zu Blossom hochgeladen wurde */
+  onVideoReady?: (videoUrl: string) => void;
 }
 
 export function SlideshowBlock({
   imageUrls,
-  lifestyle = 'vanlife',
+  lifestyle = 'mojobus',
   title = 'slideshow',
+  onVideoReady,
 }: SlideshowBlockProps) {
   const { mutateAsync: uploadFile } = useUploadFile();
   const { toast } = useToast();
@@ -172,6 +175,8 @@ export function SlideshowBlock({
           });
           setStatus('completed');
           setProgress(100);
+          // Eltern-Komponente über fertige URL informieren
+          onVideoReady?.(blossomUrl);
           toast({
             title: '✅ Slideshow auf Blossom gespeichert!',
             description: `${pollData.totalDuration}s · ${pollData.imageCount} Bilder · Musik: ${

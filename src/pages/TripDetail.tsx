@@ -390,6 +390,29 @@ export default function TripDetail() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Slideshow Video */}
+            {trip.video && (
+              <Card className="mb-6">
+                <CardContent className="pt-4 pb-4">
+                  <video
+                    src={trip.video}
+                    controls
+                    autoPlay={false}
+                    loop
+                    playsInline
+                    className="w-full rounded-lg"
+                    style={{ maxHeight: '520px' }}
+                    onError={(e) => {
+                      // Bei Fehler Video-Element ausblenden
+                      (e.currentTarget as HTMLVideoElement).style.display = 'none';
+                    }}
+                  >
+                    <source src={trip.video} type="video/mp4" />
+                  </video>
+                </CardContent>
+              </Card>
+            )}
           </div>
           
           {/* Route Map */}
