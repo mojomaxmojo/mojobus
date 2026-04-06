@@ -40,7 +40,7 @@ import { useToast } from '@/hooks/useToast';
 import { VanillaMap, type MapMarker, type MapPolyline } from '@/components/VanillaMap';
 import { generateImageUrl } from '@/config/imageService';
 import { 
-  ArrowLeft, MapPin, Camera, Calendar, Navigation, Info, Pencil, Trash2
+  ArrowLeft, MapPin, Camera, Calendar, Navigation, Pencil, Trash2
 } from '@/lib/icons';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -137,54 +137,7 @@ function NotFound() {
   );
 }
 
-/**
- * Photo with Description
- */
-function PhotoWithDescription({ 
-  url, 
-  index, 
-  name, 
-  description, 
-  hasGps 
-}: { 
-  url: string; 
-  index: number; 
-  name?: string; 
-  description?: string;
-  hasGps?: boolean;
-}) {
-  // Optimize image URL via images.weserv.nl
-  const optimizedUrl = generateImageUrl(url, 600, 600, 85);
-  
-  return (
-    <div className="space-y-2">
-      <div className="relative aspect-square overflow-hidden rounded-lg group">
-        <img
-          src={optimizedUrl}
-          alt={name || `Photo ${index + 1}`}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
-        {hasGps && (
-          <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded-full flex items-center gap-1 text-xs font-medium">
-            <MapPin className="w-3 h-3" />
-            {index + 1}
-          </div>
-        )}
-      </div>
-      {(name || description) && (
-        <div className="p-2 bg-muted/50 rounded-lg">
-          {name && (
-            <p className="font-medium text-sm">{name}</p>
-          )}
-          {description && (
-            <p className="text-xs text-muted-foreground mt-1">{description}</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+
 
 /**
  * Main Trip Detail Component
@@ -380,104 +333,125 @@ export default function TripDetail() {
               </div>
             </div>
             
-            {/* Summary */}
-            {trip.summary && (
-              <Card className="mb-6">
-                <CardContent className="pt-6">
-                  <p className="text-base leading-relaxed whitespace-pre-wrap">
+          </div>
+
+          {/* Route Map – ganz oben */}
+          {trip.waypoints.length > 0 && (
+            <Card className="mb-8">
+              <CardContent className="p-0 overflow-hidden rounded-lg">
+                <VanillaMap
+                  center={[trip.waypoints[0].lat, trip.waypoints[0].lon]}
+                  zoom={10}
+                  minZoom={2}
+                  maxZoom={18}
+                  markers={mapMarkers}
+                  polylines={mapPolylines}
+                  height="420px"
+                  fitToMarkers={true}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Haupt-Content-Block: Zusammenfassung → Video → Stationen als Geschichte */}
+          <Card>
+            <CardContent className="pt-8 pb-8 space-y-10">
+
+              {/* Zusammenfassung */}
+              {trip.summary && (
+                <div className="prose prose-lg dark:prose-invert max-w-none">
+                  <p className="text-lg leading-relaxed whitespace-pre-wrap text-foreground">
                     {trip.summary}
                   </p>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              )}
 
-            {/* Slideshow Video */}
-            {trip.video && (
-              <Card className="mb-6">
-                <CardContent className="pt-4 pb-4">
+              {/* Video nach der Zusammenfassung */}
+              {trip.video && (
+                <div>
                   <video
                     src={trip.video}
                     controls
                     autoPlay={false}
                     loop
                     playsInline
-                    className="w-full rounded-lg"
-                    style={{ maxHeight: '520px' }}
+                    className="w-full rounded-xl shadow-md"
+                    style={{ maxHeight: '560px' }}
                     onError={(e) => {
-                      // Bei Fehler Video-Element ausblenden
                       (e.currentTarget as HTMLVideoElement).style.display = 'none';
                     }}
                   >
                     <source src={trip.video} type="video/mp4" />
                   </video>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-          
-          {/* Route Map */}
-          {trip.waypoints.length > 0 && (
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-yellow-500" />
-                  Trip Route
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg overflow-hidden">
-                  <VanillaMap
-                    center={[trip.waypoints[0].lat, trip.waypoints[0].lon]}
-                    zoom={10}
-                    minZoom={2}
-                    maxZoom={18}
-                    markers={mapMarkers}
-                    polylines={mapPolylines}
-                    height="500px"
-                    fitToMarkers={true}
-                  />
                 </div>
-                
-                {/* Info Box */}
-                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <Info className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      <strong>Hinweis:</strong> Die Route basiert auf den Photo-Standorten und ist nicht der exakte Reiseweg. 
-                      Sie zeigt nur die Punkte, an denen Photos aufgenommen wurden.
-                    </p>
-                  </div>
+              )}
+
+              {/* Stationen als fließende Geschichte */}
+              {trip.waypoints.length > 0 && (
+                <div className="space-y-12">
+                  {trip.waypoints.map((waypoint, index) => {
+                    const photoUrl = trip.photos[index];
+                    if (!photoUrl) return null;
+                    const optimizedUrl = generateImageUrl(photoUrl, 900, 700, 85);
+                    const isEven = index % 2 === 0;
+
+                    return (
+                      <div key={index}>
+                        {/* Trennlinie außer vor erstem Element */}
+                        {index > 0 && (
+                          <div className="border-t border-muted mb-12" />
+                        )}
+
+                        <div className={`flex flex-col ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'} gap-6 md:gap-10 items-start`}>
+
+                          {/* Bild */}
+                          <div className="w-full md:w-1/2 flex-shrink-0">
+                            <div className="relative overflow-hidden rounded-xl">
+                              <img
+                                src={optimizedUrl}
+                                alt={waypoint.name || `Station ${index + 1}`}
+                                className="w-full object-cover"
+                                style={{ maxHeight: '400px' }}
+                                loading="lazy"
+                              />
+                              {/* Stations-Nummer */}
+                              <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-yellow-500 text-white flex items-center justify-center text-sm font-bold shadow">
+                                {index + 1}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Text */}
+                          <div className="w-full md:w-1/2 flex flex-col justify-center space-y-3">
+                            {waypoint.name && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <MapPin className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />
+                                <span>{waypoint.name}</span>
+                                {waypoint.date && (
+                                  <>
+                                    <span>·</span>
+                                    <span>{waypoint.date}</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            {waypoint.description ? (
+                              <p className="text-base leading-relaxed text-foreground whitespace-pre-wrap">
+                                {waypoint.description}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground italic">
+                                Keine Beschreibung.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Photo Gallery */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-yellow-500" />
-                Photos ({trip.photos.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {trip.photos.map((photoUrl, index) => {
-                  const waypoint = trip.waypoints[index];
-                  const hasGps = waypoint?.lat && waypoint?.lon;
-                  
-                  return (
-                    <PhotoWithDescription
-                      key={index}
-                      url={photoUrl}
-                      index={index}
-                      name={waypoint?.name}
-                      description={waypoint?.description}
-                      hasGps={hasGps}
-                    />
-                  );
-                })}
-              </div>
+              )}
+
             </CardContent>
           </Card>
         </div>
