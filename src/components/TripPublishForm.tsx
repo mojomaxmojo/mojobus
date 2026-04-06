@@ -471,6 +471,12 @@ export function TripPublishForm() {
       }));
       
       setStations(existingStations);
+
+      // Vorhandene Video-URL laden (wenn trip.video gesetzt)
+      if (existingTrip.video) {
+        setSlideshowVideoUrl(existingTrip.video);
+        console.log('[Trip Edit] Vorhandene Video-URL geladen:', existingTrip.video);
+      }
       
       // Skip to details step since we have stations
       setCurrentStep('details');
@@ -1826,15 +1832,38 @@ export function TripPublishForm() {
         }}
       />
 
-      {/* Slideshow-Video Vorschau wenn fertig */}
-      {slideshowVideoUrl && (
-        <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 space-y-2">
-          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-            ✅ Slideshow-Video wird beim Trip gespeichert:
-          </p>
-          <p className="text-xs font-mono text-muted-foreground break-all">{slideshowVideoUrl}</p>
+      {/* Video-URL: automatisch via Slideshow ODER manuell eintragen */}
+      <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">🎞️ Video-URL</span>
+          {slideshowVideoUrl && (
+            <span className="text-xs bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded">
+              ✅ via Slideshow
+            </span>
+          )}
         </div>
-      )}
+        <Input
+          value={slideshowVideoUrl || ''}
+          onChange={(e) => setSlideshowVideoUrl(e.target.value || null)}
+          placeholder="https://... (MP4-URL – automatisch via Slideshow oder manuell eintragen)"
+          className="font-mono text-xs"
+        />
+        <p className="text-xs text-muted-foreground">
+          Wird als <code className="bg-muted px-1 rounded">['video', url]</code> im Trip gespeichert und auf der Trip-Seite abgespielt.
+        </p>
+        {/* Vorschau wenn URL vorhanden */}
+        {slideshowVideoUrl && slideshowVideoUrl.startsWith('http') && (
+          <video
+            src={slideshowVideoUrl}
+            controls
+            playsInline
+            className="w-full rounded-lg mt-2"
+            style={{ maxHeight: '300px' }}
+          >
+            <source src={slideshowVideoUrl} type="video/mp4" />
+          </video>
+        )}
+      </div>
 
       {/* Navigation */}
       <div className="flex justify-between">
