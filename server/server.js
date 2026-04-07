@@ -1058,7 +1058,7 @@ app.post('/api/generate-trip', (req, res, next) => {
     // ===== BILDER ANALYSIEREN – Google Gemini 2.5 Flash via OpenRouter =====
     // Kein Rate-Limit-Problem (bezahltes API), alle Bilder PARALLEL, sehr günstig
     // Fallback auf Groq wenn OPENROUTER_API_KEY fehlt
-    const MAX_IMAGES_TO_ANALYZE = 12
+    const MAX_IMAGES_TO_ANALYZE = 12  // Stufe 1=12, 2=10, 3=6 (Frontend-Stufen)
     const MAX_IMAGE_BYTES = 4 * 1024 * 1024  // 4MB max pro Bild
     const imagesToAnalyze = images.slice(0, MAX_IMAGES_TO_ANALYZE)
     const useGemini = !!process.env.OPENROUTER_API_KEY
