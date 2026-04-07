@@ -1142,6 +1142,153 @@ setInterval(() => {
   }
 }, 30 * 60 * 1000)
 
+// ===== API FÜR TRIP GENERIERUNG =====
+// Tab: "Trips" in /veroeffentlichen
+// Input: images (alle Station-Bilder), title, description, locations, stationDescriptions, tripType, country, tripLength, model, lifestyle, gender
+// Output: { article (Zusammenfassung), captions (Bild-Texte pro Station) }
+app.post('/api/generate-trip', upload.array('images', 30), async (req, res) => {
+  if (!validateApiKey()) {
+    return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
+  }
+
+  const title = sanitizeInput(req.body.title) || 'Meine Reise'
+  const description = (req.body.description || '').trim()
+  const model = req.body.model || 'llama4'
+  const lifestyle = sanitizeInput(req.body.lifestyle) || 'mojobus'
+  const gender = sanitizeInput(req.body.gender) || 'couple'
+  const tripType = sanitizeInput(req.body.tripType) || ''
+  const country = sanitizeInput(req.body.country) || ''
+  const tripLength = sanitizeInput(req.body.tripLength) || 'medium'
+  const startDate = sanitizeInput(req.body.startDate) || ''
+  const endDate = sanitizeInput(req.body.endDate) || ''
+  const locations = safelyParseJSON(req.body.locations) || []
+  const stationDescriptions = safelyParseJSON(req.body.stationDescriptions) || []
+  const images = req.files || []
+
+  console.log(`[KI] Generiere Trip: "${title}", Bilder: ${images.length}, Stationen: ${stationDescriptions.length}, Modell: ${model}, Lifestyle: ${lifestyle}, Länge: ${tripLength}`)
+  if (tripType) console.log(`[KI] Trip-Typ: ${tripType}`)
+  if (country) console.log(`[KI] Land: ${country}`)
+
+  try {
+    const lifestyleConfig = getLifestyleConfig(lifestyle)
+
+    // ===== BILDER ANALYSIEREN (alle Stationen) =====
+    // Bei vielen Bildern: max 12 analysieren (Performance + Groq-Limits)
+    const imagesToAnalyze = images.slice(0, 12)
+    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern...`)
+
+    const imageDescriptions = await Promise.allSettled(
+      imagesToAnalyze.map(async (img, index) => {
+        const base64 = img.buffer.toString('base64')
+        console.log(`[KI] Bild ${index + 1}/${imagesToAnalyze.length}: ${(img.size / 1024).toFixed(1)}KB`)
+
+        const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength, tripType) },
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+            ]
+          }],
+          max_tokens: 150,
+          temperature: 0.7
+        }, {
+          headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+          timeout: 30000
+        })
+        return visionResponse.data.choices[0].message.content
+      })
+    ).then(results => results.map(r => r.status === 'fulfilled' ? r.value : '(Bild nicht analysierbar)'))
+
+    console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
+
+    // ===== TRIP-ZUSAMMENFASSUNG GENERIEREN =====
+    const tripPrompt = generateTripPrompt({
+      title,
+      description,
+      locations,
+      text: description,
+      imageDescriptions,
+      lifestyleConfig,
+      country,
+      stations: locations,
+      stationDescriptions,
+      tripType,
+      tripLength,
+      gender
+    })
+
+    const tripMaxTokens = tripLength === 'short' ? 500 : tripLength === 'medium' ? 1400 : 2800
+
+    console.log(`[KI] Generiere Trip-Text (${tripLength}, max ${tripMaxTokens} Tokens)...`)
+    const article = await generateWithModel(tripPrompt, model, lifestyle, {
+      maxTokens: tripMaxTokens,
+      temperature: 0.85
+    })
+    console.log(`[KI] Trip-Text fertig: ${article.length} Zeichen`)
+
+    // ===== BILD-CAPTIONS FÜR STATIONEN GENERIEREN =====
+    // Jede Station bekommt einen kurzen Foster-Bildtext (20-100 Wörter)
+    // Nur wenn Stationen vorhanden
+    let captions = []
+    if (imagesToAnalyze.length > 0) {
+      console.log(`[KI] Generiere ${imagesToAnalyze.length} Bild-Captions...`)
+
+      // Captions sequentiell generieren (nicht parallel - Groq Rate-Limits)
+      for (let i = 0; i < imagesToAnalyze.length; i++) {
+        const station = stationDescriptions[i] || {}
+        const stationLocation = station.location || locations[i] || `Station ${i + 1}`
+        const userDescription = station.description || ''
+
+        const captionPrompt = generateTripCaptionPrompt({
+          imageDescription: imageDescriptions[i] || '',
+          stationTitle: stationLocation,
+          stationLocation,
+          userDescription,
+          tripTitle: title,
+          lifestyleConfig,
+          gender,
+          stationIndex: i,
+          totalStations: imagesToAnalyze.length
+        })
+
+        try {
+          const caption = await generateWithModel(captionPrompt, model, lifestyle, {
+            maxTokens: 120,
+            temperature: 0.8
+          })
+          captions.push(caption.trim())
+          console.log(`[KI] Caption ${i + 1}/${imagesToAnalyze.length} fertig`)
+        } catch (captionErr) {
+          console.warn(`[KI] Caption ${i + 1} fehlgeschlagen:`, captionErr.message)
+          captions.push('') // Leerer String als Fallback
+        }
+      }
+
+      // Für Bilder die nicht analysiert wurden (>12): leere Captions
+      for (let i = imagesToAnalyze.length; i < images.length; i++) {
+        captions.push('')
+      }
+    }
+
+    console.log(`[KI] Trip fertig: ${article.length} Zeichen, ${captions.length} Captions`)
+
+    res.json({
+      article,
+      captions,
+      imageCount: images.length,
+      analyzedCount: imagesToAnalyze.length,
+      tripLength,
+      lifestyle
+    })
+
+  } catch (error) {
+    console.error('[KI] Fehler bei Trip-Generierung:', error.response?.data || error.message)
+    res.status(500).json({ error: 'Fehler bei Trip-Generierung. Bitte versuche es erneut.' })
+  }
+})
+
 // ===== API FÜR BERICHT/ARTIKEL GENERIERUNG =====
 // Tab: "Berichte" in /veroeffentlichen
 app.post('/api/generate-article', upload.array('images', 10), async (req, res) => {
