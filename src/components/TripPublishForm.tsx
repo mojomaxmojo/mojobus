@@ -344,16 +344,34 @@ export function TripPublishForm() {
 
     setIsGeneratingArticle(true);
     setGeneratingProgress(0);
+
+    // Hilfsfunktion: Response sicher als JSON parsen – zeigt echten Fehlertext wenn kein JSON
+    const safeJson = async (response: Response) => {
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        // Server hat kein JSON gesendet (z.B. nginx 413, HTML-Fehlerseite, leere Antwort)
+        const preview = text.slice(0, 300).replace(/<[^>]+>/g, '').trim();
+        throw new Error(
+          `Server HTTP ${response.status}: ${preview || 'Keine Antwort vom Server'}`
+        );
+      }
+    };
     
     try {
       const formData = new FormData();
       
-      // Alle Bilder hinzufügen
+      // Alle Bilder hinzufügen (nur vorhandene Files, nicht bereits hochgeladene)
+      let imageCount = 0;
       stations.forEach(station => {
         if (station.file) {
           formData.append('images', station.file);
+          imageCount++;
         }
       });
+
+      console.log(`[KI] Sende ${imageCount} Bilder an /api/generate-trip`);
       
       // Trip-Daten hinzufügen
       formData.append('title', tripData.title || 'Meine Reise');
@@ -385,7 +403,11 @@ export function TripPublishForm() {
 
       setGeneratingProgress(90);
 
-      const data = await response.json();
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || `Server HTTP ${response.status}`);
+      }
       
       if (data.article) {
         // Zusammenfassung in Trip-Summary einfügen
@@ -420,12 +442,13 @@ export function TripPublishForm() {
           setGeneratingProgress(0);
         }, 1000);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[KI] Generierung fehlgeschlagen:', error);
       setGeneratingProgress(0);
+      const errMsg = error?.message || 'KI-Generierung fehlgeschlagen. Bitte versuche es erneut.';
       toast({
-        title: 'Fehler',
-        description: 'KI-Generierung fehlgeschlagen. Bitte versuche es erneut.',
+        title: 'KI-Fehler',
+        description: errMsg.length > 200 ? errMsg.slice(0, 197) + '...' : errMsg,
         variant: 'destructive'
       });
     } finally {

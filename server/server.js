@@ -55,8 +55,33 @@ app.use(express.json())
 const storage = multer.memoryStorage()
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB max pro Bild
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20MB max pro Datei
+    files: 30,                  // max 30 Dateien pro Request
+    fieldSize: 1 * 1024 * 1024  // 1MB max pro Textfeld
+  }
 })
+
+// Hilfsfunktion: Multer-Fehler als JSON zurückgeben
+const handleMulterError = (err, req, res, next) => {
+  if (err && err.code) {
+    // Multer-spezifische Fehler
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: `Bild zu groß: max. 20MB pro Datei erlaubt. (${err.field || 'images'})` })
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(413).json({ error: 'Zu viele Dateien: max. 30 Bilder erlaubt.' })
+    }
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ error: `Unerwartetes Dateifeld: ${err.field}` })
+    }
+    if (err.code === 'LIMIT_FIELD_VALUE') {
+      return res.status(400).json({ error: 'Textfeld zu lang.' })
+    }
+    return res.status(400).json({ error: `Upload-Fehler: ${err.message || err.code}` })
+  }
+  next(err)
+}
 
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads')
@@ -163,7 +188,12 @@ const generateWithModel = async (prompt, model = 'llama4', lifestyle = 'mojobus'
 // ===== API FÜR MEDIEN ARTIKEL GENERIERUNG =====
 // Generiert authentische Artikel im Foster Huntington Stil
 // Verwendet in: Medien-Tab der Publish-Seite
-app.post('/api/generate-media-article', upload.array('images', 10), async (req, res) => {
+app.post('/api/generate-media-article', (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) return handleMulterError(err, req, res, next)
+    next()
+  })
+}, async (req, res) => {
   if (!validateApiKey()) {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
@@ -994,7 +1024,12 @@ setInterval(() => {
 // Tab: "Trips" in /veroeffentlichen
 // Input: images (alle Station-Bilder), title, description, locations, stationDescriptions, tripType, country, tripLength, model, lifestyle, gender
 // Output: { article (Zusammenfassung), captions (Bild-Texte pro Station) }
-app.post('/api/generate-trip', upload.array('images', 30), async (req, res) => {
+app.post('/api/generate-trip', (req, res, next) => {
+  upload.array('images', 30)(req, res, (err) => {
+    if (err) return handleMulterError(err, req, res, next)
+    next()
+  })
+}, async (req, res) => {
   if (!validateApiKey()) {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
@@ -1139,7 +1174,12 @@ app.post('/api/generate-trip', upload.array('images', 30), async (req, res) => {
 
 // ===== API FÜR BERICHT/ARTIKEL GENERIERUNG =====
 // Tab: "Berichte" in /veroeffentlichen
-app.post('/api/generate-article', upload.array('images', 10), async (req, res) => {
+app.post('/api/generate-article', (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) return handleMulterError(err, req, res, next)
+    next()
+  })
+}, async (req, res) => {
   if (!validateApiKey()) {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
@@ -1338,7 +1378,12 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
 
 // ===== API FÜR PLATZ GENERIERUNG =====
 // Tab: "Plätze" in /veroeffentlichen
-app.post('/api/generate-place', upload.array('images', 10), async (req, res) => {
+app.post('/api/generate-place', (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) return handleMulterError(err, req, res, next)
+    next()
+  })
+}, async (req, res) => {
   if (!validateApiKey()) {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
@@ -1510,7 +1555,12 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
 
 // ===== API FÜR NOTE GENERIERUNG =====
 // Tab: "Note" in /veroeffentlichen
-app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
+app.post('/api/generate-note', (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) return handleMulterError(err, req, res, next)
+    next()
+  })
+}, async (req, res) => {
   if (!validateApiKey()) {
     return res.status(500).json({ error: 'Server-Konfigurationsfehler' })
   }
@@ -1625,6 +1675,22 @@ app.post('/api/debug-video', async (req, res) => {
       axiosMessage: error.message
     })
   }
+})
+
+// ===== GLOBALER ERROR-HANDLER =====
+// Fängt alle unbehandelten Fehler ab und gibt immer JSON zurück (nie HTML)
+// MUSS nach allen Routen stehen
+app.use((err, req, res, next) => {
+  console.error('[Server] Unbehandelter Fehler:', err.message || err)
+  // Multer-Fehler die durch next(err) kamen
+  if (err && err.code) {
+    return handleMulterError(err, req, res, () => {
+      res.status(500).json({ error: err.message || 'Interner Server-Fehler' })
+    })
+  }
+  // Alle anderen Fehler
+  const status = err.status || err.statusCode || 500
+  res.status(status).json({ error: err.message || 'Interner Server-Fehler' })
 })
 
 // Health Check
