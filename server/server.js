@@ -352,14 +352,18 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
   if (stationDescriptions.length > 0) console.log(`[KI] Station-Beschreibungen: ${stationDescriptions.length}`)
 
     try {
-      // ===== BILD ANALYSE FÜR TRIP ARTIKEL =====
-      // Prompt: siehe src/config/prompts/trips.ts
-      const lifestyleConfig = getLifestyleConfig(lifestyle)
-      const imageDescriptions = await Promise.all(images.map(async (img, index) => {
-      const base64 = img.buffer.toString('base64')
-      console.log(`[KI] Analysiere Bild ${index + 1}/${images.length}, Größe: ${(img.size / 1024).toFixed(1)}KB`)
+  // ===== BILD ANALYSE FÜR TRIP ARTIKEL (BATC HED) =====
+  // Prompt: siehe src/config/prompts/trips.ts
+  // Max 4 parallel → Groq Rate Limit vermeiden
+  const lifestyleConfig = getLifestyleConfig(lifestyle)
+  
+  const analyzeImage = async (img, index) => {
+    const base64 = img.buffer.toString('base64')
+    console.log(`[KI] Analysiere Bild ${index + 1}/${images.length}, Größe: ${(img.size / 1024).toFixed(1)}KB`)
 
-      const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+    const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      timeout: 45000  // 45s pro Bild
+    }
         model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: [{
           role: 'user',
@@ -414,23 +418,33 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
       })
     })
 
-    // Trips: maxTokens für Summary abhängig von tripLength
-    const tripMaxTokens = tripLength === 'short' ? 500 : tripLength === 'medium' ? 1400 : 2500
+  // Trips: maxTokens für Summary abhängig von tripLength
+  const tripMaxTokens = tripLength === 'short' ? 500 : tripLength === 'medium' ? 1400 : 2500
 
-    // Summary + alle Captions parallel generieren
-    console.log(`[KI] Generiere Summary + ${captionPrompts.length} Bild-Captions parallel...`)
-    const [article, ...captions] = await Promise.all([
-      generateWithModel(summaryPrompt, model, lifestyle, {
-        maxTokens: tripMaxTokens,
-        temperature: 0.8
-      }),
-      ...captionPrompts.map(captionPrompt =>
-        generateWithModel(captionPrompt, model, lifestyle, {
-          maxTokens: 180,  // 100 Wörter ≈ 130-150 Tokens, etwas Puffer
-          temperature: 0.85
-        })
-      )
-    ])
+  // Summary ZUERST (parallelism vermeiden)
+  console.log(`[KI] Generiere Summary...`)
+  const article = await generateWithModel(summaryPrompt, model, lifestyle, {
+    maxTokens: tripMaxTokens,
+    temperature: 0.8
+  })
+
+  // Captions in Batches von 4 (Groq Rate Limit)
+  console.log(`[KI] Generiere ${captionPrompts.length} Bild-Captions in Batches...`)
+  const captions = []
+  const batchSize = 4
+  for (let i = 0; i < captionPrompts.length; i += batchSize) {
+    const batch = captionPrompts.slice(i, i + batchSize)
+    const batchCaptions = await Promise.all(batch.map(p =>
+      generateWithModel(p, model, lifestyle, {
+        maxTokens: 180,
+        temperature: 0.85
+      })
+    ))
+    captions.push(...batchCaptions)
+    if (i + batchSize < captionPrompts.length) {
+      await new Promise(r => setTimeout(r, 1000)) // 1s Pause zwischen Batches
+    }
+  }
 
     console.log(`[KI] Trip-Artikel generiert: ${article.length} Zeichen`)
     console.log(`[KI] ${captions.length} Bild-Captions generiert`)
