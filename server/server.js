@@ -362,10 +362,8 @@ app.post('/api/generate-trip', upload.array('images', 10), async (req, res) => {
     console.log(`[KI] Analysiere Bild ${index + 1}/${images.length}, Größe: ${(img.size / 1024).toFixed(1)}KB`)
 
     const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      timeout: 45000  // 45s pro Bild
-    }
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        messages: [{
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{
           role: 'user',
           content: [
              { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength, tripType) },
