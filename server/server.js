@@ -1005,8 +1005,8 @@ app.post('/api/generate-slideshow', async (req, res) => {
   if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
     return res.status(400).json({ error: 'imageUrls Array erforderlich (min. 1 Bild).' })
   }
-  if (imageUrls.length > 15) {
-    return res.status(400).json({ error: 'Maximal 15 Bilder pro Slideshow.' })
+  if (imageUrls.length > 12) {
+    return res.status(400).json({ error: `Zu viele Bilder: ${imageUrls.length} (Maximum 12 für stabile Slideshows). Verwende weniger Bilder oder deaktiviere Slideshow.` })
   }
 
   const ppqKey = process.env.PPQ_API_KEY
