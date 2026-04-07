@@ -1105,12 +1105,12 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
                {/* Art der Reise */}
                <div className="mt-3 space-y-2">
                  <Label className="text-sm font-medium">Art der Reise (optional):</Label>
-                 <Select value={tripType} onValueChange={(value) => setTripType(value as TripType | '')}>
+                 <Select value={tripType || 'none'} onValueChange={(value) => setTripType(value === 'none' ? '' : value as TripType)}>
                    <SelectTrigger>
                      <SelectValue placeholder="Keine Angabe" />
                    </SelectTrigger>
                    <SelectContent>
-                     <SelectItem value="">— Keine Angabe —</SelectItem>
+                     <SelectItem value="none">— Keine Angabe —</SelectItem>
                      {TRIP_TYPES.map((type) => (
                        <SelectItem key={type.id} value={type.id}>
                          <span className="flex items-center gap-2">
@@ -2160,12 +2160,12 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
           {/* Art der Reise */}
           <div className="space-y-2">
             <Label>Art der Reise (optional)</Label>
-            <Select value={tripType} onValueChange={(value) => setTripType(value as TripType | '')}>
+            <Select value={tripType || 'none'} onValueChange={(value) => setTripType(value === 'none' ? '' : value as TripType)}>
               <SelectTrigger>
                 <SelectValue placeholder="Keine Angabe" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">— Keine Angabe —</SelectItem>
+                <SelectItem value="none">— Keine Angabe —</SelectItem>
                 {TRIP_TYPES.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <span className="flex items-center gap-2">
@@ -3568,12 +3568,12 @@ Beschreibe hier den Ort, was macht ihn besonders...
           {/* Art der Reise */}
           <div className="space-y-2">
             <Label>Art der Reise (optional)</Label>
-            <Select value={tripType} onValueChange={(value) => setTripType(value as TripType | '')}>
+            <Select value={tripType || 'none'} onValueChange={(value) => setTripType(value === 'none' ? '' : value as TripType)}>
               <SelectTrigger>
                 <SelectValue placeholder="Keine Angabe" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">— Keine Angabe —</SelectItem>
+                <SelectItem value="none">— Keine Angabe —</SelectItem>
                 {TRIP_TYPES.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <span className="flex items-center gap-2">
@@ -4928,12 +4928,12 @@ Schreibe deinen Artikel hier...
           {/* Art der Reise */}
           <div className="space-y-2">
             <Label>Art der Reise (optional)</Label>
-            <Select value={tripType} onValueChange={(value) => setTripType(value as TripType | '')}>
+            <Select value={tripType || 'none'} onValueChange={(value) => setTripType(value === 'none' ? '' : value as TripType)}>
               <SelectTrigger>
                 <SelectValue placeholder="Keine Angabe" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">— Keine Angabe —</SelectItem>
+                <SelectItem value="none">— Keine Angabe —</SelectItem>
                 {TRIP_TYPES.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
                     <span className="flex items-center gap-2">
