@@ -30,11 +30,6 @@ type ContentItem = {
   thumbnailUrl?: string;
   parsedData?: Trip;
 };
-  type: 'article' | 'note' | 'image' | 'place';
-  event: NostrEvent;
-  date: number;
-  thumbnailUrl?: string;
-};
 
 export function Home() {
   const { nostr } = useNostr();
@@ -437,13 +432,11 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
   const authorName = author.data?.metadata?.name || genUserName(item.event.pubkey);
 
   let title = '';
-  let summary = '';
-  let link = '';
-  let summary = '';
-  let link = '';
+
+
 
   if (item.type === 'trip') {
-    const trip = (item.parsedData as Trip);
+    const trip = item.parsedData as Trip;
     title = trip.title;
     summary = trip.summary || '';
     link = `/trip/${trip.naddr}`;
