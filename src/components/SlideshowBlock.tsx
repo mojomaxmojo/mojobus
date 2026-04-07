@@ -253,9 +253,10 @@ export function SlideshowBlock({
           <>
             🖼️{' '}
             <strong>
-              {imageUrls.length} Bild{imageUrls.length !== 1 ? 'er' : ''}
-            </strong>{' '}
-            verfügbar · ~{totalSec}s Slideshow · Ken Burns + Deep Pan
+              {Math.min(imageUrls.length, 30)} Bild{Math.min(imageUrls.length, 30) !== 1 ? 'er' : ''}
+            </strong>
+            {imageUrls.length > 30 && <span className="text-amber-500"> (max 30)</span>}
+            {' '}verfügbar · ~{totalSec}s Slideshow · Ken Burns + Deep Pan
           </>
         ) : (
           '⚠️ Noch keine Bilder — lade zuerst Bilder hoch.'

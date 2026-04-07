@@ -895,8 +895,8 @@ app.post('/api/generate-slideshow', async (req, res) => {
   if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
     return res.status(400).json({ error: 'imageUrls Array erforderlich (min. 1 Bild).' })
   }
-  if (imageUrls.length > 20) {
-    return res.status(400).json({ error: `Zu viele Bilder: ${imageUrls.length} (Maximum 20). Bitte maximal 20 Bilder verwenden.` })
+  if (imageUrls.length > 30) {
+    return res.status(400).json({ error: `Zu viele Bilder: ${imageUrls.length} (Maximum 30). Bitte maximal 30 Bilder verwenden.` })
   }
 
   const ppqKey = process.env.PPQ_API_KEY
@@ -906,7 +906,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
 
   // Job-ID generieren
   const jobId = 'sl_' + crypto.randomBytes(8).toString('hex')
-    const totalDuration = Math.min(imageUrls.length, 20) * imageDuration
+    const totalDuration = Math.min(imageUrls.length, 30) * imageDuration
   const estimatedCost = musicMode === 'elevenlabs' ? 0.50 : 0.00
 
   // Job registrieren
@@ -920,7 +920,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
 
   // Job asynchron starten (nicht awaiten!)
   runSlideshowJob(jobId, {
-    imageUrls: imageUrls.slice(0, 20),
+    imageUrls: imageUrls.slice(0, 30),
     musicMode,
     lifestyle,
     aspectRatio,
@@ -932,7 +932,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
   res.json({
     jobId,
     status: 'pending',
-      imageCount: Math.min(imageUrls.length, 20),
+      imageCount: Math.min(imageUrls.length, 30),
     totalDuration,
     estimatedCost,
     musicMode
