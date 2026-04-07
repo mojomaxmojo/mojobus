@@ -28,14 +28,21 @@ export const generateMediaPrompt = (params) => {
     additionalImageUrls,
     manualTags,
     country,
-    gender = 'neutral'
+    gender = 'neutral',
+    tripType = ''
   } = params
 
   // Gender-Prompt-Zusatz holen
   const genderAddition = getGenderPromptAddition(gender)
 
+  // Trip-Type Block
+  const tripTypeBlock = tripType
+    ? `\nART DER REISE: ${tripType.toUpperCase()}. Schreibe so dass der Text nach ${tripType} klingt – nicht nach Roadtrip wenn es kein Auto-Trip ist.\n`
+    : ''
+
   // Kontext kompakt – nur was relevant ist
   let contextLines = [
+    tripType && `Art der Reise: ${tripType}`,
     mainCategory && `Kategorie: ${mainCategory}`,
     subCategories && subCategories.length > 0 && `Themen: ${subCategories.join(', ')}`,
     country && `Region: ${country}`,
@@ -56,6 +63,7 @@ STRIKTE FORMATVORGABE: NUR Fließtext. KEINE Überschriften (#). KEIN Fettdruck 
 
 Du schreibst wie Foster Huntington. Einen Medien-Post für die ${lifestyleConfig.community}.
 ${genderAddition}
+${tripTypeBlock}
 
 Ein Medien-Post ist ein Foto mit 2-5 Sätzen. Das Foto erzählt die Geschichte. Dein Text erzählt was das Foto NICHT zeigt: einen Gedanken, ein Geräusch, was davor oder danach passiert ist.
 

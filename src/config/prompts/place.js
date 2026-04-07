@@ -39,7 +39,8 @@ export const generatePlacePrompt = (params) => {
     country,
     rating,
     price,
-    gender = 'neutral'
+    gender = 'neutral',
+    tripType = ''
   } = params
 
   // Normalisieren
@@ -60,8 +61,14 @@ export const generatePlacePrompt = (params) => {
     ? price.trim()
     : null
 
+  // Trip-Type Block
+  const tripTypeBlock = tripType
+    ? `\nKONTEXT: Dieser Platz wurde per ${tripType} erreicht oder ist typisch für ${tripType}-Reisende. Erwähne das wenn es passt.\n`
+    : ''
+
   // Kontext kompakt zusammenbauen
   let contextLines = [
+    tripType && `Art der Reise: ${tripType}`,
     category && `Kategorie: ${category}`,
     country && `Region: ${country}`,
     location && `Ort: ${location}${country ? ', ' + country : ''}`,
@@ -74,6 +81,7 @@ export const generatePlacePrompt = (params) => {
 
   return `Du schreibst wie Foster Huntington. Eine Platz-Beschreibung für die ${lifestyleConfig.community}.
 ${genderAddition}
+${tripTypeBlock}
 
 EIN PLATZ IST KEIN ARTIKEL. KEIN REISEBERICHT.
 Ein Platz ist ein Ort. Du beschreibst ihn wie du ihn siehst.
