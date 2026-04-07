@@ -43,6 +43,59 @@ import {
 } from '@/lib/gpsExtraction';
 
 /**
+ * Komprimiert ein Bild auf max. targetSizeBytes (Standard: 2MB)
+ * Gibt ein neues File-Objekt zurück – GPS/EXIF gehen verloren (egal, die sind schon extrahiert)
+ */
+async function compressImageForUpload(file: File, targetSizeBytes = 2 * 1024 * 1024): Promise<File> {
+  // Nur Bilder komprimieren, Videos/Audio/Docs unverändert lassen
+  if (!file.type.startsWith('image/')) return file;
+  // Wenn schon klein genug → Original zurückgeben
+  if (file.size <= targetSizeBytes) return file;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+
+      // Maximale Dimension: 1920px (ausreichend für KI-Analyse)
+      const MAX_DIM = 1920;
+      let { naturalWidth: w, naturalHeight: h } = img;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        if (w > h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+        else        { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+      }
+      canvas.width = w;
+      canvas.height = h;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(file); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // Qualität iterativ reduzieren bis Zielgröße erreicht
+      const tryQuality = (quality: number) => {
+        canvas.toBlob((blob) => {
+          if (!blob) { resolve(file); return; }
+          if (blob.size <= targetSizeBytes || quality <= 0.3) {
+            const compressed = new File([blob], file.name, { type: 'image/jpeg', lastModified: file.lastModified });
+            console.log(`[Compress] ${file.name}: ${(file.size/1024/1024).toFixed(1)}MB → ${(compressed.size/1024/1024).toFixed(1)}MB (q=${quality.toFixed(1)})`);
+            resolve(compressed);
+          } else {
+            tryQuality(quality - 0.1);
+          }
+        }, 'image/jpeg', quality);
+      };
+      tryQuality(0.82);
+    };
+
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+/**
  * Erstellt eine korrigierte Vorschau basierend auf EXIF-Daten
  * Berücksichtigt die EXIF-Orientierung, die Browser oft ignorieren
  */
@@ -361,17 +414,27 @@ export function TripPublishForm() {
     
     try {
       const formData = new FormData();
-      
-      // Alle Bilder hinzufügen (nur vorhandene Files, nicht bereits hochgeladene)
-      let imageCount = 0;
-      stations.forEach(station => {
-        if (station.file) {
-          formData.append('images', station.file);
-          imageCount++;
-        }
-      });
 
-      console.log(`[KI] Sende ${imageCount} Bilder an /api/generate-trip`);
+      // Bilder komprimieren (max 2MB pro Bild) – verhindert NetworkError bei großen Uploads
+      // Groq Vision braucht kein Original-Bild, 1920px JPEG reicht für KI-Analyse
+      const stationsWithFiles = stations.filter(s => s.file);
+      let imageCount = 0;
+
+      if (stationsWithFiles.length > 0) {
+        toast({
+          title: '🗜️ Bilder werden vorbereitet...',
+          description: `${stationsWithFiles.length} Bilder komprimieren für KI-Upload`,
+        });
+      }
+
+      for (const station of stationsWithFiles) {
+        const compressed = await compressImageForUpload(station.file, 2 * 1024 * 1024);
+        formData.append('images', compressed);
+        imageCount++;
+      }
+
+      const totalMB = stationsWithFiles.reduce((sum, s) => sum + s.file.size, 0) / 1024 / 1024;
+      console.log(`[KI] Sende ${imageCount} Bilder an /api/generate-trip (komprimiert, ~${totalMB.toFixed(1)}MB original)`);
       
       // Trip-Daten hinzufügen
       formData.append('title', tripData.title || 'Meine Reise');
