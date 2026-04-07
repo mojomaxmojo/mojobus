@@ -15,6 +15,7 @@ import { Compass, Sun, Anchor, MapPin, RefreshCw } from 'lucide-react';
 import { nip19 } from 'nostr-tools';
 import { memo } from 'react';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { useTrips, type Trip } from '@/hooks/useTrips';
 import { getGalleryThumbnailUrl, getImagePlaceholder, generateSrcset, generateSizes } from '@/lib/imageUtils';
 import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
@@ -23,6 +24,12 @@ import { useToast } from '@/hooks/useToast';
 import { LivePositionIndicator } from '@/components/LivePositionIndicator';
 
 type ContentItem = {
+  type: 'article' | 'note' | 'image' | 'place' | 'trip';
+  event: NostrEvent;
+  date: number;
+  thumbnailUrl?: string;
+  parsedData?: Trip;
+};
   type: 'article' | 'note' | 'image' | 'place';
   event: NostrEvent;
   date: number;
@@ -116,6 +123,8 @@ export function Home() {
     staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
   });
 
+  const tripsQuery = useTrips();
+  const { data: tripsData = [] } = tripsQuery;
   const { data: imageEvents = [] } = useQuery({
     queryKey: ['home-media', NOSTR_CONFIG.authorPubkeys],
     queryFn: async ({ signal }) => {
@@ -154,7 +163,7 @@ export function Home() {
     staleTime: DEFAULT_PERFORMANCE_CONFIG.cache.staleTime,
   });
 
-  const isLoading = articlesLoading || placesLoading;
+  const isLoading = articlesLoading || placesLoading || tripsQuery.isLoading;
 
   const contentItems: ContentItem[] = [];
 
@@ -190,6 +199,18 @@ export function Home() {
         event,
         date: event.created_at,
         thumbnailUrl: imageUrl ? getGalleryThumbnailUrl(imageUrl) : undefined
+      });
+    });
+  }
+
+  if (tripsData && Array.isArray(tripsData)) {
+    tripsData.forEach((trip: Trip) => {
+      contentItems.push({
+        type: 'trip' as const,
+        event: trip.event,
+        date: trip.createdAt,
+        thumbnailUrl: trip.image ? getGalleryThumbnailUrl(trip.image) : undefined,
+        parsedData: trip
       });
     });
   }
@@ -418,8 +439,15 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
   let title = '';
   let summary = '';
   let link = '';
+  let summary = '';
+  let link = '';
 
-  if (item.type === 'article' || item.type === 'place') {
+  if (item.type === 'trip') {
+    const trip = (item.parsedData as Trip);
+    title = trip.title;
+    summary = trip.summary || '';
+    link = `/trip/${trip.naddr}`;
+  } else if (item.type === 'article' || item.type === 'place') {
     const metadata = extractArticleMetadata(item.event);
     title = metadata.title;
     summary = metadata.summary;
@@ -464,7 +492,7 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
             {/* Type badge */}
             <div className="absolute top-4 left-4">
               <span className="px-3 py-1.5 bg-primary/90 text-white text-xs font-semibold rounded-full backdrop-blur-sm shadow-lg">
-                {item.type === 'place' ? '📍 Ort' : item.type === 'image' ? '📷 Bild' : '📝 Artikel'}
+                {item.type === 'trip' ? '🗺️ Trip' : item.type === 'place' ? '📍 Ort' : item.type === 'image' ? '📷 Bild' : '📝 Beitrag'}
               </span>
             </div>
           </div>
