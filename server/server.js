@@ -1056,54 +1056,68 @@ app.post('/api/generate-trip', (req, res, next) => {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
 
     // ===== BILDER ANALYSIEREN (alle Stationen) =====
-    // Bei vielen Bildern: max 8 analysieren (Groq Bild-Rate-Limit: ~4MB Base64 pro Request)
-    // SEQUENTIELL (nicht parallel!) um Rate-Limit-Fehler zu vermeiden
-    const GROQ_MAX_IMAGE_BYTES = 4 * 1024 * 1024 // 4MB max pro Bild für Groq Vision
-    const MAX_IMAGES_TO_ANALYZE = 8
+    // Groq Vision Rate-Limit: ~6000 Bild-Tokens/Minute bei kostenlosem Plan
+    // Lösung: max 5 Bilder, 2s Pause zwischen Anfragen, Retry bei 429
+    const GROQ_MAX_IMAGE_BYTES = 2 * 1024 * 1024 // 2MB max (Frontend komprimiert bereits)
+    const MAX_IMAGES_TO_ANALYZE = 5              // Groq-sicheres Maximum
+    const INTER_IMAGE_DELAY_MS  = 2000           // 2s Pause zwischen Bildern
     const imagesToAnalyze = images.slice(0, MAX_IMAGES_TO_ANALYZE)
-    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern (sequentiell, max 4MB/Bild)...`)
+    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern (max ${MAX_IMAGES_TO_ANALYZE}, ${INTER_IMAGE_DELAY_MS}ms Pause)...`)
+
+    // Hilfsfunktion: einzelnes Bild analysieren mit Retry bei 429
+    const analyzeImageWithRetry = async (img, index, maxRetries = 3) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          if (img.buffer.length > GROQ_MAX_IMAGE_BYTES) {
+            console.warn(`[KI] Bild ${index + 1} zu groß (${(img.buffer.length / 1024 / 1024).toFixed(1)}MB), überspringe`)
+            return '(Bild übersprungen – zu groß)'
+          }
+          const base64 = img.buffer.toString('base64')
+          console.log(`[KI] Bild ${index + 1}/${imagesToAnalyze.length}: ${(img.size / 1024).toFixed(1)}KB (Versuch ${attempt})`)
+
+          const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength, tripType) },
+                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+              ]
+            }],
+            max_tokens: 120,
+            temperature: 0.7
+          }, {
+            headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+            timeout: 30000
+          })
+          return visionResponse.data.choices[0].message.content
+
+        } catch (imgErr) {
+          const status = imgErr.response?.status
+          const msg    = imgErr.response?.data?.error?.message || imgErr.message
+          console.warn(`[KI] Bild ${index + 1} Versuch ${attempt}/${maxRetries} fehlgeschlagen (HTTP ${status}): ${msg}`)
+
+          if (status === 429) {
+            // Exponentielles Backoff: 15s, 30s, 60s
+            const waitMs = 15000 * attempt
+            console.log(`[KI] Rate-Limit 429 – warte ${waitMs / 1000}s...`)
+            await new Promise(r => setTimeout(r, waitMs))
+            if (attempt === maxRetries) return '(Rate-Limit – Bild übersprungen)'
+          } else {
+            return '(Bild nicht analysierbar)'
+          }
+        }
+      }
+      return '(Bild nicht analysierbar)'
+    }
 
     const imageDescriptions = []
     for (let index = 0; index < imagesToAnalyze.length; index++) {
-      const img = imagesToAnalyze[index]
-      try {
-        // Bild-Größe prüfen: wenn > 4MB Base64, überspringen
-        if (img.buffer.length > GROQ_MAX_IMAGE_BYTES) {
-          console.warn(`[KI] Bild ${index + 1} zu groß (${(img.buffer.length / 1024 / 1024).toFixed(1)}MB > 4MB), überspringe`)
-          imageDescriptions.push('(Bild zu groß für Analyse, übersprungen)')
-          continue
-        }
-
-        const base64 = img.buffer.toString('base64')
-        console.log(`[KI] Bild ${index + 1}/${imagesToAnalyze.length}: ${(img.size / 1024).toFixed(1)}KB`)
-
-        const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength, tripType) },
-              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
-            ]
-          }],
-          max_tokens: 150,
-          temperature: 0.7
-        }, {
-          headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-          timeout: 30000
-        })
-        imageDescriptions.push(visionResponse.data.choices[0].message.content)
-      } catch (imgErr) {
-        const imgErrStatus = imgErr.response?.status
-        const imgErrMsg = imgErr.response?.data?.error?.message || imgErr.message
-        console.warn(`[KI] Bild ${index + 1} Analyse fehlgeschlagen (HTTP ${imgErrStatus}): ${imgErrMsg}`)
-        imageDescriptions.push('(Bild nicht analysierbar)')
-
-        // Bei Rate-Limit: kurz warten bevor nächstes Bild
-        if (imgErrStatus === 429) {
-          console.log('[KI] Rate-Limit erkannt, warte 5 Sekunden...')
-          await new Promise(r => setTimeout(r, 5000))
-        }
+      const desc = await analyzeImageWithRetry(imagesToAnalyze[index], index)
+      imageDescriptions.push(desc)
+      // Pause zwischen Bildern um Rate-Limit zu vermeiden (außer nach letztem)
+      if (index < imagesToAnalyze.length - 1) {
+        await new Promise(r => setTimeout(r, INTER_IMAGE_DELAY_MS))
       }
     }
 
