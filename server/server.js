@@ -1056,12 +1056,24 @@ app.post('/api/generate-trip', (req, res, next) => {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
 
     // ===== BILDER ANALYSIEREN (alle Stationen) =====
-    // Bei vielen Bildern: max 12 analysieren (Performance + Groq-Limits)
-    const imagesToAnalyze = images.slice(0, 12)
-    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern...`)
+    // Bei vielen Bildern: max 8 analysieren (Groq Bild-Rate-Limit: ~4MB Base64 pro Request)
+    // SEQUENTIELL (nicht parallel!) um Rate-Limit-Fehler zu vermeiden
+    const GROQ_MAX_IMAGE_BYTES = 4 * 1024 * 1024 // 4MB max pro Bild für Groq Vision
+    const MAX_IMAGES_TO_ANALYZE = 8
+    const imagesToAnalyze = images.slice(0, MAX_IMAGES_TO_ANALYZE)
+    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern (sequentiell, max 4MB/Bild)...`)
 
-    const imageDescriptions = await Promise.allSettled(
-      imagesToAnalyze.map(async (img, index) => {
+    const imageDescriptions = []
+    for (let index = 0; index < imagesToAnalyze.length; index++) {
+      const img = imagesToAnalyze[index]
+      try {
+        // Bild-Größe prüfen: wenn > 4MB Base64, überspringen
+        if (img.buffer.length > GROQ_MAX_IMAGE_BYTES) {
+          console.warn(`[KI] Bild ${index + 1} zu groß (${(img.buffer.length / 1024 / 1024).toFixed(1)}MB > 4MB), überspringe`)
+          imageDescriptions.push('(Bild zu groß für Analyse, übersprungen)')
+          continue
+        }
+
         const base64 = img.buffer.toString('base64')
         console.log(`[KI] Bild ${index + 1}/${imagesToAnalyze.length}: ${(img.size / 1024).toFixed(1)}KB`)
 
@@ -1080,9 +1092,20 @@ app.post('/api/generate-trip', (req, res, next) => {
           headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
           timeout: 30000
         })
-        return visionResponse.data.choices[0].message.content
-      })
-    ).then(results => results.map(r => r.status === 'fulfilled' ? r.value : '(Bild nicht analysierbar)'))
+        imageDescriptions.push(visionResponse.data.choices[0].message.content)
+      } catch (imgErr) {
+        const imgErrStatus = imgErr.response?.status
+        const imgErrMsg = imgErr.response?.data?.error?.message || imgErr.message
+        console.warn(`[KI] Bild ${index + 1} Analyse fehlgeschlagen (HTTP ${imgErrStatus}): ${imgErrMsg}`)
+        imageDescriptions.push('(Bild nicht analysierbar)')
+
+        // Bei Rate-Limit: kurz warten bevor nächstes Bild
+        if (imgErrStatus === 429) {
+          console.log('[KI] Rate-Limit erkannt, warte 5 Sekunden...')
+          await new Promise(r => setTimeout(r, 5000))
+        }
+      }
+    }
 
     console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
 
@@ -1119,6 +1142,7 @@ app.post('/api/generate-trip', (req, res, next) => {
       console.log(`[KI] Generiere ${imagesToAnalyze.length} Bild-Captions...`)
 
       // Captions sequentiell generieren (nicht parallel - Groq Rate-Limits)
+      // Kurze Pause zwischen den Anfragen um Rate-Limit zu vermeiden
       for (let i = 0; i < imagesToAnalyze.length; i++) {
         const station = stationDescriptions[i] || {}
         const stationLocation = station.location || locations[i] || `Station ${i + 1}`
@@ -1143,13 +1167,23 @@ app.post('/api/generate-trip', (req, res, next) => {
           })
           captions.push(caption.trim())
           console.log(`[KI] Caption ${i + 1}/${imagesToAnalyze.length} fertig`)
+          // Kleine Pause zwischen Caption-Anfragen (Groq Rate-Limit)
+          if (i < imagesToAnalyze.length - 1) {
+            await new Promise(r => setTimeout(r, 300))
+          }
         } catch (captionErr) {
-          console.warn(`[KI] Caption ${i + 1} fehlgeschlagen:`, captionErr.message)
+          const capStatus = captionErr.response?.status
+          console.warn(`[KI] Caption ${i + 1} fehlgeschlagen (HTTP ${capStatus}):`, captionErr.response?.data?.error?.message || captionErr.message)
           captions.push('') // Leerer String als Fallback
+          // Bei Rate-Limit: länger warten
+          if (capStatus === 429) {
+            console.log('[KI] Caption Rate-Limit, warte 5s...')
+            await new Promise(r => setTimeout(r, 5000))
+          }
         }
       }
 
-      // Für Bilder die nicht analysiert wurden (>12): leere Captions
+      // Für Bilder die nicht analysiert wurden (>MAX): leere Captions
       for (let i = imagesToAnalyze.length; i < images.length; i++) {
         captions.push('')
       }
@@ -1167,8 +1201,28 @@ app.post('/api/generate-trip', (req, res, next) => {
     })
 
   } catch (error) {
-    console.error('[KI] Fehler bei Trip-Generierung:', error.response?.data || error.message)
-    res.status(500).json({ error: 'Fehler bei Trip-Generierung. Bitte versuche es erneut.' })
+    // Detailliertes Logging für Debugging
+    const errData = error.response?.data
+    const httpStatus = error.response?.status
+    const errMsg = error.message || 'Unbekannter Fehler'
+    console.error(`[KI] Fehler bei Trip-Generierung (HTTP ${httpStatus || 'no-response'}):`, errData || errMsg)
+    if (errData) console.error('[KI] API-Antwort:', JSON.stringify(errData).slice(0, 500))
+
+    // Sprechende Fehlermeldung ans Frontend
+    let userError = 'Fehler bei Trip-Generierung. Bitte versuche es erneut.'
+    if (httpStatus === 429 || errData?.error?.type === 'rate_limit_exceeded') {
+      userError = 'Groq API-Limit erreicht. Bitte 30 Sekunden warten und erneut versuchen.'
+    } else if (httpStatus === 413 || errMsg.includes('too large') || errMsg.includes('image_too_large')) {
+      userError = 'Ein oder mehrere Bilder sind zu groß für die KI-Analyse. Bitte kleinere Bilder verwenden (max. 4MB pro Bild für Groq).'
+    } else if (error.code === 'ECONNABORTED' || errMsg.includes('timeout')) {
+      userError = 'Zeitüberschreitung bei der KI-Analyse. Versuche es mit weniger Bildern (max. 6).'
+    } else if (errData?.error?.message) {
+      userError = `KI-Fehler: ${errData.error.message}`
+    } else if (errMsg && errMsg !== 'Unbekannter Fehler') {
+      userError = `Fehler: ${errMsg}`
+    }
+
+    res.status(httpStatus || 500).json({ error: userError })
   }
 })
 
