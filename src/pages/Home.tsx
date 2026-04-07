@@ -432,8 +432,8 @@ const ContentCard = memo(function ContentCard({ item }: { item: ContentItem }) {
   const authorName = author.data?.metadata?.name || genUserName(item.event.pubkey);
 
   let title = '';
-
-
+  let summary = '';
+  let link = '';
 
   if (item.type === 'trip') {
     const trip = item.parsedData as Trip;
