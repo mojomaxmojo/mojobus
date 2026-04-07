@@ -851,7 +851,7 @@ async function runSlideshowJob(jobId, params) {
 
     console.log(`[Slideshow] ffmpeg starten: ${FFMPEG} ${ffmpegArgs.slice(0, 8).join(' ')}...`)
 
-    await execFileAsync(FFMPEG, ffmpegArgs, { timeout: 300000 }) // max 5 Min.
+    await execFileAsync(FFMPEG, ffmpegArgs, { timeout: 600000 }) // max 10 Min. (20 Bilder × zoompan)
 
     console.log(`[Slideshow] ffmpeg fertig: ${outputPath}`)
 
@@ -895,8 +895,8 @@ app.post('/api/generate-slideshow', async (req, res) => {
   if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
     return res.status(400).json({ error: 'imageUrls Array erforderlich (min. 1 Bild).' })
   }
-  if (imageUrls.length > 12) {
-    return res.status(400).json({ error: `Zu viele Bilder: ${imageUrls.length} (Maximum 12 für stabile Slideshows). Verwende weniger Bilder oder deaktiviere Slideshow.` })
+  if (imageUrls.length > 20) {
+    return res.status(400).json({ error: `Zu viele Bilder: ${imageUrls.length} (Maximum 20). Bitte maximal 20 Bilder verwenden.` })
   }
 
   const ppqKey = process.env.PPQ_API_KEY
@@ -906,7 +906,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
 
   // Job-ID generieren
   const jobId = 'sl_' + crypto.randomBytes(8).toString('hex')
-  const totalDuration = Math.min(imageUrls.length, 15) * imageDuration
+    const totalDuration = Math.min(imageUrls.length, 20) * imageDuration
   const estimatedCost = musicMode === 'elevenlabs' ? 0.50 : 0.00
 
   // Job registrieren
@@ -920,7 +920,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
 
   // Job asynchron starten (nicht awaiten!)
   runSlideshowJob(jobId, {
-    imageUrls: imageUrls.slice(0, 15),
+    imageUrls: imageUrls.slice(0, 20),
     musicMode,
     lifestyle,
     aspectRatio,
@@ -932,7 +932,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
   res.json({
     jobId,
     status: 'pending',
-    imageCount: Math.min(imageUrls.length, 15),
+      imageCount: Math.min(imageUrls.length, 20),
     totalDuration,
     estimatedCost,
     musicMode
