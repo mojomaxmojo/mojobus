@@ -29,7 +29,8 @@ export const generateNotePrompt = (params) => {
     imageDescriptions,
     lifestyleConfig,
     country,
-    gender = 'neutral'
+    gender = 'neutral',
+    tripType = ''
   } = params
 
   // Gender-Prompt-Zusatz holen
@@ -37,6 +38,7 @@ export const generateNotePrompt = (params) => {
 
   // Kontext kompakt zusammenbauen
   let contextLines = [
+    tripType && `Art der Reise: ${tripType}`,
     country && `Region: ${country}`,
     location && `Ort: ${location}${country ? ', ' + country : ''}`
   ].filter(Boolean).join('\n')
@@ -57,9 +59,14 @@ export const generateNotePrompt = (params) => {
     Bleib vage wo dir Infos fehlen.`
   }
 
+  // Trip-Type Block (wenn gesetzt)
+  const tripTypeBlock = tripType
+    ? `\nART DER REISE: ${tripType.toUpperCase()}. Schreibe so dass der Text nach ${tripType} klingt – nicht nach Roadtrip oder Vanlife wenn das nicht zutrifft.\n`
+    : ''
+
   return `Du schreibst wie Foster Huntington. Eine Notiz für die ${lifestyleConfig.community}.
 ${genderAddition}
-
+${tripTypeBlock}
 DAS WICHTIGSTE: Eine Notiz ist KEIN Artikel. Kein Medien-Post. Kein Bericht.
 Es ist ein Gedanke. Ein Fragment. Wie eine Nachricht an dich selbst.
 1-5 Sätze. Meistens weniger.

@@ -25,6 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { CONTENT_CATEGORIES, createRequiredTags, getOptionalTags, getTabConfig } from '@/config/contentCategories';
 import { CountrySelector, getCountryTag } from '@/components/CountrySelector';
 import { ARTICLE_CATEGORIES, DIY_CATEGORIES, DIY_TAGS, NATURE_CATEGORIES, NATURE_TAGS, TAG_GROUPS } from '@/config';
+import { TRIP_TYPES, type TripType } from '@/config/tags';
 import MAIN_MENU from '@/config/menu';
 import { RV_LIFE_CONFIG } from '@/config/rvlife';
 import { nip19 } from 'nostr-tools';
@@ -202,6 +203,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [isGeneratingArticle, setIsGeneratingArticle] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'gpt4'>('llama4');
   const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
+  const [tripType, setTripType] = useState<TripType | ''>('');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -241,6 +243,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
       formData.append('manualTags', JSON.stringify(manualTags));
       formData.append('additionalImageUrls', additionalImagesUrlInput || '');
       formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
+      formData.append('tripType', tripType || '');
 
       const response = await fetch('/api/generate-media-article', {
         method: 'POST',
@@ -1079,28 +1082,52 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
               />
               
               {/* Lifestyle Selection */}
-              <div className="mt-4 space-y-3">
-                <Label className="text-sm font-medium">Lifestyle auswählen:</Label>
-                <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Wähle deinen Lifestyle" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mojobus">🚌 Mojobus - Mojo &amp; Susanne, US-Oldtimer</SelectItem>
-                    <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
-                    <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
-                    <SelectItem value="beachlife">🏖️ Beachlife - Strand &amp; Surf Lifestyle</SelectItem>
-                    <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
-                    <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Foster Huntington Stil - ehrlich, direkt, authentisch
-                </p>
-              </div>
-              
-              {/* KI-Modell Auswahl */}
-              <div className="mt-4 space-y-3">
+               <div className="mt-4 space-y-3">
+                 <Label className="text-sm font-medium">Lifestyle auswählen:</Label>
+                 <Select value={lifestyle} onValueChange={(value: any) => setLifestyle(value)}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Wähle deinen Lifestyle" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="mojobus">🚌 Mojobus - Mojo &amp; Susanne, US-Oldtimer</SelectItem>
+                     <SelectItem value="vanlife">🚐 Vanlife - Van-Life auf Rädern</SelectItem>
+                     <SelectItem value="rvlife">🚗 RVlife - Recreational Vehicle</SelectItem>
+                     <SelectItem value="beachlife">🏖️ Beachlife - Strand &amp; Surf Lifestyle</SelectItem>
+                     <SelectItem value="wohnmobil">🏠 Wohnmobil - Wohnmobil/Camper</SelectItem>
+                     <SelectItem value="perpetual-travelers">🌍 Perpetual Travelers - Permanent Reisende</SelectItem>
+                   </SelectContent>
+                 </Select>
+                 <p className="text-xs text-muted-foreground">
+                   Foster Huntington Stil - ehrlich, direkt, authentisch
+                 </p>
+               </div>
+
+               {/* Art der Reise */}
+               <div className="mt-3 space-y-2">
+                 <Label className="text-sm font-medium">Art der Reise (optional):</Label>
+                 <Select value={tripType} onValueChange={(value) => setTripType(value as TripType | '')}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Keine Angabe" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="">— Keine Angabe —</SelectItem>
+                     {TRIP_TYPES.map((type) => (
+                       <SelectItem key={type.id} value={type.id}>
+                         <span className="flex items-center gap-2">
+                           <span>{type.icon}</span>
+                           <span>{type.label}</span>
+                         </span>
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+                 <p className="text-xs text-muted-foreground">
+                   Beeinflusst den KI-Text (z.B. Wandern statt Roadtrip)
+                 </p>
+               </div>
+               
+               {/* KI-Modell Auswahl */}
+               <div className="mt-4 space-y-3">
                 <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div 
@@ -1589,6 +1616,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
   const [isGeneratingNote, setIsGeneratingNote] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
+  const [tripType, setTripType] = useState<TripType | ''>('');
   const { toast } = useToast();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { mutateAsync: uploadFile } = useUploadFile();
@@ -1622,6 +1650,7 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
       formData.append('lifestyle', lifestyle);
       formData.append('model', selectedModel);
       formData.append('gender', gender || 'neutral');
+      formData.append('tripType', tripType || '');
 
       const response = await fetch('/api/generate-note', {
         method: 'POST',
@@ -2128,6 +2157,30 @@ function NoteForm({ editEvent }: { editEvent?: any }) {
             </p>
           </div>
 
+          {/* Art der Reise */}
+          <div className="space-y-2">
+            <Label>Art der Reise (optional)</Label>
+            <Select value={tripType} onValueChange={(value) => setTripType(value as TripType | '')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Keine Angabe" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">— Keine Angabe —</SelectItem>
+                {TRIP_TYPES.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <span className="flex items-center gap-2">
+                      <span>{type.icon}</span>
+                      <span>{type.label}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Beeinflusst den KI-Text (z.B. Wandern statt Roadtrip)
+            </p>
+          </div>
+
           {/* KI-Modell Auswahl */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
@@ -2593,6 +2646,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
    const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
     const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
+    const [tripType, setTripType] = useState<TripType | ''>('');
     const { toast } = useToast();
     const { mutateAsync: publishEvent } = useNostrPublish();
     const { mutateAsync: uploadFile } = useUploadFile();
@@ -2653,6 +2707,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
        formData.append('gender', gender || 'neutral');
        formData.append('rating', rating.toString());
        formData.append('price', price || '');
+       formData.append('tripType', tripType || '');
 
        // Zusatzbilder (hochgeladene URLs)
        if (additionalImages.length > 0) {
@@ -3510,6 +3565,30 @@ Beschreibe hier den Ort, was macht ihn besonders...
             </p>
           </div>
 
+          {/* Art der Reise */}
+          <div className="space-y-2">
+            <Label>Art der Reise (optional)</Label>
+            <Select value={tripType} onValueChange={(value) => setTripType(value as TripType | '')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Keine Angabe" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">— Keine Angabe —</SelectItem>
+                {TRIP_TYPES.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <span className="flex items-center gap-2">
+                      <span>{type.icon}</span>
+                      <span>{type.label}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Beeinflusst den KI-Text (z.B. Wandern statt Roadtrip)
+            </p>
+          </div>
+
           {/* KI-Modell Auswahl */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">KI-Modell auswählen:</Label>
@@ -3787,6 +3866,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
   const [articleLength, setArticleLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]); // 3 KI-Titel-Vorschläge
+  const [tripType, setTripType] = useState<TripType | ''>('');
   // Kling Video-Generator State
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
@@ -4098,6 +4178,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       formData.append('country', selectedCountry || '');
       formData.append('articleLength', articleLength);
       formData.append('gender', gender || 'neutral');
+      formData.append('tripType', tripType || '');
 
       // Bild-URLs aus dem MilkdownEditor (bereits auf Blossom hochgeladen)
       if (markdownImageUrls.length > 0) {
@@ -4841,6 +4922,30 @@ Schreibe deinen Artikel hier...
             </Select>
             <p className="text-xs text-muted-foreground">
               Foster Huntington Stil - ehrlich, direkt, authentisch
+            </p>
+          </div>
+
+          {/* Art der Reise */}
+          <div className="space-y-2">
+            <Label>Art der Reise (optional)</Label>
+            <Select value={tripType} onValueChange={(value) => setTripType(value as TripType | '')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Keine Angabe" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">— Keine Angabe —</SelectItem>
+                {TRIP_TYPES.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <span className="flex items-center gap-2">
+                      <span>{type.icon}</span>
+                      <span>{type.label}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Beeinflusst den KI-Text (z.B. Wandern statt Roadtrip)
             </p>
           </div>
 

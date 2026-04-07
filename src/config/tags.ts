@@ -170,12 +170,9 @@ export const TAG_GROUPS: TagGroup[] = [
       { id: 'spaziergang', label: 'Spaziergang', icon: '🚶' },
       { id: 'radfahren', label: 'Radfahren', icon: '🚴' },
       { id: 'roadtrip', label: 'Roadtrip', icon: '🚗' },
-      { id: 'eisenbahn', label: 'Eisenbahn', icon: '🚂' },
       { id: 'boot', label: 'Boot', icon: '⛵' },
       { id: 'flug', label: 'Flug', icon: '✈️' },
-      { id: 'laufen', label: 'Laufen', icon: '🏃' },
       { id: 'wandern', label: 'Wandern', icon: '🥾' },
-      { id: 'klettern', label: 'Klettern', icon: '🧗' }
     ]
   }
 ];
@@ -187,12 +184,9 @@ export const TRIP_TYPES = [
   { id: 'spaziergang', label: 'Spaziergang', icon: '🚶' },
   { id: 'radfahren', label: 'Radfahren', icon: '🚴' },
   { id: 'roadtrip', label: 'Roadtrip', icon: '🚗' },
-  { id: 'eisenbahn', label: 'Eisenbahn', icon: '🚂' },
   { id: 'boot', label: 'Boot', icon: '⛵' },
   { id: 'flug', label: 'Flug', icon: '✈️' },
-  { id: 'laufen', label: 'Laufen', icon: '🏃' },
   { id: 'wandern', label: 'Wandern', icon: '🥾' },
-  { id: 'klettern', label: 'Klettern', icon: '🧗' }
 ] as const;
 
 export type TripType = typeof TRIP_TYPES[number]['id'];

@@ -184,6 +184,7 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
   const additionalImageUrls = sanitizeInput(req.body.additionalImageUrls) || ''
   const manualTags = safelyParseJSON(req.body.manualTags) || []
   const country = sanitizeInput(req.body.country) || ''
+  const tripType = sanitizeInput(req.body.tripType) || ''
 
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
@@ -191,6 +192,7 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
 
   console.log(`[KI] Generiere Media-Artikel: "${title}", Bilder: ${images.length}, Standort: ${location}, Modell: ${model}, Lifestyle: ${lifestyle}`)
   console.log(`[KI] Kontext: Kategorie=${mainCategory}, SubTags=${subCategories.length}, DetailTags=${detailedTags.length}, ManualTags=${manualTags.length}`)
+  if (tripType) console.log(`[KI] Trip-Typ: ${tripType}`)
 
     try {
       // ===== BILD UND VIDEO ANALYSE FÜR MEDIEN ARTIKEL =====
@@ -279,7 +281,8 @@ app.post('/api/generate-media-article', upload.array('images', 10), async (req, 
       additionalImageUrls,
       manualTags,
       country,
-      gender
+      gender,
+      tripType
     })
 
     // Artikel generieren – MEDIEN: max 150 Tokens (35-50 Wörter + Hashtags)
@@ -1149,6 +1152,7 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
   const tags = safelyParseJSON(req.body.tags) || []
   const country = sanitizeInput(req.body.country) || ''
   const articleLength = sanitizeInput(req.body.articleLength) || 'medium'
+  const tripType = sanitizeInput(req.body.tripType) || ''
   // Bild-URLs aus dem MilkdownEditor-Markdown (bereits hochgeladen, öffentlich erreichbar)
   const markdownImageUrls = safelyParseJSON(req.body.markdownImageUrls) || []
 
@@ -1254,7 +1258,8 @@ app.post('/api/generate-article', upload.array('images', 10), async (req, res) =
       tags,
       country,
       articleLength,
-      gender
+      gender,
+      tripType
     })
 
     // Berichte: maxTokens abhängig von articleLength
@@ -1349,6 +1354,7 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
   const country = sanitizeInput(req.body.country) || ''
   const rating = sanitizeInput(req.body.rating) || ''
   const price = sanitizeInput(req.body.price) || ''
+  const tripType = sanitizeInput(req.body.tripType) || ''
   // Zusätzliche Bild-URLs: hochgeladene Zusatzbilder + Markdown-Bilder aus description
   const additionalImageUrls = safelyParseJSON(req.body.additionalImageUrls) || []
   const markdownImageUrls = safelyParseJSON(req.body.markdownImageUrls) || []
@@ -1470,7 +1476,8 @@ app.post('/api/generate-place', upload.array('images', 10), async (req, res) => 
       country,
       rating,
       price,
-      gender
+      gender,
+      tripType
     })
 
     // Plätze: max 300 Tokens (80-150 Wörter + Hashtags)
@@ -1513,12 +1520,14 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
 
   // Zusätzliche Kontext-Felder
   const country = sanitizeInput(req.body.country) || ''
+  const tripType = sanitizeInput(req.body.tripType) || ''
 
   if (!images || images.length === 0) {
     return res.status(400).json({ error: 'Mindestens ein Bild erforderlich' })
   }
 
   console.log(`[KI] Generiere Notiz: "${title || '(kein Titel)'}", Text: ${text.length} Zeichen, Bilder: ${images.length}, Lifestyle: ${lifestyle}, Modell: ${model}`)
+  if (tripType) console.log(`[KI] Trip-Typ: ${tripType}`)
 
   try {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
@@ -1553,7 +1562,8 @@ app.post('/api/generate-note', upload.array('images', 10), async (req, res) => {
       imageDescriptions,
       lifestyleConfig,
       country,
-      gender
+      gender,
+      tripType
     })
 
     // Notizen: max 120 Tokens (20-80 Wörter + Hashtags)

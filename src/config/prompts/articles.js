@@ -86,7 +86,8 @@ export const generateArticlePrompt = (params) => {
         tags,
         country,
         articleLength = 'long',
-        gender = 'neutral'
+        gender = 'neutral',
+        tripType = ''
     } = params
 
     // Normalisieren: imageObjects bevorzugen, imageDescriptions als Fallback
@@ -102,6 +103,7 @@ export const generateArticlePrompt = (params) => {
 
     // Kontext kompakt zusammenbauen
     let contextLines = [
+        tripType && `Art der Reise: ${tripType}`,
         category && `Kategorie: ${category}`,
         country && `Region: ${country}`,
         location && `Ort: ${location}${country ? ', ' + country : ''}`,
@@ -154,9 +156,14 @@ export const generateArticlePrompt = (params) => {
         Bleib vage wo dir Infos fehlen. "Irgendein Strand" statt "Praia da Rocha".`
     }
 
+    // Trip-Type Block (wenn gesetzt)
+    const tripTypeBlock = tripType
+        ? `\n    ART DER REISE: ${tripType.toUpperCase()}. Der Text soll sich nach ${tripType} anfühlen, nicht nach einem generischen Roadtrip.\n    Wenn es kein Fahrzeug-Trip ist (Wandern, Spaziergang, Radfahren, Boot, Flug): KEIN Lenkrad, kein Van, keine Schiebetür.\n`
+        : ''
+
     return `Du schreibst wie Foster Huntington. Einen ${length.label}form-Artikel für die ${lifestyleConfig.community}.
 ${genderAddition}
-
+${tripTypeBlock}
     FORMAT: ${length.label} (${length.words} Wörter)
     ${length.description}
     ${length.scenes} Szenen.
