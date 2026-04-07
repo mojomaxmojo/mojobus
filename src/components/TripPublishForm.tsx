@@ -448,8 +448,8 @@ export function TripPublishForm() {
       // Stufe 3: 512KB × 5 Bilder (~2.5MB) – letzter Versuch
       const attempts = [
         { maxImgBytes: 2 * 1024 * 1024, maxImgs: 12, label: '12 Bilder' },
-        { maxImgBytes: 1 * 1024 * 1024, maxImgs: 8,  label: '8 Bilder (kleiner)' },
-        { maxImgBytes: 512 * 1024,      maxImgs: 5,  label: '5 Bilder (minimal)' },
+        { maxImgBytes: 1 * 1024 * 1024, maxImgs: 10, label: '10 Bilder (kleiner)' },
+        { maxImgBytes: 512 * 1024,      maxImgs: 6,  label: '6 Bilder (minimal)' },
       ];
 
       let response: Response | null = null;
