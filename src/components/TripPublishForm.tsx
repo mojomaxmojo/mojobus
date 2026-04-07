@@ -1927,19 +1927,34 @@ export function TripPublishForm() {
         </CardContent>
       </Card>
 
-      {/* Slideshow */}
-      <SlideshowBlock
-        imageUrls={stations.map(s => s.uploadedUrl || s.preview).filter(Boolean)}
-        lifestyle={lifestyle}
-        title={tripData.title || 'trip'}
-        onVideoReady={(url) => {
-          setSlideshowVideoUrl(url);
-          toast({
-            title: '🎞️ Slideshow gespeichert',
-            description: 'Video wird beim Veröffentlichen automatisch eingebunden.',
-          });
-        }}
-      />
+      {/* Slideshow – nur mit echten Blossom-URLs (keine base64/blob previews!) */}
+      {(() => {
+        const blossomUrls = stations.map(s => s.uploadedUrl).filter((u): u is string => !!u && u.startsWith('http'));
+        const notUploaded = stations.filter(s => s.file && !s.uploadedUrl).length;
+        if (notUploaded > 0) {
+          return (
+            <div className="p-4 border rounded-lg bg-muted/30 text-sm text-muted-foreground text-center space-y-1">
+              <p className="font-medium">🎞️ Slideshow</p>
+              <p>⚠️ Erst Bilder zu Blossom hochladen, dann Slideshow generieren.</p>
+              <p className="text-xs">({notUploaded} Bild{notUploaded !== 1 ? 'er' : ''} noch nicht hochgeladen – klicke "Trip veröffentlichen")</p>
+            </div>
+          );
+        }
+        return (
+          <SlideshowBlock
+            imageUrls={blossomUrls}
+            lifestyle={lifestyle}
+            title={tripData.title || 'trip'}
+            onVideoReady={(url) => {
+              setSlideshowVideoUrl(url);
+              toast({
+                title: '🎞️ Slideshow gespeichert',
+                description: 'Video wird beim Veröffentlichen automatisch eingebunden.',
+              });
+            }}
+          />
+        );
+      })()}
 
       {/* Video-URL: automatisch via Slideshow ODER manuell eintragen */}
       <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
