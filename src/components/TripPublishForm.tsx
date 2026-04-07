@@ -413,64 +413,83 @@ export function TripPublishForm() {
     };
     
     try {
-      const formData = new FormData();
+      // ── Hilfsfunktion: FormData für einen Versuch bauen ──────────────────
+      const buildFormData = async (maxImgBytes: number, maxImgs: number) => {
+        const fd = new FormData();
+        const stationsWithFiles = stations.filter(s => s.file).slice(0, maxImgs);
 
-      // Bilder komprimieren (max 2MB pro Bild) – verhindert NetworkError bei großen Uploads
-      // Groq Vision braucht kein Original-Bild, 1920px JPEG reicht für KI-Analyse
-      const stationsWithFiles = stations.filter(s => s.file);
-      let imageCount = 0;
+        for (const station of stationsWithFiles) {
+          const compressed = await compressImageForUpload(station.file, maxImgBytes);
+          fd.append('images', compressed);
+        }
 
-      if (stationsWithFiles.length > 0) {
+        fd.append('title',        tripData.title || 'Meine Reise');
+        fd.append('description',  tripData.summary || '');
+        fd.append('locations',    JSON.stringify(stations.map(s => s.location || s.title)));
+        fd.append('startDate',    stations[0]?.date || '');
+        fd.append('endDate',      stations[stations.length - 1]?.date || '');
+        fd.append('model',        selectedModel);
+        fd.append('lifestyle',    lifestyle);
+        fd.append('tripType',     tripData.tripType || '');
+        fd.append('country',      tripData.country || '');
+        fd.append('tripLength',   tripLength);
+        fd.append('gender',       gender || 'neutral');
+        fd.append('stationDescriptions', JSON.stringify(
+          stations.map(s => ({ location: s.location || s.title, description: s.description || '' }))
+                  .filter(s => s.description)
+        ));
+        return { fd, count: stationsWithFiles.length };
+      };
+
+      // ── Versuchs-Stufen: erst voll, dann kleiner, dann minimal ───────────
+      // Stufe 1: 2MB/Bild, max 8 Bilder  (~16MB gesamt)
+      // Stufe 2: 1MB/Bild, max 5 Bilder  ( ~5MB gesamt) – Fallback bei NetworkError
+      // Stufe 3: 0.5MB/Bild, max 3 Bilder (~1.5MB gesamt) – letzter Versuch
+      const attempts = [
+        { maxImgBytes: 2 * 1024 * 1024, maxImgs: 8,  label: '2MB × 8 Bilder' },
+        { maxImgBytes: 1 * 1024 * 1024, maxImgs: 5,  label: '1MB × 5 Bilder' },
+        { maxImgBytes: 512 * 1024,       maxImgs: 3,  label: '512KB × 3 Bilder' },
+      ];
+
+      let response: Response | null = null;
+      let data: any = null;
+      let lastError = '';
+
+      for (let attempt = 0; attempt < attempts.length; attempt++) {
+        const { maxImgBytes, maxImgs, label } = attempts[attempt];
+
         toast({
-          title: '🗜️ Bilder werden vorbereitet...',
-          description: `${stationsWithFiles.length} Bilder komprimieren für KI-Upload`,
+          title: attempt === 0 ? '🗜️ Bilder werden vorbereitet...' : `🔄 Versuch ${attempt + 1}/3 (${label})`,
+          description: attempt === 0
+            ? `${Math.min(stations.filter(s => s.file).length, maxImgs)} Bilder komprimieren...`
+            : 'Kleinere Dateigröße wird versucht...',
         });
+
+        const { fd, count } = await buildFormData(maxImgBytes, maxImgs);
+        console.log(`[KI] Versuch ${attempt + 1}: ${count} Bilder, max ${maxImgBytes/1024}KB/Bild`);
+        setGeneratingProgress(10 + attempt * 5);
+
+        try {
+          response = await fetch('/api/generate-trip', { method: 'POST', body: fd });
+          // Kein NetworkError → Antwort verarbeiten
+          data = await safeJson(response);
+          if (!response.ok) throw new Error(data.error || `Server HTTP ${response.status}`);
+          break; // ✅ Erfolg
+        } catch (fetchErr: any) {
+          lastError = fetchErr?.message || 'Netzwerkfehler';
+          console.warn(`[KI] Versuch ${attempt + 1} fehlgeschlagen: ${lastError}`);
+          if (attempt === attempts.length - 1) {
+            // Alle Versuche gescheitert
+            throw new Error(
+              `Alle ${attempts.length} Versuche fehlgeschlagen. Letzter Fehler: ${lastError}\n` +
+              `Tipp: Stelle sicher dass der Server läuft (https://mojobus.co/api/health).`
+            );
+          }
+          // Nächste Stufe versuchen
+        }
       }
-
-      for (const station of stationsWithFiles) {
-        const compressed = await compressImageForUpload(station.file, 2 * 1024 * 1024);
-        formData.append('images', compressed);
-        imageCount++;
-      }
-
-      const totalMB = stationsWithFiles.reduce((sum, s) => sum + s.file.size, 0) / 1024 / 1024;
-      console.log(`[KI] Sende ${imageCount} Bilder an /api/generate-trip (komprimiert, ~${totalMB.toFixed(1)}MB original)`);
-      
-      // Trip-Daten hinzufügen
-      formData.append('title', tripData.title || 'Meine Reise');
-      formData.append('description', tripData.summary || '');
-      formData.append('locations', JSON.stringify(stations.map(s => s.location || s.title)));
-      formData.append('startDate', stations[0]?.date || '');
-      formData.append('endDate', stations[stations.length - 1]?.date || '');
-      formData.append('model', selectedModel); // Modell-Auswahl
-      formData.append('lifestyle', lifestyle); // Lifestyle-Typ
-
-      // Zusätzliche Kontext-Felder
-      formData.append('tripType', tripData.tripType || ''); // Trip-Typ
-      formData.append('country', tripData.country || ''); // Land
-      formData.append('tripLength', tripLength); // Trip-Länge
-      formData.append('gender', gender || 'neutral'); // Mojo=male, Susanne=female
-      formData.append('stationDescriptions', JSON.stringify(
-        stations.map(s => ({
-          location: s.location || s.title,
-          description: s.description || ''
-        })).filter(s => s.description) // Nur Stationen mit Beschreibung
-      ));
-
-      setGeneratingProgress(10);
-      
-      const response = await fetch('/api/generate-trip', {
-        method: 'POST',
-        body: formData
-      });
 
       setGeneratingProgress(90);
-
-      const data = await safeJson(response);
-
-      if (!response.ok) {
-        throw new Error(data.error || `Server HTTP ${response.status}`);
-      }
       
       if (data.article) {
         // Zusammenfassung in Trip-Summary einfügen
