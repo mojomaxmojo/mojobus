@@ -442,14 +442,14 @@ export function TripPublishForm() {
       };
 
       // ── Versuchs-Stufen ───────────────────────────────────────────────────
-      // Groq Vision: max ~5 Bilder/Minute sicher (Rate-Limit)
-      // Stufe 1: 2MB × 5 Bilder  (~10MB) – optimal für Groq
-      // Stufe 2: 1MB × 4 Bilder  (~4MB)  – Fallback
-      // Stufe 3: 512KB × 3 Bilder (~1.5MB) – Notfall
+      // Gemini 2.5 Flash (OpenRouter): kein Rate-Limit, alle 12 Bilder möglich
+      // Stufe 1: 2MB × 12 Bilder (~24MB) – Gemini kann das
+      // Stufe 2: 1MB × 8 Bilder  (~8MB)  – Fallback bei NetworkError
+      // Stufe 3: 512KB × 5 Bilder (~2.5MB) – letzter Versuch
       const attempts = [
-        { maxImgBytes: 2 * 1024 * 1024, maxImgs: 5, label: '5 Bilder' },
-        { maxImgBytes: 1 * 1024 * 1024, maxImgs: 4, label: '4 Bilder (kleiner)' },
-        { maxImgBytes: 512 * 1024,      maxImgs: 3, label: '3 Bilder (minimal)' },
+        { maxImgBytes: 2 * 1024 * 1024, maxImgs: 12, label: '12 Bilder' },
+        { maxImgBytes: 1 * 1024 * 1024, maxImgs: 8,  label: '8 Bilder (kleiner)' },
+        { maxImgBytes: 512 * 1024,      maxImgs: 5,  label: '5 Bilder (minimal)' },
       ];
 
       let response: Response | null = null;
@@ -1601,24 +1601,12 @@ export function TripPublishForm() {
                   <span className="text-base">🖼️</span>
                   <div>
                     <div className="font-medium text-foreground">
-                      {Math.min(stations.length, 5)}× Bild-Text
-                      {stations.length > 5 && <span className="text-amber-500 ml-1">(max 5)</span>}
+                      {stations.length}× Bild-Text
                     </div>
-                    <div>20–100 Wörter pro Bild</div>
+                    <div>20–100 Wörter pro Bild · Gemini Vision</div>
                   </div>
                 </div>
               </div>
-
-              {/* Warnung bei mehr als 5 Bildern */}
-              {stations.filter(s => s.file).length > 5 && (
-                <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-                  <span className="text-base leading-none mt-0.5">⚠️</span>
-                  <span>
-                    Du hast <strong>{stations.filter(s => s.file).length} Bilder</strong> — die KI analysiert davon nur die ersten <strong>5</strong> (Groq Vision Rate-Limit).{' '}
-                    Alle {stations.length} Bilder bekommen einen Text, aber nur 5 werden vom Bild analysiert.
-                  </span>
-                </div>
-              )}
 
               <Button
                 type="button"
@@ -1629,9 +1617,9 @@ export function TripPublishForm() {
                 {isGeneratingArticle ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {generatingProgress < 10 && 'Bilder vorbereiten...'}
-                    {generatingProgress >= 10 && generatingProgress < 90 && `Bilder analysieren... (${Math.min(stations.filter(s=>s.file).length,5)} Bilder)`}
-                    {generatingProgress >= 90 && generatingProgress < 100 && 'Texte werden generiert...'}
+                    {generatingProgress < 10 && 'Bilder komprimieren...'}
+                    {generatingProgress >= 10 && generatingProgress < 90 && `Gemini analysiert ${stations.filter(s=>s.file).length} Bilder...`}
+                    {generatingProgress >= 90 && generatingProgress < 100 && 'Foster-Text generieren...'}
                     {generatingProgress >= 100 && '✓ Fertig!'}
                   </>
                 ) : (

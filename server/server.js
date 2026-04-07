@@ -1055,73 +1055,103 @@ app.post('/api/generate-trip', (req, res, next) => {
   try {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
 
-    // ===== BILDER ANALYSIEREN (alle Stationen) =====
-    // Groq Vision Rate-Limit: ~6000 Bild-Tokens/Minute bei kostenlosem Plan
-    // Lösung: max 5 Bilder, 2s Pause zwischen Anfragen, Retry bei 429
-    const GROQ_MAX_IMAGE_BYTES = 2 * 1024 * 1024 // 2MB max (Frontend komprimiert bereits)
-    const MAX_IMAGES_TO_ANALYZE = 5              // Groq-sicheres Maximum
-    const INTER_IMAGE_DELAY_MS  = 2000           // 2s Pause zwischen Bildern
+    // ===== BILDER ANALYSIEREN – Google Gemini 2.5 Flash via OpenRouter =====
+    // Kein Rate-Limit-Problem (bezahltes API), alle Bilder PARALLEL, sehr günstig
+    // Fallback auf Groq wenn OPENROUTER_API_KEY fehlt
+    const MAX_IMAGES_TO_ANALYZE = 12
+    const MAX_IMAGE_BYTES = 4 * 1024 * 1024  // 4MB max pro Bild
     const imagesToAnalyze = images.slice(0, MAX_IMAGES_TO_ANALYZE)
-    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern (max ${MAX_IMAGES_TO_ANALYZE}, ${INTER_IMAGE_DELAY_MS}ms Pause)...`)
+    const useGemini = !!process.env.OPENROUTER_API_KEY
+    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern via ${useGemini ? 'Gemini 2.5 Flash (OpenRouter)' : 'Groq Llama-4 (Fallback)'} – PARALLEL`)
 
-    // Hilfsfunktion: einzelnes Bild analysieren mit Retry bei 429
-    const analyzeImageWithRetry = async (img, index, maxRetries = 3) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Einzelnes Bild analysieren: Gemini preferred, Groq als Fallback
+    const analyzeOneBild = async (img, index) => {
+      if (img.buffer.length > MAX_IMAGE_BYTES) {
+        console.warn(`[KI] Bild ${index + 1} zu groß (${(img.buffer.length/1024/1024).toFixed(1)}MB > 4MB), überspringe`)
+        return '(Bild übersprungen – zu groß)'
+      }
+      const base64   = img.buffer.toString('base64')
+      const mimeType = img.mimetype || 'image/jpeg'
+      const sizeKB   = (img.size / 1024).toFixed(0)
+      const prompt   = getTripImageAnalysisPrompt(lifestyleConfig, tripLength, tripType)
+
+      // ── Gemini 2.5 Flash via OpenRouter ─────────────────────────────────
+      if (useGemini) {
         try {
-          if (img.buffer.length > GROQ_MAX_IMAGE_BYTES) {
-            console.warn(`[KI] Bild ${index + 1} zu groß (${(img.buffer.length / 1024 / 1024).toFixed(1)}MB), überspringe`)
-            return '(Bild übersprungen – zu groß)'
-          }
-          const base64 = img.buffer.toString('base64')
-          console.log(`[KI] Bild ${index + 1}/${imagesToAnalyze.length}: ${(img.size / 1024).toFixed(1)}KB (Versuch ${attempt})`)
-
-          const visionResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          console.log(`[KI] Gemini Bild ${index + 1}/${imagesToAnalyze.length}: ${sizeKB}KB`)
+          const r = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+            model: 'google/gemini-2.5-flash',
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: getTripImageAnalysisPrompt(lifestyleConfig, tripLength, tripType) },
-                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
               ]
             }],
-            max_tokens: 120,
+            max_tokens: 150,
             temperature: 0.7
           }, {
-            headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-            timeout: 30000
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 45000
           })
-          return visionResponse.data.choices[0].message.content
-
-        } catch (imgErr) {
-          const status = imgErr.response?.status
-          const msg    = imgErr.response?.data?.error?.message || imgErr.message
-          console.warn(`[KI] Bild ${index + 1} Versuch ${attempt}/${maxRetries} fehlgeschlagen (HTTP ${status}): ${msg}`)
-
-          if (status === 429) {
-            // Exponentielles Backoff: 15s, 30s, 60s
-            const waitMs = 15000 * attempt
-            console.log(`[KI] Rate-Limit 429 – warte ${waitMs / 1000}s...`)
-            await new Promise(r => setTimeout(r, waitMs))
-            if (attempt === maxRetries) return '(Rate-Limit – Bild übersprungen)'
-          } else {
-            return '(Bild nicht analysierbar)'
-          }
+          return r.data.choices[0].message.content
+        } catch (geminiErr) {
+          const status = geminiErr.response?.status
+          const msg    = geminiErr.response?.data?.error?.message || geminiErr.message
+          console.warn(`[KI] Gemini Bild ${index + 1} fehlgeschlagen (HTTP ${status}): ${msg} – versuche Groq Fallback`)
+          // Weiter zum Groq-Fallback
         }
       }
-      return '(Bild nicht analysierbar)'
-    }
 
-    const imageDescriptions = []
-    for (let index = 0; index < imagesToAnalyze.length; index++) {
-      const desc = await analyzeImageWithRetry(imagesToAnalyze[index], index)
-      imageDescriptions.push(desc)
-      // Pause zwischen Bildern um Rate-Limit zu vermeiden (außer nach letztem)
-      if (index < imagesToAnalyze.length - 1) {
-        await new Promise(r => setTimeout(r, INTER_IMAGE_DELAY_MS))
+      // ── Groq Llama-4-Scout Fallback (sequentiell, mit Pause) ────────────
+      try {
+        console.log(`[KI] Groq Fallback Bild ${index + 1}/${imagesToAnalyze.length}: ${sizeKB}KB`)
+        const r = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }
+            ]
+          }],
+          max_tokens: 120,
+          temperature: 0.7
+        }, {
+          headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+          timeout: 30000
+        })
+        return r.data.choices[0].message.content
+      } catch (groqErr) {
+        const status = groqErr.response?.status
+        const msg    = groqErr.response?.data?.error?.message || groqErr.message
+        console.warn(`[KI] Groq Bild ${index + 1} fehlgeschlagen (HTTP ${status}): ${msg}`)
+        if (status === 429) return '(Rate-Limit – bitte erneut versuchen)'
+        return '(Bild nicht analysierbar)'
       }
     }
 
-    console.log(`[KI] ${imageDescriptions.length} Bilder analysiert`)
+    // PARALLEL analysieren (Gemini hat kein striktes Rate-Limit-Problem)
+    // Bei Groq-Fallback: max 4 gleichzeitig um Rate-Limit zu schonen
+    let imageDescriptions = []
+    if (useGemini) {
+      // Alle parallel via Gemini
+      const results = await Promise.allSettled(
+        imagesToAnalyze.map((img, i) => analyzeOneBild(img, i))
+      )
+      imageDescriptions = results.map(r => r.status === 'fulfilled' ? r.value : '(Fehler)')
+    } else {
+      // Groq: sequentiell mit 1s Pause
+      for (let i = 0; i < imagesToAnalyze.length; i++) {
+        imageDescriptions.push(await analyzeOneBild(imagesToAnalyze[i], i))
+        if (i < imagesToAnalyze.length - 1) await new Promise(r => setTimeout(r, 1000))
+      }
+    }
+
+    console.log(`[KI] ${imageDescriptions.length} Bilder analysiert (${useGemini ? 'Gemini' : 'Groq'})`)
 
     // ===== TRIP-ZUSAMMENFASSUNG GENERIEREN =====
     const tripPrompt = generateTripPrompt({
