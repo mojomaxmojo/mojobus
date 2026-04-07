@@ -126,7 +126,7 @@ export function SlideshowBlock({
 
       let attempts = 0;
       const poll = async (): Promise<void> => {
-        if (attempts++ > 120) throw new Error('Timeout nach 6 Minuten.');
+        if (attempts++ > 200) throw new Error('Timeout nach 10 Minuten.');
         
         let pollData: any;
         try {
