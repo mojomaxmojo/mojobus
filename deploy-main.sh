@@ -190,6 +190,14 @@ build_project() {
 deploy_files() {
     info_msg "Deploye Files nach $DEPLOY_DIR..."
 
+    # ── Musik-Dateien VOR dem Löschen sichern ────────────────────────────────
+    MUSIC_BACKUP_DIR=""
+    if [ -d "$DEPLOY_DIR/server/music" ] && [ "$(ls -A "$DEPLOY_DIR/server/music" 2>/dev/null)" ]; then
+        MUSIC_BACKUP_DIR="$(mktemp -d)"
+        cp -r "$DEPLOY_DIR/server/music/." "$MUSIC_BACKUP_DIR/"
+        info_msg "✓ Musik-Dateien gesichert ($(ls "$MUSIC_BACKUP_DIR" | wc -l) Dateien)"
+    fi
+
     # Zielverzeichnis leeren
     rm -rf "$DEPLOY_DIR"/*
 
@@ -202,25 +210,16 @@ deploy_files() {
 
     # Server-Verzeichnis kopieren
     if [ -d "$PROJECT_DIR/server" ]; then
-        # ── Musik-Dateien sichern (werden durch cp -r überschrieben) ──────────
-        MUSIC_BACKUP_DIR=""
-        if [ -d "$DEPLOY_DIR/server/music" ] && [ "$(ls -A "$DEPLOY_DIR/server/music" 2>/dev/null)" ]; then
-            MUSIC_BACKUP_DIR="$(mktemp -d)"
-            cp -r "$DEPLOY_DIR/server/music/." "$MUSIC_BACKUP_DIR/"
-            info_msg "✓ Musik-Dateien gesichert ($(ls "$MUSIC_BACKUP_DIR" | wc -l) Dateien)"
-        fi
-
         cp -r "$PROJECT_DIR/server" "$DEPLOY_DIR/" || error_exit "Kopieren des server/ Verzeichnisses fehlgeschlagen"
         info_msg "✓ server/ Verzeichnis deployed"
 
         # ── Musik-Dateien wiederherstellen ────────────────────────────────────
+        mkdir -p "$DEPLOY_DIR/server/music"
         if [ -n "$MUSIC_BACKUP_DIR" ]; then
-            mkdir -p "$DEPLOY_DIR/server/music"
             cp -r "$MUSIC_BACKUP_DIR/." "$DEPLOY_DIR/server/music/"
             rm -rf "$MUSIC_BACKUP_DIR"
             success_msg "✓ Musik-Dateien wiederhergestellt ($(ls "$DEPLOY_DIR/server/music" | wc -l) Dateien)"
         else
-            mkdir -p "$DEPLOY_DIR/server/music"
             info_msg "server/music/ angelegt (noch keine Musik-Dateien vorhanden)"
         fi
 
