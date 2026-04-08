@@ -581,13 +581,36 @@ const ASPECT_SIZES = {
 }
 
 // ── Lifestyle → ElevenLabs Musik-Prompt ───────────────────────────────────
+// Hier die Musik-Stile für ElevenLabs anpassen.
+// Format: kurze englische Beschreibung, Kommas trennen Eigenschaften.
+// Tipps: Tempo (slow/mid/fast), Instrumente, Stimmung, Genre angeben.
+// Beispiele: 'cinematic orchestral, epic, slow build, strings and brass'
+//            'upbeat electronic, energetic, synth beats, modern'
+//            'jazz lounge, smooth, piano and bass, relaxed evening'
 const LIFESTYLE_MUSIC_PROMPTS = {
-  mojobus:             'vintage americana, slow road trip blues, diesel engine hum, open highway, worn guitar, warm and weathered',
-  vanlife:             'chill acoustic guitar, road trip vibes, slow tempo, warm sunset atmosphere, indie folk',
-  rvlife:              'americana country folk, open road, relaxed tempo, guitar and harmonica',
-  beachlife:           'tropical chill, reggae influence, ocean waves, summer vibes, laid back',
-  wohnmobil:           'european cafe music, accordion, relaxed journey, soft piano',
-  'perpetual-travelers': 'world music ambient, travel vibes, ethnic instruments, meditative journey',
+  // 🚌 MojoBus — Hauptprofil
+  mojobus:
+    'vintage americana, slow road trip blues, diesel engine hum, open highway, worn guitar, warm and weathered',
+
+  // 🚐 Vanlife
+  vanlife:
+    'chill acoustic guitar, road trip vibes, slow tempo, warm sunset atmosphere, indie folk',
+
+  // 🏕️ RV Life
+  rvlife:
+    'americana country folk, open road, relaxed tempo, guitar and harmonica',
+
+  // 🏖️ Beach Life
+  beachlife:
+    'tropical chill, reggae influence, ocean waves, summer vibes, laid back',
+
+  // 🇩🇪 Wohnmobil
+  wohnmobil:
+    'european cafe music, accordion, relaxed journey, soft piano',
+
+  // ✈️ Perpetual Travelers
+  'perpetual-travelers':
+    'world music ambient, travel vibes, ethnic instruments, meditative journey',
 }
 
 // ── Lokale Musik nach Lifestyle wählen ────────────────────────────────────
