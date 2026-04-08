@@ -271,41 +271,20 @@ function MilkdownEditorInner({
     if (!type) return;
 
     if (type === '1') {
-      // YouTube
+      // YouTube – nackte URL einfügen; mojobus.co rendert via YouTubeEmbed, Nostr-Clients erkennen YouTube-Links nativ
       const url = window.prompt('YouTube URL eingeben:', 'https://www.youtube.com/watch?v=');
       if (!url) return;
-      
-      // Extract video ID from various YouTube URL formats
-      let videoId = '';
-      if (url.includes('youtu.be/')) {
-        videoId = url.split('youtu.be/')[1]?.split('?')[0];
-      } else if (url.includes('v=')) {
-        videoId = url.split('v=')[1]?.split('&')[0];
-      } else if (url.includes('embed/')) {
-        videoId = url.split('embed/')[1]?.split('?')[0];
-      }
-      
-      if (videoId) {
-        const embedHtml = `\n<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>\n`;
-        onChange(content + embedHtml);
-      }
+      onChange(content + `\n\n${url.trim()}\n\n`);
     } else if (type === '2') {
-      // Vimeo
+      // Vimeo – nackte URL einfügen
       const url = window.prompt('Vimeo URL eingeben:', 'https://vimeo.com/');
       if (!url) return;
-      
-      // Extract video ID
-      const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
-      
-      if (videoId) {
-        const embedHtml = `\n<iframe width="560" height="315" src="https://player.vimeo.com/video/${videoId}" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>\n`;
-        onChange(content + embedHtml);
-      }
+      onChange(content + `\n\n${url.trim()}\n\n`);
     } else if (type === '3') {
-      // Direct video URL (MP4, WebM) – nackte URL einfügen, funktioniert auf mojobus.co + allen Nostr-Clients
+      // Direkter Video-Link (MP4, WebM, Blossom) – nackte URL einfügen
       const url = window.prompt('Video URL eingeben (MP4, WebM, MOV):');
       if (!url) return;
-      onChange(content + `\n\n${url}\n\n`);
+      onChange(content + `\n\n${url.trim()}\n\n`);
     }
   };
 

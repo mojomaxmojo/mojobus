@@ -4041,7 +4041,8 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   // Video-URL in den Artikeltext einbetten
   const embedVideoInArticle = () => {
     if (!generatedVideoUrl) return;
-    const videoMarkdown = `\n\n<video src="${generatedVideoUrl}" controls autoplay muted loop style="width:100%;border-radius:8px;"></video>\n\n`;
+    // Nackte URL einfügen – funktioniert auf mojobus.co UND in allen Nostr-Clients (Primal, Amethyst usw.)
+    const videoMarkdown = `\n\n${generatedVideoUrl}\n\n`;
     setContent(prev => prev + videoMarkdown);
     toast({ title: '✅ Video eingebettet', description: 'Das Video wurde am Ende des Artikels eingefügt.' });
   };
@@ -4136,7 +4137,8 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
   const embedSlideshowInArticle = () => {
     if (!slideshowVideoUrl) return;
-    const videoMd = `\n\n<video src="${slideshowVideoUrl}" controls autoplay muted loop style="width:100%;border-radius:8px;"></video>\n\n`;
+    // Nackte URL einfügen – funktioniert auf mojobus.co UND in allen Nostr-Clients (Primal, Amethyst usw.)
+    const videoMd = `\n\n${slideshowVideoUrl}\n\n`;
     setContent(prev => prev + videoMd);
     toast({ title: '✅ Slideshow eingebettet' });
   };
