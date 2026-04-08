@@ -12,7 +12,6 @@ import { SocialBar } from '@/components/SocialBar';
 import { Calendar, User, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { TextWithLinks } from '@/components/TextWithLinks';
 import { VideoEmbed, isVideoContent } from '@/components/VideoEmbed';
@@ -142,13 +141,30 @@ function generateStructuredDataMarkdown(article: any, metadata: any): string {
   return markdown;
 }
 
+/**
+ * Wandelt alte HTML-Video-Tags in nackte URLs um, damit sie von ReactMarkdown
+ * als Auto-Links erkannt und vom VideoEmbed-Handler eingebettet werden.
+ * Beispiel: <video src="https://...mp4" ...></video>  →  https://...mp4
+ */
+function normalizeVideoHtml(content: string): string {
+  // <video src="URL" ...> oder <video controls src="URL" ...>
+  return content.replace(
+    /<video[^>]*\ssrc=["']([^"']+)["'][^>]*>[\s\S]*?<\/video>/gi,
+    (_match, url) => `\n\n${url.trim()}\n\n`
+  ).replace(
+    // <source src="URL" ...> standalone (innerhalb alter video-Tags die oben nicht erfasst wurden)
+    /<video[^>]*>[\s\S]*?<source\s+src=["']([^"']+)["'][^>]*>[\s\S]*?<\/video>/gi,
+    (_match, url) => `\n\n${url.trim()}\n\n`
+  );
+}
+
 // Custom component for rendering text with links and videos while preserving markdown
 function MarkdownWithLinks({ content }: { content: string }) {
+  const normalizedContent = normalizeVideoHtml(content);
   return (
     <div className="prose prose-slate dark:prose-invert prose-lg max-w-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
         components={{
           p: ({ children }) => {
             // Hilfsfunktion: extrahiere Video-URL aus einem einzelnen Kind
@@ -156,10 +172,7 @@ function MarkdownWithLinks({ content }: { content: string }) {
               if (typeof child === 'string' && isVideoContent(child.trim())) return child.trim();
               if (child && typeof child === 'object') {
                 const el = child as React.ReactElement;
-                // <a href="..."> mit Video-URL
                 if (el.props?.href && isVideoContent(el.props.href)) return el.props.href;
-                // <video src="..."> HTML-Tag (aus alten Artikeln mit rehype-raw)
-                if (el.props?.src && isVideoContent(el.props.src)) return el.props.src;
               }
               return null;
             };
@@ -219,7 +232,7 @@ function MarkdownWithLinks({ content }: { content: string }) {
           },
         }}
       >
-        {content}
+        {normalizedContent}
       </ReactMarkdown>
     </div>
   );
