@@ -6,41 +6,36 @@ import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 /**
- * Validiert ein Longform Artikel Event (NIP-23) oder Platz Event
+ * Validiert ein Longform Artikel Event (NIP-23) oder Platz Event.
+ *
+ * Bewusst LIBERAL gehalten damit externe Clients (Amethyst, Primal, Yakihonne)
+ * und MojoBus-eigene Artikel gleichermaßen angezeigt werden.
+ *
+ * Pflicht (NIP-23 Standard):
+ *   - kind 30023
+ *   - d-Tag vorhanden
+ *   - content nicht leer
+ *
+ * Optional (erhöht Qualität, aber kein hartes Filter):
+ *   - title-Tag empfohlen → wird notfalls aus Content extrahiert
  */
 function validateLongformArticle(event: NostrEvent): boolean {
   if (!event) return false;
   if (event.kind !== NOSTR_CONFIG.kinds.longform) return false;
 
-  // Benötigte Tags: d (identifier)
+  // d-Tag ist Pflicht (NIP-23 addressable event)
   const d = event.tags.find(([name]) => name === 'd')?.[1];
-
   if (!d) return false;
 
-  // Content sollte vorhanden sein
+  // Content darf nicht leer sein
   const content = event.content || '';
   if (content.trim().length === 0) return false;
 
-  // STRIKTERE VALIDIERUNG: Prüfe auf MojoBus-spezifische Tags
-  // Option 1: title-Tag muss vorhanden sein
+  // title-Tag ODER name-Tag ODER extrahierbarer Titel aus Content
   const title = event.tags.find(([name]) => name === 'title')?.[1] ||
-                event.tags.find(([name]) => name === 'name')?.[1]; // Auch name-Tag akzeptieren für Plätze
-
-  if (!title) {
-    return false;
-  }
-
-  // Option 2: type=article, type=place oder #t artikel/places Tag
-  const typeTag = event.tags.find(([name]) => name === 'type')?.[1];
-  const articleTag = event.tags.some(([name, value]) => name === 't' && value === 'artikel');
-  const placesTag = event.tags.some(([name, value]) => name === 't' && value === 'places');
-
-  // Akzeptiere Artikel (type=article oder #t artikel) ODER Plätze (type=place oder #t places)
-  const isValidType = typeTag === 'article' || articleTag || typeTag === 'place' || placesTag;
-
-  if (!isValidType) {
-    return false;
-  }
+                event.tags.find(([name]) => name === 'name')?.[1] ||
+                extractTitleFromContent(content);
+  if (!title) return false;
 
   return true;
 }
