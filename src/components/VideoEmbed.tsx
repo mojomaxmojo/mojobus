@@ -76,7 +76,15 @@ export function isVideoUrl(url: string): boolean {
     
     // Prüfen ob die Endung unterstützt wird
     const extension = pathname.split('.').pop();
-    return videoConfig.supportedExtensions.includes(extension || '');
+    if (videoConfig.supportedExtensions.includes(extension || '')) return true;
+
+    // Blossom-URLs: Hash-Pfad ohne Endung aber mit Content-Type mp4/webm
+    // z.B. https://relay.mojobus.co/<64-char-hex>.mp4 oder /<64-char-hex>
+    // Erkennung: 64-stelliger Hex-Hash als letztes Pfadsegment
+    const lastSegment = pathname.split('/').pop() || '';
+    if (/^[a-f0-9]{64}(\.(mp4|webm|mov|m4v))?$/.test(lastSegment)) return true;
+
+    return false;
   } catch {
     return false;
   }

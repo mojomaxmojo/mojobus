@@ -30,7 +30,7 @@ export function SlideshowBlock({
   const [enabled, setEnabled] = useState(false);
   const [musicMode, setMusicMode] = useState<'local' | 'elevenlabs'>('local');
   const [aspect, setAspect] = useState<'16:9' | '9:16' | '1:1'>('16:9');
-  const [imgDuration, setImgDuration] = useState<3 | 4 | 5>(4);
+  const [imgDuration, setImgDuration] = useState<4 | 6 | 8>(4);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
@@ -373,10 +373,10 @@ export function SlideshowBlock({
                 ))}
               </div>
             </div>
-            <div className="space-y-1">
+              <div className="space-y-1">
               <Label className="text-xs">Sek. pro Bild</Label>
               <div className="flex gap-1">
-                {([3, 4, 5] as const).map((d) => (
+                {([4, 6, 8] as const).map((d) => (
                   <button
                     key={d}
                     type="button"

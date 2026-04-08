@@ -12,6 +12,8 @@ import { SocialBar } from '@/components/SocialBar';
 import { Calendar, User, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 import { TextWithLinks } from '@/components/TextWithLinks';
 import { VideoEmbed, isVideoContent } from '@/components/VideoEmbed';
 import NotFound from '@/pages/NotFound';
@@ -145,8 +147,42 @@ function MarkdownWithLinks({ content }: { content: string }) {
   return (
     <div className="prose prose-slate dark:prose-invert prose-lg max-w-none">
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={{
-          p: ({ children }) => <p>{children}</p>,
+          p: ({ children }) => {
+            // Hilfsfunktion: extrahiere Video-URL aus einem einzelnen Kind
+            const extractVideoUrl = (child: React.ReactNode): string | null => {
+              if (typeof child === 'string' && isVideoContent(child.trim())) return child.trim();
+              if (child && typeof child === 'object') {
+                const el = child as React.ReactElement;
+                // <a href="..."> mit Video-URL
+                if (el.props?.href && isVideoContent(el.props.href)) return el.props.href;
+                // <video src="..."> HTML-Tag (aus alten Artikeln mit rehype-raw)
+                if (el.props?.src && isVideoContent(el.props.src)) return el.props.src;
+              }
+              return null;
+            };
+
+            // Einzelnes Kind prüfen
+            const singleUrl = extractVideoUrl(children);
+            if (singleUrl) {
+              return <div className="my-4"><VideoEmbed url={singleUrl} /></div>;
+            }
+
+            // Array mit einem einzigen nicht-leeren Kind
+            if (Array.isArray(children)) {
+              const nonEmpty = (children as React.ReactNode[]).filter(
+                c => c !== null && c !== undefined && c !== ''
+              );
+              if (nonEmpty.length === 1) {
+                const url = extractVideoUrl(nonEmpty[0]);
+                if (url) return <div className="my-4"><VideoEmbed url={url} /></div>;
+              }
+            }
+
+            return <p>{children}</p>;
+          },
           li: ({ children }) => <li>{children}</li>,
           blockquote: ({ children }) => <blockquote>{children}</blockquote>,
           a: ({ href, children }) => {
