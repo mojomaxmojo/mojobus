@@ -2647,11 +2647,11 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
     const [selectedModel, setSelectedModel] = useState<'llama4' | 'claude'>('llama4');
     const [tripType, setTripType] = useState<TripType | ''>('');
-    const { toast } = useToast();
-    const { mutateAsync: publishEvent } = useNostrPublish();
-    const { mutateAsync: uploadFile } = useUploadFile();
-    const { gender } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
-    const navigate = useNavigate();
+  const { toast } = useToast();
+  const { mutateAsync: publishEvent } = useNostrPublish();
+  const { mutateAsync: uploadFile } = useUploadFile();
+  const { gender, user: currentUser } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
+  const navigate = useNavigate();
 
    // Hilfsfunktion: Bild-URLs aus Markdown extrahieren (gleiche Logik wie ArticleForm)
    const extractPlaceImageUrls = (markdown: string): string[] => {
@@ -4512,7 +4512,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) {
       toast({
         title: 'Fehler',
@@ -4594,15 +4594,59 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       ...additionalTags
     ];
 
-    publishEvent({
-      kind: 30023, // Long-form article
-      content: content.trim(), // MilkdownEditor liefert bereits Markdown
-      tags: finalTags
+    // Schritt 1: Kind 30023 publizieren (NIP-23 Long-form)
+    const pubkey = finalTags.find(t => t[0] === 'p')?.[1] || '';
+    await publishEvent({
+      kind: 30023,
+      content: content.trim(),
+      tags: finalTags,
     });
+
+    // Schritt 2: Kind 1 Ankündigungs-Note publizieren (nur bei Neu-Veröffentlichung)
+    // Amethyst, Primal, Damus zeigen Kind-30023 NUR im "Articles"-Tab.
+    // Eine Kind-1 Note mit naddr-Link erscheint im normalen Feed aller Follower
+    // und verlinkt direkt auf den Artikel. Das ist Standard-Praxis für Nostr-Blogs.
+    if (!editEvent && currentUser?.pubkey) {
+      try {
+        // naddr (NIP-19) für direkten Link zum Artikel
+        const { nip19 } = await import('nostr-tools');
+        const naddrData = {
+          kind: 30023,
+          pubkey: currentUser.pubkey,
+          identifier: dTag,
+          relays: ['wss://relay.mojobus.co', 'wss://relay.primal.net'],
+        };
+        const naddr = nip19.naddrEncode(naddrData);
+        const articleUrl = `https://mojobus.co/artikel/${dTag}`;
+
+        const announcementContent = [
+          `📖 ${title.trim()}`,
+          summary.trim() ? `\n\n${summary.trim()}` : '',
+          `\n\nnostr:${naddr}`,
+          `\n${articleUrl}`,
+        ].join('').trim();
+
+        await publishEvent({
+          kind: 1,
+          content: announcementContent,
+          tags: [
+            ['a', `30023:${currentUser.pubkey}:${dTag}`, 'wss://relay.mojobus.co'],
+            ['t', 'mojobus'],
+            ['t', 'artikel'],
+            ['t', 'article'],
+            ...(image ? [['imeta', `url ${image}`, 'alt', title.trim()]] : []),
+          ],
+        });
+        console.log('[Article] Ankündigungs-Note publiziert:', naddr);
+      } catch (announceErr) {
+        // Ankündigung fehlgeschlagen → kein harter Fehler, Artikel ist schon publiziert
+        console.warn('[Article] Ankündigungs-Note fehlgeschlagen:', announceErr);
+      }
+    }
 
     toast({
       title: 'Erfolg!',
-      description: editEvent ? 'Bericht erfolgreich aktualisiert.' : 'Bericht erfolgreich veroeffentlicht.'
+      description: editEvent ? 'Bericht erfolgreich aktualisiert.' : 'Bericht veröffentlicht + im Feed angekündigt.'
     });
 
     // Reset form and redirect
