@@ -12,6 +12,7 @@ import { SocialBar } from '@/components/SocialBar';
 import { Calendar, User, ArrowLeft, Hash, Edit, Trash2, MapPin, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { TextWithLinks } from '@/components/TextWithLinks';
 import { VideoEmbed, isVideoContent } from '@/components/VideoEmbed';
 import NotFound from '@/pages/NotFound';
@@ -145,6 +146,7 @@ function MarkdownWithLinks({ content }: { content: string }) {
   return (
     <div className="prose prose-slate dark:prose-invert prose-lg max-w-none">
       <ReactMarkdown
+        rehypePlugins={[rehypeRaw]}
         components={{
           p: ({ children }) => <p>{children}</p>,
           li: ({ children }) => <li>{children}</li>,
