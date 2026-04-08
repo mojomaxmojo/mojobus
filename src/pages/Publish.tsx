@@ -3880,7 +3880,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [slideshowEnabled, setSlideshowEnabled] = useState(false);
   const [slideshowMusicMode, setSlideshowMusicMode] = useState<'local' | 'elevenlabs'>('local');
   const [slideshowAspect, setSlideshowAspect] = useState<'16:9' | '9:16' | '1:1'>('16:9');
-  const [slideshowImgDuration, setSlideshowImgDuration] = useState<3 | 4 | 5>(4);
+  const [slideshowImgDuration, setSlideshowImgDuration] = useState<4 | 6 | 8>(4);
   const [isGeneratingSlideshow, setIsGeneratingSlideshow] = useState(false);
   const [slideshowJobId, setSlideshowJobId] = useState<string | null>(null);
   const [slideshowProgress, setSlideshowProgress] = useState(0);
@@ -5401,7 +5401,7 @@ Schreibe deinen Artikel hier...
                 <div className="space-y-1">
                   <Label className="text-xs">Sek. pro Bild</Label>
                   <div className="flex gap-1">
-                    {([3, 4, 5] as const).map(d => (
+                    {([4, 6, 8] as const).map(d => (
                       <button key={d} type="button" onClick={() => setSlideshowImgDuration(d)}
                         className={`flex-1 py-1 text-xs rounded border transition-colors ${
                           slideshowImgDuration === d
