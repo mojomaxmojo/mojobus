@@ -302,15 +302,10 @@ function MilkdownEditorInner({
         onChange(content + embedHtml);
       }
     } else if (type === '3') {
-      // Direct video URL (MP4, WebM)
+      // Direct video URL (MP4, WebM) – nackte URL einfügen, funktioniert auf mojobus.co + allen Nostr-Clients
       const url = window.prompt('Video URL eingeben (MP4, WebM, MOV):');
       if (!url) return;
-      
-      const embedHtml = `\n<video controls style="max-width: 100%; height: auto; border-radius: 0.5rem;">
-  <source src="${url}" type="video/mp4">
-  Dein Browser unterstützt dieses Video nicht.
-</video>\n`;
-      onChange(content + embedHtml);
+      onChange(content + `\n\n${url}\n\n`);
     }
   };
 

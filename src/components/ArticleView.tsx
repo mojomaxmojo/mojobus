@@ -148,7 +148,31 @@ function MarkdownWithLinks({ content }: { content: string }) {
       <ReactMarkdown
         rehypePlugins={[rehypeRaw]}
         components={{
-          p: ({ children }) => <p>{children}</p>,
+          p: ({ children }) => {
+            // Nackte Video-URL als einziger Inhalt eines Absatzes → direkt einbetten
+            if (typeof children === 'string' && isVideoContent(children.trim())) {
+              return (
+                <div className="my-4">
+                  <VideoEmbed url={children.trim()} />
+                </div>
+              );
+            }
+            // Einzelnes Kind: Link-Element das eine Video-URL ist
+            if (
+              children &&
+              !Array.isArray(children) &&
+              typeof children === 'object' &&
+              (children as React.ReactElement)?.props?.href &&
+              isVideoContent((children as React.ReactElement).props.href)
+            ) {
+              return (
+                <div className="my-4">
+                  <VideoEmbed url={(children as React.ReactElement).props.href} />
+                </div>
+              );
+            }
+            return <p>{children}</p>;
+          },
           li: ({ children }) => <li>{children}</li>,
           blockquote: ({ children }) => <blockquote>{children}</blockquote>,
           a: ({ href, children }) => {
