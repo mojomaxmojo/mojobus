@@ -590,7 +590,7 @@ const ASPECT_SIZES = {
 const LIFESTYLE_MUSIC_PROMPTS = {
   // 🚌 MojoBus — Hauptprofil
   mojobus:
-    'vintage americana, slow road trip blues, diesel engine hum, open highway, worn guitar, warm and weathered',
+    'Vintage Americana, a leisurely road trip, the hum of a diesel engine, the open highway, deep house, progressive house, warm and weathered',
 
   // 🚐 Vanlife
   vanlife:
