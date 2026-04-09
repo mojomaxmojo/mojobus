@@ -1,4 +1,4 @@
-# robots.txt for mojobus.cc
+# robots.txt for mojobus.co
 # MojoBus - Perpetual Travelers Blog
 
 # User-agent: *
@@ -16,7 +16,7 @@ Disallow: /api/
 Allow: /
 
 # Sitemap location
-Sitemap: https://mojobus.cc/sitemap.xml
+Sitemap: https://mojobus.co/sitemap.xml
 
 # Crawl-delay (optional, 1 second)
 Crawl-delay: 1

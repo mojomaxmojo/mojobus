@@ -54,4 +54,4 @@
 
 [context.production.environment]
   # Custom domain configuration
-  SITE_URL = "https://mojobus.cc"
+  SITE_URL = "https://mojobus.co"

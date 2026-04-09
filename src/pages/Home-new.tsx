@@ -26,14 +26,14 @@ export function Home() {
       { name: 'keywords', content: 'perpetual traveler, vanlife, offgrid, beachlife, reisen, camping, meer, strand, mobiles leben, nomaden' },
       { property: 'og:title', content: 'MojoBus - Perpetual Traveler Blog' },
       { property: 'og:description', content: 'Unser Leben am Meer. Vanlife, offgrid und Geschichten vom Strand. Perpetual Traveler Lifestyle mit Soul Leon (Lionhunter).' },
-      { property: 'og:url', content: 'https://mojobus.cc/' },
+      { property: 'og:url', content: 'https://mojobus.co/' },
       { property: 'og:type', content: 'website' },
       { name: 'twitter:title', content: 'MojoBus - Perpetual Traveler Blog' },
       { name: 'twitter:description', content: 'Unser Leben am Meer. Vanlife, offgrid und Geschichten vom Strand. 🌊🚐✨' },
       { name: 'twitter:card', content: 'summary_large_image' },
     ],
     link: [
-      { rel: 'canonical', href: 'https://mojobus.cc/' }
+      { rel: 'canonical', href: 'https://mojobus.co/' }
     ]
   });
 

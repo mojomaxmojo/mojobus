@@ -17,12 +17,12 @@ export function About() {
       { name: 'description', content: 'Lerne Mojo und unser Leben als Perpetual Travelers kennen. Vanlife, offgrid, Leben am Meer und unsere Abenteuer mit Lionhunter.' },
       { property: 'og:title', content: 'Über Uns - MojoBus Perpetual Travelers Blog' },
       { property: 'og:description', content: 'Lerne Mojo und unser Leben als Perpetual Travelers kennen. Vanlife, offgrid und unsere Abenteuer am Meer.' },
-      { property: 'og:url', content: 'https://mojobus.cc/about' },
+      { property: 'og:url', content: 'https://mojobus.co/about' },
       { name: 'twitter:title', content: 'Über Uns - MojoBus Perpetual Travelers Blog' },
       { name: 'twitter:description', content: 'Lerne Mojo und unser Leben als Perpetual Travelers kennen. 🌍🧭🌊' },
     ],
     link: [
-      { rel: 'canonical', href: 'https://mojobus.cc/about' }
+      { rel: 'canonical', href: 'https://mojobus.co/about' }
     ]
   });
   const validAuthors = getValidAuthors();

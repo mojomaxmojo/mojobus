@@ -29,4 +29,4 @@ echo "🔄 Lade Nginx neu..."
 systemctl reload nginx
 
 echo "✅ Update abgeschlossen!"
-echo "🌐 https://mojobus.cc aktualisiert"
+echo "🌐 https://mojobus.co aktualisiert"
