@@ -645,28 +645,40 @@ async function generateElevenLabsMusic(lifestyle, durationSeconds, ppqKey) {
   console.log(`[ElevenLabs] Musik generieren: prompt="${prompt}", duration=${duration}s`)
   console.log(`[ElevenLabs] API-Key vorhanden: ${ppqKey ? 'ja (' + ppqKey.slice(0,8) + '...)' : 'NEIN!'}`)
 
+  // Versuche verschiedene Endpoints der ppq.ai API
+  const endpoints = [
+    { url: 'https://api.ppq.ai/v1/audio/generations',       body: { model: 'elevenlabs-music-v1', prompt, duration_seconds: duration } },
+    { url: 'https://api.ppq.ai/v1/audio/music/generations', body: { model: 'elevenlabs-music-v1', prompt, duration_seconds: duration } },
+    { url: 'https://api.ppq.ai/v1/generations/audio',       body: { model: 'elevenlabs-music-v1', prompt, duration_seconds: duration } },
+  ]
+
   let response
-  try {
-    response = await axios.post('https://api.ppq.ai/v1/audio/generations', {
-      model: 'elevenlabs-music-v1',
-      prompt,
-      duration_seconds: duration
-    }, {
-      headers: {
-        'Authorization': `Bearer ${ppqKey}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 180000 // 3 Minuten — ElevenLabs kann lange dauern
-    })
-  } catch (axiosErr) {
-    const status = axiosErr.response?.status
-    const body = JSON.stringify(axiosErr.response?.data || axiosErr.message)
-    console.error(`[ElevenLabs] HTTP-Fehler ${status}: ${body}`)
-    throw new Error(`ElevenLabs API-Fehler (HTTP ${status}): ${body}`)
+  let lastError
+  for (const ep of endpoints) {
+    try {
+      console.log(`[ElevenLabs] Versuche Endpoint: ${ep.url}`)
+      response = await axios.post(ep.url, ep.body, {
+        headers: {
+          'Authorization': `Bearer ${ppqKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 180000 // 3 Minuten
+      })
+      console.log(`[ElevenLabs] ✅ Endpoint funktioniert: ${ep.url}`)
+      break // Erfolg
+    } catch (axiosErr) {
+      const status = axiosErr.response?.status
+      const body = JSON.stringify(axiosErr.response?.data || axiosErr.message).slice(0, 200)
+      console.warn(`[ElevenLabs] Endpoint ${ep.url} → HTTP ${status}: ${body}`)
+      lastError = new Error(`ElevenLabs HTTP ${status} bei ${ep.url}: ${body}`)
+      if (status !== 404 && status !== 405) break // Bei anderen Fehlern (401, 429, 500) nicht weitersuchen
+    }
   }
 
+  if (!response) throw lastError
+
   console.log(`[ElevenLabs] Antwort-Status: ${response.status}`)
-  console.log(`[ElevenLabs] Antwort-Body: ${JSON.stringify(response.data).slice(0, 300)}`)
+  console.log(`[ElevenLabs] Antwort-Body: ${JSON.stringify(response.data).slice(0, 400)}`)
 
   // URL aus Antwort extrahieren — verschiedene mögliche Strukturen
   const musicUrl =
@@ -674,13 +686,15 @@ async function generateElevenLabsMusic(lifestyle, durationSeconds, ppqKey) {
     response.data?.data?.[0]?.audio_url ||
     response.data?.url ||
     response.data?.audio_url ||
-    response.data?.data?.url
+    response.data?.data?.url ||
+    response.data?.choices?.[0]?.url ||
+    response.data?.result?.url
 
   if (!musicUrl) {
-    throw new Error('Keine Musik-URL in Antwort: ' + JSON.stringify(response.data).slice(0, 200))
+    throw new Error('Keine Musik-URL in Antwort: ' + JSON.stringify(response.data).slice(0, 300))
   }
 
-  console.log(`[ElevenLabs] Musik-URL erhalten: ${musicUrl.slice(0, 80)}...`)
+  console.log(`[ElevenLabs] ✅ Musik-URL erhalten: ${musicUrl.slice(0, 100)}`)
   return musicUrl
 }
 
