@@ -222,6 +222,14 @@ export function SlideshowBlock({
           });
           setStatus('completed');
           setProgress(100);
+          // ElevenLabs-Fehler als Warnung anzeigen (Slideshow wurde trotzdem erstellt)
+          if (pollData.elevenlabsError) {
+            toast({
+              title: '⚠️ ElevenLabs fehlgeschlagen',
+              description: `Fallback auf lokale Musik. Fehler: ${pollData.elevenlabsError.slice(0, 120)}`,
+              variant: 'destructive',
+            });
+          }
           // Eltern-Komponente über fertige URL informieren
           onVideoReady?.(blossomUrl);
           toast({

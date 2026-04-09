@@ -641,24 +641,46 @@ async function downloadImage(url, destPath) {
 // ── ElevenLabs Musik generieren via ppq.ai ────────────────────────────────
 async function generateElevenLabsMusic(lifestyle, durationSeconds, ppqKey) {
   const prompt = LIFESTYLE_MUSIC_PROMPTS[lifestyle] || LIFESTYLE_MUSIC_PROMPTS['mojobus']
-  console.log(`[Slideshow] ElevenLabs Musik generieren: "${prompt}"`)
+  const duration = Math.min(durationSeconds + 4, 180) // +4s für Fade, max 180s
+  console.log(`[ElevenLabs] Musik generieren: prompt="${prompt}", duration=${duration}s`)
+  console.log(`[ElevenLabs] API-Key vorhanden: ${ppqKey ? 'ja (' + ppqKey.slice(0,8) + '...)' : 'NEIN!'}`)
 
-  const response = await axios.post('https://api.ppq.ai/v1/audio/generations', {
-    model: 'elevenlabs-music-v1',
-    prompt,
-    duration_seconds: Math.min(durationSeconds + 4, 180) // +4s für Fade, max 180s
-  }, {
-    headers: {
-      'Authorization': `Bearer ${ppqKey}`,
-      'Content-Type': 'application/json'
-    },
-    timeout: 60000
-  })
+  let response
+  try {
+    response = await axios.post('https://api.ppq.ai/v1/audio/generations', {
+      model: 'elevenlabs-music-v1',
+      prompt,
+      duration_seconds: duration
+    }, {
+      headers: {
+        'Authorization': `Bearer ${ppqKey}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 180000 // 3 Minuten — ElevenLabs kann lange dauern
+    })
+  } catch (axiosErr) {
+    const status = axiosErr.response?.status
+    const body = JSON.stringify(axiosErr.response?.data || axiosErr.message)
+    console.error(`[ElevenLabs] HTTP-Fehler ${status}: ${body}`)
+    throw new Error(`ElevenLabs API-Fehler (HTTP ${status}): ${body}`)
+  }
 
-  // URL aus Antwort extrahieren
-  const musicUrl = response.data?.data?.[0]?.url || response.data?.url || response.data?.audio_url
-  if (!musicUrl) throw new Error('Keine Musik-URL von ElevenLabs erhalten: ' + JSON.stringify(response.data))
+  console.log(`[ElevenLabs] Antwort-Status: ${response.status}`)
+  console.log(`[ElevenLabs] Antwort-Body: ${JSON.stringify(response.data).slice(0, 300)}`)
 
+  // URL aus Antwort extrahieren — verschiedene mögliche Strukturen
+  const musicUrl =
+    response.data?.data?.[0]?.url ||
+    response.data?.data?.[0]?.audio_url ||
+    response.data?.url ||
+    response.data?.audio_url ||
+    response.data?.data?.url
+
+  if (!musicUrl) {
+    throw new Error('Keine Musik-URL in Antwort: ' + JSON.stringify(response.data).slice(0, 200))
+  }
+
+  console.log(`[ElevenLabs] Musik-URL erhalten: ${musicUrl.slice(0, 80)}...`)
   return musicUrl
 }
 
@@ -749,21 +771,32 @@ async function runSlideshowJob(jobId, params) {
     let musicSource = 'none'  // 'elevenlabs' | 'local' | 'silent'
 
     if (musicMode === 'elevenlabs' && ppqKey) {
+      console.log(`[Slideshow] Starte ElevenLabs Musik-Generierung für lifestyle="${lifestyle}", ${totalDuration}s`)
       try {
-        console.log('[Slideshow] ElevenLabs Musik generieren...')
         const musicUrl = await generateElevenLabsMusic(lifestyle, totalDuration, ppqKey)
         musicPath = path.join(jobDir, 'music.mp3')
+        console.log(`[Slideshow] Lade Musik von: ${musicUrl.slice(0, 80)}...`)
         await downloadImage(musicUrl, musicPath)
         musicSource = 'elevenlabs'
-        console.log(`[Slideshow] ElevenLabs Musik heruntergeladen: ${musicPath}`)
+        const sizeMB = (fs.statSync(musicPath).size / 1024 / 1024).toFixed(2)
+        console.log(`[Slideshow] ✅ ElevenLabs Musik heruntergeladen: ${sizeMB}MB → ${musicPath}`)
       } catch (err) {
-        console.warn('[Slideshow] ElevenLabs fehlgeschlagen, versuche lokal:', err.message)
+        console.error('[Slideshow] ❌ ElevenLabs fehlgeschlagen:', err.message)
+        // Fallback auf lokale Musik — im Job-Status vermerken
         musicPath = getLocalMusicFile(lifestyle)
         if (musicPath) {
-          musicSource = 'local'
+          musicSource = 'local_fallback'
           console.log(`[Slideshow] Fallback auf lokale Musik: ${path.basename(musicPath)}`)
+          updateJob({ elevenlabsError: err.message })
+        } else {
+          musicSource = 'silent'
+          updateJob({ elevenlabsError: err.message })
         }
       }
+    } else if (musicMode === 'elevenlabs' && !ppqKey) {
+      console.error('[Slideshow] ❌ musicMode=elevenlabs aber PPQ_API_KEY fehlt!')
+      musicPath = getLocalMusicFile(lifestyle)
+      if (musicPath) musicSource = 'local'
     } else {
       musicPath = getLocalMusicFile(lifestyle)
       if (musicPath) {
@@ -888,7 +921,9 @@ async function runSlideshowJob(jobId, params) {
       outputPath,   // Disk-Pfad für Download-Endpoint
       videoSizeMB,
       imageCount: imagePaths.length,
-      musicUsed: musicPath ? path.basename(musicPath) : (musicSource === 'silent' ? 'keine (Stille)' : null),
+      musicUsed: musicPath
+        ? `${path.basename(musicPath)}${musicSource === 'local_fallback' ? ' (ElevenLabs fehlgeschlagen → Fallback)' : ''}`
+        : (musicSource === 'silent' ? 'keine (Stille)' : null),
       musicSource,
       totalDuration
     })
@@ -996,8 +1031,10 @@ app.get('/api/slideshow-status/:jobId', (req, res) => {
       videoSizeMB: job.videoSizeMB,
       imageCount: job.imageCount,
       musicUsed: job.musicUsed,
+      musicSource: job.musicSource,
+      elevenlabsError: job.elevenlabsError || null,  // ElevenLabs-Fehler ans Frontend weitergeben
       totalDuration: job.totalDuration,
-      downloadUrl: `/api/slideshow-download/${jobId}`  // Frontend lädt hier herunter
+      downloadUrl: `/api/slideshow-download/${jobId}`
     })
   } else if (job.status === 'failed') {
     res.json({ status: 'failed', error: job.error })
