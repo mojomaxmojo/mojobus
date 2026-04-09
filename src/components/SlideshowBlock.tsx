@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/useToast';
 
 interface SlideshowBlockProps {
   imageUrls: string[];
+  /** Lokale File-Objekte die noch nicht zu Blossom hochgeladen wurden */
+  localFiles?: File[];
   lifestyle?: string;
   title?: string;
   /** Wird aufgerufen wenn das Video fertig zu Blossom hochgeladen wurde */
@@ -20,6 +22,7 @@ interface SlideshowBlockProps {
 
 export function SlideshowBlock({
   imageUrls,
+  localFiles = [],
   lifestyle = 'mojobus',
   title = 'slideshow',
   onVideoReady,
@@ -32,6 +35,8 @@ export function SlideshowBlock({
   const [aspect, setAspect] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [imgDuration, setImgDuration] = useState<4 | 6 | 8>(4);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploadingLocal, setIsUploadingLocal] = useState(false);
+  const [uploadedLocalUrls, setUploadedLocalUrls] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -44,6 +49,38 @@ export function SlideshowBlock({
   const [localMusicAvailable, setLocalMusicAvailable] = useState<boolean | null>(null);
   const [localMusicFiles, setLocalMusicFiles] = useState<string[]>([]);
   const [musicDir, setMusicDir] = useState<string>('');
+
+  // Effektive Bild-URLs: bereits hochgeladene ODER lokal hochgeladene
+  const effectiveUrls = uploadedLocalUrls.length > 0 ? uploadedLocalUrls : imageUrls;
+  // Ob noch lokale Dateien vorhanden sind die noch nicht hochgeladen wurden
+  const hasUnuploadedLocal = localFiles.length > 0 && imageUrls.length === 0 && uploadedLocalUrls.length === 0;
+
+  /** Lädt lokale Dateien zuerst zu Blossom hoch, dann startet die Slideshow */
+  const uploadLocalThenGenerate = async () => {
+    if (localFiles.length === 0) return;
+    setIsUploadingLocal(true);
+    const urls: string[] = [];
+    try {
+      toast({ title: '📤 Bilder werden zu Blossom hochgeladen...', description: `${localFiles.length} Bilder` });
+      for (let i = 0; i < localFiles.length; i++) {
+        const f = localFiles[i];
+        if (!f.type.startsWith('image/')) continue;
+        const tags = await uploadFile(f);
+        const url = (tags as string[][]).find(t => t[0] === 'url')?.[1];
+        if (url) urls.push(url);
+        setProgress(Math.round(((i + 1) / localFiles.length) * 30)); // 0-30% für Upload
+      }
+      if (urls.length === 0) throw new Error('Kein Bild konnte hochgeladen werden.');
+      setUploadedLocalUrls(urls);
+      toast({ title: `✅ ${urls.length} Bilder hochgeladen`, description: 'Starte Slideshow-Generierung...' });
+    } catch (err: any) {
+      toast({ title: 'Upload Fehler', description: err.message, variant: 'destructive' });
+      setIsUploadingLocal(false);
+      return;
+    }
+    setIsUploadingLocal(false);
+    return urls;
+  };
 
   // Musik-Status beim Aktivieren einmalig abrufen
   useEffect(() => {
@@ -59,10 +96,12 @@ export function SlideshowBlock({
     }
   }, [enabled, localMusicAvailable]);
 
-  const totalSec = imageUrls.length * imgDuration;
+  const totalSec = effectiveUrls.length * imgDuration;
 
   const statusText =
-    progress < 32
+    isUploadingLocal
+      ? `Bilder hochladen... ${progress}%`
+      : progress < 32
       ? 'Bilder herunterladen...'
       : progress < 40
       ? musicMode === 'elevenlabs'
@@ -73,7 +112,15 @@ export function SlideshowBlock({
       : 'Zu Blossom hochladen...';
 
   const generate = async () => {
-    if (imageUrls.length === 0) {
+    // Wenn noch keine URLs vorhanden → zuerst zu Blossom hochladen
+    let urlsToUse = effectiveUrls;
+    if (urlsToUse.length === 0 && localFiles.length > 0) {
+      const uploaded = await uploadLocalThenGenerate();
+      if (!uploaded || uploaded.length === 0) return;
+      urlsToUse = uploaded;
+    }
+
+    if (urlsToUse.length === 0) {
       toast({
         title: 'Keine Bilder',
         description: 'Lade zuerst Bilder hoch.',
@@ -107,7 +154,7 @@ export function SlideshowBlock({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageUrls,
+          imageUrls: urlsToUse,
           musicMode,
           lifestyle,
           aspectRatio: aspect,
@@ -249,14 +296,19 @@ export function SlideshowBlock({
 
       {/* Bilder-Info immer sichtbar */}
       <p className="text-xs text-muted-foreground">
-        {imageUrls.length > 0 ? (
+        {effectiveUrls.length > 0 ? (
           <>
             🖼️{' '}
             <strong>
-              {Math.min(imageUrls.length, 30)} Bild{Math.min(imageUrls.length, 30) !== 1 ? 'er' : ''}
+              {Math.min(effectiveUrls.length, 30)} Bild{Math.min(effectiveUrls.length, 30) !== 1 ? 'er' : ''}
             </strong>
-            {imageUrls.length > 30 && <span className="text-amber-500"> (max 30)</span>}
+            {effectiveUrls.length > 30 && <span className="text-amber-500"> (max 30)</span>}
             {' '}verfügbar · ~{totalSec}s Slideshow · Ken Burns + Deep Pan
+          </>
+        ) : hasUnuploadedLocal ? (
+          <>
+            🖼️ <strong>{localFiles.filter(f => f.type.startsWith('image/')).length} lokale Bilder</strong>
+            {' '}— werden automatisch zu Blossom hochgeladen beim Generieren
           </>
         ) : (
           '⚠️ Noch keine Bilder — lade zuerst Bilder hoch.'
@@ -416,14 +468,19 @@ export function SlideshowBlock({
           <Button
             type="button"
             onClick={generate}
-            disabled={isGenerating || imageUrls.length === 0}
+            disabled={isGenerating || isUploadingLocal || (effectiveUrls.length === 0 && localFiles.filter(f => f.type.startsWith('image/')).length === 0)}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            {isGenerating ? (
+            {isGenerating || isUploadingLocal ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 {progress > 0 ? `${progress}% — ` : ''}
                 {statusText}
+              </>
+            ) : hasUnuploadedLocal ? (
+              <>
+                <Video className="h-4 w-4 mr-2" />
+                📤 Hochladen &amp; Slideshow generieren ({localFiles.filter(f => f.type.startsWith('image/')).length} Bilder)
               </>
             ) : (
               <>

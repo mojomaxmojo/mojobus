@@ -1560,6 +1560,7 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
           {/* Slideshow */}
           <SlideshowBlock
             imageUrls={imageUrls}
+            localFiles={files.filter(f => f.type === 'image').map(f => f.file)}
             lifestyle={lifestyle}
             title={title || 'medien'}
           />
