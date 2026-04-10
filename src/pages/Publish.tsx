@@ -207,11 +207,27 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
   const [lifestyle, setLifestyle] = useState<'mojobus' | 'vanlife' | 'rvlife' | 'beachlife' | 'wohnmobil' | 'perpetual-travelers'>('mojobus');
   const [tripType, setTripType] = useState<TripType | ''>('');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, stage: '', status: '' });
+  // Video-URL der fertigen Slideshow (wird automatisch in Beschreibung eingefügt)
+  const [slideshowVideoUrl, setSlideshowVideoUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { gender } = useCurrentUser(); // Gender für KI-Generierung (Mojo=male, Susanne=female)
   const navigate = useNavigate();
+
+  // Wird von SlideshowBlock aufgerufen sobald das Video auf Blossom fertig ist
+  const handleSlideshowVideoReady = (videoUrl: string) => {
+    setSlideshowVideoUrl(videoUrl);
+    // Video-URL ans Ende der Beschreibung anfügen
+    setDescription(prev => {
+      const trimmed = prev.trimEnd();
+      return trimmed ? `${trimmed}\n\n${videoUrl}` : videoUrl;
+    });
+    toast({
+      title: '🎬 Video in Beschreibung eingefügt',
+      description: 'Die Slideshow-URL wurde automatisch in die Beschreibung übernommen.',
+    });
+  };
 
   // KI-Artikelgenerierung (Foster Huntington Stil)
   const generateArticleWithAI = async () => {
@@ -1694,7 +1710,16 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
             localFiles={files.filter(f => f.type === 'image').map(f => f.file)}
             lifestyle={lifestyle}
             title={title || 'medien'}
+            onVideoReady={handleSlideshowVideoReady}
           />
+
+          {/* Hinweis wenn Video bereits eingefügt */}
+          {slideshowVideoUrl && (
+            <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
+              <span>🎬</span>
+              <span>Slideshow-Video wurde in die Beschreibung eingefügt und wird beim Veröffentlichen automatisch mit gepostet.</span>
+            </div>
+          )}
 
           <Button
             onClick={handleSubmit}
