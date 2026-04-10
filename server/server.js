@@ -839,30 +839,22 @@ function getColorGradingFilter(videoStyle) {
   // WICHTIG: ffmpeg curves erwartet normalisierte Werte 0.0–1.0 (NICHT 0–255!)
   // Formel: alter_wert / 255 → z.B. 128/255 ≈ 0.502, 135/255 ≈ 0.529
   const base = {
-    // Cinematic: warmer Ton, leichte Vignette, Filmlook
+    // Cinematic: warmer Ton, goldene Stunde
     cinematic:
       // Warm Lift: Rot +2%, Grün minimal, Blau -8% → goldener Ton
       `curves=r='0/0 0.502/0.529 1/1':g='0/0 0.502/0.502 1/0.988':b='0/0 0.502/0.471 1/0.922',` +
       // S-Kurve: Schatten dunkler, Lichter heller → mehr Tiefe
-      `curves=all='0/0 0.251/0.235 0.753/0.776 1/1',` +
-      // Vignette: dunkle Ecken, Blick zur Mitte
-      `vignette=angle=PI/4:mode=forward:eval=init:aspect=1`,
+      `curves=all='0/0 0.251/0.235 0.753/0.776 1/1'`,
 
     // Smooth: neutral warm, sanft, kein harter Kontrast
     smooth:
-      // Nur ein leichter Warmton, sehr subtil
       `curves=r='0/0 0.502/0.518 1/0.988':g='0/0 0.502/0.502 1/0.980':b='0/0 0.502/0.478 1/0.941',` +
-      // Minimal S-Kurve
-      `curves=all='0/0 0.251/0.243 0.753/0.769 1/1',` +
-      `vignette=angle=PI/4:mode=forward:eval=init:aspect=1`,
+      `curves=all='0/0 0.251/0.243 0.753/0.769 1/1'`,
 
     // Dynamic: mehr Kontrast, leicht kühler, knackig
     dynamic:
-      // Leicht kühler: Blau minimal angehoben
       `curves=r='0/0 0.502/0.510 1/1':g='0/0 0.502/0.498 1/0.988':b='0/0.031 0.502/0.502 1/0.973',` +
-      // Stärkere S-Kurve für Punch
-      `curves=all='0/0 0.251/0.227 0.753/0.784 1/1',` +
-      `vignette=angle=PI/4:mode=forward:eval=init:aspect=1`,
+      `curves=all='0/0 0.251/0.227 0.753/0.784 1/1'`,
   }
 
   return base[videoStyle] || base.cinematic
