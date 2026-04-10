@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Home -->
   <url>
-    <loc>https://mojobus.cc/</loc>
+    <loc>https://mojobus.co/</loc>
     <lastmod>2026-01-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -10,7 +10,7 @@
 
   <!-- Artikel -->
   <url>
-    <loc>https://mojobus.cc/artikel</loc>
+    <loc>https://mojobus.co/artikel</loc>
     <lastmod>2026-01-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -18,7 +18,7 @@
 
   <!-- Plätze -->
   <url>
-    <loc>https://mojobus.cc/plaetze</loc>
+    <loc>https://mojobus.co/plaetze</loc>
     <lastmod>2026-01-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -26,7 +26,7 @@
 
   <!-- Bilder -->
   <url>
-    <loc>https://mojobus.cc/bilder</loc>
+    <loc>https://mojobus.co/bilder</loc>
     <lastmod>2026-01-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -34,7 +34,7 @@
 
   <!-- Notes -->
   <url>
-    <loc>https://mojobus.cc/notes</loc>
+    <loc>https://mojobus.co/notes</loc>
     <lastmod>2026-01-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -42,7 +42,7 @@
 
   <!-- RV Life -->
   <url>
-    <loc>https://mojobus.cc/rv-life</loc>
+    <loc>https://mojobus.co/rv-life</loc>
     <lastmod>2026-01-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -50,7 +50,7 @@
 
   <!-- About -->
   <url>
-    <loc>https://mojobus.cc/about</loc>
+    <loc>https://mojobus.co/about</loc>
     <lastmod>2026-01-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

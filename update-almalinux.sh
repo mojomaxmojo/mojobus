@@ -38,11 +38,11 @@ sudo systemctl reload nginx
 # 6. Health Check
 echo "🏥 Führe Health Check durch..."
 sleep 2
-if curl -f -s "https://mojobus.cc/health" > /dev/null; then
+if curl -f -s "https://mojobus.co/health" > /dev/null; then
     echo "✅ Health Check erfolgreich"
 else
     echo "❌ Health Check fehlgeschlagen"
 fi
 
 echo "✅ Update abgeschlossen!"
-echo "🌐 https://mojobus.cc ist aktualisiert"
+echo "🌐 https://mojobus.co ist aktualisiert"
