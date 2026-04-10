@@ -175,6 +175,8 @@ interface MediaFile {
   gps?: GpsData;
   /** GPS extraction status */
   gpsStatus?: GpsStatus;
+  /** Aufnahme-Timestamp für Sortierung (EXIF > lastModified > now) */
+  sortDate?: number;
 }
 
 interface UploadProgress {
@@ -446,6 +448,25 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
          preview = (mediaType === 'image' || mediaType === 'video') ? URL.createObjectURL(file) : undefined;
        }
 
+      // EXIF-Aufnahmedatum lesen (für Sortierung: älteste zuerst)
+      let exifDate: number | undefined;
+      if (mediaType === 'image') {
+        try {
+          const dateMeta = await exifr.parse(file, { exif: true, pickTags: ['DateTimeOriginal', 'CreateDate', 'DateTime'] });
+          const rawDate = dateMeta?.DateTimeOriginal || dateMeta?.CreateDate || dateMeta?.DateTime;
+          if (rawDate instanceof Date) {
+            exifDate = rawDate.getTime();
+          } else if (typeof rawDate === 'string') {
+            // EXIF Format: "2024:06:15 14:30:00" → ISO parsen
+            const iso = rawDate.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+            exifDate = new Date(iso).getTime();
+          }
+          if (exifDate) console.log(`[EXIF Date] ${file.name}: ${new Date(exifDate).toLocaleString()}`);
+        } catch {
+          // kein EXIF-Datum → Fallback: lastModified
+        }
+      }
+
       const newFile: MediaFile = {
         id: Math.random().toString(36).substr(2, 9),
         file,
@@ -454,6 +475,8 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
         size: file.size,
         preview,
         gpsStatus: 'not_found',
+        // Sortier-Timestamp: EXIF-Datum > lastModified > jetzt
+        sortDate: exifDate || file.lastModified || Date.now(),
       };
 
       // Extract GPS from images only
@@ -473,6 +496,10 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
 
       newFiles.push(newFile);
     }
+
+    // Sortierung: älteste zuerst (kleinster Timestamp zuerst)
+    newFiles.sort((a, b) => (a.sortDate ?? 0) - (b.sortDate ?? 0));
+    console.log('[Sort] Bilder sortiert nach Aufnahmedatum (älteste zuerst):', newFiles.map(f => `${f.name} (${new Date(f.sortDate ?? 0).toLocaleString()})`));
 
     setFiles(prev => [...prev, ...newFiles]);
   };
