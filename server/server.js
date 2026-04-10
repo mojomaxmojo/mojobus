@@ -594,26 +594,115 @@ app.get('/api/video-status/:jobId', async (req, res) => {
 // Musik: lokal (server/music/) oder ElevenLabs via ppq.ai
 // ffmpeg: /opt/bin/ffmpeg
 
-// ── Ken Burns / Deep Pan Effekte ──────────────────────────────────────────
-// Jedes Bild bekommt einen anderen Effekt — abwechselnd, nie langweilig
-const ZOOM_PAN_EFFECTS = [
-  // Zoom In Mitte (klassisch)
-  (d, fps) => `zoompan=z='min(zoom+0.0015,1.5)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Zoom Out Mitte
-  (d, fps) => `zoompan=z='if(eq(on,1),1.5,max(zoom-0.0015,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Pan Links → Rechts
-  (d, fps) => `zoompan=z='1.3':x='iw/2-(iw/zoom/2)+on/${d * fps}*(iw-(iw/1.3))':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Pan Rechts → Links
-  (d, fps) => `zoompan=z='1.3':x='iw-(iw/zoom)-on/${d * fps}*(iw-(iw/1.3))':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Deep Pan Oben → Unten (cineastisch)
-  (d, fps) => `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='0+on/${d * fps}*(ih-(ih/1.4))':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Deep Pan Unten → Oben
-  (d, fps) => `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='ih-(ih/zoom)-on/${d * fps}*(ih-(ih/1.4))':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Zoom In + Pan Diagonal (dramatisch)
-  (d, fps) => `zoompan=z='min(zoom+0.001,1.4)':x='on/${d * fps}*(iw/4)':y='on/${d * fps}*(ih/4)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Zoom Out + Pan Diagonal
-  (d, fps) => `zoompan=z='if(eq(on,1),1.4,max(zoom-0.001,1.0))':x='iw/2-(iw/zoom/2)':y='ih-(ih/zoom)-on/${d * fps}*(ih/4)':d=${d * fps}:s=1920x1080:fps=${fps}`,
+// ── Ken Burns / Deep Pan / Cinematic Effekte ──────────────────────────────
+// Verfeinerte Bewegungsprofile: sanfte Ease-Kurven, natürlicheres Tempo
+// Keine hartcodierte Auflösung hier — wird in buildFilterComplex ersetzt
+//
+// STIL-PAKETE:
+//   ZOOM_PAN_CINEMATIC  → warme filmische Bewegungen, langsam + stimmungsvoll
+//   ZOOM_PAN_SMOOTH     → sanft, subtil, ideal für Natur- und Reisefotos
+//   ZOOM_PAN_DYNAMIC    → dynamischer, mehr Bewegung, Story-Feeling
+//
+// Alle Effekte nutzen sin-basierte Easing (on/D*PI) für organische Kurven
+// statt linearer Bewegung — kein mechanischer "Roboter-Zoom" mehr.
+
+// ── Hilfsmakros ────────────────────────────────────────────────────────────
+// D = Gesamtframes = d * fps
+// sinEase: 0→1 via sin(on/D*PI/2) — startet schnell, bremst sanft ab
+// cosEase: 1→0 via (1-cos(on/D*PI))/2 — beschleunigt in Mitte, bremst ab
+
+const ZOOM_PAN_CINEMATIC = [
+  // 1. Slow Zoom In Mitte — klassischer Ken Burns, sanftes Easing
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.0+0.35*sin(on/${D}*PI/2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 2. Slow Zoom Out — Enthüllung, Weite, Natur
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.35-0.30*sin(on/${D}*PI/2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 3. Pan Links→Rechts + leichter Zoom In (Reisegefühl)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.25+0.05*sin(on/${D}*PI)':x='(iw/2-(iw/zoom/2))+sin(on/${D}*PI/2)*(iw*0.18)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 4. Pan Rechts→Links + Zoom sanft
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.25+0.05*sin(on/${D}*PI)':x='(iw*0.18)+sin(on/${D}*PI/2)*(iw/2-(iw/zoom/2)-(iw*0.18))':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 5. Deep Pan Oben→Unten (Himmel zu Boden — epische Landschaften)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.40':x='iw/2-(iw/zoom/2)':y='sin(on/${D}*PI/2)*(ih-(ih/1.4))':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 6. Deep Pan Unten→Oben (Boden zu Himmel — Aufbruch, Weite)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.40':x='iw/2-(iw/zoom/2)':y='(ih-(ih/1.4))-(sin(on/${D}*PI/2)*(ih-(ih/1.4)))':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 7. Zoom In + Diagonale (links oben → Mitte) — Dokumentarfilm-Stil
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.0+0.30*sin(on/${D}*PI/2)':x='(iw*0.10)*(1-sin(on/${D}*PI/2))':y='(ih*0.10)*(1-sin(on/${D}*PI/2))':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 8. Zoom Out + Diagonale (Mitte → rechts unten) — Abschied, Weiterreise
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.30-0.25*sin(on/${D}*PI/2)':x='sin(on/${D}*PI/2)*(iw*0.12)':y='sin(on/${D}*PI/2)*(ih*0.12)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 9. Minimal Zoom + leichtes Schwenken (sehr subtil, Stil-brecher)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.05+0.08*sin(on/${D}*PI)':x='iw/2-(iw/zoom/2)+sin(on/${D}*PI)*12':y='ih/2-(ih/zoom/2)+sin(on/${D}*PI/1.7)*8':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 10. Zoom In Tele (Gesichter/Details heranzoomen — Portraitaufnahmen)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.0+0.45*(1-cos(on/${D}*PI))/2':x='iw/2-(iw/zoom/2)':y='ih/3-(ih/zoom/3)':d=${D}:s=1920x1080:fps=${fps}`
+  },
 ]
+
+// ── Stil-Mapping für API ───────────────────────────────────────────────────
+const EFFECT_PRESETS = {
+  cinematic: ZOOM_PAN_CINEMATIC,
+  smooth: ZOOM_PAN_CINEMATIC,   // gleiche Basis, andere Transitions
+  dynamic: ZOOM_PAN_CINEMATIC,  // gleiche Basis, andere Transitions
+}
+
+// Aktueller Standard: cinematic
+const ZOOM_PAN_EFFECTS = ZOOM_PAN_CINEMATIC
+
+// ── xfade Transitions nach Stil ───────────────────────────────────────────
+// ffmpeg xfade unterstützt ~30 Transitions — diese Pakete rotieren durch
+const XFADE_TRANSITIONS = {
+  // Cinematic: edle, filmische Übergänge
+  cinematic: [
+    'fade',           // klassisch, immer gut
+    'dissolve',       // organic, Körner-Effekt
+    'wipeleft',       // Schnitt-Gefühl, Dynamik
+    'fadeblack',      // kurze Schwarzblende — Zeitsprung-Gefühl
+    'fade',           // wieder fade — häufiger, da universell
+    'smoothleft',     // fließender Wipe
+    'dissolve',
+    'wiperight',
+    'fade',
+    'smoothright',
+  ],
+  // Smooth: rein weiche Übergänge, nie hart
+  smooth: [
+    'fade', 'dissolve', 'fade', 'dissolve',
+    'smoothleft', 'smoothright', 'fade', 'dissolve',
+    'fade', 'fade',
+  ],
+  // Dynamic: Energie, Bewegung, Social-Media-Stil
+  dynamic: [
+    'slideleft', 'slideright', 'wipeleft', 'wiperight',
+    'slideup', 'slidedown', 'fade', 'dissolve',
+    'slideleft', 'wipeleft',
+  ],
+}
 
 // ── Aspect Ratio → ffmpeg Größe ────────────────────────────────────────────
 const ASPECT_SIZES = {
@@ -740,42 +829,82 @@ async function generateElevenLabsMusic(lifestyle, durationSeconds, ppqKey) {
   return musicUrl
 }
 
+// ── Color Grading Filter nach Stil ────────────────────────────────────────
+// Gibt einen ffmpeg-Filter-String zurück der auf das fertige Video angewendet wird
+// Kein Extra-Pass nötig — wird direkt in den filter_complex eingehängt
+function getColorGradingFilter(videoStyle) {
+  // Alle Stile bekommen ein leichtes Warm-Grading (goldene Stunde, Vanlife-Feeling)
+  // Keine extremen LUTs — subtil genug dass es natürlich wirkt
+
+  const base = {
+    // Cinematic: warmer Ton, leichte Vignette, etwas entsättigt für Filmlook
+    cinematic:
+      // 1. Warm Lift: leicht gelblich-oranges Licht
+      `curves=r='0/10 128/135 255/255':g='0/5 128/128 255/252':b='0/0 128/120 255/235',` +
+      // 2. Leichte Kontrasterhöhung (S-Kurve)
+      `curves=all='0/0 64/60 192/198 255/255',` +
+      // 3. Subtile Vignette: dunkle Ecken, lenkt Blick zur Mitte
+      `vignette=angle=PI/4:mode=forward:eval=init:dither=1:aspect=1`,
+
+    // Smooth: neutral warm, sanft, kein harter Kontrast
+    smooth:
+      `curves=r='0/5 128/132 255/252':g='0/3 128/128 255/250':b='0/0 128/122 255/240',` +
+      `curves=all='0/0 64/62 192/196 255/255',` +
+      `vignette=angle=PI/4:mode=forward:eval=init:dither=1:aspect=1`,
+
+    // Dynamic: mehr Kontrast, leicht kühler, knackig
+    dynamic:
+      `curves=r='0/5 128/130 255/255':g='0/3 128/127 255/252':b='0/8 128/128 255/248',` +
+      `curves=all='0/0 64/58 192/200 255/255',` +
+      `vignette=angle=PI/4:mode=forward:eval=init:dither=0:aspect=1`,
+  }
+
+  return base[videoStyle] || base.cinematic
+}
+
 // ── ffmpeg filter_complex für Slideshow aufbauen ──────────────────────────
-function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDuration = 1.0) {
+function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDuration = 1.0, videoStyle = 'cinematic') {
   const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
   const [w, h] = size.split('x').map(Number)
   const filterSize = `${w}x${h}`
 
+  // Transitions nach Stil
+  const transitions = XFADE_TRANSITIONS[videoStyle] || XFADE_TRANSITIONS.cinematic
+
   let filters = []
-  let overlayChain = ''
 
   for (let i = 0; i < imageCount; i++) {
     const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
     const zpFilter = effect(imageDuration, fps).replace('1920x1080', filterSize)
 
-    // Scale → pad → zoompan für jedes Bild
+    // Scale → crop → zoompan → setsar für jedes Bild
     filters.push(
       `[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
-      `crop=${w}:${h},` +
-      `${zpFilter},` +
-      `setsar=1[v${i}]`
+      `crop=${w}:${h},setsar=1,` +
+      `${zpFilter}[v${i}]`
     )
   }
 
-  // Crossfade-Kette aufbauen
+  // xfade-Kette mit abwechselnden Transitions
   if (imageCount === 1) {
-    overlayChain = '[v0]'
+    // Color Grading auf einzelnes Bild anwenden
+    const cg = getColorGradingFilter(videoStyle)
+    filters.push(`[v0]${cg}[vout]`)
   } else {
     let lastLabel = '[v0]'
     for (let i = 1; i < imageCount; i++) {
-      const offset = i * imageDuration - fadeDuration
-      const outLabel = i === imageCount - 1 ? '[vout]' : `[xf${i}]`
+      const offset = (i * imageDuration - fadeDuration).toFixed(2)
+      const transition = transitions[i % transitions.length]
+      // Letzter xfade → temporäres Label, dann Color Grading drauf
+      const outLabel = i === imageCount - 1 ? `[xfraw]` : `[xf${i}]`
       filters.push(
-        `${lastLabel}[v${i}]xfade=transition=fade:duration=${fadeDuration}:offset=${offset.toFixed(2)}${outLabel}`
+        `${lastLabel}[v${i}]xfade=transition=${transition}:duration=${fadeDuration}:offset=${offset}${outLabel}`
       )
-      lastLabel = `[xf${i}]`
+      lastLabel = i === imageCount - 1 ? `[xfraw]` : `[xf${i}]`
     }
-    if (imageCount === 1) overlayChain = '[v0]'
+    // Color Grading als letzter Schritt auf das zusammengesetzte Video
+    const cg = getColorGradingFilter(videoStyle)
+    filters.push(`[xfraw]${cg}[vout]`)
   }
 
   return filters.join('; ')
@@ -783,7 +912,7 @@ function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDur
 
 // ── Hauptfunktion: Slideshow Job asynchron ausführen ──────────────────────
 async function runSlideshowJob(jobId, params) {
-  const { imageUrls, musicMode, lifestyle, aspectRatio, imageDuration, ppqKey } = params
+  const { imageUrls, musicMode, lifestyle, aspectRatio, imageDuration, ppqKey, videoStyle = 'cinematic' } = params
   const fps = 30
   const fadeDuration = 1.0
   const totalDuration = imageUrls.length * imageDuration
@@ -876,69 +1005,44 @@ async function runSlideshowJob(jobId, params) {
     const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
     const [w, h] = size.split('x').map(Number)
 
-    // ffmpeg Input-Args aufbauen
-    // Bilder als Loop-Inputs
+    console.log(`[Slideshow] Effekt-Stil: ${videoStyle} | Übergänge: ${(XFADE_TRANSITIONS[videoStyle] || XFADE_TRANSITIONS.cinematic).slice(0,3).join(', ')}...`)
+
+    // ffmpeg Input-Args aufbauen — Bilder als Loop-Inputs
     const inputArgs = []
     for (const imgPath of imagePaths) {
       inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
     }
 
     // Audio-Input: echte Musik-Datei ODER lavfi-Stille als Fallback
-    let audioInputLabel = null
     if (musicPath) {
       inputArgs.push('-i', musicPath)
-      audioInputLabel = `[${n}:a]`   // n-ter Input = Musik-Datei
-    } else {
-      // lavfi anullsrc: synthetische Stille – immer verfügbar in ffmpeg
-      // Kein extra -i nötig, wird direkt im filter_complex definiert
-      audioInputLabel = null  // wird unten als anullsrc in filterLines gebaut
     }
 
-    // Filter Complex aufbauen
-    let filterLines = []
+    // ── Video filter_complex via buildFilterComplex() ─────────────────────
+    // Ken Burns (sinEasing) + xfade (stilspezifische Transitions) + Color Grading
+    const videoFilterLines = buildFilterComplex(n, imageDuration, fps, aspectRatio, fadeDuration, videoStyle)
+      .split('; ')
 
-    // Video-Filter: Scale + Crop + Ken Burns pro Bild
-    for (let i = 0; i < n; i++) {
-      const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
-      const zpFilter = effect(imageDuration, fps).replace('1920x1080', `${w}x${h}`)
-      filterLines.push(
-        `[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
-        `crop=${w}:${h},setsar=1,` +
-        `${zpFilter}[v${i}]`
-      )
-    }
-
-    // Video Crossfade-Kette
-    if (n === 1) {
-      filterLines.push(`[v0]copy[vout]`)
-    } else {
-      let lastLabel = '[v0]'
-      for (let i = 1; i < n; i++) {
-        const offset = (i * imageDuration - fadeDuration).toFixed(2)
-        const outLabel = i === n - 1 ? '[vout]' : `[xf${i}]`
-        filterLines.push(`${lastLabel}[v${i}]xfade=transition=fade:duration=${fadeDuration}:offset=${offset}${outLabel}`)
-        lastLabel = outLabel === '[vout]' ? '[vout]' : `[xf${i}]`
-      }
-    }
-
-    // Audio: immer einen Audio-Track bauen (Musik oder Stille)
+    // ── Audio filter_complex ──────────────────────────────────────────────
     const fadeStart = Math.max(0, totalDuration - 2)
+    const audioFilterLines = []
+
     if (musicPath) {
-      // Echte Musik-Datei: trim auf Video-Länge + fade out
-      filterLines.push(
+      // Echte Musik-Datei: trim auf Video-Länge + sanfter fade out
+      audioFilterLines.push(
         `[${n}:a]atrim=0:${totalDuration},` +
+        `afade=t=in:st=0:d=1,` +    // +fade in 1s (weicher Einstieg)
         `afade=t=out:st=${fadeStart}:d=2[aout]`
       )
     } else {
       // Kein Musik-File: lavfi anullsrc als separater -i Input
-      // Wird als letzter Input NACH den Bildern hinzugefügt
       inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
-      filterLines.push(
+      audioFilterLines.push(
         `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
       )
     }
 
-    const filterComplex = filterLines.join('; ')
+    const filterComplex = [...videoFilterLines, ...audioFilterLines].join('; ')
 
     // ffmpeg Output-Args: immer mit Audio-Track (-map [aout])
     const outputArgs = [
@@ -999,11 +1103,12 @@ async function runSlideshowJob(jobId, params) {
 // ── POST /api/generate-slideshow ──────────────────────────────────────────
 app.post('/api/generate-slideshow', async (req, res) => {
   const {
-    imageUrls,                    // Array von Bild-URLs
-    musicMode = 'local',          // 'local' | 'elevenlabs'
+    imageUrls,                     // Array von Bild-URLs
+    musicMode = 'local',           // 'local' | 'elevenlabs'
     lifestyle = 'mojobus',
     aspectRatio = '16:9',
-    imageDuration = 4,            // Sekunden pro Bild
+    imageDuration = 4,             // Sekunden pro Bild
+    videoStyle = 'cinematic',      // 'cinematic' | 'smooth' | 'dynamic'
   } = req.body
 
   if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
@@ -1013,6 +1118,9 @@ app.post('/api/generate-slideshow', async (req, res) => {
     return res.status(400).json({ error: `Zu viele Bilder: ${imageUrls.length} (Maximum 30). Bitte maximal 30 Bilder verwenden.` })
   }
 
+  // Stil validieren
+  const resolvedStyle = ['cinematic', 'smooth', 'dynamic'].includes(videoStyle) ? videoStyle : 'cinematic'
+
   const ppqKey = process.env.PPQ_API_KEY
   if (musicMode === 'elevenlabs' && !ppqKey) {
     return res.status(400).json({ error: 'PPQ_API_KEY fehlt für ElevenLabs Musik.' })
@@ -1020,7 +1128,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
 
   // Job-ID generieren
   const jobId = 'sl_' + crypto.randomBytes(8).toString('hex')
-    const totalDuration = Math.min(imageUrls.length, 30) * imageDuration
+  const totalDuration = Math.min(imageUrls.length, 30) * imageDuration
   const estimatedCost = musicMode === 'elevenlabs' ? 0.50 : 0.00
 
   // Job registrieren
@@ -1030,7 +1138,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
     created: Date.now()
   })
 
-  console.log(`[Slideshow] Neuer Job: ${jobId}, ${imageUrls.length} Bilder, ${musicMode}, ${aspectRatio}`)
+  console.log(`[Slideshow] Neuer Job: ${jobId}, ${imageUrls.length} Bilder, ${musicMode}, ${aspectRatio}, Stil: ${resolvedStyle}`)
 
   // Job asynchron starten (nicht awaiten!)
   runSlideshowJob(jobId, {
@@ -1039,7 +1147,8 @@ app.post('/api/generate-slideshow', async (req, res) => {
     lifestyle,
     aspectRatio,
     imageDuration: Math.min(Math.max(imageDuration, 2), 8), // 2-8s pro Bild
-    ppqKey
+    ppqKey,
+    videoStyle: resolvedStyle
   })
 
   // Sofort Job-ID zurückgeben
