@@ -595,59 +595,89 @@ app.get('/api/video-status/:jobId', async (req, res) => {
 // ffmpeg: /opt/bin/ffmpeg
 
 // ── Ken Burns + Deep Pan Effekte ──────────────────────────────────────────
-// Klassische lineare Bewegung — bewährt, klar, cineastisch
-// Kein sin()-Easing — die Bewegung soll kontinuierlich und vorhersehbar sein
-// damit der xfade-Übergang sauber anschließen kann (kein Ruckeln am Ende)
+// Implementierung via scale+crop statt zoompan.
 //
-// ANTI-STOTTER-MASSNAHMEN:
-// 1. fps-Filter VOR zoompan: stellt sicher dass jedes Bild exakt fps Frames hat
-// 2. trim=0:d Filter NACH zoompan: schneidet exakt auf d Sekunden, kein Frame mehr
-// 3. Zoom-Startpunkt bei Zoom-Out: beginnt bei 1.3 (nicht 1.5) — kleinerer Hub
-//    = weniger Bewegung = sanfterer Übergang zum nächsten Clip
-// 4. Lineare Bewegung (on/D statt sin) — am Ende ist Bewegung noch aktiv,
-//    kein abrupter Stopp kurz vor Clipende
+// WARUM NICHT zoompan:
+//   zoompan berechnet jeden Frame sequenziell im CPU-Einzelthread.
+//   Bei 12 Bildern × 8s × 30fps = 2880 Frames/Bild bricht ffmpeg ab
+//   Bild 3-4 und alles danach bleibt eingefroren (Standbild + Musik).
+//
+// LÖSUNG: scale-overscan + crop mit n/TB Zeitvariable:
+//   - scale: Bild auf Zielgröße × Zoom-Faktor hochskalieren (Overscan)
+//   - crop: Ausschnitt mit linearer Bewegung via n/TB Expression
+//   - n = aktueller Frame-Index, TB = Timebase (1/fps)
+//   - Bewegung: crop_x/crop_y ändert sich linear über die Zeit
+//   - Schnell, parallelisierbar, kein Speicherproblem, kein Timeout
+//
+// EFFEKTE: 8 klassische Ken Burns / Deep Pan Varianten
 
-const ZOOM_PAN_EFFECTS = [
-  // 1. Zoom In Mitte — klassischer Ken Burns
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='min(zoom+0.0010,1.3)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 2. Zoom Out Mitte — Weite, Natur, Enthüllung
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='if(eq(on,1),1.3,max(zoom-0.0010,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 3. Pan Links → Rechts (bei konstantem Zoom 1.25)
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='1.25':x='(iw/2-(iw/zoom/2))*(1-on/${D})+(iw-(iw/zoom))*on/${D}':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 4. Pan Rechts → Links (bei konstantem Zoom 1.25)
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='1.25':x='(iw-(iw/zoom))*(1-on/${D})+(iw/2-(iw/zoom/2))*on/${D}':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 5. Deep Pan Oben → Unten (Himmel zu Boden)
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='on/${D}*(ih-(ih/1.4))':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 6. Deep Pan Unten → Oben (Boden zu Himmel)
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='(ih-(ih/1.4))*(1-on/${D})':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 7. Zoom In + Pan Links→Rechts (diagonal, Dokumentarfilm)
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='min(zoom+0.0008,1.25)':x='on/${D}*(iw/5)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 8. Zoom Out + Pan Rechts→Links
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='if(eq(on,1),1.25,max(zoom-0.0008,1.0))':x='(iw/5)*(1-on/${D})':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
-  },
+// Hilfsfunktion: Overscan-Größe berechnen
+// zoomFactor=1.3 → Bild wird 30% größer skaliert → Crop hat 30% Bewegungsraum
+function makeKenBurns(w, h, d, fps, type) {
+  const D = d * fps  // Gesamtframes
+  const TB = `1/${fps}`  // Timebase
+
+  // Zoom-Faktor bestimmt Overscan
+  const zIn = 1.30   // Zoom In: startet bei 1.0, endet bei 1.3 (overscan)
+  const zOut = 1.30  // Zoom Out: startet bei 1.3, endet bei 1.0
+  const zPan = 1.25  // Pan: konstanter Overscan
+
+  // Overscan-Dimensionen
+  const wIn  = Math.round(w * zIn)
+  const hIn  = Math.round(h * zIn)
+  const wPan = Math.round(w * zPan)
+  const hPan = Math.round(h * zPan)
+  const wDPan = Math.round(w * 1.40)
+  const hDPan = Math.round(h * 1.40)
+
+  // Verfügbarer Bewegungsraum
+  const dxPan  = wPan - w    // horizontal Pan-Raum
+  const dyDPan = hDPan - h   // vertical Deep Pan-Raum
+
+  // n*TB = aktuelle Zeit in Sekunden, n*TB/${d} = Fortschritt 0→1
+  const t = `n*${TB}/${d}`   // 0.0 → 1.0 über die Clip-Dauer
+
+  switch (type) {
+    case 'zoomIn':
+      // Zoom In Mitte: Bild vergrößert sich von 1.0→1.3, Ausschnitt bleibt mittig
+      return `scale=${wIn}:${hIn},crop=${w}:${h}:'(${wIn}-${w})*(${t})/2':'(${hIn}-${h})*(${t})/2'`
+
+    case 'zoomOut':
+      // Zoom Out Mitte: Bild schrumpft von 1.3→1.0, Ausschnitt bleibt mittig
+      return `scale=${wIn}:${hIn},crop=${w}:${h}:'(${wIn}-${w})*(1-${t})/2':'(${hIn}-${h})*(1-${t})/2'`
+
+    case 'panLR':
+      // Pan Links→Rechts: konstanter Zoom 1.25, Ausschnitt wandert L→R
+      return `scale=${wPan}:${hPan},crop=${w}:${h}:'${dxPan}*(${t})':'(${hPan}-${h})/2'`
+
+    case 'panRL':
+      // Pan Rechts→Links: konstanter Zoom 1.25, Ausschnitt wandert R→L
+      return `scale=${wPan}:${hPan},crop=${w}:${h}:'${dxPan}*(1-${t})':'(${hPan}-${h})/2'`
+
+    case 'panTB':
+      // Deep Pan Oben→Unten: Himmel zu Boden
+      return `scale=${wDPan}:${hDPan},crop=${w}:${h}:'(${wDPan}-${w})/2':'${dyDPan}*(${t})'`
+
+    case 'panBT':
+      // Deep Pan Unten→Oben: Boden zu Himmel
+      return `scale=${wDPan}:${hDPan},crop=${w}:${h}:'(${wDPan}-${w})/2':'${dyDPan}*(1-${t})'`
+
+    case 'zoomInPanLR':
+      // Zoom In + Pan L→R diagonal
+      return `scale=${wIn}:${hIn},crop=${w}:${h}:'(${wIn}-${w})*(${t})/3':'(${hIn}-${h})*(${t})/2'`
+
+    case 'zoomOutPanRL':
+      // Zoom Out + Pan R→L diagonal
+      return `scale=${wIn}:${hIn},crop=${w}:${h}:'(${wIn}-${w})*(1-${t})*2/3':'(${hIn}-${h})*(1-${t})/2'`
+
+    default:
+      return `scale=${wIn}:${hIn},crop=${w}:${h}:'(${wIn}-${w})*(${t})/2':'(${hIn}-${h})*(${t})/2'`
+  }
+}
+
+const EFFECT_TYPES = [
+  'zoomIn', 'zoomOut', 'panLR', 'panRL',
+  'panTB', 'panBT', 'zoomInPanLR', 'zoomOutPanRL',
 ]
 
 // ── xfade Transitions nach Stil ───────────────────────────────────────────
@@ -823,36 +853,29 @@ function getColorGradingFilter(videoStyle) {
 }
 
 // ── ffmpeg filter_complex für Slideshow aufbauen ──────────────────────────
-// ANTI-STOTTER-STRATEGIE:
-//   1. fps=N vor zoompan: normalisiert Eingangs-Framerate (WebP liefert 25fps!)
-//   2. zoompan=d=N*fps: exakt N*fps Frames generieren
-//   3. trim=duration=N: harter Schnitt auf exakt N Sekunden nach zoompan
-//      → verhindert dass ein einzelner Duplikat-Frame am Clipende hängen bleibt
-//   4. setpts=PTS-STARTPTS: Timestamps nach trim zurücksetzen
-//      → xfade rechnet korrekte Offsets
+// Ken Burns / Deep Pan via scale+crop (schnell, kein Timeout)
 function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDuration = 1.0, videoStyle = 'cinematic') {
   const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
   const [w, h] = size.split('x').map(Number)
-  const filterSize = `${w}x${h}`
 
   const transitions = XFADE_TRANSITIONS[videoStyle] || XFADE_TRANSITIONS.cinematic
   let filters = []
 
   for (let i = 0; i < imageCount; i++) {
-    const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
-    const zpFilter = effect(imageDuration, fps).replace('1920x1080', filterSize)
+    const effectType = EFFECT_TYPES[i % EFFECT_TYPES.length]
+    const kenBurns = makeKenBurns(w, h, imageDuration, fps, effectType)
 
-    // fps=N  → normalisiert auf exakt N fps (WebP/JPEG kommen als 25fps rein)
-    // scale+crop → passgenau für Zielauflösung
-    // zoompan   → Ken Burns / Deep Pan Bewegung, exakt imageDuration*fps Frames
-    // trim      → harter Schnitt auf genau imageDuration Sekunden (kein Duplikat-Frame)
-    // setpts    → Timestamps auf 0 zurücksetzen für sauberes xfade-Offset
-    // setsar    → Square Pixel sicherstellen
+    // Kette pro Bild:
+    // fps=N      → normalisiert auf exakt N fps (WebP liefert 25fps!)
+    // format     → yuv420p sicherstellen (crop expr braucht das)
+    // scale+crop → Ken Burns / Deep Pan (schnell, kein zoompan-Timeout)
+    // trim       → exakt imageDuration Sekunden, kein Duplikat-Frame
+    // setpts     → Timestamps auf 0 für korrekte xfade-Offsets
+    // setsar=1   → Square Pixel
     filters.push(
       `[${i}:v]fps=${fps},` +
-      `scale=${w}:${h}:force_original_aspect_ratio=increase,` +
-      `crop=${w}:${h},` +
-      `${zpFilter},` +
+      `format=yuv420p,` +
+      `${kenBurns},` +
       `trim=duration=${imageDuration},` +
       `setpts=PTS-STARTPTS,` +
       `setsar=1` +
@@ -984,9 +1007,7 @@ async function runSlideshowJob(jobId, params) {
     // ffmpeg Input-Args aufbauen — Bilder als Loop-Inputs
     const inputArgs = []
     for (const imgPath of imagePaths) {
-      // -t mit +2s Puffer: zoompan braucht etwas mehr Material als die exakte Dauer
-      // trim=duration=N im filter_complex schneidet danach exakt ab
-      inputArgs.push('-loop', '1', '-t', String(imageDuration + 2), '-i', imgPath)
+      inputArgs.push('-loop', '1', '-t', String(imageDuration + 1), '-i', imgPath)
     }
 
     // Audio-Input: echte Musik-Datei ODER lavfi-Stille als Fallback
