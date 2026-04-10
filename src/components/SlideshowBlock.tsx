@@ -272,7 +272,7 @@ export function SlideshowBlock({
           <Video className="h-5 w-5 text-emerald-500" />
           <h3 className="font-semibold">🎞️ Slideshow generieren</h3>
           <span className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-medium">
-            ffmpeg · sinEasing · Color Grading
+            ffmpeg · Ken Burns · Deep Pan
           </span>
         </div>
         <button
