@@ -352,20 +352,22 @@ app.post('/api/generate-media-article', (req, res, next) => {
 
 // ===== /api/generate-trip → weiter unten definiert (vollständige Version) =====
 
-// ===== API FÜR RUNWAY GEN-4 TURBO VIDEO-GENERIERUNG =====
+// ===== API FÜR GROK IMAGINE VIDEO (xAI) =====
 // Tab: "Berichte" in /veroeffentlichen
-// PPQ_API_KEY muss als Umgebungsvariable gesetzt sein
-// Prompt wird automatisch aus Artikeldaten aufgebaut
+// XAI_API_KEY muss als Umgebungsvariable gesetzt sein
+// Unterstützt: Text-to-Video, Image-to-Video (1 Bild), Reference-to-Video (mehrere Bilder)
+// Modell: grok-imagine-video | Auflösung: 720p | Dauer: 5–15s
 
 app.post('/api/generate-video', async (req, res) => {
-  const ppqKey = process.env.PPQ_API_KEY
-  if (!ppqKey) {
-    console.error('[Video] PPQ_API_KEY fehlt in Umgebungsvariablen')
-    return res.status(500).json({ error: 'PPQ_API_KEY nicht konfiguriert auf dem Server.' })
+  const xaiKey = process.env.XAI_API_KEY
+  if (!xaiKey) {
+    console.error('[Video] XAI_API_KEY fehlt in Umgebungsvariablen')
+    return res.status(500).json({ error: 'XAI_API_KEY nicht konfiguriert auf dem Server.' })
   }
 
   const {
-    imageUrl,       // Titelbild-URL → Start-Frame
+    imageUrl,           // Titelbild-URL → Start-Frame (Image-to-Video)
+    referenceImageUrls, // Array von Bild-URLs → Reference-to-Video (mehrere Bilder)
     title,
     summary,
     location,
@@ -373,21 +375,39 @@ app.post('/api/generate-video', async (req, res) => {
     lifestyle,
     tags,
     duration = '10',
-    aspectRatio = '16:9'
+    aspectRatio = '16:9',
+    mode = 'auto'       // 'auto' | 'image-to-video' | 'reference-to-video' | 'text-to-video'
   } = req.body
 
-  if (!imageUrl) {
-    return res.status(400).json({ error: 'imageUrl (Titelbild) ist erforderlich.' })
+  // Dauer validieren: 5–15s
+  const resolvedDuration = Math.min(15, Math.max(5, parseInt(String(duration)) || 10))
+
+  // ── Video-Modus bestimmen ──────────────────────────────────────────────
+  // reference-to-video: mehrere Referenzbilder → Grok "kennt" die Charaktere
+  // image-to-video:     1 Bild als Start-Frame
+  // text-to-video:      nur Prompt, kein Bild
+  const hasReferenceImages = Array.isArray(referenceImageUrls) && referenceImageUrls.length > 0
+  const hasImageUrl = !!imageUrl
+
+  let resolvedMode
+  if (mode === 'reference-to-video' && hasReferenceImages) {
+    resolvedMode = 'reference-to-video'
+  } else if (mode === 'image-to-video' && hasImageUrl) {
+    resolvedMode = 'image-to-video'
+  } else if (mode === 'text-to-video') {
+    resolvedMode = 'text-to-video'
+  } else {
+    // Auto-Erkennung
+    if (hasReferenceImages) {
+      resolvedMode = 'reference-to-video'
+    } else if (hasImageUrl) {
+      resolvedMode = 'image-to-video'
+    } else {
+      resolvedMode = 'text-to-video'
+    }
   }
 
-  // ── Kling 2.5 Turbo I2V bei ppq.ai ──────────────────────────────────────
-  // Modell: kling-2.5-turbo-i2v
-  // Dauer:  5s ($0.23) oder 10s ($0.46)
-  // Kein quality-Parameter — wird ignoriert
-  // aspect_ratio: 16:9 oder 9:16
-  const resolvedDuration = ['5', '10'].includes(String(duration)) ? String(duration) : '10'
-
-  // Video-Prompt automatisch aus Artikeldaten aufbauen
+  // ── Video-Prompt automatisch aus Artikeldaten aufbauen ─────────────────
   const lifestyleMap = {
     mojobus: 'vintage US bus life, oldtimer bus on the road, slow travel couple',
     vanlife: 'vanlife, van life on wheels, road trip',
@@ -400,8 +420,15 @@ app.post('/api/generate-video', async (req, res) => {
   const locationText = location ? `, ${location}` : ''
   const countryText = country ? `, ${country}` : ''
   const titleText = title ? `. ${title}` : ''
-  const summaryText = summary ? ` ${summary.slice(0, 120)}` : ''
+  const summaryText = summary ? ` ${summary.slice(0, 150)}` : ''
   const tagsText = Array.isArray(tags) && tags.length > 0 ? `. ${tags.slice(0, 5).join(', ')}` : ''
+
+  // Bei reference-to-video: Bilder als <IMAGE_1>, <IMAGE_2> etc. referenzieren
+  let referenceNote = ''
+  if (resolvedMode === 'reference-to-video' && hasReferenceImages) {
+    const imageRefs = referenceImageUrls.map((_, i) => `<IMAGE_${i + 1}>`).join(', ')
+    referenceNote = ` Featuring the people and scenes from ${imageRefs}.`
+  }
 
   const videoPrompt = [
     'Cinematic travel video,',
@@ -410,112 +437,122 @@ app.post('/api/generate-video', async (req, res) => {
     countryText,
     titleText,
     summaryText,
-    '. Smooth camera movement, golden light, authentic atmosphere',
+    referenceNote,
+    '. Smooth camera movement, golden hour light, authentic atmosphere',
     tagsText,
-    '. High quality, cinematic, 4K look'
+    '. High quality, cinematic 720p'
   ].join('').replace(/\s+/g, ' ').trim()
 
-  console.log(`[Video] Starte Kling 2.5 Turbo I2V: "${title || 'Kein Titel'}", ${resolvedDuration}s, ${aspectRatio}`)
-  console.log(`[Video] Prompt: ${videoPrompt.slice(0, 120)}...`)
+  console.log(`[Video] Starte grok-imagine-video: "${title || 'Kein Titel'}", ${resolvedDuration}s, ${aspectRatio}, Modus: ${resolvedMode}`)
+  console.log(`[Video] Prompt: ${videoPrompt.slice(0, 150)}...`)
 
-  // Exakte Parameter die an ppq.ai gehen
-  const ppqPayload = {
-    model: 'kling-2.5-turbo-i2v',
+  // ── xAI API Payload aufbauen ───────────────────────────────────────────
+  const xaiPayload = {
+    model: 'grok-imagine-video',
     prompt: videoPrompt,
-    image_url: imageUrl,
+    duration: resolvedDuration,
     aspect_ratio: aspectRatio,
-    duration: resolvedDuration
+    resolution: '720p'
   }
-  console.log('[Video] ppq.ai Payload:', JSON.stringify(ppqPayload))
+
+  // Modus-spezifische Parameter hinzufügen
+  if (resolvedMode === 'image-to-video' && hasImageUrl) {
+    xaiPayload.image = { url: imageUrl }
+  } else if (resolvedMode === 'reference-to-video' && hasReferenceImages) {
+    xaiPayload.reference_images = referenceImageUrls.map(url => ({ url }))
+  }
+
+  console.log('[Video] xAI Payload:', JSON.stringify({ ...xaiPayload, prompt: xaiPayload.prompt.slice(0, 80) + '...' }))
 
   try {
-    // Schritt 1: Job bei ppq.ai einreichen
-    const submitRes = await axios.post('https://api.ppq.ai/v1/videos', ppqPayload, {
+    // Schritt 1: Job bei xAI einreichen → bekommt request_id zurück
+    const submitRes = await axios.post('https://api.x.ai/v1/videos/generations', xaiPayload, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ppqKey}`
+        'Authorization': `Bearer ${xaiKey}`
       },
       timeout: 30000
     })
 
     const job = submitRes.data
-    console.log('[Video] ppq.ai Job-Antwort vollständig:', JSON.stringify(job))
+    console.log('[Video] xAI Job-Antwort:', JSON.stringify(job))
 
-    // Job-ID zurückgeben – Frontend pollt dann /api/video-status/:id
+    // request_id zurückgeben – Frontend pollt dann /api/video-status/:id
     res.json({
-      jobId: job.id,
-      status: job.status,
-      estimatedCost: job.estimated_cost,
+      jobId: job.request_id,
+      requestId: job.request_id,
+      status: 'pending',
       prompt: videoPrompt,
-      sentParams: { duration: resolvedDuration, aspectRatio }
+      mode: resolvedMode,
+      sentParams: { duration: resolvedDuration, aspectRatio, resolution: '720p' }
     })
 
   } catch (error) {
-    // Vollständige ppq.ai Antwort loggen für Debugging
     const rawData = error.response?.data
     const httpStatus = error.response?.status
 
     console.error('[Video] HTTP Status:', httpStatus)
-    console.error('[Video] ppq.ai Antwort (raw):', JSON.stringify(rawData, null, 2))
+    console.error('[Video] xAI Antwort (raw):', JSON.stringify(rawData, null, 2))
     console.error('[Video] Axios Fehler:', error.message)
 
-    // Fehlertext sicher extrahieren (kein [object Object])
     let errMsg = error.message
     if (rawData) {
       if (typeof rawData === 'string') {
         errMsg = rawData
       } else if (typeof rawData.error === 'string') {
         errMsg = rawData.error
+      } else if (rawData.error?.message) {
+        errMsg = rawData.error.message
       } else if (typeof rawData.message === 'string') {
         errMsg = rawData.message
-      } else if (typeof rawData.detail === 'string') {
-        errMsg = rawData.detail
       } else {
         errMsg = JSON.stringify(rawData)
       }
     }
 
     if (httpStatus === 401) {
-      res.status(401).json({ error: 'PPQ_API_KEY ungültig oder abgelaufen.', detail: errMsg })
+      res.status(401).json({ error: 'XAI_API_KEY ungültig oder abgelaufen.', detail: errMsg })
     } else if (httpStatus === 402) {
-      res.status(402).json({ error: 'Nicht genug Guthaben auf ppq.ai Account.', detail: errMsg })
+      res.status(402).json({ error: 'Nicht genug Guthaben im xAI Account.', detail: errMsg })
     } else if (httpStatus === 429) {
-      res.status(429).json({ error: 'API-Limit erreicht. Bitte kurz warten.', detail: errMsg })
-    } else if (httpStatus === 422) {
-      res.status(422).json({ error: `Ungültige Parameter für ppq.ai: ${errMsg}`, detail: errMsg })
+      res.status(429).json({ error: 'xAI API-Limit erreicht. Bitte kurz warten.', detail: errMsg })
+    } else if (httpStatus === 422 || httpStatus === 400) {
+      res.status(422).json({ error: `Ungültige Parameter für xAI: ${errMsg}`, detail: errMsg })
     } else {
       res.status(500).json({ error: `Video-Job fehlgeschlagen (HTTP ${httpStatus || 'no-response'}): ${errMsg}` })
     }
   }
 })
 
-// ===== VIDEO STATUS POLLING =====
-// Frontend pollt alle 6 Sekunden bis status === 'completed' oder 'failed'
+// ===== VIDEO STATUS POLLING (xAI) =====
+// Frontend pollt alle 8 Sekunden bis status === 'done', 'expired' oder 'failed'
+// xAI Status-Werte: 'pending' | 'done' | 'expired' | 'failed'
 app.get('/api/video-status/:jobId', async (req, res) => {
-  const ppqKey = process.env.PPQ_API_KEY
-  if (!ppqKey) {
-    return res.status(500).json({ error: 'PPQ_API_KEY nicht konfiguriert.' })
+  const xaiKey = process.env.XAI_API_KEY
+  if (!xaiKey) {
+    return res.status(500).json({ error: 'XAI_API_KEY nicht konfiguriert.' })
   }
 
   const { jobId } = req.params
-  if (!jobId || !jobId.startsWith('gen_')) {
+  if (!jobId) {
     return res.status(400).json({ error: 'Ungültige Job-ID.' })
   }
 
   try {
-    const pollRes = await axios.get(`https://api.ppq.ai/v1/videos/${jobId}`, {
-      headers: { 'Authorization': `Bearer ${ppqKey}` },
+    const pollRes = await axios.get(`https://api.x.ai/v1/videos/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${xaiKey}` },
       timeout: 15000
     })
 
     const data = pollRes.data
-    console.log(`[Video] Status für ${jobId}: ${data.status}`)
+    console.log(`[Video] xAI Status für ${jobId}: ${data.status}`)
 
-    if (data.status === 'completed' && data.data?.url) {
+    if (data.status === 'done' && data.video?.url) {
       res.json({
         status: 'completed',
-        videoUrl: data.data.url,
-        cost: data.cost,
+        videoUrl: data.video.url,
+        duration: data.video.duration,
+        model: data.model,
         jobId
       })
     } else if (data.status === 'failed') {
@@ -524,8 +561,14 @@ app.get('/api/video-status/:jobId', async (req, res) => {
         error: data.error || 'Video-Generierung fehlgeschlagen.',
         jobId
       })
+    } else if (data.status === 'expired') {
+      res.json({
+        status: 'failed',
+        error: 'xAI Video-Request abgelaufen (expired). Bitte neu starten.',
+        jobId
+      })
     } else {
-      // Noch in Bearbeitung
+      // Status: 'pending' — noch in Bearbeitung
       res.json({
         status: data.status || 'processing',
         jobId
@@ -538,9 +581,8 @@ app.get('/api/video-status/:jobId', async (req, res) => {
     let errMsg = error.message
     if (rawData) {
       errMsg = typeof rawData === 'string' ? rawData
-        : typeof rawData.error === 'string' ? rawData.error
-        : typeof rawData.message === 'string' ? rawData.message
-        : JSON.stringify(rawData)
+        : rawData.error?.message || rawData.error || rawData.message
+        || JSON.stringify(rawData)
     }
     console.error(`[Video] Polling-Fehler für ${jobId} (HTTP ${httpStatus}):`, errMsg)
     res.status(500).json({ error: `Status-Abfrage fehlgeschlagen: ${errMsg}` })
@@ -1815,31 +1857,35 @@ app.post('/api/generate-note', (req, res, next) => {
   }
 })
 
-// ===== DEBUG: ppq.ai Video-API direkter Test =====
-// Nur für Debugging – zeigt rohe ppq.ai Antwort
+// ===== DEBUG: xAI Video-API direkter Test =====
+// Nur für Debugging – zeigt rohe xAI Antwort
 app.post('/api/debug-video', async (req, res) => {
-  const ppqKey = process.env.PPQ_API_KEY
-  if (!ppqKey) return res.status(500).json({ error: 'PPQ_API_KEY fehlt' })
+  const xaiKey = process.env.XAI_API_KEY
+  if (!xaiKey) return res.status(500).json({ error: 'XAI_API_KEY fehlt' })
 
   try {
-    const response = await axios.post('https://api.ppq.ai/v1/videos', {
-      model: 'kling-2.5-turbo-i2v',
-      prompt: 'Cinematic travel video, vintage bus road trip, smooth camera movement, golden light',
-      image_url: req.body.imageUrl || 'https://picsum.photos/800/450',
+    const payload = {
+      model: 'grok-imagine-video',
+      prompt: 'Cinematic travel video, vintage bus road trip, smooth camera movement, golden light, 720p',
+      duration: 5,
       aspect_ratio: '16:9',
-      duration: '10'
-    }, {
+      resolution: '720p'
+    }
+    if (req.body.imageUrl) {
+      payload.image = { url: req.body.imageUrl }
+    }
+    const response = await axios.post('https://api.x.ai/v1/videos/generations', payload, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ppqKey}`
+        'Authorization': `Bearer ${xaiKey}`
       },
       timeout: 30000
     })
-    console.log('[Debug] ppq.ai Erfolg:', JSON.stringify(response.data))
+    console.log('[Debug] xAI Erfolg:', JSON.stringify(response.data))
     res.json({ ok: true, data: response.data })
   } catch (error) {
     const rawData = error.response?.data
-    console.error('[Debug] ppq.ai Fehler raw:', JSON.stringify(rawData))
+    console.error('[Debug] xAI Fehler raw:', JSON.stringify(rawData))
     res.status(error.response?.status || 500).json({
       ok: false,
       httpStatus: error.response?.status,
@@ -1872,7 +1918,7 @@ app.get('/api/health', (req, res) => {
     groqApiKey: process.env.GROQ_API_KEY ? 'configured' : 'missing',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY ? 'configured' : 'missing',
     openrouterApiKey: process.env.OPENROUTER_API_KEY ? 'configured' : 'missing',
-    ppqApiKey: process.env.PPQ_API_KEY ? 'configured' : 'missing',
+    xaiApiKey: process.env.XAI_API_KEY ? 'configured' : 'missing',
     timestamp: new Date().toISOString()
   })
 })
@@ -1882,5 +1928,5 @@ app.listen(PORT, () => {
   console.log(`[Server] GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
   console.log(`[Server] ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
   console.log(`[Server] OPENROUTER_API_KEY: ${process.env.OPENROUTER_API_KEY ? '✓ Konfiguriert (für Video-Analyse)' : '✗ Fehlt (Video-Analyse nicht verfügbar)'}`)
-  console.log(`[Server] PPQ_API_KEY: ${process.env.PPQ_API_KEY ? '✓ Konfiguriert (Runway Gen-4 Video)' : '✗ Fehlt (Video-Generierung nicht verfügbar)'}`)
+  console.log(`[Server] XAI_API_KEY: ${process.env.XAI_API_KEY ? '✓ Konfiguriert (Grok Imagine Video 720p)' : '✗ Fehlt (Video-Generierung nicht verfügbar)'}`)
 })
