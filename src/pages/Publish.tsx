@@ -556,6 +556,53 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
     setBatchEditMode(prev => !prev);
   };
 
+  // ── Drag-and-Drop Reihenfolge ──────────────────────────────────────────
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (index !== dragIndex) setDragOverIndex(index);
+  };
+
+  const handleDragDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    setFiles(prev => {
+      const updated = [...prev];
+      const [moved] = updated.splice(dragIndex, 1);
+      updated.splice(dropIndex, 0, moved);
+      return updated;
+    });
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // Bild nach links/rechts verschieben (Pfeil-Buttons als Alternative)
+  const moveFile = (index: number, direction: 'left' | 'right') => {
+    const newIndex = direction === 'left' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= files.length) return;
+    setFiles(prev => {
+      const updated = [...prev];
+      [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+      return updated;
+    });
+  };
+
   const applyGpsToAll = (sourceFileId: string) => {
     const sourceFile = files.find(f => f.id === sourceFileId);
     if (!sourceFile || !sourceFile.gps) return;
@@ -838,7 +885,14 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
          <Card>
            <CardHeader>
              <div className="flex items-center justify-between">
-               <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
+               <div>
+                 <CardTitle>Vorschau ({files.length} Dateien)</CardTitle>
+                 {files.length > 1 && files.some(f => f.type === 'image') && (
+                   <p className="text-xs text-muted-foreground mt-1">
+                     ☰ Ziehen zum Sortieren · Reihenfolge gilt auch für Slideshow
+                   </p>
+                 )}
+               </div>
                {files.some(f => f.type === 'image') && (
                  <Button
                    size="sm"
@@ -854,8 +908,58 @@ function MediaUploadForm({ editEvent }: { editEvent?: any }) {
            </CardHeader>
            <CardContent>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {files.map(file => (
-                  <div key={file.id} className="relative group border rounded-lg overflow-hidden">
+                {files.map((file, index) => (
+                  <div
+                    key={file.id}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDrop={(e) => handleDragDrop(e, index)}
+                    onDragEnd={handleDragEnd}
+                    className={`relative group border-2 rounded-lg overflow-hidden transition-all cursor-grab active:cursor-grabbing select-none ${
+                      dragOverIndex === index && dragIndex !== index
+                        ? 'border-ocean-500 bg-ocean-50 dark:bg-ocean-950/30 scale-[1.02] shadow-lg'
+                        : dragIndex === index
+                          ? 'border-dashed border-gray-400 opacity-50'
+                          : 'border-transparent'
+                    }`}
+                  >
+                    {/* Reihenfolge-Badge + Drag-Handle oben links */}
+                    <div className="absolute top-1 left-1 z-20 flex items-center gap-1">
+                      <div className="bg-black/60 text-white text-xs font-bold w-5 h-5 rounded flex items-center justify-center">
+                        {index + 1}
+                      </div>
+                      <div className="bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity px-1 py-0.5 rounded text-xs">
+                        ☰
+                      </div>
+                    </div>
+
+                    {/* Pfeil-Buttons zum Verschieben (erscheinen beim Hover) */}
+                    {files.length > 1 && (
+                      <div className="absolute bottom-1 left-1 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {index > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); moveFile(index, 'left'); }}
+                            className="bg-black/60 hover:bg-ocean-600 text-white text-xs w-6 h-6 rounded flex items-center justify-center transition-colors"
+                            title="Nach links"
+                          >
+                            ‹
+                          </button>
+                        )}
+                        {index < files.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); moveFile(index, 'right'); }}
+                            className="bg-black/60 hover:bg-ocean-600 text-white text-xs w-6 h-6 rounded flex items-center justify-center transition-colors"
+                            title="Nach rechts"
+                          >
+                            ›
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {file.preview ? (
                       file.type === 'video' ? (
                         // Video-Vorschau mit Controls
