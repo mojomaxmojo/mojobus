@@ -594,113 +594,75 @@ app.get('/api/video-status/:jobId', async (req, res) => {
 // Musik: lokal (server/music/) oder ElevenLabs via ppq.ai
 // ffmpeg: /opt/bin/ffmpeg
 
-// ── Ken Burns / Deep Pan / Cinematic Effekte ──────────────────────────────
-// Verfeinerte Bewegungsprofile: sanfte Ease-Kurven, natürlicheres Tempo
-// Keine hartcodierte Auflösung hier — wird in buildFilterComplex ersetzt
+// ── Ken Burns + Deep Pan Effekte ──────────────────────────────────────────
+// Klassische lineare Bewegung — bewährt, klar, cineastisch
+// Kein sin()-Easing — die Bewegung soll kontinuierlich und vorhersehbar sein
+// damit der xfade-Übergang sauber anschließen kann (kein Ruckeln am Ende)
 //
-// STIL-PAKETE:
-//   ZOOM_PAN_CINEMATIC  → warme filmische Bewegungen, langsam + stimmungsvoll
-//   ZOOM_PAN_SMOOTH     → sanft, subtil, ideal für Natur- und Reisefotos
-//   ZOOM_PAN_DYNAMIC    → dynamischer, mehr Bewegung, Story-Feeling
-//
-// Alle Effekte nutzen sin-basierte Easing (on/D*PI) für organische Kurven
-// statt linearer Bewegung — kein mechanischer "Roboter-Zoom" mehr.
+// ANTI-STOTTER-MASSNAHMEN:
+// 1. fps-Filter VOR zoompan: stellt sicher dass jedes Bild exakt fps Frames hat
+// 2. trim=0:d Filter NACH zoompan: schneidet exakt auf d Sekunden, kein Frame mehr
+// 3. Zoom-Startpunkt bei Zoom-Out: beginnt bei 1.3 (nicht 1.5) — kleinerer Hub
+//    = weniger Bewegung = sanfterer Übergang zum nächsten Clip
+// 4. Lineare Bewegung (on/D statt sin) — am Ende ist Bewegung noch aktiv,
+//    kein abrupter Stopp kurz vor Clipende
 
-// ── Hilfsmakros ────────────────────────────────────────────────────────────
-// D = Gesamtframes = d * fps
-// sinEase: 0→1 via sin(on/D*PI/2) — startet schnell, bremst sanft ab
-// cosEase: 1→0 via (1-cos(on/D*PI))/2 — beschleunigt in Mitte, bremst ab
-
-const ZOOM_PAN_CINEMATIC = [
-  // 1. Slow Zoom In Mitte — klassischer Ken Burns, sanftes Easing
+const ZOOM_PAN_EFFECTS = [
+  // 1. Zoom In Mitte — klassischer Ken Burns
   (d, fps) => {
     const D = d * fps
-    return `zoompan=z='1.0+0.35*sin(on/${D}*PI/2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+    return `zoompan=z='min(zoom+0.0010,1.3)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
   },
-  // 2. Slow Zoom Out — Enthüllung, Weite, Natur
+  // 2. Zoom Out Mitte — Weite, Natur, Enthüllung
   (d, fps) => {
     const D = d * fps
-    return `zoompan=z='1.35-0.30*sin(on/${D}*PI/2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+    return `zoompan=z='if(eq(on,1),1.3,max(zoom-0.0010,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
   },
-  // 3. Pan Links→Rechts + leichter Zoom In (Reisegefühl)
+  // 3. Pan Links → Rechts (bei konstantem Zoom 1.25)
   (d, fps) => {
     const D = d * fps
-    return `zoompan=z='1.25+0.05*sin(on/${D}*PI)':x='(iw/2-(iw/zoom/2))+sin(on/${D}*PI/2)*(iw*0.18)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+    return `zoompan=z='1.25':x='(iw/2-(iw/zoom/2))*(1-on/${D})+(iw-(iw/zoom))*on/${D}':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
   },
-  // 4. Pan Rechts→Links + Zoom sanft
+  // 4. Pan Rechts → Links (bei konstantem Zoom 1.25)
   (d, fps) => {
     const D = d * fps
-    return `zoompan=z='1.25+0.05*sin(on/${D}*PI)':x='(iw*0.18)+sin(on/${D}*PI/2)*(iw/2-(iw/zoom/2)-(iw*0.18))':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+    return `zoompan=z='1.25':x='(iw-(iw/zoom))*(1-on/${D})+(iw/2-(iw/zoom/2))*on/${D}':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
   },
-  // 5. Deep Pan Oben→Unten (Himmel zu Boden — epische Landschaften)
+  // 5. Deep Pan Oben → Unten (Himmel zu Boden)
   (d, fps) => {
     const D = d * fps
-    return `zoompan=z='1.40':x='iw/2-(iw/zoom/2)':y='sin(on/${D}*PI/2)*(ih-(ih/1.4))':d=${D}:s=1920x1080:fps=${fps}`
+    return `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='on/${D}*(ih-(ih/1.4))':d=${D}:s=1920x1080:fps=${fps}`
   },
-  // 6. Deep Pan Unten→Oben (Boden zu Himmel — Aufbruch, Weite)
+  // 6. Deep Pan Unten → Oben (Boden zu Himmel)
   (d, fps) => {
     const D = d * fps
-    return `zoompan=z='1.40':x='iw/2-(iw/zoom/2)':y='(ih-(ih/1.4))-(sin(on/${D}*PI/2)*(ih-(ih/1.4)))':d=${D}:s=1920x1080:fps=${fps}`
+    return `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='(ih-(ih/1.4))*(1-on/${D})':d=${D}:s=1920x1080:fps=${fps}`
   },
-  // 7. Zoom In + Diagonale (links oben → Mitte) — Dokumentarfilm-Stil
+  // 7. Zoom In + Pan Links→Rechts (diagonal, Dokumentarfilm)
   (d, fps) => {
     const D = d * fps
-    return `zoompan=z='1.0+0.30*sin(on/${D}*PI/2)':x='(iw*0.10)*(1-sin(on/${D}*PI/2))':y='(ih*0.10)*(1-sin(on/${D}*PI/2))':d=${D}:s=1920x1080:fps=${fps}`
+    return `zoompan=z='min(zoom+0.0008,1.25)':x='on/${D}*(iw/5)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
   },
-  // 8. Zoom Out + Diagonale (Mitte → rechts unten) — Abschied, Weiterreise
+  // 8. Zoom Out + Pan Rechts→Links
   (d, fps) => {
     const D = d * fps
-    return `zoompan=z='1.30-0.25*sin(on/${D}*PI/2)':x='sin(on/${D}*PI/2)*(iw*0.12)':y='sin(on/${D}*PI/2)*(ih*0.12)':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 9. Minimal Zoom + leichtes Schwenken (sehr subtil, Stil-brecher)
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='1.05+0.08*sin(on/${D}*PI)':x='iw/2-(iw/zoom/2)+sin(on/${D}*PI)*12':y='ih/2-(ih/zoom/2)+sin(on/${D}*PI/1.7)*8':d=${D}:s=1920x1080:fps=${fps}`
-  },
-  // 10. Zoom In Tele (Gesichter/Details heranzoomen — Portraitaufnahmen)
-  (d, fps) => {
-    const D = d * fps
-    return `zoompan=z='1.0+0.45*(1-cos(on/${D}*PI))/2':x='iw/2-(iw/zoom/2)':y='ih/3-(ih/zoom/3)':d=${D}:s=1920x1080:fps=${fps}`
+    return `zoompan=z='if(eq(on,1),1.25,max(zoom-0.0008,1.0))':x='(iw/5)*(1-on/${D})':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
   },
 ]
 
-// ── Stil-Mapping für API ───────────────────────────────────────────────────
-const EFFECT_PRESETS = {
-  cinematic: ZOOM_PAN_CINEMATIC,
-  smooth: ZOOM_PAN_CINEMATIC,   // gleiche Basis, andere Transitions
-  dynamic: ZOOM_PAN_CINEMATIC,  // gleiche Basis, andere Transitions
-}
-
-// Aktueller Standard: cinematic
-const ZOOM_PAN_EFFECTS = ZOOM_PAN_CINEMATIC
-
 // ── xfade Transitions nach Stil ───────────────────────────────────────────
-// ffmpeg xfade unterstützt ~30 Transitions — diese Pakete rotieren durch
 const XFADE_TRANSITIONS = {
-  // Cinematic: edle, filmische Übergänge
   cinematic: [
-    'fade',           // klassisch, immer gut
-    'dissolve',       // organic, Körner-Effekt
-    'wipeleft',       // Schnitt-Gefühl, Dynamik
-    'fadeblack',      // kurze Schwarzblende — Zeitsprung-Gefühl
-    'fade',           // wieder fade — häufiger, da universell
-    'smoothleft',     // fließender Wipe
-    'dissolve',
-    'wiperight',
-    'fade',
-    'smoothright',
+    'fade', 'dissolve', 'fade', 'dissolve',
+    'fade', 'fade', 'dissolve', 'fade',
   ],
-  // Smooth: rein weiche Übergänge, nie hart
   smooth: [
     'fade', 'dissolve', 'fade', 'dissolve',
-    'smoothleft', 'smoothright', 'fade', 'dissolve',
-    'fade', 'fade',
+    'fade', 'dissolve', 'fade', 'fade',
   ],
-  // Dynamic: Energie, Bewegung, Social-Media-Stil
   dynamic: [
-    'slideleft', 'slideright', 'wipeleft', 'wiperight',
-    'slideup', 'slidedown', 'fade', 'dissolve',
-    'slideleft', 'wipeleft',
+    'fade', 'wipeleft', 'fade', 'wiperight',
+    'fade', 'dissolve', 'fade', 'wipeleft',
   ],
 }
 
@@ -861,31 +823,45 @@ function getColorGradingFilter(videoStyle) {
 }
 
 // ── ffmpeg filter_complex für Slideshow aufbauen ──────────────────────────
+// ANTI-STOTTER-STRATEGIE:
+//   1. fps=N vor zoompan: normalisiert Eingangs-Framerate (WebP liefert 25fps!)
+//   2. zoompan=d=N*fps: exakt N*fps Frames generieren
+//   3. trim=duration=N: harter Schnitt auf exakt N Sekunden nach zoompan
+//      → verhindert dass ein einzelner Duplikat-Frame am Clipende hängen bleibt
+//   4. setpts=PTS-STARTPTS: Timestamps nach trim zurücksetzen
+//      → xfade rechnet korrekte Offsets
 function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDuration = 1.0, videoStyle = 'cinematic') {
   const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
   const [w, h] = size.split('x').map(Number)
   const filterSize = `${w}x${h}`
 
-  // Transitions nach Stil
   const transitions = XFADE_TRANSITIONS[videoStyle] || XFADE_TRANSITIONS.cinematic
-
   let filters = []
 
   for (let i = 0; i < imageCount; i++) {
     const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
     const zpFilter = effect(imageDuration, fps).replace('1920x1080', filterSize)
 
-    // Scale → crop → zoompan → setsar für jedes Bild
+    // fps=N  → normalisiert auf exakt N fps (WebP/JPEG kommen als 25fps rein)
+    // scale+crop → passgenau für Zielauflösung
+    // zoompan   → Ken Burns / Deep Pan Bewegung, exakt imageDuration*fps Frames
+    // trim      → harter Schnitt auf genau imageDuration Sekunden (kein Duplikat-Frame)
+    // setpts    → Timestamps auf 0 zurücksetzen für sauberes xfade-Offset
+    // setsar    → Square Pixel sicherstellen
     filters.push(
-      `[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
-      `crop=${w}:${h},setsar=1,` +
-      `${zpFilter}[v${i}]`
+      `[${i}:v]fps=${fps},` +
+      `scale=${w}:${h}:force_original_aspect_ratio=increase,` +
+      `crop=${w}:${h},` +
+      `${zpFilter},` +
+      `trim=duration=${imageDuration},` +
+      `setpts=PTS-STARTPTS,` +
+      `setsar=1` +
+      `[v${i}]`
     )
   }
 
-  // xfade-Kette mit abwechselnden Transitions
+  // xfade-Kette: abwechselnde Transitions
   if (imageCount === 1) {
-    // Color Grading auf einzelnes Bild anwenden
     const cg = getColorGradingFilter(videoStyle)
     filters.push(`[v0]${cg}[vout]`)
   } else {
@@ -893,14 +869,14 @@ function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDur
     for (let i = 1; i < imageCount; i++) {
       const offset = (i * imageDuration - fadeDuration).toFixed(2)
       const transition = transitions[i % transitions.length]
-      // Letzter xfade → temporäres Label, dann Color Grading drauf
-      const outLabel = i === imageCount - 1 ? `[xfraw]` : `[xf${i}]`
+      const isLast = i === imageCount - 1
+      const outLabel = isLast ? '[xfraw]' : `[xf${i}]`
       filters.push(
         `${lastLabel}[v${i}]xfade=transition=${transition}:duration=${fadeDuration}:offset=${offset}${outLabel}`
       )
-      lastLabel = i === imageCount - 1 ? `[xfraw]` : `[xf${i}]`
+      lastLabel = outLabel
     }
-    // Color Grading als letzter Schritt auf das zusammengesetzte Video
+    // Color Grading auf fertig zusammengesetztes Video
     const cg = getColorGradingFilter(videoStyle)
     filters.push(`[xfraw]${cg}[vout]`)
   }
@@ -1008,7 +984,9 @@ async function runSlideshowJob(jobId, params) {
     // ffmpeg Input-Args aufbauen — Bilder als Loop-Inputs
     const inputArgs = []
     for (const imgPath of imagePaths) {
-      inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
+      // -t mit +2s Puffer: zoompan braucht etwas mehr Material als die exakte Dauer
+      // trim=duration=N im filter_complex schneidet danach exakt ab
+      inputArgs.push('-loop', '1', '-t', String(imageDuration + 2), '-i', imgPath)
     }
 
     // Audio-Input: echte Musik-Datei ODER lavfi-Stille als Fallback
@@ -1017,7 +995,7 @@ async function runSlideshowJob(jobId, params) {
     }
 
     // ── Video filter_complex via buildFilterComplex() ─────────────────────
-    // Ken Burns (sinEasing) + xfade (stilspezifische Transitions) + Color Grading
+    // Ken Burns / Deep Pan + xfade + Color Grading + trim (Anti-Stotter)
     const videoFilterLines = buildFilterComplex(n, imageDuration, fps, aspectRatio, fadeDuration, videoStyle)
       .split('; ')
 
