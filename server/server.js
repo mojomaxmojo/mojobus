@@ -836,27 +836,33 @@ function getColorGradingFilter(videoStyle) {
   // Alle Stile bekommen ein leichtes Warm-Grading (goldene Stunde, Vanlife-Feeling)
   // Keine extremen LUTs — subtil genug dass es natürlich wirkt
 
+  // WICHTIG: ffmpeg curves erwartet normalisierte Werte 0.0–1.0 (NICHT 0–255!)
+  // Formel: alter_wert / 255 → z.B. 128/255 ≈ 0.502, 135/255 ≈ 0.529
   const base = {
-    // Cinematic: warmer Ton, leichte Vignette, etwas entsättigt für Filmlook
+    // Cinematic: warmer Ton, leichte Vignette, Filmlook
     cinematic:
-      // 1. Warm Lift: leicht gelblich-oranges Licht
-      `curves=r='0/10 128/135 255/255':g='0/5 128/128 255/252':b='0/0 128/120 255/235',` +
-      // 2. Leichte Kontrasterhöhung (S-Kurve)
-      `curves=all='0/0 64/60 192/198 255/255',` +
-      // 3. Subtile Vignette: dunkle Ecken, lenkt Blick zur Mitte
-      `vignette=angle=PI/4:mode=forward:eval=init:dither=1:aspect=1`,
+      // Warm Lift: Rot +2%, Grün minimal, Blau -8% → goldener Ton
+      `curves=r='0/0 0.502/0.529 1/1':g='0/0 0.502/0.502 1/0.988':b='0/0 0.502/0.471 1/0.922',` +
+      // S-Kurve: Schatten dunkler, Lichter heller → mehr Tiefe
+      `curves=all='0/0 0.251/0.235 0.753/0.776 1/1',` +
+      // Vignette: dunkle Ecken, Blick zur Mitte
+      `vignette=angle=PI/4:mode=forward:eval=init:aspect=1`,
 
     // Smooth: neutral warm, sanft, kein harter Kontrast
     smooth:
-      `curves=r='0/5 128/132 255/252':g='0/3 128/128 255/250':b='0/0 128/122 255/240',` +
-      `curves=all='0/0 64/62 192/196 255/255',` +
-      `vignette=angle=PI/4:mode=forward:eval=init:dither=1:aspect=1`,
+      // Nur ein leichter Warmton, sehr subtil
+      `curves=r='0/0 0.502/0.518 1/0.988':g='0/0 0.502/0.502 1/0.980':b='0/0 0.502/0.478 1/0.941',` +
+      // Minimal S-Kurve
+      `curves=all='0/0 0.251/0.243 0.753/0.769 1/1',` +
+      `vignette=angle=PI/4:mode=forward:eval=init:aspect=1`,
 
     // Dynamic: mehr Kontrast, leicht kühler, knackig
     dynamic:
-      `curves=r='0/5 128/130 255/255':g='0/3 128/127 255/252':b='0/8 128/128 255/248',` +
-      `curves=all='0/0 64/58 192/200 255/255',` +
-      `vignette=angle=PI/4:mode=forward:eval=init:dither=0:aspect=1`,
+      // Leicht kühler: Blau minimal angehoben
+      `curves=r='0/0 0.502/0.510 1/1':g='0/0 0.502/0.498 1/0.988':b='0/0.031 0.502/0.502 1/0.973',` +
+      // Stärkere S-Kurve für Punch
+      `curves=all='0/0 0.251/0.227 0.753/0.784 1/1',` +
+      `vignette=angle=PI/4:mode=forward:eval=init:aspect=1`,
   }
 
   return base[videoStyle] || base.cinematic
