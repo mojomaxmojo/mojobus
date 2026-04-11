@@ -21,7 +21,9 @@ async function correctImageOrientation(file: File): Promise<File> {
     // EXIF-Daten lesen
     const exif = await exifr.parse(file);
     const orientation = exif?.Orientation || 1;
-    
+    const make = exif?.Make;
+    const model = exif?.Model;
+
     // EXIF-Bildabmessungen
     const exifWidth = exif?.ImageWidth || exif?.ExifImageWidth || exif?.PixelXDimension;
     const exifHeight = exif?.ImageHeight || exif?.ExifImageHeight || exif?.PixelYDimension;
@@ -53,7 +55,7 @@ async function correctImageOrientation(file: File): Promise<File> {
       // EXIF-Orientation basierte Rotation
       switch (orientation) {
         case 3: rotationDegrees = 180; break;
-        case 6: rotationDegrees = 90; break;
+        case 6: rotationDegrees = make === 'Google' ? -90 : 90; break;  // GrapheneOS fix: CCW statt CW
         case 8: rotationDegrees = -90; break;
       }
      } else if (exifWidth && exifHeight && actualWidth && actualHeight) {
