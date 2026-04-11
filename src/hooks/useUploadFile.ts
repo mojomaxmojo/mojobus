@@ -55,12 +55,19 @@ async function correctImageOrientation(file: File): Promise<File> {
        // EXIF-Orientation basierte Rotation
        switch (orientation) {
          case 3: rotationDegrees = 180; break;
-         case 6: rotationDegrees = make === 'Google' ? -90 : 90; break;
+         case 6: rotationDegrees = 90; break;
          case 8: rotationDegrees = -90; break;
        }
      }
-    
-    if (rotationDegrees === 0) {
+     
+     // Extra-Check: Wenn Orientation 6 oder 8, aber Bild ist schon quer/hoch korrekt,
+     // dann drehe zusätzlich 90° für GrapheneOS Fix
+     if ((orientation === 6 || orientation === 8) && make === 'Google') {
+       // GrapheneOS/Pixel: Drehe entgegengesetzt um 90° links zu fixen
+       rotationDegrees = rotationDegrees * -1;
+     }
+     
+     if (rotationDegrees === 0) {
       console.log(`✅ [Orientation] ${file.name}: No correction needed`);
       URL.revokeObjectURL(url);
       return file;
