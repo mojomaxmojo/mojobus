@@ -594,33 +594,115 @@ app.get('/api/video-status/:jobId', async (req, res) => {
 // Musik: lokal (server/music/) oder ElevenLabs via ppq.ai
 // ffmpeg: /opt/bin/ffmpeg
 
-// ── Ken Burns / Deep Pan Effekte via zoompan ──────────────────────────────
-// zoompan läuft stabil bei 25fps (statt 30) — weniger Frames pro Bild
-// = weniger Speicher, kein Einfrieren ab Bild 3-4
-// 8s × 25fps = 200 Frames/Bild (statt 240 bei 30fps)
+// ── Ken Burns / Deep Pan / Cinematic Effekte ──────────────────────────────
+// Verfeinerte Bewegungsprofile: sanfte Ease-Kurven, natürlicheres Tempo
+// Keine hartcodierte Auflösung hier — wird in buildFilterComplex ersetzt
 //
-// Bilder werden VOR zoompan auf Zielgröße skaliert+gecroppt (scale+crop).
-// zoompan bekommt also bereits ein 1920x1080 Bild und muss nicht mehr skalieren.
-// Das reduziert den Speicherbedarf nochmals deutlich.
+// STIL-PAKETE:
+//   ZOOM_PAN_CINEMATIC  → warme filmische Bewegungen, langsam + stimmungsvoll
+//   ZOOM_PAN_SMOOTH     → sanft, subtil, ideal für Natur- und Reisefotos
+//   ZOOM_PAN_DYNAMIC    → dynamischer, mehr Bewegung, Story-Feeling
+//
+// Alle Effekte nutzen sin-basierte Easing (on/D*PI) für organische Kurven
+// statt linearer Bewegung — kein mechanischer "Roboter-Zoom" mehr.
 
-const ZOOM_PAN_EFFECTS = [
-  // 1. Zoom In Mitte — klassischer Ken Burns
-  (d, fps) => `zoompan=z='min(zoom+0.0015,1.5)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // 2. Zoom Out Mitte
-  (d, fps) => `zoompan=z='if(eq(on,1),1.5,max(zoom-0.0015,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // 3. Pan Links → Rechts
-  (d, fps) => `zoompan=z='1.3':x='iw/2-(iw/zoom/2)+on/${d * fps}*(iw-(iw/1.3))':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // 4. Pan Rechts → Links
-  (d, fps) => `zoompan=z='1.3':x='iw-(iw/zoom)-on/${d * fps}*(iw-(iw/1.3))':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // 5. Deep Pan Oben → Unten
-  (d, fps) => `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='0+on/${d * fps}*(ih-(ih/1.4))':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // 6. Deep Pan Unten → Oben
-  (d, fps) => `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='ih-(ih/zoom)-on/${d * fps}*(ih-(ih/1.4))':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // 7. Zoom In + Pan Diagonal
-  (d, fps) => `zoompan=z='min(zoom+0.001,1.4)':x='on/${d * fps}*(iw/4)':y='on/${d * fps}*(ih/4)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // 8. Zoom Out + Pan Diagonal
-  (d, fps) => `zoompan=z='if(eq(on,1),1.4,max(zoom-0.001,1.0))':x='iw/2-(iw/zoom/2)':y='ih-(ih/zoom)-on/${d * fps}*(ih/4)':d=${d * fps}:s=1920x1080:fps=${fps}`,
+// ── Hilfsmakros ────────────────────────────────────────────────────────────
+// D = Gesamtframes = d * fps
+// sinEase: 0→1 via sin(on/D*PI/2) — startet schnell, bremst sanft ab
+// cosEase: 1→0 via (1-cos(on/D*PI))/2 — beschleunigt in Mitte, bremst ab
+
+const ZOOM_PAN_CINEMATIC = [
+  // 1. Slow Zoom In Mitte — klassischer Ken Burns, sanftes Easing
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.0+0.35*sin(on/${D}*PI/2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 2. Slow Zoom Out — Enthüllung, Weite, Natur
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.35-0.30*sin(on/${D}*PI/2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 3. Pan Links→Rechts + leichter Zoom In (Reisegefühl)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.25+0.05*sin(on/${D}*PI)':x='(iw/2-(iw/zoom/2))+sin(on/${D}*PI/2)*(iw*0.18)':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 4. Pan Rechts→Links + Zoom sanft
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.25+0.05*sin(on/${D}*PI)':x='(iw*0.18)+sin(on/${D}*PI/2)*(iw/2-(iw/zoom/2)-(iw*0.18))':y='ih/2-(ih/zoom/2)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 5. Deep Pan Oben→Unten (Himmel zu Boden — epische Landschaften)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.40':x='iw/2-(iw/zoom/2)':y='sin(on/${D}*PI/2)*(ih-(ih/1.4))':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 6. Deep Pan Unten→Oben (Boden zu Himmel — Aufbruch, Weite)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.40':x='iw/2-(iw/zoom/2)':y='(ih-(ih/1.4))-(sin(on/${D}*PI/2)*(ih-(ih/1.4)))':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 7. Zoom In + Diagonale (links oben → Mitte) — Dokumentarfilm-Stil
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.0+0.30*sin(on/${D}*PI/2)':x='(iw*0.10)*(1-sin(on/${D}*PI/2))':y='(ih*0.10)*(1-sin(on/${D}*PI/2))':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 8. Zoom Out + Diagonale (Mitte → rechts unten) — Abschied, Weiterreise
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.30-0.25*sin(on/${D}*PI/2)':x='sin(on/${D}*PI/2)*(iw*0.12)':y='sin(on/${D}*PI/2)*(ih*0.12)':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 9. Minimal Zoom + leichtes Schwenken (sehr subtil, Stil-brecher)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.05+0.08*sin(on/${D}*PI)':x='iw/2-(iw/zoom/2)+sin(on/${D}*PI)*12':y='ih/2-(ih/zoom/2)+sin(on/${D}*PI/1.7)*8':d=${D}:s=1920x1080:fps=${fps}`
+  },
+  // 10. Zoom In Tele (Gesichter/Details heranzoomen — Portraitaufnahmen)
+  (d, fps) => {
+    const D = d * fps
+    return `zoompan=z='1.0+0.45*(1-cos(on/${D}*PI))/2':x='iw/2-(iw/zoom/2)':y='ih/3-(ih/zoom/3)':d=${D}:s=1920x1080:fps=${fps}`
+  },
 ]
+
+// ── Stil-Mapping für API ───────────────────────────────────────────────────
+const EFFECT_PRESETS = {
+  cinematic: ZOOM_PAN_CINEMATIC,
+  smooth: ZOOM_PAN_CINEMATIC,   // gleiche Basis, andere Transitions
+  dynamic: ZOOM_PAN_CINEMATIC,  // gleiche Basis, andere Transitions
+}
+
+// Aktueller Standard: cinematic
+const ZOOM_PAN_EFFECTS = ZOOM_PAN_CINEMATIC
+
+// ── xfade Transitions nach Stil ───────────────────────────────────────────
+// ffmpeg xfade unterstützt ~30 Transitions — diese Pakete rotieren durch
+const XFADE_TRANSITIONS = {
+  // Cinematic: edle, filmische Übergänge
+  cinematic: [
+    'fade',           // klassisch, immer gut
+    'dissolve',       // organic, Körner-Effekt
+    'wipeleft',       // Schnitt-Gefühl, Dynamik
+    'fadeblack',      // kurze Schwarzblende — Zeitsprung-Gefühl
+    'fade',           // wieder fade — häufiger, da universell
+    'smoothleft',     // fließender Wipe
+    'dissolve',
+    'wiperight',
+    'fade',
+    'smoothright',
+  ],
+  // Smooth: rein weiche Übergänge, nie hart
+  smooth: [
+    'fade', 'dissolve', 'fade', 'dissolve',
+    'smoothleft', 'smoothright', 'fade', 'dissolve',
+    'fade', 'fade',
+  ],
+  // Dynamic: Energie, Bewegung, Social-Media-Stil
+  dynamic: [
+    'slideleft', 'slideright', 'wipeleft', 'wiperight',
+    'slideup', 'slidedown', 'fade', 'dissolve',
+    'slideleft', 'wipeleft',
+  ],
+}
 
 // ── Aspect Ratio → ffmpeg Größe ────────────────────────────────────────────
 const ASPECT_SIZES = {
@@ -747,97 +829,91 @@ async function generateElevenLabsMusic(lifestyle, durationSeconds, ppqKey) {
   return musicUrl
 }
 
-// ── ffmpeg filter_complex aufbauen ────────────────────────────────────────
-// Jedes Bild: scale+crop auf Zielgröße, dann zoompan für Ken Burns / Deep Pan
-// zoompan bekommt bereits fertig skaliertes Bild → weniger Speicher nötig
-function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDuration = 1.0) {
+// ── Color Grading Filter nach Stil ────────────────────────────────────────
+// Gibt einen ffmpeg-Filter-String zurück der auf das fertige Video angewendet wird
+// Kein Extra-Pass nötig — wird direkt in den filter_complex eingehängt
+function getColorGradingFilter(videoStyle) {
+  // Alle Stile bekommen ein leichtes Warm-Grading (goldene Stunde, Vanlife-Feeling)
+  // Keine extremen LUTs — subtil genug dass es natürlich wirkt
+
+  const base = {
+    // Cinematic: warmer Ton, leichte Vignette, etwas entsättigt für Filmlook
+    cinematic:
+      // 1. Warm Lift: leicht gelblich-oranges Licht
+      `curves=r='0/10 128/135 255/255':g='0/5 128/128 255/252':b='0/0 128/120 255/235',` +
+      // 2. Leichte Kontrasterhöhung (S-Kurve)
+      `curves=all='0/0 64/60 192/198 255/255',` +
+      // 3. Subtile Vignette: dunkle Ecken, lenkt Blick zur Mitte
+      `vignette=angle=PI/4:mode=forward:eval=init:dither=1:aspect=1`,
+
+    // Smooth: neutral warm, sanft, kein harter Kontrast
+    smooth:
+      `curves=r='0/5 128/132 255/252':g='0/3 128/128 255/250':b='0/0 128/122 255/240',` +
+      `curves=all='0/0 64/62 192/196 255/255',` +
+      `vignette=angle=PI/4:mode=forward:eval=init:dither=1:aspect=1`,
+
+    // Dynamic: mehr Kontrast, leicht kühler, knackig
+    dynamic:
+      `curves=r='0/5 128/130 255/255':g='0/3 128/127 255/252':b='0/8 128/128 255/248',` +
+      `curves=all='0/0 64/58 192/200 255/255',` +
+      `vignette=angle=PI/4:mode=forward:eval=init:dither=0:aspect=1`,
+  }
+
+  return base[videoStyle] || base.cinematic
+}
+
+// ── ffmpeg filter_complex für Slideshow aufbauen ──────────────────────────
+function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDuration = 1.0, videoStyle = 'cinematic') {
   const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
   const [w, h] = size.split('x').map(Number)
   const filterSize = `${w}x${h}`
 
-  let filterLines = []
+  // Transitions nach Stil
+  const transitions = XFADE_TRANSITIONS[videoStyle] || XFADE_TRANSITIONS.cinematic
 
-  // Pro Bild: scale → crop → zoompan
+  let filters = []
+
   for (let i = 0; i < imageCount; i++) {
     const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
     const zpFilter = effect(imageDuration, fps).replace('1920x1080', filterSize)
-    filterLines.push(
+
+    // Scale → crop → zoompan → setsar für jedes Bild
+    filters.push(
       `[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
       `crop=${w}:${h},setsar=1,` +
       `${zpFilter}[v${i}]`
     )
   }
 
-  // xfade Crossfade-Kette
+  // xfade-Kette mit abwechselnden Transitions
   if (imageCount === 1) {
-    filterLines.push(`[v0]copy[vout]`)
+    // Color Grading auf einzelnes Bild anwenden
+    const cg = getColorGradingFilter(videoStyle)
+    filters.push(`[v0]${cg}[vout]`)
   } else {
     let lastLabel = '[v0]'
     for (let i = 1; i < imageCount; i++) {
       const offset = (i * imageDuration - fadeDuration).toFixed(2)
-      const outLabel = i === imageCount - 1 ? '[vout]' : `[xf${i}]`
-      filterLines.push(
-        `${lastLabel}[v${i}]xfade=transition=fade:duration=${fadeDuration}:offset=${offset}${outLabel}`
+      const transition = transitions[i % transitions.length]
+      // Letzter xfade → temporäres Label, dann Color Grading drauf
+      const outLabel = i === imageCount - 1 ? `[xfraw]` : `[xf${i}]`
+      filters.push(
+        `${lastLabel}[v${i}]xfade=transition=${transition}:duration=${fadeDuration}:offset=${offset}${outLabel}`
       )
-      lastLabel = outLabel
+      lastLabel = i === imageCount - 1 ? `[xfraw]` : `[xf${i}]`
     }
+    // Color Grading als letzter Schritt auf das zusammengesetzte Video
+    const cg = getColorGradingFilter(videoStyle)
+    filters.push(`[xfraw]${cg}[vout]`)
   }
 
-  return filterLines.join('; ')
+  return filters.join('; ')
 }
 
 // ── Hauptfunktion: Slideshow Job asynchron ausführen ──────────────────────
-// ── JPEG Dimensionen direkt aus SOF0/SOF2 Bytes lesen ─────────────────────
-// JPEG SOF0 (FF C0) oder SOF2 (FF C2): precision(1) height(2) width(2)
-// Steht immer nach den Quantisierungstabellen, aber vor den Bilddaten.
-// Viel zuverlässiger als EXIF-Parsing — funktioniert bei JFIF und EXIF JPEG.
-function readJpegDimensions(filePath) {
-  try {
-    const fd = fs.openSync(filePath, 'r')
-    const buf = Buffer.alloc(65536)
-    const bytesRead = fs.readSync(fd, buf, 0, 65536, 0)
-    fs.closeSync(fd)
-
-    if (buf[0] !== 0xFF || buf[1] !== 0xD8) return { w: 0, h: 0 }
-
-    let offset = 2
-    while (offset < bytesRead - 9) {
-      if (buf[offset] !== 0xFF) break
-      const marker = buf[offset + 1]
-      const segLen  = buf.readUInt16BE(offset + 2)
-
-      // SOF0=0xC0, SOF1=0xC1, SOF2=0xC2 — alle enthalten Breite/Höhe
-      if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
-        // offset+2 = Länge, offset+4 = precision, offset+5/6 = height, offset+7/8 = width
-        const h = buf.readUInt16BE(offset + 5)
-        const w = buf.readUInt16BE(offset + 7)
-        return { w, h }
-      }
-
-      if (segLen < 2) break
-      offset += 2 + segLen
-    }
-  } catch (e) { /* ignore */ }
-  return { w: 0, h: 0 }
-}
-
-// ffmpeg via spawn ausführen (streaming, kein Speicherlimit)
-function runFfmpeg(ffmpegPath, args) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(ffmpegPath, args)
-    let stderr = ''
-    proc.stderr.on('data', d => { stderr += d.toString() })
-    proc.on('close', code => {
-      if (code === 0) resolve()
-      else reject(new Error(`ffmpeg exit ${code}:\n${stderr.slice(-2000)}`))
-    })
-    proc.on('error', reject)
-  })
-}
-
 async function runSlideshowJob(jobId, params) {
-  const { imageUrls, musicMode, lifestyle, aspectRatio, imageDuration, ppqKey } = params
-  const fps = 25        // 25fps statt 30 → 25*8=200 Frames/Bild statt 240 → weniger Speicher
+  const { imageUrls, musicMode, lifestyle, aspectRatio, imageDuration, ppqKey, videoStyle = 'cinematic' } = params
+  const fps = 30
   const fadeDuration = 1.0
   const totalDuration = imageUrls.length * imageDuration
   const jobDir = path.join(TMP_DIR, jobId)
@@ -852,41 +928,18 @@ async function runSlideshowJob(jobId, params) {
     updateJob({ status: 'downloading', progress: 5 })
     console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
 
-    // ── Schritt 1: Bilder downloaden + Rotation normalisieren ────────────────
-    // GrapheneOS Camera: Bilder physisch quer (4032×3024) gespeichert,
-    // EXIF wird von Blossom beim Upload entfernt → kein Rotations-Tag mehr.
-    // Lösung: JPEG-SOF0 Bytes direkt lesen (schnell, kein ffprobe nötig).
-    // Wenn physische Breite > Höhe → 90° CW drehen via ffmpeg transpose=1.
+    // ── Schritt 1: Bilder downloaden ─────────────────────────────────────
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
-      const rawPath = path.join(jobDir, `img_${i}_raw.jpg`)
-      const fixedPath = path.join(jobDir, `img_${i}.jpg`)
+      const ext = imageUrls[i].includes('.png') ? 'png' : 'jpg'
+      const imgPath = path.join(jobDir, `img_${i}.${ext}`)
       try {
-        await downloadImage(imageUrls[i], rawPath)
-
-        // Breite/Höhe direkt aus JPEG-Bytes lesen (SOF0/SOF2 Marker)
-        const { w: imgW, h: imgH } = readJpegDimensions(rawPath)
-        console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
-
-        // Quer (w>h) = falsch orientiert (GrapheneOS ohne EXIF) → drehen
-        if (imgW > 0 && imgH > 0 && imgW > imgH) {
-          await runFfmpeg(FFMPEG, [
-            '-i', rawPath,
-            '-vf', 'transpose=1',
-            '-q:v', '2',
-            '-y', fixedPath
-          ])
-          console.log(`[Slideshow] Bild ${i+1}: 90°CW gedreht ✓`)
-          try { fs.unlinkSync(rawPath) } catch {}
-        } else {
-          fs.renameSync(rawPath, fixedPath)
-        }
-
-        imagePaths.push(fixedPath)
+        await downloadImage(imageUrls[i], imgPath)
+        imagePaths.push(imgPath)
+        console.log(`[Slideshow] Bild ${i + 1}/${imageUrls.length} heruntergeladen`)
         updateJob({ progress: 5 + Math.round((i + 1) / imageUrls.length * 25) })
       } catch (err) {
-        console.warn(`[Slideshow] Bild ${i} fehlgeschlagen: ${err.message}`)
-        try { fs.unlinkSync(rawPath) } catch {}
+        console.warn(`[Slideshow] Bild ${i} fehlgeschlagen, überspringe: ${err.message}`)
       }
     }
 
@@ -949,43 +1002,55 @@ async function runSlideshowJob(jobId, params) {
     // ── Schritt 3: ffmpeg Slideshow bauen ─────────────────────────────────
     const outputPath = path.join(jobDir, 'slideshow.mp4')
     const n = imagePaths.length
+    const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
+    const [w, h] = size.split('x').map(Number)
 
-    // Bilder als Loop-Inputs
+    console.log(`[Slideshow] Effekt-Stil: ${videoStyle} | Übergänge: ${(XFADE_TRANSITIONS[videoStyle] || XFADE_TRANSITIONS.cinematic).slice(0,3).join(', ')}...`)
+
+    // ffmpeg Input-Args aufbauen — Bilder als Loop-Inputs
     const inputArgs = []
     for (const imgPath of imagePaths) {
       inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
     }
 
-    // Audio-Input
-    const fadeStart = Math.max(0, totalDuration - 2)
+    // Audio-Input: echte Musik-Datei ODER lavfi-Stille als Fallback
     if (musicPath) {
       inputArgs.push('-i', musicPath)
     }
 
-    // Video filter_complex: scale+crop+zoompan pro Bild, dann xfade
-    const videoFilters = buildFilterComplex(n, imageDuration, fps, aspectRatio, fadeDuration)
+    // ── Video filter_complex via buildFilterComplex() ─────────────────────
+    // Ken Burns (sinEasing) + xfade (stilspezifische Transitions) + Color Grading
+    const videoFilterLines = buildFilterComplex(n, imageDuration, fps, aspectRatio, fadeDuration, videoStyle)
+      .split('; ')
 
-    // Audio filter
-    let audioFilter
+    // ── Audio filter_complex ──────────────────────────────────────────────
+    const fadeStart = Math.max(0, totalDuration - 2)
+    const audioFilterLines = []
+
     if (musicPath) {
-      audioFilter = `[${n}:a]atrim=0:${totalDuration},afade=t=out:st=${fadeStart}:d=2[aout]`
+      // Echte Musik-Datei: trim auf Video-Länge + sanfter fade out
+      audioFilterLines.push(
+        `[${n}:a]atrim=0:${totalDuration},` +
+        `afade=t=in:st=0:d=1,` +    // +fade in 1s (weicher Einstieg)
+        `afade=t=out:st=${fadeStart}:d=2[aout]`
+      )
     } else {
+      // Kein Musik-File: lavfi anullsrc als separater -i Input
       inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
-      audioFilter = `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
+      audioFilterLines.push(
+        `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
+      )
     }
 
-    const filterComplex = videoFilters + '; ' + audioFilter
+    const filterComplex = [...videoFilterLines, ...audioFilterLines].join('; ')
 
-    const ffmpegArgs = [
-      '-y',
-      ...inputArgs,
-      '-filter_complex', filterComplex,
+    // ffmpeg Output-Args: immer mit Audio-Track (-map [aout])
+    const outputArgs = [
       '-map', '[vout]',
       '-map', '[aout]',
       '-c:v', 'libx264',
       '-preset', 'fast',
       '-crf', '23',
-      '-r', String(fps),
       '-c:a', 'aac',
       '-b:a', musicPath ? '192k' : '64k',
       '-movflags', '+faststart',
@@ -993,9 +1058,16 @@ async function runSlideshowJob(jobId, params) {
       outputPath
     ]
 
-    console.log(`[Slideshow] ffmpeg starten (${n} Bilder, ${fps}fps, ${imageDuration}s/Bild)`)
+    const ffmpegArgs = [
+      '-y',           // Overwrite
+      ...inputArgs,
+      '-filter_complex', filterComplex,
+      ...outputArgs
+    ]
 
-    await runFfmpeg(FFMPEG, ffmpegArgs)
+    console.log(`[Slideshow] ffmpeg starten: ${FFMPEG} ${ffmpegArgs.slice(0, 8).join(' ')}...`)
+
+    await execFileAsync(FFMPEG, ffmpegArgs, { timeout: 600000 }) // max 10 Min. (20 Bilder × zoompan)
 
     console.log(`[Slideshow] ffmpeg fertig: ${outputPath}`)
 
