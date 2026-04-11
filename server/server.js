@@ -933,21 +933,38 @@ async function runSlideshowJob(jobId, params) {
 
     updateJob({ status: 'rendering', progress: 40 })
 
-    // ── Schritt 2.5: ImageMagick normalize (EXIF/Sensor-Fix für GrapheneOS) ──
-    console.log('[Slideshow] Normalisiere Bilder mit ImageMagick -auto-orient + strip...')
+    // ── Schritt 2.5: ImageMagick normalize (Sensor-Fix für GrapheneOS: 90° CCW für quer) ──
+    console.log('[Slideshow] Normalisiere Bilder mit ImageMagick -rotate für quer-Bilder...')
     const normalizedImages = []
     for (let i = 0; i < imagePaths.length; i++) {
       const inputPath = imagePaths[i]
       const outputPath = path.join(jobDir, `norm_${i}.jpg`)
-      const convertProc = spawn('convert', [
-        '-auto-orient',  // ROTATION FIX: EXIF + Sensor-Flip (90° links für GrapheneOS)
-        '-strip',        // EXIF/Metadata entfernen
-        '-quality', '95',
-        inputPath,
-        outputPath
-      ])
+
+      // Breite/Höhe ermitteln
+      const identifyProc = spawn('identify', ['-format', '%w %h', inputPath])
+      const dimensions = await new Promise((resolve, reject) => {
+        let stdout = ''
+        identifyProc.stdout.on('data', data => stdout += data)
+        identifyProc.on('close', code => {
+          if (code === 0) {
+            const [w, h] = stdout.trim().split(' ').map(Number)
+            resolve({ w, h })
+          } else reject(new Error('Identify failed'))
+        })
+      })
+
+      let convertArgs = ['-strip', '-quality', '95', inputPath, outputPath]
+      if (dimensions.w > dimensions.h) {
+        // Quer-Bild: 90° CCW drehen (fixxt GrapheneOS 90° links)
+        convertArgs = ['-rotate', '270', '-strip', '-quality', '95', inputPath, outputPath]
+        console.log(`[Slideshow] Bild ${i+1}: Quer (${dimensions.w}x${dimensions.h}) → 90° CCW gedreht`)
+      } else {
+        console.log(`[Slideshow] Bild ${i+1}: Hoch (${dimensions.w}x${dimensions.h}) → keine Drehung`)
+      }
+
+      const convertProc = spawn('convert', convertArgs)
       await new Promise((resolve, reject) => {
-        convertProc.on('close', code => code === 0 ? resolve(outputPath) : reject(new Error(`Convert ${i} failed`)))
+        convertProc.on('close', code => code === 0 ? resolve() : reject(new Error(`Convert ${i} failed`)))
       })
       normalizedImages.push(outputPath)
     }
