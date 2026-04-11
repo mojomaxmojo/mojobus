@@ -1948,6 +1948,65 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: err.message || 'Interner Server-Fehler' })
 })
 
+// ===== DEBUG: Bild-Rotation Test =====
+// Aufruf: GET /api/debug-rotation?url=https://...bild.jpg
+// Zeigt: Dimensionen, ob Drehung nötig, führt Drehung durch
+app.get('/api/debug-rotation', async (req, res) => {
+  const { url } = req.query
+  if (!url) return res.status(400).json({ error: 'url Parameter fehlt' })
+
+  const tmpDir = path.join(os.tmpdir(), 'rotation-test')
+  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
+  const rawPath = path.join(tmpDir, 'test_raw.jpg')
+  const fixedPath = path.join(tmpDir, 'test_fixed.jpg')
+
+  try {
+    // Download
+    const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000 })
+    fs.writeFileSync(rawPath, response.data)
+    const fileSize = response.data.byteLength
+
+    // Erste 16 Bytes hex
+    const first16 = Buffer.from(response.data.slice(0, 16)).toString('hex').match(/../g).join(' ')
+
+    // SOF0 Parsing
+    const { w, h } = readJpegDimensions(rawPath)
+
+    // Rotation nötig?
+    const needsRotate = w > 0 && h > 0 && w > h
+
+    // Wenn ja: drehen
+    let rotatedSize = null
+    let rotateError = null
+    if (needsRotate) {
+      try {
+        await runFfmpeg(FFMPEG, ['-i', rawPath, '-vf', 'transpose=1', '-q:v', '2', '-y', fixedPath])
+        rotatedSize = fs.statSync(fixedPath).size
+        const { w: fw, h: fh } = readJpegDimensions(fixedPath)
+        rotatedSize = `${fw}×${fh} (${rotatedSize} bytes)`
+      } catch (e) {
+        rotateError = e.message.slice(0, 300)
+      }
+    }
+
+    res.json({
+      url,
+      fileSize,
+      first16hex: first16,
+      isJpeg: first16.startsWith('ff d8'),
+      dimensions: { w, h },
+      ratio: w && h ? (w/h).toFixed(3) : null,
+      needsRotate,
+      rotatedDimensions: rotatedSize,
+      rotateError,
+      ffmpegPath: FFMPEG,
+      ffprobePath: FFPROBE,
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({
