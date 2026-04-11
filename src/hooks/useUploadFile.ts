@@ -56,12 +56,13 @@ async function correctImageOrientation(file: File): Promise<File> {
         case 6: rotationDegrees = 90; break;
         case 8: rotationDegrees = -90; break;
       }
-    } else if (exifWidth && exifHeight && actualWidth && actualHeight) {
-      // Pixel-Smartphone Problem: EXIF sagt Querformat, Bild ist Hochformat
-      if (exifWidth > exifHeight && actualHeight > actualWidth) {
-        rotationDegrees = 90; // 90° CW
-        console.log(`🔄 [Orientation] ${file.name}: Detected Pixel rotation (EXIF landscape, actual portrait)`);
-      }
+     } else if (exifWidth && exifHeight && actualWidth && actualHeight) {
+       // Pixel-Smartphone Problem: EXIF sagt Querformat, Bild ist Hochformat
+       if (exifWidth > exifHeight && actualHeight > actualWidth) {
+         rotationDegrees = -90; // 90° CCW für GrapheneOS/Pixel (90° links fix)
+         console.log(`🔄 [Orientation] ${file.name}: Detected Pixel rotation (EXIF landscape, actual portrait) → CCW`)
+       }
+     }
     }
     
     if (rotationDegrees === 0) {

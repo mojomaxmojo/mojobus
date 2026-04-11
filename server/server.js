@@ -933,51 +933,14 @@ async function runSlideshowJob(jobId, params) {
 
     updateJob({ status: 'rendering', progress: 40 })
 
-    // ── Schritt 2.5: ImageMagick normalize (Sensor-Fix für GrapheneOS: 90° CCW für quer) ──
-    console.log('[Slideshow] Normalisiere Bilder mit ImageMagick -rotate für quer-Bilder...')
-    const normalizedImages = []
-    for (let i = 0; i < imagePaths.length; i++) {
-      const inputPath = imagePaths[i]
-      const outputPath = path.join(jobDir, `norm_${i}.jpg`)
-
-      // Breite/Höhe ermitteln
-      const identifyProc = spawn('identify', ['-format', '%w %h', inputPath])
-      const dimensions = await new Promise((resolve, reject) => {
-        let stdout = ''
-        identifyProc.stdout.on('data', data => stdout += data)
-        identifyProc.on('close', code => {
-          if (code === 0) {
-            const [w, h] = stdout.trim().split(' ').map(Number)
-            resolve({ w, h })
-          } else reject(new Error('Identify failed'))
-        })
-      })
-
-      let convertArgs = ['-strip', '-quality', '95', inputPath, outputPath]
-      if (dimensions.w > dimensions.h) {
-        // Quer-Bild: 90° CCW drehen (fixxt GrapheneOS 90° links)
-        convertArgs = ['-rotate', '270', '-strip', '-quality', '95', inputPath, outputPath]
-        console.log(`[Slideshow] Bild ${i+1}: Quer (${dimensions.w}x${dimensions.h}) → 90° CCW gedreht`)
-      } else {
-        console.log(`[Slideshow] Bild ${i+1}: Hoch (${dimensions.w}x${dimensions.h}) → keine Drehung`)
-      }
-
-      const convertProc = spawn('convert', convertArgs)
-      await new Promise((resolve, reject) => {
-        convertProc.on('close', code => code === 0 ? resolve() : reject(new Error(`Convert ${i} failed`)))
-      })
-      normalizedImages.push(outputPath)
-    }
-    console.log(`[Slideshow] ${normalizedImages.length} Bilder normalisiert`)
-
     // ── Schritt 3: ffmpeg Slideshow bauen ─────────────────────────────────
     const outputPath = path.join(jobDir, 'slideshow.mp4')
     const n = imagePaths.length
 
     // Bilder als Loop-Inputs
     const inputArgs = []
-    for (const normPath of normalizedImages) {
-      inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', normPath)
+    for (const imgPath of imagePaths) {
+      inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
     }
 
     // Audio-Input
@@ -1032,7 +995,7 @@ async function runSlideshowJob(jobId, params) {
       progress: 100,
       outputPath,   // Disk-Pfad für Download-Endpoint
       videoSizeMB,
-      imageCount: normalizedImages.length,
+      imageCount: imagePaths.length,
       musicUsed: musicPath
         ? `${path.basename(musicPath)}${musicSource === 'local_fallback' ? ' (ElevenLabs fehlgeschlagen → Fallback)' : ''}`
         : (musicSource === 'silent' ? 'keine (Stille)' : null),
