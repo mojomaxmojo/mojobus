@@ -787,6 +787,66 @@ function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDur
 }
 
 // ── Hauptfunktion: Slideshow Job asynchron ausführen ──────────────────────
+// ── JPEG EXIF Orientation direkt aus Datei-Bytes lesen ────────────────────
+// JPEG EXIF-Struktur: SOI (FF D8) → APP1 (FF E1) → "Exif\0\0" → TIFF-Header
+// Orientation-Tag = 0x0112, Werte: 1=normal, 3=180°, 6=90°CW, 8=90°CCW
+// Kein npm nötig — reines Node.js Buffer-Parsing
+function readJpegOrientation(filePath) {
+  try {
+    // Nur die ersten 64KB lesen — EXIF steht immer am Anfang
+    const fd = fs.openSync(filePath, 'r')
+    const buf = Buffer.alloc(65536)
+    const bytesRead = fs.readSync(fd, buf, 0, 65536, 0)
+    fs.closeSync(fd)
+    const data = buf.slice(0, bytesRead)
+
+    // JPEG muss mit FF D8 starten
+    if (data[0] !== 0xFF || data[1] !== 0xD8) return 1
+
+    let offset = 2
+    while (offset < data.length - 4) {
+      // Marker suchen
+      if (data[offset] !== 0xFF) break
+      const marker = data[offset + 1]
+      const segLen = data.readUInt16BE(offset + 2)
+
+      // APP1 (FF E1) = EXIF/XMP
+      if (marker === 0xE1 && segLen > 6) {
+        // "Exif\0\0" Check
+        if (data.slice(offset + 4, offset + 10).toString('ascii') === 'Exif\0\0') {
+          const tiffStart = offset + 10
+          // Byte order: 'II' = little-endian, 'MM' = big-endian
+          const byteOrder = data.slice(tiffStart, tiffStart + 2).toString('ascii')
+          const le = byteOrder === 'II'
+          const readU16 = (o) => le ? data.readUInt16LE(o) : data.readUInt16BE(o)
+          const readU32 = (o) => le ? data.readUInt32LE(o) : data.readUInt32BE(o)
+
+          // IFD0 Offset lesen (relativ zu tiffStart)
+          const ifd0Offset = tiffStart + readU32(tiffStart + 4)
+          const numEntries = readU16(ifd0Offset)
+
+          for (let e = 0; e < numEntries && e < 64; e++) {
+            const entryOffset = ifd0Offset + 2 + e * 12
+            if (entryOffset + 12 > data.length) break
+            const tag = readU16(entryOffset)
+            if (tag === 0x0112) {
+              // Orientation gefunden
+              return readU16(entryOffset + 8)
+            }
+          }
+        }
+      }
+
+      // Nächsten Marker
+      if (segLen < 2) break
+      offset += 2 + segLen
+    }
+  } catch (e) {
+    // Parsing-Fehler → keine Rotation annehmen
+  }
+  return 1 // Default: normal (keine Rotation)
+}
+
 // ffmpeg via spawn ausführen (streaming, kein Speicherlimit)
 function runFfmpeg(ffmpegPath, args) {
   return new Promise((resolve, reject) => {
@@ -819,12 +879,10 @@ async function runSlideshowJob(jobId, params) {
     console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
 
     // ── Schritt 1: Bilder downloaden + EXIF-Rotation normalisieren ──────────
-    // Problem: Graphenos/GrapheneOS Camera speichert Hochformat-Fotos mit
-    // EXIF Orientation=6 (Rotate 90°), Pixel-Array liegt aber horizontal.
-    // ffmpeg ignoriert EXIF bei Standbildern → Bild erscheint gekippt.
-    // Fix: jedes Bild durch ffmpeg mit -vf transpose=... neu rendern,
-    //      dabei EXIF-Orientation auslesen und Pixel korrekt drehen.
-    //      Das neue JPEG hat keine Orientation-Metadaten mehr (baked in).
+    // Graphenos/GrapheneOS Camera: EXIF Orientation im JPEG-Header gesetzt,
+    // Pixel-Array liegt aber quer → ffmpeg dreht NICHT automatisch.
+    // Lösung: EXIF-Orientation direkt aus JPEG-Bytes lesen (kein npm nötig),
+    // dann ffmpeg transpose-Filter anwenden.
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
       const rawPath = path.join(jobDir, `img_${i}_raw.jpg`)
@@ -832,53 +890,36 @@ async function runSlideshowJob(jobId, params) {
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // EXIF Orientation via ffmpeg stderr lesen
-        // ffmpeg -i bild.jpg gibt in stderr aus: "Rotate          : 90" oder "rotate: 90"
-        // Das ist zuverlässiger als ffprobe für JPEG EXIF
-        let orientation = 0
-        try {
-          await execFileAsync(FFMPEG, ['-i', rawPath, '-f', 'null', '-'])
-        } catch (e) {
-          // ffmpeg gibt immer exit 1 wenn kein Output — Rotation steckt in stderr
-          const stderr = e.stderr || e.message || ''
-          // Suche nach "rotate          : 90" (EXIF) oder "displaymatrix: rotation of -90 degrees"
-          const exifMatch = stderr.match(/rotate\s*[=:]\s*(-?\d+)/i)
-          const matrixMatch = stderr.match(/rotation of\s*(-?\d+)\s*degrees/i)
-          const deg = exifMatch ? parseInt(exifMatch[1])
-                    : matrixMatch ? parseInt(matrixMatch[1])
-                    : 0
-          orientation = ((deg % 360) + 360) % 360
-        }
+        // EXIF-Orientation direkt aus JPEG-Bytes lesen
+        const orientation = readJpegOrientation(rawPath)
+        console.log(`[Slideshow] Bild ${i + 1}: EXIF Orientation=${orientation}`)
 
-        // Transpose-Filter nach EXIF-Rotation wählen
-        // orientation = Grad die das Bild gedreht wurde (CW)
-        // transpose: 0=90CCW+vflip, 1=90CW, 2=90CCW, 3=90CW+vflip
-        let transposeFilter = null
-        if (orientation === 90)  transposeFilter = 'transpose=1'       // 90° CW
-        if (orientation === 180) transposeFilter = 'transpose=2,transpose=2' // 180°
-        if (orientation === 270) transposeFilter = 'transpose=2'       // 90° CCW
+        // ffmpeg transpose-Filter nach EXIF-Orientation
+        // EXIF-Werte: 1=normal, 3=180°, 6=90°CW, 8=90°CCW
+        // (2,4,5,7 = gespiegelt, selten bei Kameras)
+        const transposeFilter = {
+          3: 'transpose=2,transpose=2',  // 180°
+          6: 'transpose=1',              // 90° CW  ← GrapheneOS Hochformat
+          8: 'transpose=2',              // 90° CCW
+        }[orientation] || null
 
         if (transposeFilter) {
-          // Bild neu rendern mit korrekter Pixel-Rotation
           await runFfmpeg(FFMPEG, [
             '-i', rawPath,
             '-vf', transposeFilter,
-            '-q:v', '2',        // hohe JPEG-Qualität
+            '-q:v', '2',
             '-y', fixedPath
           ])
-          console.log(`[Slideshow] Bild ${i + 1}: EXIF-Rotation ${orientation}° korrigiert`)
+          console.log(`[Slideshow] Bild ${i + 1}: EXIF ${orientation} → ${transposeFilter} ✓`)
           try { fs.unlinkSync(rawPath) } catch {}
         } else {
-          // Keine Rotation nötig — raw direkt verwenden
           fs.renameSync(rawPath, fixedPath)
         }
 
         imagePaths.push(fixedPath)
-        console.log(`[Slideshow] Bild ${i + 1}/${imageUrls.length} bereit`)
         updateJob({ progress: 5 + Math.round((i + 1) / imageUrls.length * 25) })
       } catch (err) {
-        console.warn(`[Slideshow] Bild ${i} fehlgeschlagen, überspringe: ${err.message}`)
-        // rawPath aufräumen falls vorhanden
+        console.warn(`[Slideshow] Bild ${i} fehlgeschlagen: ${err.message}`)
         try { fs.unlinkSync(rawPath) } catch {}
       }
     }
