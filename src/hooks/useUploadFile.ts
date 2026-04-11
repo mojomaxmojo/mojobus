@@ -51,24 +51,28 @@ async function correctImageOrientation(file: File): Promise<File> {
     // Fall 2: EXIF sagt Querformat, Bild ist Hochformat (Pixel-Problem)
     let rotationDegrees = 0;
     
-     if (orientation !== 1) {
-       // EXIF-Orientation basierte Rotation
-       switch (orientation) {
-         case 3: rotationDegrees = 180; break;
-         case 6: rotationDegrees = 90; break;
-         case 8: rotationDegrees = -90; break;
-       }
-     }
-     
-     // Extra-Check: Wenn Orientation 6 oder 8, aber Bild ist schon quer/hoch korrekt,
-     // dann drehe zusätzlich 90° für GrapheneOS Fix
-     if ((orientation === 6 || orientation === 8) && make === 'Google') {
-       // GrapheneOS/Pixel: Drehe entgegengesetzt um 90° links zu fixen
-       rotationDegrees = rotationDegrees * -1;
-     }
-     
-     if (rotationDegrees === 0) {
-      console.log(`✅ [Orientation] ${file.name}: No correction needed`);
+      if (orientation !== 1) {
+        // EXIF-Orientation basierte Rotation
+        switch (orientation) {
+          case 3: rotationDegrees = 180; break;
+          case 6: rotationDegrees = 90; break;
+          case 8: rotationDegrees = -90; break;
+        }
+        
+        // GrapheneOS/Google Camera Fix für Pixel Geräte
+        // Orientation 6 bedeutet normalerweise "drehe 90° CW", aber Pixel
+        // speichert das Bild schon gedreht. Wenn also nach Standard-Rotation
+        // das Bild immer noch quer ist (width > height), drehen wir zusätzlich.
+        if (orientation === 6 && actualWidth > actualHeight) {
+          // Bild ist quer obwohl Orientation 6 sagt es sollte hoch sein
+          // Das bedeutet: Pixel hat es schon gedreht, wir müssen zurückdrehen
+          rotationDegrees = -90; // Drehe CCW statt CW
+          console.log(`🔄 [Orientation] ${file.name}: Pixel/GrapheneOS detected, using CCW rotation`);
+        }
+      }
+      
+      if (rotationDegrees === 0) {
+        console.log(`✅ [Orientation] ${file.name}: No correction needed`);
       URL.revokeObjectURL(url);
       return file;
     }
