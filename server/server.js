@@ -787,64 +787,38 @@ function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDur
 }
 
 // ── Hauptfunktion: Slideshow Job asynchron ausführen ──────────────────────
-// ── JPEG EXIF Orientation direkt aus Datei-Bytes lesen ────────────────────
-// JPEG EXIF-Struktur: SOI (FF D8) → APP1 (FF E1) → "Exif\0\0" → TIFF-Header
-// Orientation-Tag = 0x0112, Werte: 1=normal, 3=180°, 6=90°CW, 8=90°CCW
-// Kein npm nötig — reines Node.js Buffer-Parsing
-function readJpegOrientation(filePath) {
+// ── JPEG Dimensionen direkt aus SOF0/SOF2 Bytes lesen ─────────────────────
+// JPEG SOF0 (FF C0) oder SOF2 (FF C2): precision(1) height(2) width(2)
+// Steht immer nach den Quantisierungstabellen, aber vor den Bilddaten.
+// Viel zuverlässiger als EXIF-Parsing — funktioniert bei JFIF und EXIF JPEG.
+function readJpegDimensions(filePath) {
   try {
-    // Nur die ersten 64KB lesen — EXIF steht immer am Anfang
     const fd = fs.openSync(filePath, 'r')
     const buf = Buffer.alloc(65536)
     const bytesRead = fs.readSync(fd, buf, 0, 65536, 0)
     fs.closeSync(fd)
-    const data = buf.slice(0, bytesRead)
 
-    // JPEG muss mit FF D8 starten
-    if (data[0] !== 0xFF || data[1] !== 0xD8) return 1
+    if (buf[0] !== 0xFF || buf[1] !== 0xD8) return { w: 0, h: 0 }
 
     let offset = 2
-    while (offset < data.length - 4) {
-      // Marker suchen
-      if (data[offset] !== 0xFF) break
-      const marker = data[offset + 1]
-      const segLen = data.readUInt16BE(offset + 2)
+    while (offset < bytesRead - 9) {
+      if (buf[offset] !== 0xFF) break
+      const marker = buf[offset + 1]
+      const segLen  = buf.readUInt16BE(offset + 2)
 
-      // APP1 (FF E1) = EXIF/XMP
-      if (marker === 0xE1 && segLen > 6) {
-        // "Exif\0\0" Check
-        if (data.slice(offset + 4, offset + 10).toString('ascii') === 'Exif\0\0') {
-          const tiffStart = offset + 10
-          // Byte order: 'II' = little-endian, 'MM' = big-endian
-          const byteOrder = data.slice(tiffStart, tiffStart + 2).toString('ascii')
-          const le = byteOrder === 'II'
-          const readU16 = (o) => le ? data.readUInt16LE(o) : data.readUInt16BE(o)
-          const readU32 = (o) => le ? data.readUInt32LE(o) : data.readUInt32BE(o)
-
-          // IFD0 Offset lesen (relativ zu tiffStart)
-          const ifd0Offset = tiffStart + readU32(tiffStart + 4)
-          const numEntries = readU16(ifd0Offset)
-
-          for (let e = 0; e < numEntries && e < 64; e++) {
-            const entryOffset = ifd0Offset + 2 + e * 12
-            if (entryOffset + 12 > data.length) break
-            const tag = readU16(entryOffset)
-            if (tag === 0x0112) {
-              // Orientation gefunden
-              return readU16(entryOffset + 8)
-            }
-          }
-        }
+      // SOF0=0xC0, SOF1=0xC1, SOF2=0xC2 — alle enthalten Breite/Höhe
+      if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+        // offset+2 = Länge, offset+4 = precision, offset+5/6 = height, offset+7/8 = width
+        const h = buf.readUInt16BE(offset + 5)
+        const w = buf.readUInt16BE(offset + 7)
+        return { w, h }
       }
 
-      // Nächsten Marker
       if (segLen < 2) break
       offset += 2 + segLen
     }
-  } catch (e) {
-    // Parsing-Fehler → keine Rotation annehmen
-  }
-  return 1 // Default: normal (keine Rotation)
+  } catch (e) { /* ignore */ }
+  return { w: 0, h: 0 }
 }
 
 // ffmpeg via spawn ausführen (streaming, kein Speicherlimit)
@@ -879,19 +853,10 @@ async function runSlideshowJob(jobId, params) {
     console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
 
     // ── Schritt 1: Bilder downloaden + Rotation normalisieren ────────────────
-    // Problem: GrapheneOS Camera speichert Bilder physisch quer (4032×3024)
-    // ohne EXIF-Orientation-Tag (wird beim Blossom-Upload entfernt).
-    // ffmpeg dreht also nicht automatisch.
-    //
-    // Lösung: ffprobe liest Breite×Höhe der heruntergeladenen Datei.
-    // Wenn width > height → Bild ist quer gespeichert aber wurde als
-    // Hochformat aufgenommen → 90° CW drehen (transpose=1).
-    // Ziel-Aspect-Ratio bestimmt ob Portrait erwartet wird:
-    //   16:9 / 1:1  → Querformat normal → NUR drehen wenn aspectRatio=9:16
-    //   9:16        → Hochformat erwartet → alle Querformat-Bilder drehen
-    //
-    // Für maximale Kompatibilität: IMMER drehen wenn Bild quer UND
-    // das Seitenverhältnis deutlich querformatig ist (w/h > 1.2)
+    // GrapheneOS Camera: Bilder physisch quer (4032×3024) gespeichert,
+    // EXIF wird von Blossom beim Upload entfernt → kein Rotations-Tag mehr.
+    // Lösung: JPEG-SOF0 Bytes direkt lesen (schnell, kein ffprobe nötig).
+    // Wenn physische Breite > Höhe → 90° CW drehen via ffmpeg transpose=1.
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
       const rawPath = path.join(jobDir, `img_${i}_raw.jpg`)
@@ -899,42 +864,22 @@ async function runSlideshowJob(jobId, params) {
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // Bildgröße via ffprobe lesen
-        let imgW = 0, imgH = 0
-        try {
-          const probeOut = await execFileAsync(FFPROBE, [
-            '-v', 'error',
-            '-select_streams', 'v:0',
-            '-show_entries', 'stream=width,height',
-            '-of', 'csv=p=0',
-            rawPath
-          ])
-          const parts = (probeOut.stdout || '').trim().split(',')
-          imgW = parseInt(parts[0]) || 0
-          imgH = parseInt(parts[1]) || 0
-        } catch (probeErr) {
-          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${probeErr.message}`)
-        }
-
+        // Breite/Höhe direkt aus JPEG-Bytes lesen (SOF0/SOF2 Marker)
+        const { w: imgW, h: imgH } = readJpegDimensions(rawPath)
         console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
 
-        // Drehen wenn Bild physisch quer ist (w > h) — bedeutet
-        // es wurde ohne EXIF-Rotation gespeichert (GrapheneOS/Blossom)
-        const needsRotate = imgW > 0 && imgH > 0 && imgW > imgH
-
-        if (needsRotate) {
-          // transpose=1 = 90° CW: dreht quer→hoch korrekt für GrapheneOS
+        // Quer (w>h) = falsch orientiert (GrapheneOS ohne EXIF) → drehen
+        if (imgW > 0 && imgH > 0 && imgW > imgH) {
           await runFfmpeg(FFMPEG, [
             '-i', rawPath,
             '-vf', 'transpose=1',
             '-q:v', '2',
             '-y', fixedPath
           ])
-          console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH} → 90°CW gedreht ✓`)
+          console.log(`[Slideshow] Bild ${i+1}: 90°CW gedreht ✓`)
           try { fs.unlinkSync(rawPath) } catch {}
         } else {
           fs.renameSync(rawPath, fixedPath)
-          if (imgW && imgH) console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH} → kein Drehen`)
         }
 
         imagePaths.push(fixedPath)
