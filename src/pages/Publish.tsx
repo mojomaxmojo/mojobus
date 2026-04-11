@@ -4024,14 +4024,15 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
   const [articleLength, setArticleLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [titleSuggestions, setTitleSuggestions] = useState<string[]>([]); // 3 KI-Titel-Vorschläge
   const [tripType, setTripType] = useState<TripType | ''>('');
-  // Kling Video-Generator State
+  // Grok Imagine Video (xAI) State
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [videoJobId, setVideoJobId] = useState<string | null>(null);
   const [videoProgress, setVideoProgress] = useState<'idle' | 'submitting' | 'processing' | 'completed' | 'failed'>('idle');
-  const [videoDuration, setVideoDuration] = useState<'5' | '10'>('10');
+  const [videoDuration, setVideoDuration] = useState<'5' | '10' | '15'>('10');
   const [videoAspect, setVideoAspect] = useState<'16:9' | '9:16'>('16:9');
+  const [videoMode, setVideoMode] = useState<'auto' | 'image-to-video' | 'reference-to-video' | 'text-to-video'>('auto');
 
   // Slideshow-Generator State
   const [slideshowEnabled, setSlideshowEnabled] = useState(false);
@@ -4064,10 +4065,19 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     return [...new Set(urls)]; // Duplikate entfernen
   };
 
-  // ── Runway Gen-4 Turbo Video-Generator (via eigener Server) ────────────
+  // ── Grok Imagine Video (xAI) Generator (via eigener Server) ────────────
   const generateVideoWithRunway = async () => {
-    if (!image) {
+    // Beim Text-to-Video Modus kein Bild nötig
+    const effectiveMode = videoMode === 'auto'
+      ? (image ? 'image-to-video' : 'text-to-video')
+      : videoMode;
+
+    if (effectiveMode === 'image-to-video' && !image) {
       toast({ title: 'Kein Titelbild', description: 'Lade zuerst ein Titelbild hoch – es wird als Start-Frame verwendet.', variant: 'destructive' });
+      return;
+    }
+    if (effectiveMode === 'reference-to-video' && !image && extractImageUrlsFromMarkdown(content).length === 0) {
+      toast({ title: 'Keine Bilder', description: 'Für Reference-to-Video werden Bilder aus dem Artikel benötigt.', variant: 'destructive' });
       return;
     }
 
@@ -4076,13 +4086,18 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     setGeneratedVideoUrl(null);
     setVideoJobId(null);
 
+    // Referenzbilder aus Artikel extrahieren (für reference-to-video)
+    const articleImages = extractImageUrlsFromMarkdown(content);
+    const allImages = [...(image ? [image] : []), ...articleImages].slice(0, 6); // max 6 Referenzbilder
+
     try {
-      // Schritt 1: Job über eigenen Server einreichen (PPQ_API_KEY liegt auf VPS)
+      // Schritt 1: Job über eigenen Server einreichen (XAI_API_KEY liegt auf VPS)
       const submitRes = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageUrl: image,
+          imageUrl: image || null,
+          referenceImageUrls: effectiveMode === 'reference-to-video' ? allImages : undefined,
           title,
           summary,
           location,
@@ -4090,7 +4105,8 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
           lifestyle,
           tags,
           duration: videoDuration,
-          aspectRatio: videoAspect
+          aspectRatio: videoAspect,
+          mode: effectiveMode
         })
       });
 
@@ -4099,21 +4115,22 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         throw new Error(submitData?.error || `HTTP ${submitRes.status}`);
       }
 
-      const jobId = submitData.jobId;
+      const jobId = submitData.jobId; // = request_id von xAI
       setVideoJobId(jobId);
       setVideoProgress('processing');
 
       toast({
-        title: '🎬 Video wird generiert...',
-        description: `Job gestartet (${videoDuration}s, ${videoAspect}). Bitte warten ~60–120 Sek...`
+        title: '🎬 Grok Video wird generiert...',
+        description: `${effectiveMode} · ${videoDuration}s · 720p · ${videoAspect}. Bitte ~2–5 Min. warten...`
       });
 
-      // Schritt 2: Polling über eigenen Server alle 6 Sekunden, max. 3 Minuten
+      // Schritt 2: Polling über eigenen Server alle 8 Sekunden, max. 6 Minuten
+      // xAI Generierung dauert typisch 2–5 Minuten
       let attempts = 0;
-      const maxAttempts = 30;
+      const maxAttempts = 45; // 45 × 8s = 6 Min.
       const poll = async (): Promise<void> => {
         if (attempts >= maxAttempts) {
-          throw new Error('Timeout: Video-Generierung dauert zu lange (max. 3 Min.)');
+          throw new Error('Timeout: Video-Generierung dauert zu lange (max. 6 Min.). Bitte erneut versuchen.');
         }
         attempts++;
 
@@ -4121,34 +4138,30 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         const pollData = await pollRes.json();
 
         if (pollData.status === 'completed' && pollData.videoUrl) {
-          const ppqUrl = pollData.videoUrl;
-          const cost = pollData.cost;
+          const xaiUrl = pollData.videoUrl;
 
           toast({
             title: '🎬 Video fertig! Lade zu Blossom hoch...',
-            description: `Kosten: ~$${cost?.toFixed(4) || '–'}. Wird permanent gespeichert...`
+            description: `${videoDuration}s · 720p. Wird permanent gespeichert...`
           });
 
           // ── Automatisch zu Blossom hochladen ──────────────────────────
-          // ppq.ai URLs laufen nach 24h ab → permanent auf Blossom speichern
+          // xAI URLs sind temporär → permanent auf Blossom speichern
           try {
-            // 1. Video von ppq.ai als Blob downloaden (via CORS-Proxy falls nötig)
-            setVideoProgress('processing'); // Zeige noch "läuft" während Upload
-            const videoRes = await fetch(ppqUrl);
+            setVideoProgress('processing');
+            const videoRes = await fetch(xaiUrl);
             if (!videoRes.ok) throw new Error(`Video-Download fehlgeschlagen: ${videoRes.status}`);
             const videoBlob = await videoRes.blob();
 
-            // 2. Blob → File (mp4)
             const safeTitle = (title || 'video').replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40);
             const videoFile = new File(
               [videoBlob],
-              `${safeTitle}-runway-gen4.mp4`,
+              `${safeTitle}-grok-imagine.mp4`,
               { type: 'video/mp4' }
             );
 
             console.log(`[Video] Lade ${(videoFile.size / 1024 / 1024).toFixed(2)}MB zu Blossom hoch...`);
 
-            // 3. Zu Blossom hochladen (gleicher Hook wie Bilder)
             const blossomTags = await uploadFile(videoFile);
             const blossomUrl = blossomTags.find(
               (tag: string[]) => Array.isArray(tag) && tag[0] === 'url'
@@ -4161,17 +4174,17 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
             setVideoProgress('completed');
             toast({
               title: '✅ Video auf Blossom gespeichert!',
-              description: `Permanent verfügbar · Kosten: ~$${cost?.toFixed(4) || '–'}`
+              description: `Permanent verfügbar · ${videoDuration}s · 720p`
             });
 
           } catch (uploadErr: any) {
-            // Blossom-Upload fehlgeschlagen → trotzdem ppq.ai URL verwenden (temporär)
-            console.warn('[Video] Blossom-Upload fehlgeschlagen, verwende ppq.ai URL:', uploadErr.message);
-            setGeneratedVideoUrl(ppqUrl);
+            // Blossom-Upload fehlgeschlagen → xAI URL verwenden (temporär)
+            console.warn('[Video] Blossom-Upload fehlgeschlagen, verwende xAI URL:', uploadErr.message);
+            setGeneratedVideoUrl(xaiUrl);
             setVideoProgress('completed');
             toast({
               title: '⚠️ Video fertig (temporäre URL)',
-              description: `Blossom-Upload fehlgeschlagen: ${uploadErr.message}. URL läuft in 24h ab!`,
+              description: `Blossom-Upload fehlgeschlagen: ${uploadErr.message}. URL läuft ab!`,
               variant: 'destructive'
             });
           }
@@ -4179,7 +4192,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         } else if (pollData.status === 'failed') {
           throw new Error(pollData.error || 'Video-Generierung fehlgeschlagen.');
         } else {
-          await new Promise(r => setTimeout(r, 6000));
+          await new Promise(r => setTimeout(r, 8000)); // 8s zwischen Polls
           return poll();
         }
       };
@@ -5280,7 +5293,7 @@ Schreibe deinen Artikel hier...
           )}
         </div>
 
-        {/* ── 🎬 Runway Gen-4 Turbo Video-Generator ────────────────────────── */}
+        {/* ── 🎬 Grok Imagine Video (xAI) ────────────────────────────────────── */}
         <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
           {/* Header mit An/Abwahl Toggle */}
           <div className="flex items-center justify-between">
@@ -5288,7 +5301,7 @@ Schreibe deinen Artikel hier...
               <Video className="h-5 w-5 text-purple-500" />
               <h3 className="font-semibold">🎬 Video generieren</h3>
               <span className="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full font-medium">
-                Kling 2.5 Turbo I2V
+                Grok Imagine · 720p
               </span>
             </div>
             {/* An/Abwahl Button */}
@@ -5317,21 +5330,47 @@ Schreibe deinen Artikel hier...
 
           {/* Kurzbeschreibung immer sichtbar */}
           <p className="text-xs text-muted-foreground">
-            Erstellt aus deinem <strong>Titelbild</strong> + <strong>Artikeldaten</strong> ein Video via ppq.ai · 5s = $0.23 · 10s = $0.46
+            Erstellt ein <strong>720p Video</strong> via xAI · Text, Bild oder mehrere Referenzbilder · 5s ≈ $0.25 · 10s ≈ $0.50 · 15s ≈ $0.75
           </p>
 
           {/* Erweiterter Bereich nur wenn aktiviert */}
           {videoEnabled && (
             <div className="space-y-4 pt-2 border-t border-muted">
 
-                  {/* Einstellungen: Dauer / Qualität / Format */}
+              {/* Modus-Auswahl */}
+              <div className="space-y-1">
+                <Label className="text-xs">Modus</Label>
+                <div className="grid grid-cols-2 gap-1">
+                  {([
+                    { value: 'auto', label: '🤖 Auto', desc: 'Erkennt automatisch' },
+                    { value: 'image-to-video', label: '🖼️ Bild → Video', desc: 'Titelbild als Start-Frame' },
+                    { value: 'reference-to-video', label: '📸 Referenz', desc: 'Alle Bilder als Referenz' },
+                    { value: 'text-to-video', label: '✍️ Text → Video', desc: 'Nur Prompt, kein Bild' },
+                  ] as const).map(m => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setVideoMode(m.value)}
+                      className={`py-1.5 px-2 text-xs rounded border transition-colors text-left ${
+                        videoMode === m.value
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400'
+                      }`}
+                    >
+                      <div className="font-medium">{m.label}</div>
+                      <div className={`text-xs ${videoMode === m.value ? 'text-purple-200' : 'text-gray-400'}`}>{m.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Einstellungen: Dauer + Format (2 Spalten) */}
               <div className="grid grid-cols-2 gap-3">
                 {/* Dauer */}
                 <div className="space-y-1">
                   <Label className="text-xs">Dauer</Label>
                   <div className="flex gap-1">
-                    {(['5', '10'] as const).map(d => (
+                    {(['5', '10', '15'] as const).map(d => (
                       <button
                         key={d}
                         type="button"
@@ -5370,23 +5409,28 @@ Schreibe deinen Artikel hier...
                 </div>
               </div>
 
-              {/* Kosten-Info — Kling 2.5 Turbo I2V */}
+              {/* Kosten-Info — Grok Imagine Video */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/50 rounded p-2">
                 <span>💰</span>
                 <span>
-                  Kosten:{' '}
+                  Kosten ca.{' '}
                   <strong className="text-purple-600">
-                    ${videoDuration === '5' ? '0.23' : '0.46'}
+                    ~${videoDuration === '5' ? '0.25' : videoDuration === '10' ? '0.50' : '0.75'}
                   </strong>
-                  {' '}· Kling 2.5 Turbo I2V · {videoDuration}s · {videoAspect}
+                  {' '}· grok-imagine-video · {videoDuration}s · 720p · {videoAspect}
                 </span>
               </div>
 
               {/* Was in den Prompt fließt */}
               {(image || title || location) && (
                 <div className="text-xs text-muted-foreground bg-purple-50 dark:bg-purple-900/20 rounded p-2 space-y-0.5">
-                  <p className="font-medium text-purple-700 dark:text-purple-300 mb-1">📋 Wird für Video-Prompt verwendet:</p>
-                  {image && <p>🖼️ Titelbild → Start-Frame</p>}
+                  <p className="font-medium text-purple-700 dark:text-purple-300 mb-1">📋 Wird für Video verwendet:</p>
+                  {image && videoMode !== 'text-to-video' && (
+                    <p>🖼️ Titelbild {videoMode === 'reference-to-video' ? '→ Referenz' : '→ Start-Frame'}</p>
+                  )}
+                  {videoMode === 'reference-to-video' && (
+                    <p>📸 + {extractImageUrlsFromMarkdown(content).length} Artikel-Bilder als Referenz</p>
+                  )}
                   {title && <p>📝 Titel: „{title.slice(0, 50)}{title.length > 50 ? '…' : ''}"</p>}
                   {location && <p>📍 Location: {location}</p>}
                   {selectedCountry && <p>🌍 Land: {selectedCountry}</p>}
@@ -5398,14 +5442,14 @@ Schreibe deinen Artikel hier...
               {/* Server-Info */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 rounded p-2">
                 <span>🔒</span>
-                <span>PPQ_API_KEY läuft sicher auf dem VPS-Server — kein Key im Browser nötig.</span>
+                <span>XAI_API_KEY läuft sicher auf dem VPS-Server — kein Key im Browser nötig.</span>
               </div>
 
               {/* Generieren Button */}
               <Button
                 type="button"
                 onClick={generateVideoWithRunway}
-                disabled={isGeneratingVideo || !image}
+                disabled={isGeneratingVideo}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {isGeneratingVideo ? (
@@ -5414,21 +5458,21 @@ Schreibe deinen Artikel hier...
                     {videoProgress === 'submitting'
                       ? 'Job wird eingereicht...'
                       : videoProgress === 'processing' && videoJobId
-                        ? 'Video wird generiert (~30–90 Sek.)...'
+                        ? 'Video wird generiert (~2–5 Min.)...'
                         : 'Zu Blossom hochladen...'
                     }
                   </>
                 ) : (
                   <>
                     <Video className="h-4 w-4 mr-2" />
-                    🎬 Video generieren mit Kling 2.5 Turbo
+                    🎬 Video generieren mit Grok Imagine
                   </>
                 )}
               </Button>
 
-              {!image && (
+              {!image && videoMode !== 'text-to-video' && videoMode !== 'reference-to-video' && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  ⚠️ Lade zuerst ein Titelbild hoch — es wird als Start-Frame verwendet.
+                  ⚠️ Tipp: Lade ein Titelbild hoch für Image-to-Video oder wähle „Text → Video" Modus.
                 </p>
               )}
 
@@ -5438,8 +5482,8 @@ Schreibe deinen Artikel hier...
                   <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
                     <CheckCircle className="h-4 w-4" />
                     <span className="font-medium text-sm">
-                      {generatedVideoUrl.includes('ppq.ai')
-                        ? '⚠️ Video generiert (temporäre URL — 24h)'
+                      {generatedVideoUrl.includes('x.ai') || generatedVideoUrl.includes('vidgen')
+                        ? '⚠️ Video generiert (temporäre URL)'
                         : '✅ Video auf Blossom gespeichert (permanent)'}
                     </span>
                   </div>

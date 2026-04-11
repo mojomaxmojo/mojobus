@@ -352,20 +352,22 @@ app.post('/api/generate-media-article', (req, res, next) => {
 
 // ===== /api/generate-trip → weiter unten definiert (vollständige Version) =====
 
-// ===== API FÜR RUNWAY GEN-4 TURBO VIDEO-GENERIERUNG =====
+// ===== API FÜR GROK IMAGINE VIDEO (xAI) =====
 // Tab: "Berichte" in /veroeffentlichen
-// PPQ_API_KEY muss als Umgebungsvariable gesetzt sein
-// Prompt wird automatisch aus Artikeldaten aufgebaut
+// XAI_API_KEY muss als Umgebungsvariable gesetzt sein
+// Unterstützt: Text-to-Video, Image-to-Video (1 Bild), Reference-to-Video (mehrere Bilder)
+// Modell: grok-imagine-video | Auflösung: 720p | Dauer: 5–15s
 
 app.post('/api/generate-video', async (req, res) => {
-  const ppqKey = process.env.PPQ_API_KEY
-  if (!ppqKey) {
-    console.error('[Video] PPQ_API_KEY fehlt in Umgebungsvariablen')
-    return res.status(500).json({ error: 'PPQ_API_KEY nicht konfiguriert auf dem Server.' })
+  const xaiKey = process.env.XAI_API_KEY
+  if (!xaiKey) {
+    console.error('[Video] XAI_API_KEY fehlt in Umgebungsvariablen')
+    return res.status(500).json({ error: 'XAI_API_KEY nicht konfiguriert auf dem Server.' })
   }
 
   const {
-    imageUrl,       // Titelbild-URL → Start-Frame
+    imageUrl,           // Titelbild-URL → Start-Frame (Image-to-Video)
+    referenceImageUrls, // Array von Bild-URLs → Reference-to-Video (mehrere Bilder)
     title,
     summary,
     location,
@@ -373,21 +375,39 @@ app.post('/api/generate-video', async (req, res) => {
     lifestyle,
     tags,
     duration = '10',
-    aspectRatio = '16:9'
+    aspectRatio = '16:9',
+    mode = 'auto'       // 'auto' | 'image-to-video' | 'reference-to-video' | 'text-to-video'
   } = req.body
 
-  if (!imageUrl) {
-    return res.status(400).json({ error: 'imageUrl (Titelbild) ist erforderlich.' })
+  // Dauer validieren: 5–15s
+  const resolvedDuration = Math.min(15, Math.max(5, parseInt(String(duration)) || 10))
+
+  // ── Video-Modus bestimmen ──────────────────────────────────────────────
+  // reference-to-video: mehrere Referenzbilder → Grok "kennt" die Charaktere
+  // image-to-video:     1 Bild als Start-Frame
+  // text-to-video:      nur Prompt, kein Bild
+  const hasReferenceImages = Array.isArray(referenceImageUrls) && referenceImageUrls.length > 0
+  const hasImageUrl = !!imageUrl
+
+  let resolvedMode
+  if (mode === 'reference-to-video' && hasReferenceImages) {
+    resolvedMode = 'reference-to-video'
+  } else if (mode === 'image-to-video' && hasImageUrl) {
+    resolvedMode = 'image-to-video'
+  } else if (mode === 'text-to-video') {
+    resolvedMode = 'text-to-video'
+  } else {
+    // Auto-Erkennung
+    if (hasReferenceImages) {
+      resolvedMode = 'reference-to-video'
+    } else if (hasImageUrl) {
+      resolvedMode = 'image-to-video'
+    } else {
+      resolvedMode = 'text-to-video'
+    }
   }
 
-  // ── Kling 2.5 Turbo I2V bei ppq.ai ──────────────────────────────────────
-  // Modell: kling-2.5-turbo-i2v
-  // Dauer:  5s ($0.23) oder 10s ($0.46)
-  // Kein quality-Parameter — wird ignoriert
-  // aspect_ratio: 16:9 oder 9:16
-  const resolvedDuration = ['5', '10'].includes(String(duration)) ? String(duration) : '10'
-
-  // Video-Prompt automatisch aus Artikeldaten aufbauen
+  // ── Video-Prompt automatisch aus Artikeldaten aufbauen ─────────────────
   const lifestyleMap = {
     mojobus: 'vintage US bus life, oldtimer bus on the road, slow travel couple',
     vanlife: 'vanlife, van life on wheels, road trip',
@@ -400,8 +420,15 @@ app.post('/api/generate-video', async (req, res) => {
   const locationText = location ? `, ${location}` : ''
   const countryText = country ? `, ${country}` : ''
   const titleText = title ? `. ${title}` : ''
-  const summaryText = summary ? ` ${summary.slice(0, 120)}` : ''
+  const summaryText = summary ? ` ${summary.slice(0, 150)}` : ''
   const tagsText = Array.isArray(tags) && tags.length > 0 ? `. ${tags.slice(0, 5).join(', ')}` : ''
+
+  // Bei reference-to-video: Bilder als <IMAGE_1>, <IMAGE_2> etc. referenzieren
+  let referenceNote = ''
+  if (resolvedMode === 'reference-to-video' && hasReferenceImages) {
+    const imageRefs = referenceImageUrls.map((_, i) => `<IMAGE_${i + 1}>`).join(', ')
+    referenceNote = ` Featuring the people and scenes from ${imageRefs}.`
+  }
 
   const videoPrompt = [
     'Cinematic travel video,',
@@ -410,112 +437,122 @@ app.post('/api/generate-video', async (req, res) => {
     countryText,
     titleText,
     summaryText,
-    '. Smooth camera movement, golden light, authentic atmosphere',
+    referenceNote,
+    '. Smooth camera movement, golden hour light, authentic atmosphere',
     tagsText,
-    '. High quality, cinematic, 4K look'
+    '. High quality, cinematic 720p'
   ].join('').replace(/\s+/g, ' ').trim()
 
-  console.log(`[Video] Starte Kling 2.5 Turbo I2V: "${title || 'Kein Titel'}", ${resolvedDuration}s, ${aspectRatio}`)
-  console.log(`[Video] Prompt: ${videoPrompt.slice(0, 120)}...`)
+  console.log(`[Video] Starte grok-imagine-video: "${title || 'Kein Titel'}", ${resolvedDuration}s, ${aspectRatio}, Modus: ${resolvedMode}`)
+  console.log(`[Video] Prompt: ${videoPrompt.slice(0, 150)}...`)
 
-  // Exakte Parameter die an ppq.ai gehen
-  const ppqPayload = {
-    model: 'kling-2.5-turbo-i2v',
+  // ── xAI API Payload aufbauen ───────────────────────────────────────────
+  const xaiPayload = {
+    model: 'grok-imagine-video',
     prompt: videoPrompt,
-    image_url: imageUrl,
+    duration: resolvedDuration,
     aspect_ratio: aspectRatio,
-    duration: resolvedDuration
+    resolution: '720p'
   }
-  console.log('[Video] ppq.ai Payload:', JSON.stringify(ppqPayload))
+
+  // Modus-spezifische Parameter hinzufügen
+  if (resolvedMode === 'image-to-video' && hasImageUrl) {
+    xaiPayload.image = { url: imageUrl }
+  } else if (resolvedMode === 'reference-to-video' && hasReferenceImages) {
+    xaiPayload.reference_images = referenceImageUrls.map(url => ({ url }))
+  }
+
+  console.log('[Video] xAI Payload:', JSON.stringify({ ...xaiPayload, prompt: xaiPayload.prompt.slice(0, 80) + '...' }))
 
   try {
-    // Schritt 1: Job bei ppq.ai einreichen
-    const submitRes = await axios.post('https://api.ppq.ai/v1/videos', ppqPayload, {
+    // Schritt 1: Job bei xAI einreichen → bekommt request_id zurück
+    const submitRes = await axios.post('https://api.x.ai/v1/videos/generations', xaiPayload, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ppqKey}`
+        'Authorization': `Bearer ${xaiKey}`
       },
       timeout: 30000
     })
 
     const job = submitRes.data
-    console.log('[Video] ppq.ai Job-Antwort vollständig:', JSON.stringify(job))
+    console.log('[Video] xAI Job-Antwort:', JSON.stringify(job))
 
-    // Job-ID zurückgeben – Frontend pollt dann /api/video-status/:id
+    // request_id zurückgeben – Frontend pollt dann /api/video-status/:id
     res.json({
-      jobId: job.id,
-      status: job.status,
-      estimatedCost: job.estimated_cost,
+      jobId: job.request_id,
+      requestId: job.request_id,
+      status: 'pending',
       prompt: videoPrompt,
-      sentParams: { duration: resolvedDuration, aspectRatio }
+      mode: resolvedMode,
+      sentParams: { duration: resolvedDuration, aspectRatio, resolution: '720p' }
     })
 
   } catch (error) {
-    // Vollständige ppq.ai Antwort loggen für Debugging
     const rawData = error.response?.data
     const httpStatus = error.response?.status
 
     console.error('[Video] HTTP Status:', httpStatus)
-    console.error('[Video] ppq.ai Antwort (raw):', JSON.stringify(rawData, null, 2))
+    console.error('[Video] xAI Antwort (raw):', JSON.stringify(rawData, null, 2))
     console.error('[Video] Axios Fehler:', error.message)
 
-    // Fehlertext sicher extrahieren (kein [object Object])
     let errMsg = error.message
     if (rawData) {
       if (typeof rawData === 'string') {
         errMsg = rawData
       } else if (typeof rawData.error === 'string') {
         errMsg = rawData.error
+      } else if (rawData.error?.message) {
+        errMsg = rawData.error.message
       } else if (typeof rawData.message === 'string') {
         errMsg = rawData.message
-      } else if (typeof rawData.detail === 'string') {
-        errMsg = rawData.detail
       } else {
         errMsg = JSON.stringify(rawData)
       }
     }
 
     if (httpStatus === 401) {
-      res.status(401).json({ error: 'PPQ_API_KEY ungültig oder abgelaufen.', detail: errMsg })
+      res.status(401).json({ error: 'XAI_API_KEY ungültig oder abgelaufen.', detail: errMsg })
     } else if (httpStatus === 402) {
-      res.status(402).json({ error: 'Nicht genug Guthaben auf ppq.ai Account.', detail: errMsg })
+      res.status(402).json({ error: 'Nicht genug Guthaben im xAI Account.', detail: errMsg })
     } else if (httpStatus === 429) {
-      res.status(429).json({ error: 'API-Limit erreicht. Bitte kurz warten.', detail: errMsg })
-    } else if (httpStatus === 422) {
-      res.status(422).json({ error: `Ungültige Parameter für ppq.ai: ${errMsg}`, detail: errMsg })
+      res.status(429).json({ error: 'xAI API-Limit erreicht. Bitte kurz warten.', detail: errMsg })
+    } else if (httpStatus === 422 || httpStatus === 400) {
+      res.status(422).json({ error: `Ungültige Parameter für xAI: ${errMsg}`, detail: errMsg })
     } else {
       res.status(500).json({ error: `Video-Job fehlgeschlagen (HTTP ${httpStatus || 'no-response'}): ${errMsg}` })
     }
   }
 })
 
-// ===== VIDEO STATUS POLLING =====
-// Frontend pollt alle 6 Sekunden bis status === 'completed' oder 'failed'
+// ===== VIDEO STATUS POLLING (xAI) =====
+// Frontend pollt alle 8 Sekunden bis status === 'done', 'expired' oder 'failed'
+// xAI Status-Werte: 'pending' | 'done' | 'expired' | 'failed'
 app.get('/api/video-status/:jobId', async (req, res) => {
-  const ppqKey = process.env.PPQ_API_KEY
-  if (!ppqKey) {
-    return res.status(500).json({ error: 'PPQ_API_KEY nicht konfiguriert.' })
+  const xaiKey = process.env.XAI_API_KEY
+  if (!xaiKey) {
+    return res.status(500).json({ error: 'XAI_API_KEY nicht konfiguriert.' })
   }
 
   const { jobId } = req.params
-  if (!jobId || !jobId.startsWith('gen_')) {
+  if (!jobId) {
     return res.status(400).json({ error: 'Ungültige Job-ID.' })
   }
 
   try {
-    const pollRes = await axios.get(`https://api.ppq.ai/v1/videos/${jobId}`, {
-      headers: { 'Authorization': `Bearer ${ppqKey}` },
+    const pollRes = await axios.get(`https://api.x.ai/v1/videos/${jobId}`, {
+      headers: { 'Authorization': `Bearer ${xaiKey}` },
       timeout: 15000
     })
 
     const data = pollRes.data
-    console.log(`[Video] Status für ${jobId}: ${data.status}`)
+    console.log(`[Video] xAI Status für ${jobId}: ${data.status}`)
 
-    if (data.status === 'completed' && data.data?.url) {
+    if (data.status === 'done' && data.video?.url) {
       res.json({
         status: 'completed',
-        videoUrl: data.data.url,
-        cost: data.cost,
+        videoUrl: data.video.url,
+        duration: data.video.duration,
+        model: data.model,
         jobId
       })
     } else if (data.status === 'failed') {
@@ -524,8 +561,14 @@ app.get('/api/video-status/:jobId', async (req, res) => {
         error: data.error || 'Video-Generierung fehlgeschlagen.',
         jobId
       })
+    } else if (data.status === 'expired') {
+      res.json({
+        status: 'failed',
+        error: 'xAI Video-Request abgelaufen (expired). Bitte neu starten.',
+        jobId
+      })
     } else {
-      // Noch in Bearbeitung
+      // Status: 'pending' — noch in Bearbeitung
       res.json({
         status: data.status || 'processing',
         jobId
@@ -538,9 +581,8 @@ app.get('/api/video-status/:jobId', async (req, res) => {
     let errMsg = error.message
     if (rawData) {
       errMsg = typeof rawData === 'string' ? rawData
-        : typeof rawData.error === 'string' ? rawData.error
-        : typeof rawData.message === 'string' ? rawData.message
-        : JSON.stringify(rawData)
+        : rawData.error?.message || rawData.error || rawData.message
+        || JSON.stringify(rawData)
     }
     console.error(`[Video] Polling-Fehler für ${jobId} (HTTP ${httpStatus}):`, errMsg)
     res.status(500).json({ error: `Status-Abfrage fehlgeschlagen: ${errMsg}` })
@@ -552,24 +594,31 @@ app.get('/api/video-status/:jobId', async (req, res) => {
 // Musik: lokal (server/music/) oder ElevenLabs via ppq.ai
 // ffmpeg: /opt/bin/ffmpeg
 
-// ── Ken Burns / Deep Pan Effekte ──────────────────────────────────────────
-// Jedes Bild bekommt einen anderen Effekt — abwechselnd, nie langweilig
+// ── Ken Burns / Deep Pan Effekte via zoompan ──────────────────────────────
+// zoompan läuft stabil bei 25fps (statt 30) — weniger Frames pro Bild
+// = weniger Speicher, kein Einfrieren ab Bild 3-4
+// 8s × 25fps = 200 Frames/Bild (statt 240 bei 30fps)
+//
+// Bilder werden VOR zoompan auf Zielgröße skaliert+gecroppt (scale+crop).
+// zoompan bekommt also bereits ein 1920x1080 Bild und muss nicht mehr skalieren.
+// Das reduziert den Speicherbedarf nochmals deutlich.
+
 const ZOOM_PAN_EFFECTS = [
-  // Zoom In Mitte (klassisch)
+  // 1. Zoom In Mitte — klassischer Ken Burns
   (d, fps) => `zoompan=z='min(zoom+0.0015,1.5)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Zoom Out Mitte
+  // 2. Zoom Out Mitte
   (d, fps) => `zoompan=z='if(eq(on,1),1.5,max(zoom-0.0015,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Pan Links → Rechts
+  // 3. Pan Links → Rechts
   (d, fps) => `zoompan=z='1.3':x='iw/2-(iw/zoom/2)+on/${d * fps}*(iw-(iw/1.3))':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Pan Rechts → Links
+  // 4. Pan Rechts → Links
   (d, fps) => `zoompan=z='1.3':x='iw-(iw/zoom)-on/${d * fps}*(iw-(iw/1.3))':y='ih/2-(ih/zoom/2)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Deep Pan Oben → Unten (cineastisch)
+  // 5. Deep Pan Oben → Unten
   (d, fps) => `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='0+on/${d * fps}*(ih-(ih/1.4))':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Deep Pan Unten → Oben
+  // 6. Deep Pan Unten → Oben
   (d, fps) => `zoompan=z='1.4':x='iw/2-(iw/zoom/2)':y='ih-(ih/zoom)-on/${d * fps}*(ih-(ih/1.4))':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Zoom In + Pan Diagonal (dramatisch)
+  // 7. Zoom In + Pan Diagonal
   (d, fps) => `zoompan=z='min(zoom+0.001,1.4)':x='on/${d * fps}*(iw/4)':y='on/${d * fps}*(ih/4)':d=${d * fps}:s=1920x1080:fps=${fps}`,
-  // Zoom Out + Pan Diagonal
+  // 8. Zoom Out + Pan Diagonal
   (d, fps) => `zoompan=z='if(eq(on,1),1.4,max(zoom-0.001,1.0))':x='iw/2-(iw/zoom/2)':y='ih-(ih/zoom)-on/${d * fps}*(ih/4)':d=${d * fps}:s=1920x1080:fps=${fps}`,
 ]
 
@@ -698,51 +747,97 @@ async function generateElevenLabsMusic(lifestyle, durationSeconds, ppqKey) {
   return musicUrl
 }
 
-// ── ffmpeg filter_complex für Slideshow aufbauen ──────────────────────────
+// ── ffmpeg filter_complex aufbauen ────────────────────────────────────────
+// Jedes Bild: scale+crop auf Zielgröße, dann zoompan für Ken Burns / Deep Pan
+// zoompan bekommt bereits fertig skaliertes Bild → weniger Speicher nötig
 function buildFilterComplex(imageCount, imageDuration, fps, aspectRatio, fadeDuration = 1.0) {
   const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
   const [w, h] = size.split('x').map(Number)
   const filterSize = `${w}x${h}`
 
-  let filters = []
-  let overlayChain = ''
+  let filterLines = []
 
+  // Pro Bild: scale → crop → zoompan
   for (let i = 0; i < imageCount; i++) {
     const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
     const zpFilter = effect(imageDuration, fps).replace('1920x1080', filterSize)
-
-    // Scale → pad → zoompan für jedes Bild
-    filters.push(
+    filterLines.push(
       `[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
-      `crop=${w}:${h},` +
-      `${zpFilter},` +
-      `setsar=1[v${i}]`
+      `crop=${w}:${h},setsar=1,` +
+      `${zpFilter}[v${i}]`
     )
   }
 
-  // Crossfade-Kette aufbauen
+  // xfade Crossfade-Kette
   if (imageCount === 1) {
-    overlayChain = '[v0]'
+    filterLines.push(`[v0]copy[vout]`)
   } else {
     let lastLabel = '[v0]'
     for (let i = 1; i < imageCount; i++) {
-      const offset = i * imageDuration - fadeDuration
+      const offset = (i * imageDuration - fadeDuration).toFixed(2)
       const outLabel = i === imageCount - 1 ? '[vout]' : `[xf${i}]`
-      filters.push(
-        `${lastLabel}[v${i}]xfade=transition=fade:duration=${fadeDuration}:offset=${offset.toFixed(2)}${outLabel}`
+      filterLines.push(
+        `${lastLabel}[v${i}]xfade=transition=fade:duration=${fadeDuration}:offset=${offset}${outLabel}`
       )
-      lastLabel = `[xf${i}]`
+      lastLabel = outLabel
     }
-    if (imageCount === 1) overlayChain = '[v0]'
   }
 
-  return filters.join('; ')
+  return filterLines.join('; ')
 }
 
 // ── Hauptfunktion: Slideshow Job asynchron ausführen ──────────────────────
+// ── JPEG Dimensionen direkt aus SOF0/SOF2 Bytes lesen ─────────────────────
+// JPEG SOF0 (FF C0) oder SOF2 (FF C2): precision(1) height(2) width(2)
+// Steht immer nach den Quantisierungstabellen, aber vor den Bilddaten.
+// Viel zuverlässiger als EXIF-Parsing — funktioniert bei JFIF und EXIF JPEG.
+function readJpegDimensions(filePath) {
+  try {
+    const fd = fs.openSync(filePath, 'r')
+    const buf = Buffer.alloc(65536)
+    const bytesRead = fs.readSync(fd, buf, 0, 65536, 0)
+    fs.closeSync(fd)
+
+    if (buf[0] !== 0xFF || buf[1] !== 0xD8) return { w: 0, h: 0 }
+
+    let offset = 2
+    while (offset < bytesRead - 9) {
+      if (buf[offset] !== 0xFF) break
+      const marker = buf[offset + 1]
+      const segLen  = buf.readUInt16BE(offset + 2)
+
+      // SOF0=0xC0, SOF1=0xC1, SOF2=0xC2 — alle enthalten Breite/Höhe
+      if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+        // offset+2 = Länge, offset+4 = precision, offset+5/6 = height, offset+7/8 = width
+        const h = buf.readUInt16BE(offset + 5)
+        const w = buf.readUInt16BE(offset + 7)
+        return { w, h }
+      }
+
+      if (segLen < 2) break
+      offset += 2 + segLen
+    }
+  } catch (e) { /* ignore */ }
+  return { w: 0, h: 0 }
+}
+
+// ffmpeg via spawn ausführen (streaming, kein Speicherlimit)
+function runFfmpeg(ffmpegPath, args) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(ffmpegPath, args)
+    let stderr = ''
+    proc.stderr.on('data', d => { stderr += d.toString() })
+    proc.on('close', code => {
+      if (code === 0) resolve()
+      else reject(new Error(`ffmpeg exit ${code}:\n${stderr.slice(-2000)}`))
+    })
+    proc.on('error', reject)
+  })
+}
+
 async function runSlideshowJob(jobId, params) {
   const { imageUrls, musicMode, lifestyle, aspectRatio, imageDuration, ppqKey } = params
-  const fps = 30
+  const fps = 25        // 25fps statt 30 → 25*8=200 Frames/Bild statt 240 → weniger Speicher
   const fadeDuration = 1.0
   const totalDuration = imageUrls.length * imageDuration
   const jobDir = path.join(TMP_DIR, jobId)
@@ -757,18 +852,61 @@ async function runSlideshowJob(jobId, params) {
     updateJob({ status: 'downloading', progress: 5 })
     console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
 
-    // ── Schritt 1: Bilder downloaden ─────────────────────────────────────
+    // ── Schritt 1: Bilder downloaden + Rotation normalisieren ────────────────
+    // GrapheneOS Camera: Bilder physisch quer (4032×3024) gespeichert,
+    // EXIF wird von Blossom beim Upload entfernt → kein Rotations-Tag mehr.
+    // Lösung: JPEG-SOF0 Bytes direkt lesen (schnell, kein ffprobe nötig).
+    // Wenn physische Breite > Höhe → 90° CW drehen via ffmpeg transpose=1.
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
-      const ext = imageUrls[i].includes('.png') ? 'png' : 'jpg'
-      const imgPath = path.join(jobDir, `img_${i}.${ext}`)
+      // rawPath: originale Datei (beliebiges Format: webp/jpg/png)
+      // fixedPath: immer .jpg — ffmpeg konvertiert automatisch
+      const urlExt = (imageUrls[i].match(/\.(webp|png|jpe?g)(\?|$)/i) || [])[1]?.toLowerCase() || 'webp'
+      const rawPath  = path.join(jobDir, `img_${i}_raw.${urlExt}`)
+      const fixedPath = path.join(jobDir, `img_${i}.jpg`)  // immer jpg
       try {
-        await downloadImage(imageUrls[i], imgPath)
-        imagePaths.push(imgPath)
-        console.log(`[Slideshow] Bild ${i + 1}/${imageUrls.length} heruntergeladen`)
+        await downloadImage(imageUrls[i], rawPath)
+
+        // Breite/Höhe via ffprobe (WebP, JPEG, PNG — alles)
+        let imgW = 0, imgH = 0
+        try {
+          const { stdout } = await execFileAsync(FFPROBE, [
+            '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height',
+            '-of', 'csv=s=x:p=0',
+            rawPath
+          ])
+          const parts = (stdout || '').trim().split('x')
+          imgW = parseInt(parts[0]) || 0
+          imgH = parseInt(parts[1]) || 0
+        } catch (e) {
+          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${e.message.slice(0, 100)}`)
+        }
+        console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
+
+        // Immer durch ffmpeg jagen:
+        // - konvertiert WebP/PNG → JPEG
+        // - dreht wenn quer (w>h) via transpose=1
+        // - -q:v 2 = hohe JPEG-Qualität
+        const needsRotate = imgW > 0 && imgH > 0 && imgW > imgH
+        // Immer WebP→JPEG konvertieren, optional drehen
+        const ffArgs = ['-i', rawPath]
+        if (needsRotate) ffArgs.push('-vf', 'transpose=1')
+        ffArgs.push('-q:v', '2', '-y', fixedPath)
+        await runFfmpeg(FFMPEG, ffArgs)
+        if (needsRotate) {
+          console.log(`[Slideshow] Bild ${i+1}: 90°CW gedreht + JPEG ✓`)
+        } else {
+          console.log(`[Slideshow] Bild ${i+1}: JPEG konvertiert ✓`)
+        }
+        try { fs.unlinkSync(rawPath) } catch {}
+
+        imagePaths.push(fixedPath)
         updateJob({ progress: 5 + Math.round((i + 1) / imageUrls.length * 25) })
       } catch (err) {
-        console.warn(`[Slideshow] Bild ${i} fehlgeschlagen, überspringe: ${err.message}`)
+        console.warn(`[Slideshow] Bild ${i+1} fehlgeschlagen: ${err.message.slice(0, 200)}`)
+        try { fs.unlinkSync(rawPath) } catch {}
       }
     }
 
@@ -831,80 +969,43 @@ async function runSlideshowJob(jobId, params) {
     // ── Schritt 3: ffmpeg Slideshow bauen ─────────────────────────────────
     const outputPath = path.join(jobDir, 'slideshow.mp4')
     const n = imagePaths.length
-    const size = ASPECT_SIZES[aspectRatio] || ASPECT_SIZES['16:9']
-    const [w, h] = size.split('x').map(Number)
 
-    // ffmpeg Input-Args aufbauen
     // Bilder als Loop-Inputs
     const inputArgs = []
     for (const imgPath of imagePaths) {
       inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
     }
 
-    // Audio-Input: echte Musik-Datei ODER lavfi-Stille als Fallback
-    let audioInputLabel = null
-    if (musicPath) {
-      inputArgs.push('-i', musicPath)
-      audioInputLabel = `[${n}:a]`   // n-ter Input = Musik-Datei
-    } else {
-      // lavfi anullsrc: synthetische Stille – immer verfügbar in ffmpeg
-      // Kein extra -i nötig, wird direkt im filter_complex definiert
-      audioInputLabel = null  // wird unten als anullsrc in filterLines gebaut
-    }
-
-    // Filter Complex aufbauen
-    let filterLines = []
-
-    // Video-Filter: Scale + Crop + Ken Burns pro Bild
-    for (let i = 0; i < n; i++) {
-      const effect = ZOOM_PAN_EFFECTS[i % ZOOM_PAN_EFFECTS.length]
-      const zpFilter = effect(imageDuration, fps).replace('1920x1080', `${w}x${h}`)
-      filterLines.push(
-        `[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
-        `crop=${w}:${h},setsar=1,` +
-        `${zpFilter}[v${i}]`
-      )
-    }
-
-    // Video Crossfade-Kette
-    if (n === 1) {
-      filterLines.push(`[v0]copy[vout]`)
-    } else {
-      let lastLabel = '[v0]'
-      for (let i = 1; i < n; i++) {
-        const offset = (i * imageDuration - fadeDuration).toFixed(2)
-        const outLabel = i === n - 1 ? '[vout]' : `[xf${i}]`
-        filterLines.push(`${lastLabel}[v${i}]xfade=transition=fade:duration=${fadeDuration}:offset=${offset}${outLabel}`)
-        lastLabel = outLabel === '[vout]' ? '[vout]' : `[xf${i}]`
-      }
-    }
-
-    // Audio: immer einen Audio-Track bauen (Musik oder Stille)
+    // Audio-Input
     const fadeStart = Math.max(0, totalDuration - 2)
     if (musicPath) {
-      // Echte Musik-Datei: trim auf Video-Länge + fade out
-      filterLines.push(
-        `[${n}:a]atrim=0:${totalDuration},` +
-        `afade=t=out:st=${fadeStart}:d=2[aout]`
-      )
-    } else {
-      // Kein Musik-File: lavfi anullsrc als separater -i Input
-      // Wird als letzter Input NACH den Bildern hinzugefügt
-      inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
-      filterLines.push(
-        `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
-      )
+      inputArgs.push('-i', musicPath)
     }
 
-    const filterComplex = filterLines.join('; ')
+    // Video filter_complex: scale+crop+zoompan pro Bild, dann xfade
+    const videoFilters = buildFilterComplex(n, imageDuration, fps, aspectRatio, fadeDuration)
 
-    // ffmpeg Output-Args: immer mit Audio-Track (-map [aout])
-    const outputArgs = [
+    // Audio filter
+    let audioFilter
+    if (musicPath) {
+      audioFilter = `[${n}:a]atrim=0:${totalDuration},afade=t=out:st=${fadeStart}:d=2[aout]`
+    } else {
+      inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
+      audioFilter = `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
+    }
+
+    const filterComplex = videoFilters + '; ' + audioFilter
+
+    const ffmpegArgs = [
+      '-y',
+      ...inputArgs,
+      '-filter_complex', filterComplex,
       '-map', '[vout]',
       '-map', '[aout]',
       '-c:v', 'libx264',
       '-preset', 'fast',
       '-crf', '23',
+      '-r', String(fps),
       '-c:a', 'aac',
       '-b:a', musicPath ? '192k' : '64k',
       '-movflags', '+faststart',
@@ -912,16 +1013,9 @@ async function runSlideshowJob(jobId, params) {
       outputPath
     ]
 
-    const ffmpegArgs = [
-      '-y',           // Overwrite
-      ...inputArgs,
-      '-filter_complex', filterComplex,
-      ...outputArgs
-    ]
+    console.log(`[Slideshow] ffmpeg starten (${n} Bilder, ${fps}fps, ${imageDuration}s/Bild)`)
 
-    console.log(`[Slideshow] ffmpeg starten: ${FFMPEG} ${ffmpegArgs.slice(0, 8).join(' ')}...`)
-
-    await execFileAsync(FFMPEG, ffmpegArgs, { timeout: 600000 }) // max 10 Min. (20 Bilder × zoompan)
+    await runFfmpeg(FFMPEG, ffmpegArgs)
 
     console.log(`[Slideshow] ffmpeg fertig: ${outputPath}`)
 
@@ -957,11 +1051,12 @@ async function runSlideshowJob(jobId, params) {
 // ── POST /api/generate-slideshow ──────────────────────────────────────────
 app.post('/api/generate-slideshow', async (req, res) => {
   const {
-    imageUrls,                    // Array von Bild-URLs
-    musicMode = 'local',          // 'local' | 'elevenlabs'
+    imageUrls,                     // Array von Bild-URLs
+    musicMode = 'local',           // 'local' | 'elevenlabs'
     lifestyle = 'mojobus',
     aspectRatio = '16:9',
-    imageDuration = 4,            // Sekunden pro Bild
+    imageDuration = 4,             // Sekunden pro Bild
+    videoStyle = 'cinematic',      // 'cinematic' | 'smooth' | 'dynamic'
   } = req.body
 
   if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
@@ -971,6 +1066,9 @@ app.post('/api/generate-slideshow', async (req, res) => {
     return res.status(400).json({ error: `Zu viele Bilder: ${imageUrls.length} (Maximum 30). Bitte maximal 30 Bilder verwenden.` })
   }
 
+  // Stil validieren
+  const resolvedStyle = ['cinematic', 'smooth', 'dynamic'].includes(videoStyle) ? videoStyle : 'cinematic'
+
   const ppqKey = process.env.PPQ_API_KEY
   if (musicMode === 'elevenlabs' && !ppqKey) {
     return res.status(400).json({ error: 'PPQ_API_KEY fehlt für ElevenLabs Musik.' })
@@ -978,7 +1076,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
 
   // Job-ID generieren
   const jobId = 'sl_' + crypto.randomBytes(8).toString('hex')
-    const totalDuration = Math.min(imageUrls.length, 30) * imageDuration
+  const totalDuration = Math.min(imageUrls.length, 30) * imageDuration
   const estimatedCost = musicMode === 'elevenlabs' ? 0.50 : 0.00
 
   // Job registrieren
@@ -988,7 +1086,7 @@ app.post('/api/generate-slideshow', async (req, res) => {
     created: Date.now()
   })
 
-  console.log(`[Slideshow] Neuer Job: ${jobId}, ${imageUrls.length} Bilder, ${musicMode}, ${aspectRatio}`)
+  console.log(`[Slideshow] Neuer Job: ${jobId}, ${imageUrls.length} Bilder, ${musicMode}, ${aspectRatio}, Stil: ${resolvedStyle}`)
 
   // Job asynchron starten (nicht awaiten!)
   runSlideshowJob(jobId, {
@@ -997,7 +1095,8 @@ app.post('/api/generate-slideshow', async (req, res) => {
     lifestyle,
     aspectRatio,
     imageDuration: Math.min(Math.max(imageDuration, 2), 8), // 2-8s pro Bild
-    ppqKey
+    ppqKey,
+    videoStyle: resolvedStyle
   })
 
   // Sofort Job-ID zurückgeben
@@ -1815,31 +1914,35 @@ app.post('/api/generate-note', (req, res, next) => {
   }
 })
 
-// ===== DEBUG: ppq.ai Video-API direkter Test =====
-// Nur für Debugging – zeigt rohe ppq.ai Antwort
+// ===== DEBUG: xAI Video-API direkter Test =====
+// Nur für Debugging – zeigt rohe xAI Antwort
 app.post('/api/debug-video', async (req, res) => {
-  const ppqKey = process.env.PPQ_API_KEY
-  if (!ppqKey) return res.status(500).json({ error: 'PPQ_API_KEY fehlt' })
+  const xaiKey = process.env.XAI_API_KEY
+  if (!xaiKey) return res.status(500).json({ error: 'XAI_API_KEY fehlt' })
 
   try {
-    const response = await axios.post('https://api.ppq.ai/v1/videos', {
-      model: 'kling-2.5-turbo-i2v',
-      prompt: 'Cinematic travel video, vintage bus road trip, smooth camera movement, golden light',
-      image_url: req.body.imageUrl || 'https://picsum.photos/800/450',
+    const payload = {
+      model: 'grok-imagine-video',
+      prompt: 'Cinematic travel video, vintage bus road trip, smooth camera movement, golden light, 720p',
+      duration: 5,
       aspect_ratio: '16:9',
-      duration: '10'
-    }, {
+      resolution: '720p'
+    }
+    if (req.body.imageUrl) {
+      payload.image = { url: req.body.imageUrl }
+    }
+    const response = await axios.post('https://api.x.ai/v1/videos/generations', payload, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ppqKey}`
+        'Authorization': `Bearer ${xaiKey}`
       },
       timeout: 30000
     })
-    console.log('[Debug] ppq.ai Erfolg:', JSON.stringify(response.data))
+    console.log('[Debug] xAI Erfolg:', JSON.stringify(response.data))
     res.json({ ok: true, data: response.data })
   } catch (error) {
     const rawData = error.response?.data
-    console.error('[Debug] ppq.ai Fehler raw:', JSON.stringify(rawData))
+    console.error('[Debug] xAI Fehler raw:', JSON.stringify(rawData))
     res.status(error.response?.status || 500).json({
       ok: false,
       httpStatus: error.response?.status,
@@ -1865,6 +1968,84 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: err.message || 'Interner Server-Fehler' })
 })
 
+// ===== DEBUG: Bild-Rotation Test =====
+// Aufruf: GET /api/debug-rotation?url=https://...bild.jpg
+// Zeigt: Dimensionen, ob Drehung nötig, führt Drehung durch
+app.get('/api/debug-rotation', async (req, res) => {
+  const { url } = req.query
+  if (!url) return res.status(400).json({ error: 'url Parameter fehlt' })
+
+  const tmpDir = path.join(os.tmpdir(), 'rotation-test')
+  if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
+  const rawPath = path.join(tmpDir, 'test_raw.jpg')
+  const fixedPath = path.join(tmpDir, 'test_fixed.jpg')
+
+  try {
+    // Download
+    const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000 })
+    fs.writeFileSync(rawPath, response.data)
+    const fileSize = response.data.byteLength
+
+    // Erste 16 Bytes hex
+    const first16 = Buffer.from(response.data.slice(0, 16)).toString('hex').match(/../g).join(' ')
+
+    // Dimensionen via ffprobe (WebP + JPEG + PNG)
+    let w = 0, h = 0
+    let ffprobeRaw = null
+    let ffprobeError = null
+    try {
+      const result = await execFileAsync(FFPROBE, [
+        '-v', 'error', '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height',
+        '-of', 'csv=s=x:p=0', rawPath
+      ])
+      ffprobeRaw = { stdout: result.stdout, stderr: result.stderr }
+      const parts = (result.stdout || '').trim().split('x')
+      w = parseInt(parts[0]) || 0
+      h = parseInt(parts[1]) || 0
+    } catch(e) {
+      ffprobeError = e.message?.slice(0, 500)
+      ffprobeRaw = { stdout: e.stdout, stderr: e.stderr }
+    }
+
+    // Rotation nötig?
+    const needsRotate = w > 0 && h > 0 && w > h
+
+    // Wenn ja: drehen
+    let rotatedSize = null
+    let rotateError = null
+    if (needsRotate) {
+      try {
+        await runFfmpeg(FFMPEG, ['-i', rawPath, '-vf', 'transpose=1', '-q:v', '2', '-y', fixedPath])
+        rotatedSize = fs.statSync(fixedPath).size
+        const { w: fw, h: fh } = readJpegDimensions(fixedPath)
+        rotatedSize = `${fw}×${fh} (${rotatedSize} bytes)`
+      } catch (e) {
+        rotateError = e.message.slice(0, 300)
+      }
+    }
+
+    res.json({
+      url,
+      fileSize,
+      first16hex: first16,
+      isJpeg: first16.startsWith('ff d8'),
+      isWebp: first16.startsWith('52 49 46 46'),
+      dimensions: { w, h },
+      ratio: w && h ? (w/h).toFixed(3) : null,
+      needsRotate,
+      rotatedDimensions: rotatedSize,
+      rotateError,
+      ffprobeRaw,
+      ffprobeError,
+      ffmpegPath: FFMPEG,
+      ffprobePath: FFPROBE,
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -1872,7 +2053,7 @@ app.get('/api/health', (req, res) => {
     groqApiKey: process.env.GROQ_API_KEY ? 'configured' : 'missing',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY ? 'configured' : 'missing',
     openrouterApiKey: process.env.OPENROUTER_API_KEY ? 'configured' : 'missing',
-    ppqApiKey: process.env.PPQ_API_KEY ? 'configured' : 'missing',
+    xaiApiKey: process.env.XAI_API_KEY ? 'configured' : 'missing',
     timestamp: new Date().toISOString()
   })
 })
@@ -1882,5 +2063,5 @@ app.listen(PORT, () => {
   console.log(`[Server] GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
   console.log(`[Server] ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? '✓ Konfiguriert' : '✗ Fehlt!'}`)
   console.log(`[Server] OPENROUTER_API_KEY: ${process.env.OPENROUTER_API_KEY ? '✓ Konfiguriert (für Video-Analyse)' : '✗ Fehlt (Video-Analyse nicht verfügbar)'}`)
-  console.log(`[Server] PPQ_API_KEY: ${process.env.PPQ_API_KEY ? '✓ Konfiguriert (Runway Gen-4 Video)' : '✗ Fehlt (Video-Generierung nicht verfügbar)'}`)
+  console.log(`[Server] XAI_API_KEY: ${process.env.XAI_API_KEY ? '✓ Konfiguriert (Grok Imagine Video 720p)' : '✗ Fehlt (Video-Generierung nicht verfügbar)'}`)
 })
