@@ -1987,16 +1987,22 @@ app.get('/api/debug-rotation', async (req, res) => {
 
     // Dimensionen via ffprobe (WebP + JPEG + PNG)
     let w = 0, h = 0
+    let ffprobeRaw = null
+    let ffprobeError = null
     try {
-      const { stdout } = await execFileAsync(FFPROBE, [
+      const result = await execFileAsync(FFPROBE, [
         '-v', 'error', '-select_streams', 'v:0',
         '-show_entries', 'stream=width,height',
         '-of', 'csv=s=x:p=0', rawPath
       ])
-      const parts = stdout.trim().split('x')
+      ffprobeRaw = { stdout: result.stdout, stderr: result.stderr }
+      const parts = (result.stdout || '').trim().split('x')
       w = parseInt(parts[0]) || 0
       h = parseInt(parts[1]) || 0
-    } catch(e) { /* ignore */ }
+    } catch(e) {
+      ffprobeError = e.message?.slice(0, 500)
+      ffprobeRaw = { stdout: e.stdout, stderr: e.stderr }
+    }
 
     // Rotation nötig?
     const needsRotate = w > 0 && h > 0 && w > h
@@ -2020,11 +2026,14 @@ app.get('/api/debug-rotation', async (req, res) => {
       fileSize,
       first16hex: first16,
       isJpeg: first16.startsWith('ff d8'),
+      isWebp: first16.startsWith('52 49 46 46'),
       dimensions: { w, h },
       ratio: w && h ? (w/h).toFixed(3) : null,
       needsRotate,
       rotatedDimensions: rotatedSize,
       rotateError,
+      ffprobeRaw,
+      ffprobeError,
       ffmpegPath: FFMPEG,
       ffprobePath: FFPROBE,
     })
