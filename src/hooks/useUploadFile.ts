@@ -51,15 +51,14 @@ async function correctImageOrientation(file: File): Promise<File> {
     // Fall 2: EXIF sagt Querformat, Bild ist Hochformat (Pixel-Problem)
     let rotationDegrees = 0;
     
-    if (orientation !== 1) {
-      // EXIF-Orientation basierte Rotation
-      switch (orientation) {
-        case 3: rotationDegrees = 180; break;
-        case 6: rotationDegrees = make === 'Google' ? -90 : 90; break;  // GrapheneOS fix: CCW statt CW
-        case 8: rotationDegrees = -90; break;
-      }
-
-    }
+     if (orientation !== 1) {
+       // EXIF-Orientation basierte Rotation
+       switch (orientation) {
+         case 3: rotationDegrees = 180; break;
+         case 6: rotationDegrees = make === 'Google' ? -90 : 90; break;
+         case 8: rotationDegrees = -90; break;
+       }
+     }
     
     if (rotationDegrees === 0) {
       console.log(`✅ [Orientation] ${file.name}: No correction needed`);
