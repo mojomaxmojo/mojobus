@@ -852,11 +852,9 @@ async function runSlideshowJob(jobId, params) {
     updateJob({ status: 'downloading', progress: 5 })
     console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
 
-    // ── Schritt 1: Bilder downloaden + Rotation normalisieren ────────────────
-    // GrapheneOS Camera: Bilder physisch quer (4032×3024) gespeichert,
-    // EXIF wird von Blossom beim Upload entfernt → kein Rotations-Tag mehr.
-    // Lösung: JPEG-SOF0 Bytes direkt lesen (schnell, kein ffprobe nötig).
-    // Wenn physische Breite > Höhe → 90° CW drehen via ffmpeg transpose=1.
+    // ── Schritt 1: Bilder downloaden ───────────────────────────────────────
+    // GrapheneOS Camera: Bilder physisch quer gespeichert, EXIF entfernt.
+    // Rotation wird später mit ImageMagick -auto-orient behandelt.
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
       // rawPath: originale Datei (beliebiges Format: webp/jpg/png)
@@ -867,41 +865,10 @@ async function runSlideshowJob(jobId, params) {
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // Breite/Höhe via ffprobe (WebP, JPEG, PNG — alles)
-        let imgW = 0, imgH = 0
-        try {
-          const { stdout } = await execFileAsync(FFPROBE, [
-            '-v', 'error',
-            '-select_streams', 'v:0',
-            '-show_entries', 'stream=width,height',
-            '-of', 'csv=s=x:p=0',
-            rawPath
-          ])
-          const parts = (stdout || '').trim().split('x')
-          imgW = parseInt(parts[0]) || 0
-          imgH = parseInt(parts[1]) || 0
-        } catch (e) {
-          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${e.message.slice(0, 100)}`)
-        }
-        console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
-
-        // Immer durch ffmpeg jagen:
-        // - konvertiert WebP/PNG → JPEG
-        // - dreht wenn quer (w>h) via transpose=1
-        // - -q:v 2 = hohe JPEG-Qualität
-        const needsRotate = imgW > 0 && imgH > 0 && imgW > imgH
-        // Immer WebP→JPEG konvertieren, optional drehen
-        const ffArgs = ['-i', rawPath]
-        if (needsRotate) ffArgs.push('-vf', 'transpose=1')
-        ffArgs.push('-q:v', '2', '-y', fixedPath)
+        // Immer durch ffmpeg jagen: WebP/PNG → JPEG konvertieren (-q:v 2 hohe Qualität)
+        const ffArgs = ['-i', rawPath, '-q:v', '2', '-y', fixedPath]
         await runFfmpeg(FFMPEG, ffArgs)
-        if (needsRotate) {
-          console.log(`[Slideshow] Bild ${i+1}: 90°CW gedreht + JPEG ✓`)
-        } else {
-          console.log(`[Slideshow] Bild ${i+1}: JPEG konvertiert ✓`)
-        }
-        try { fs.unlinkSync(rawPath) } catch {}
-
+        console.log(`[Slideshow] Bild ${i+1}: JPEG konvertiert ✓`)
         imagePaths.push(fixedPath)
         updateJob({ progress: 5 + Math.round((i + 1) / imageUrls.length * 25) })
       } catch (err) {
@@ -966,14 +933,34 @@ async function runSlideshowJob(jobId, params) {
 
     updateJob({ status: 'rendering', progress: 40 })
 
+    // ── Schritt 2.5: ImageMagick normalize (EXIF/Sensor-Fix für GrapheneOS) ──
+    console.log('[Slideshow] Normalisiere Bilder mit ImageMagick -auto-orient + strip...')
+    const normalizedImages = []
+    for (let i = 0; i < imagePaths.length; i++) {
+      const inputPath = imagePaths[i]
+      const outputPath = path.join(jobDir, `norm_${i}.jpg`)
+      const convertProc = spawn('convert', [
+        '-auto-orient',  // ROTATION FIX: EXIF + Sensor-Flip (90° links für GrapheneOS)
+        '-strip',        // EXIF/Metadata entfernen
+        '-quality', '95',
+        inputPath,
+        outputPath
+      ])
+      await new Promise((resolve, reject) => {
+        convertProc.on('close', code => code === 0 ? resolve(outputPath) : reject(new Error(`Convert ${i} failed`)))
+      })
+      normalizedImages.push(outputPath)
+    }
+    console.log(`[Slideshow] ${normalizedImages.length} Bilder normalisiert`)
+
     // ── Schritt 3: ffmpeg Slideshow bauen ─────────────────────────────────
     const outputPath = path.join(jobDir, 'slideshow.mp4')
     const n = imagePaths.length
 
     // Bilder als Loop-Inputs
     const inputArgs = []
-    for (const imgPath of imagePaths) {
-      inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
+    for (const normPath of normalizedImages) {
+      inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', normPath)
     }
 
     // Audio-Input
@@ -1028,7 +1015,7 @@ async function runSlideshowJob(jobId, params) {
       progress: 100,
       outputPath,   // Disk-Pfad für Download-Endpoint
       videoSizeMB,
-      imageCount: imagePaths.length,
+      imageCount: normalizedImages.length,
       musicUsed: musicPath
         ? `${path.basename(musicPath)}${musicSource === 'local_fallback' ? ' (ElevenLabs fehlgeschlagen → Fallback)' : ''}`
         : (musicSource === 'silent' ? 'keine (Stille)' : null),
