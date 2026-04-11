@@ -865,8 +865,33 @@ async function runSlideshowJob(jobId, params) {
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // Immer durch ffmpeg jagen: WebP/PNG → JPEG konvertieren (-q:v 2 hohe Qualität)
-        const ffArgs = ['-i', rawPath, '-q:v', '2', '-y', fixedPath]
+        // Prüfe Bild-Abmessungen mit ffprobe
+        let imgW = 0, imgH = 0
+        try {
+          const { stdout } = await execFileAsync(FFPROBE, [
+            '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height',
+            '-of', 'csv=s=x:p=0',
+            rawPath
+          ])
+          const parts = (stdout || '').trim().split('x')
+          imgW = parseInt(parts[0]) || 0
+          imgH = parseInt(parts[1]) || 0
+        } catch (e) {
+          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${e.message.slice(0, 100)}`)
+        }
+        console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
+        
+        // Immer durch ffmpeg jagen: WebP/PNG → JPEG konvertieren
+        // Wenn Bild quer ist (width > height) und sollte hoch sein -> drehen
+        const ffArgs = ['-i', rawPath]
+        if (imgW > imgH) {
+          // Quer-Bild: Rotate 90° CW für korrekte Darstellung
+          ffArgs.push('-vf', 'transpose=1')
+          console.log(`[Slideshow] Bild ${i+1}: 90°CW drehen (quer→hoch) ✓`)
+        }
+        ffArgs.push('-q:v', '2', '-y', fixedPath)
         await runFfmpeg(FFMPEG, ffArgs)
         console.log(`[Slideshow] Bild ${i+1}: JPEG konvertiert ✓`)
         imagePaths.push(fixedPath)

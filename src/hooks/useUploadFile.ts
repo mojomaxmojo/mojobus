@@ -65,9 +65,10 @@ async function correctImageOrientation(file: File): Promise<File> {
         // das Bild immer noch quer ist (width > height), drehen wir zusätzlich.
         if (orientation === 6 && actualWidth > actualHeight) {
           // Bild ist quer obwohl Orientation 6 sagt es sollte hoch sein
-          // Das bedeutet: Pixel hat es schon gedreht, wir müssen zurückdrehen
-          rotationDegrees = -90; // Drehe CCW statt CW
-          console.log(`🔄 [Orientation] ${file.name}: Pixel/GrapheneOS detected, using CCW rotation`);
+          // Das bedeutet: Pixel/GrapheneOS hat es schon gedreht
+          // Wir drehen +180° (zwei mal 90° CW) um komplett zu korrigieren
+          rotationDegrees = 180;
+          console.log(`🔄 [Orientation] ${file.name}: Pixel/GrapheneOS detected (landscape), using 180° rotation`);
         }
       }
       
