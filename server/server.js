@@ -878,11 +878,20 @@ async function runSlideshowJob(jobId, params) {
     updateJob({ status: 'downloading', progress: 5 })
     console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
 
-    // ── Schritt 1: Bilder downloaden + EXIF-Rotation normalisieren ──────────
-    // Graphenos/GrapheneOS Camera: EXIF Orientation im JPEG-Header gesetzt,
-    // Pixel-Array liegt aber quer → ffmpeg dreht NICHT automatisch.
-    // Lösung: EXIF-Orientation direkt aus JPEG-Bytes lesen (kein npm nötig),
-    // dann ffmpeg transpose-Filter anwenden.
+    // ── Schritt 1: Bilder downloaden + Rotation normalisieren ────────────────
+    // Problem: GrapheneOS Camera speichert Bilder physisch quer (4032×3024)
+    // ohne EXIF-Orientation-Tag (wird beim Blossom-Upload entfernt).
+    // ffmpeg dreht also nicht automatisch.
+    //
+    // Lösung: ffprobe liest Breite×Höhe der heruntergeladenen Datei.
+    // Wenn width > height → Bild ist quer gespeichert aber wurde als
+    // Hochformat aufgenommen → 90° CW drehen (transpose=1).
+    // Ziel-Aspect-Ratio bestimmt ob Portrait erwartet wird:
+    //   16:9 / 1:1  → Querformat normal → NUR drehen wenn aspectRatio=9:16
+    //   9:16        → Hochformat erwartet → alle Querformat-Bilder drehen
+    //
+    // Für maximale Kompatibilität: IMMER drehen wenn Bild quer UND
+    // das Seitenverhältnis deutlich querformatig ist (w/h > 1.2)
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
       const rawPath = path.join(jobDir, `img_${i}_raw.jpg`)
@@ -890,30 +899,42 @@ async function runSlideshowJob(jobId, params) {
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // EXIF-Orientation direkt aus JPEG-Bytes lesen
-        const orientation = readJpegOrientation(rawPath)
-        console.log(`[Slideshow] Bild ${i + 1}: EXIF Orientation=${orientation}`)
+        // Bildgröße via ffprobe lesen
+        let imgW = 0, imgH = 0
+        try {
+          const probeOut = await execFileAsync(FFPROBE, [
+            '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height',
+            '-of', 'csv=p=0',
+            rawPath
+          ])
+          const parts = (probeOut.stdout || '').trim().split(',')
+          imgW = parseInt(parts[0]) || 0
+          imgH = parseInt(parts[1]) || 0
+        } catch (probeErr) {
+          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${probeErr.message}`)
+        }
 
-        // ffmpeg transpose-Filter nach EXIF-Orientation
-        // EXIF-Werte: 1=normal, 3=180°, 6=90°CW, 8=90°CCW
-        // (2,4,5,7 = gespiegelt, selten bei Kameras)
-        const transposeFilter = {
-          3: 'transpose=2,transpose=2',  // 180°
-          6: 'transpose=1',              // 90° CW  ← GrapheneOS Hochformat
-          8: 'transpose=2',              // 90° CCW
-        }[orientation] || null
+        console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
 
-        if (transposeFilter) {
+        // Drehen wenn Bild physisch quer ist (w > h) — bedeutet
+        // es wurde ohne EXIF-Rotation gespeichert (GrapheneOS/Blossom)
+        const needsRotate = imgW > 0 && imgH > 0 && imgW > imgH
+
+        if (needsRotate) {
+          // transpose=1 = 90° CW: dreht quer→hoch korrekt für GrapheneOS
           await runFfmpeg(FFMPEG, [
             '-i', rawPath,
-            '-vf', transposeFilter,
+            '-vf', 'transpose=1',
             '-q:v', '2',
             '-y', fixedPath
           ])
-          console.log(`[Slideshow] Bild ${i + 1}: EXIF ${orientation} → ${transposeFilter} ✓`)
+          console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH} → 90°CW gedreht ✓`)
           try { fs.unlinkSync(rawPath) } catch {}
         } else {
           fs.renameSync(rawPath, fixedPath)
+          if (imgW && imgH) console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH} → kein Drehen`)
         }
 
         imagePaths.push(fixedPath)
