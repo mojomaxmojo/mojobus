@@ -34,7 +34,7 @@ export function SlideshowBlock({
   const [musicMode, setMusicMode] = useState<'local' | 'elevenlabs'>('local');
   const [aspect, setAspect] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [imgDuration, setImgDuration] = useState<4 | 6 | 8>(4);
-  const [videoStyle, setVideoStyle] = useState<'cinematic' | 'smooth' | 'dynamic'>('cinematic');
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploadingLocal, setIsUploadingLocal] = useState(false);
   const [uploadedLocalUrls, setUploadedLocalUrls] = useState<string[]>([]);
@@ -160,7 +160,6 @@ export function SlideshowBlock({
           lifestyle,
           aspectRatio: aspect,
           imageDuration: imgDuration,
-          videoStyle,
         }),
       });
       const data = await safeJson(res);
@@ -272,7 +271,7 @@ export function SlideshowBlock({
           <Video className="h-5 w-5 text-emerald-500" />
           <h3 className="font-semibold">🎞️ Slideshow generieren</h3>
           <span className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-medium">
-            ffmpeg · sinEasing · Color Grading
+            ffmpeg · Ken Burns · Deep Pan
           </span>
         </div>
         <button
@@ -414,50 +413,6 @@ export function SlideshowBlock({
             )}
           </div>
 
-          {/* Effekt-Stil */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">🎨 Effekt-Stil</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                {
-                  value: 'cinematic',
-                  label: '🎬 Cinematic',
-                  desc: 'Warm, filmisch, Vignette',
-                  transitions: 'dissolve · fade · wipeleft',
-                },
-                {
-                  value: 'smooth',
-                  label: '🌿 Sanft',
-                  desc: 'Weich, subtil, Natur',
-                  transitions: 'fade · dissolve · smooth',
-                },
-                {
-                  value: 'dynamic',
-                  label: '⚡ Dynamisch',
-                  desc: 'Energie, Wipes, Social',
-                  transitions: 'slide · wipe · snap',
-                },
-              ] as const).map((s) => (
-                <button
-                  key={s.value}
-                  type="button"
-                  onClick={() => setVideoStyle(s.value)}
-                  className={`p-2.5 rounded-lg border text-left transition-all ${
-                    videoStyle === s.value
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
-                  }`}
-                >
-                  <div className="font-medium text-xs">{s.label}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{s.desc}</div>
-                  <div className={`text-xs mt-1 font-mono ${videoStyle === s.value ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
-                    {s.transitions}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Format + Sek. pro Bild */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -504,7 +459,6 @@ export function SlideshowBlock({
           <div className="flex justify-between text-xs bg-gray-50 dark:bg-gray-800/50 rounded p-2 text-muted-foreground">
             <span>🖼️ {effectiveUrls.length} Bilder</span>
             <span>⏱️ ~{effectiveUrls.length * imgDuration}s</span>
-            <span>🎨 {videoStyle}</span>
             <span>
               💰{' '}
               <strong className="text-emerald-600">
