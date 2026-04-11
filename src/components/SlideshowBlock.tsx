@@ -34,7 +34,6 @@ export function SlideshowBlock({
   const [musicMode, setMusicMode] = useState<'local' | 'elevenlabs'>('local');
   const [aspect, setAspect] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [imgDuration, setImgDuration] = useState<4 | 6 | 8>(4);
-
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploadingLocal, setIsUploadingLocal] = useState(false);
   const [uploadedLocalUrls, setUploadedLocalUrls] = useState<string[]>([]);
@@ -457,8 +456,8 @@ export function SlideshowBlock({
 
           {/* Info-Zeile */}
           <div className="flex justify-between text-xs bg-gray-50 dark:bg-gray-800/50 rounded p-2 text-muted-foreground">
-            <span>🖼️ {effectiveUrls.length} Bilder</span>
-            <span>⏱️ ~{effectiveUrls.length * imgDuration}s</span>
+            <span>🖼️ {imageUrls.length} Bilder</span>
+            <span>⏱️ ~{imageUrls.length * imgDuration}s</span>
             <span>
               💰{' '}
               <strong className="text-emerald-600">
