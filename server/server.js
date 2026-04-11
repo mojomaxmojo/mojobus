@@ -859,16 +859,32 @@ async function runSlideshowJob(jobId, params) {
     // Wenn physische Breite > Höhe → 90° CW drehen via ffmpeg transpose=1.
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
-      const rawPath = path.join(jobDir, `img_${i}_raw.jpg`)
-      const fixedPath = path.join(jobDir, `img_${i}.jpg`)
+      // Dateiendung aus URL ermitteln (webp, jpg, png)
+      const urlExt = (imageUrls[i].match(/\.(webp|png|jpe?g)(\?|$)/i) || [])[1]?.toLowerCase() || 'jpg'
+      const rawPath  = path.join(jobDir, `img_${i}_raw.${urlExt}`)
+      const fixedPath = path.join(jobDir, `img_${i}.${urlExt}`)
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // Breite/Höhe direkt aus JPEG-Bytes lesen (SOF0/SOF2 Marker)
-        const { w: imgW, h: imgH } = readJpegDimensions(rawPath)
+        // Breite/Höhe via ffprobe lesen — funktioniert für WebP, JPEG, PNG
+        let imgW = 0, imgH = 0
+        try {
+          const { stdout } = await execFileAsync(FFPROBE, [
+            '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height',
+            '-of', 'csv=s=x:p=0',
+            rawPath
+          ])
+          const parts = stdout.trim().split('x')
+          imgW = parseInt(parts[0]) || 0
+          imgH = parseInt(parts[1]) || 0
+        } catch (e) {
+          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${e.message.slice(0,100)}`)
+        }
         console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
 
-        // Quer (w>h) = falsch orientiert (GrapheneOS ohne EXIF) → drehen
+        // Quer (w>h) = falsch orientiert (GrapheneOS WebP ohne EXIF) → drehen
         if (imgW > 0 && imgH > 0 && imgW > imgH) {
           await runFfmpeg(FFMPEG, [
             '-i', rawPath,
@@ -1969,8 +1985,18 @@ app.get('/api/debug-rotation', async (req, res) => {
     // Erste 16 Bytes hex
     const first16 = Buffer.from(response.data.slice(0, 16)).toString('hex').match(/../g).join(' ')
 
-    // SOF0 Parsing
-    const { w, h } = readJpegDimensions(rawPath)
+    // Dimensionen via ffprobe (WebP + JPEG + PNG)
+    let w = 0, h = 0
+    try {
+      const { stdout } = await execFileAsync(FFPROBE, [
+        '-v', 'error', '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height',
+        '-of', 'csv=s=x:p=0', rawPath
+      ])
+      const parts = stdout.trim().split('x')
+      w = parseInt(parts[0]) || 0
+      h = parseInt(parts[1]) || 0
+    } catch(e) { /* ignore */ }
 
     // Rotation nötig?
     const needsRotate = w > 0 && h > 0 && w > h
