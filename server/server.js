@@ -859,14 +859,15 @@ async function runSlideshowJob(jobId, params) {
     // Wenn physische Breite > Höhe → 90° CW drehen via ffmpeg transpose=1.
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
-      // Dateiendung aus URL ermitteln (webp, jpg, png)
-      const urlExt = (imageUrls[i].match(/\.(webp|png|jpe?g)(\?|$)/i) || [])[1]?.toLowerCase() || 'jpg'
+      // rawPath: originale Datei (beliebiges Format: webp/jpg/png)
+      // fixedPath: immer .jpg — ffmpeg konvertiert automatisch
+      const urlExt = (imageUrls[i].match(/\.(webp|png|jpe?g)(\?|$)/i) || [])[1]?.toLowerCase() || 'webp'
       const rawPath  = path.join(jobDir, `img_${i}_raw.${urlExt}`)
-      const fixedPath = path.join(jobDir, `img_${i}.${urlExt}`)
+      const fixedPath = path.join(jobDir, `img_${i}.jpg`)  // immer jpg
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // Breite/Höhe via ffprobe lesen — funktioniert für WebP, JPEG, PNG
+        // Breite/Höhe via ffprobe (WebP, JPEG, PNG — alles)
         let imgW = 0, imgH = 0
         try {
           const { stdout } = await execFileAsync(FFPROBE, [
@@ -876,32 +877,35 @@ async function runSlideshowJob(jobId, params) {
             '-of', 'csv=s=x:p=0',
             rawPath
           ])
-          const parts = stdout.trim().split('x')
+          const parts = (stdout || '').trim().split('x')
           imgW = parseInt(parts[0]) || 0
           imgH = parseInt(parts[1]) || 0
         } catch (e) {
-          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${e.message.slice(0,100)}`)
+          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${e.message.slice(0, 100)}`)
         }
         console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
 
-        // Quer (w>h) = falsch orientiert (GrapheneOS WebP ohne EXIF) → drehen
-        if (imgW > 0 && imgH > 0 && imgW > imgH) {
-          await runFfmpeg(FFMPEG, [
-            '-i', rawPath,
-            '-vf', 'transpose=1',
-            '-q:v', '2',
-            '-y', fixedPath
-          ])
-          console.log(`[Slideshow] Bild ${i+1}: 90°CW gedreht ✓`)
-          try { fs.unlinkSync(rawPath) } catch {}
+        // Immer durch ffmpeg jagen:
+        // - konvertiert WebP/PNG → JPEG
+        // - dreht wenn quer (w>h) via transpose=1
+        // - -q:v 2 = hohe JPEG-Qualität
+        const needsRotate = imgW > 0 && imgH > 0 && imgW > imgH
+        // Immer WebP→JPEG konvertieren, optional drehen
+        const ffArgs = ['-i', rawPath]
+        if (needsRotate) ffArgs.push('-vf', 'transpose=1')
+        ffArgs.push('-q:v', '2', '-y', fixedPath)
+        await runFfmpeg(FFMPEG, ffArgs)
+        if (needsRotate) {
+          console.log(`[Slideshow] Bild ${i+1}: 90°CW gedreht + JPEG ✓`)
         } else {
-          fs.renameSync(rawPath, fixedPath)
+          console.log(`[Slideshow] Bild ${i+1}: JPEG konvertiert ✓`)
         }
+        try { fs.unlinkSync(rawPath) } catch {}
 
         imagePaths.push(fixedPath)
         updateJob({ progress: 5 + Math.round((i + 1) / imageUrls.length * 25) })
       } catch (err) {
-        console.warn(`[Slideshow] Bild ${i} fehlgeschlagen: ${err.message}`)
+        console.warn(`[Slideshow] Bild ${i+1} fehlgeschlagen: ${err.message.slice(0, 200)}`)
         try { fs.unlinkSync(rawPath) } catch {}
       }
     }
