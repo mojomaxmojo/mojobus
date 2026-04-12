@@ -4242,13 +4242,13 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       const res = await fetch('/api/generate-slideshow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageUrls: allImages,
-          musicMode: slideshowMusicMode,
-          lifestyle,
-          aspectRatio: slideshowAspect,
-          imageDuration: slideshowImgDuration,
-        })
+                  body: JSON.stringify({
+                    imageUrls: allImages,
+                    musicMode: 'local',
+                    lifestyle,
+                    aspectRatio: slideshowAspect,
+                    imageDuration: slideshowImgDuration,
+                  })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -4259,10 +4259,10 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         description: `${data.imageCount} Bilder · ${data.totalDuration}s · Musik: ${slideshowMusicMode === 'elevenlabs' ? 'KI ($0.50)' : 'Lokal (gratis)'}`
       });
 
-      // Polling alle 3 Sekunden
+       // Polling alle 3 Sekunden — 400 attempts = 20 Minuten
       let attempts = 0;
       const poll = async (): Promise<void> => {
-        if (attempts++ > 100) throw new Error('Timeout nach 5 Minuten.');
+        if (attempts++ > 400) throw new Error('Timeout nach 20 Minuten.');
         const pollRes = await fetch(`/api/slideshow-status/${data.jobId}`);
         const pollData = await pollRes.json();
 
@@ -5594,47 +5594,17 @@ Schreibe deinen Artikel hier...
           {slideshowEnabled && (
             <div className="space-y-4 pt-2 border-t border-muted">
 
-              {/* 🎵 Musik-Schalter */}
+               {/* 🎵 Musik: Nur Lokal */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium">🎵 Musik</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSlideshowMusicMode('local')}
-                    className={`p-3 rounded-lg border text-left transition-all ${
-                      slideshowMusicMode === 'local'
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
-                    }`}
-                  >
-                    <div className="font-medium text-sm">🎸 Lokal</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Fertige Chill-Tracks</div>
-                    <div className="text-xs font-medium text-emerald-600 mt-1">$0.00 — kostenlos</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSlideshowMusicMode('elevenlabs')}
-                    className={`p-3 rounded-lg border text-left transition-all ${
-                      slideshowMusicMode === 'elevenlabs'
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
-                    }`}
-                  >
-                    <div className="font-medium text-sm">🤖 KI-Musik</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">ElevenLabs · Lifestyle-passend</div>
-                    <div className="text-xs font-medium text-amber-600 mt-1">$0.50 via ppq.ai</div>
-                  </button>
+                <div className="rounded-lg p-3 border bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+                  <div className="font-medium text-sm text-emerald-700 dark:text-emerald-300">🎸 Lokal</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Fertige Chill-Tracks · Zufällige Auswahl</div>
+                  <div className="text-xs font-medium text-emerald-600 mt-1">$0.00 — kostenlos</div>
                 </div>
-                {slideshowMusicMode === 'elevenlabs' && (
-                  <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 rounded p-2">
-                    🎵 Musik-Stil wird automatisch aus dem gewählten Lifestyle (<strong>{lifestyle}</strong>) generiert.
-                  </p>
-                )}
-                {slideshowMusicMode === 'local' && (
-                  <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 rounded p-2">
-                    🎸 Zufälliger Chill-Track aus <code>server/music/</code> — lifestyle-passend wenn vorhanden.
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 rounded p-2">
+                  🎸 Zufälliger Chill-Track aus <code>server/music/</code> — lifestyle-passend wenn vorhanden.
+                </p>
               </div>
 
               {/* Einstellungen: Format + Bild-Dauer */}
@@ -5643,14 +5613,18 @@ Schreibe deinen Artikel hier...
                 <div className="space-y-1">
                   <Label className="text-xs">Format</Label>
                   <div className="flex gap-1">
-                    {(['16:9', '9:16', '1:1'] as const).map(a => (
+                     {([
+                      { value: '16:9' as const, label: '16:9 Cinema' },
+                      { value: '9:16' as const, label: '9:16 Phone' },
+                      { value: '1:1' as const, label: '1:1 Square' },
+                    ]).map(({ value: a, label }) => (
                       <button key={a} type="button" onClick={() => setSlideshowAspect(a)}
                         className={`flex-1 py-1 text-xs rounded border transition-colors ${
                           slideshowAspect === a
                             ? 'bg-emerald-600 text-white border-emerald-600'
                             : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-300 dark:border-gray-600 hover:border-emerald-400'
                         }`}
-                      >{a}</button>
+                      >{label}</button>
                     ))}
                   </div>
                 </div>
