@@ -12,51 +12,61 @@ import {
 
 /**
  * Stript EXIF-Orientierung von Bildern durch Canvas-Redraw.
- * Der Browser wendet EXIF-Rotation bereits an beim Laden.
- * Wir zeichnen das Bild auf Canvas → korrekte Pixel ohne EXIF-Tag.
- * Wird IMMER ausgeführt, nicht nur bei orientation ≠ 1,
- * da exifr manche EXIF-Daten nicht lesen kann (z.B. GrapheneOS Camera).
+ *
+ * GrapheneOS Camera auf Pixel-Geräten speichert Bilder mit EXIF=6 (90° CW),
+ * aber die Pixel sind bereits korrekt orientiert. createImageBitmap mit
+ * 'from-image' dreht DOPPELT → Bild falsch.
+ *
+ * Lösung: imageOrientation='none' = keine EXIF-Rotation,
+ * dann manuell rotieren basierend auf tatsächlichen Abmessungen.
  */
 async function correctImageOrientation(file: File): Promise<File> {
-  // Nur Bilder verarbeiten
   if (!file.type.startsWith('image/')) {
     return file;
   }
 
   try {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
+    // imageOrientation='none' = KEINE automatische EXIF-Rotation
+    // Wir bekommen die rohen Pixel so wie sie im File gespeichert sind
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'none' });
 
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = reject;
-      img.src = url;
-    });
+    const rawW = bitmap.width;
+    const rawH = bitmap.height;
 
-    // Browser hat EXIF-Rotation bereits angewendet.
-    // Canvas Redraw = korrekte Pixel, aber kein EXIF-Orientation-Tag.
+    // EXIF Orientation lesen um zu wissen ob/wie wir drehen müssen
+    const exif = await exifr.parse(file).catch(() => null);
+    const orientation = exif?.Orientation || 1;
+
+    let rotation = 0;
+    switch (orientation) {
+      case 3: rotation = 180; break;
+      case 6: rotation = 90; break;   // 90° CW
+      case 8: rotation = -90; break;  // 90° CCW
+    }
+
+    // Canvas erstellen
     const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
+    const needsSwap = Math.abs(rotation) === 90;
+    canvas.width = needsSwap ? rawH : rawW;
+    canvas.height = needsSwap ? rawW : rawH;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-      URL.revokeObjectURL(url);
+      bitmap.close();
       return file;
     }
 
-    ctx.drawImage(img, 0, 0);
-    URL.revokeObjectURL(url);
+    // Rotation anwenden
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.drawImage(bitmap, -rawW / 2, -rawH / 2);
+    bitmap.close();
 
-    const orientation = (await exifr.parse(file).catch(() => null))?.Orientation || 1;
-    console.log(`📷 [Orientation] ${file.name}: EXIF=${orientation}, Canvas=${img.naturalWidth}x${img.naturalHeight} → EXIF stripped`);
+    console.log(`📷 [Orientation] ${file.name}: EXIF=${orientation}, ${rawW}x${rawH} → rotate ${rotation}° → ${canvas.width}x${canvas.height}`);
 
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
-        if (!blob) {
-          resolve(file);
-          return;
-        }
+        if (!blob) { resolve(file); return; }
         resolve(new File([blob], file.name, {
           type: 'image/jpeg',
           lastModified: file.lastModified,
@@ -69,8 +79,8 @@ async function correctImageOrientation(file: File): Promise<File> {
     return file;
   }
 }
-        
-        export function useUploadFile() {
+
+export function useUploadFile() {
   const { user, users } = useCurrentUser();
 
   return useMutation({
