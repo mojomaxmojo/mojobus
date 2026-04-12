@@ -852,9 +852,10 @@ async function runSlideshowJob(jobId, params) {
     updateJob({ status: 'downloading', progress: 5 })
     console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
 
-    // ── Schritt 1: Bilder downloaden ───────────────────────────────────────
-    // Client korrigiert EXIF-Orientierung bereits vor Upload (Canvas Redraw).
-    // Server muss nur konvertieren, NICHT rotieren.
+    // ── Schritt 1: Bilder downloaden + Orientierung normalisieren ─────────
+    // Bilder kommen vom Client mit EXIF (ohne manuelle client-seitige Rotation).
+    // ImageMagick -auto-orient liest EXIF und korrigiert physisch die Pixel.
+    // -strip entfernt dann EXIF-Orientation damit ffmpeg nicht verwirrt wird.
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
       const urlExt = (imageUrls[i].match(/\.(webp|png|jpe?g)(\?|$)/i) || [])[1]?.toLowerCase() || 'webp'
@@ -863,10 +864,43 @@ async function runSlideshowJob(jobId, params) {
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // Nur konvertieren: WebP/PNG → JPEG, KEINE Rotation
-        const ffArgs = ['-i', rawPath, '-q:v', '2', '-y', fixedPath]
-        await runFfmpeg(FFMPEG, ffArgs)
-        console.log(`[Slideshow] Bild ${i+1}: JPEG konvertiert ✓`)
+        // Prüfe EXIF Orientation mit ffprobe
+        let orientation = 0
+        try {
+          const { stdout } = await execFileAsync(FFPROBE, [
+            '-v', 'quiet', '-print_format', 'json',
+            '-show_entries', 'stream_tags=orientation',
+            '-show_entries', 'stream=width,height',
+            rawPath
+          ])
+          const data = JSON.parse(stdout || '{}')
+          const stream = data.streams?.[0]
+          orientation = parseInt(stream?.tags?.orientation) || 0
+          const w = stream?.width || 0
+          const h = stream?.height || 0
+          console.log(`[Slideshow] Bild ${i+1}: EXIF-Orient=${orientation || 'normal'}, ${w}x${h}`)
+        } catch (e) {
+          console.warn(`[Slideshow] ffprobe EXIF Bild ${i+1}: ${e.message.slice(0, 150)}`)
+        }
+
+        await runFfmpeg(FFMPEG, ['-i', rawPath, '-q:v', '2', '-y', fixedPath])
+
+        // ImageMagick: auto-orient korrigiert ALLE EXIF-Fälle korrekt
+        // GrapheneOS, Google Camera, Pixel – alles wird richtig gedreht
+        try {
+          await new Promise((resolve, reject) => {
+            const proc = spawn('convert', [fixedPath, '-auto-orient', '-strip', '-quality', '95', fixedPath])
+            proc.on('close', code => code === 0 ? resolve(null) : reject(new Error(`convert exit ${code}`)))
+            proc.stderr.on('data', d => {
+              const msg = d.toString().trim()
+              if (msg) console.warn(`[Slideshow] convert stderr: ${msg.slice(0, 200)}`)
+            })
+          })
+          console.log(`[Slideshow] Bild ${i+1}: ImageMagick -auto-orient ✅`)
+        } catch (imgErr) {
+          console.warn(`[Slideshow] Bild ${i+1}: ImageMagick fehlgeschlagen (${imgErr.message}), nutze ohne auto-orient`)
+        }
+
         imagePaths.push(fixedPath)
         updateJob({ progress: 5 + Math.round((i + 1) / imageUrls.length * 25) })
       } catch (err) {
