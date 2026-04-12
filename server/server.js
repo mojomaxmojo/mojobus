@@ -864,41 +864,80 @@ async function runSlideshowJob(jobId, params) {
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // Prüfe EXIF Orientation mit ffprobe
-        let orientation = 0
+        // ════════════════════════════════════════════════════════════
+        // ImageMagick ZUERST auf dem Original-Bild (rawPath) ausführen!
+        // -auto-orient liest EXIF und dreht physisch die Pixel korrekt
+        // -strip entfernt EXIF-Orientation damit nachfolgende Tools nicht verwirrt werden
+        // ════════════════════════════════════════════════════════════
+
+        // Prüfe ob ImageMagick verfügbar ist
         try {
-          const { stdout } = await execFileAsync(FFPROBE, [
+          const { stdout: versionStdout } = await execFileAsync('convert', ['--version'])
+          console.log(`[Slideshow] ImageMagick Version: ${versionStdout.trim().split('\n')[0]}`)
+        } catch (vErr) {
+          console.error(`[Slideshow] ⚠️ ImageMagick NICHT verfügbar: ${vErr.message}`)
+        }
+
+        // EXIF-Orientation am Original prüfen
+        let orientationBefore = 0
+        try {
+          const { stdout: s1 } = await execFileAsync(FFPROBE, [
             '-v', 'quiet', '-print_format', 'json',
             '-show_entries', 'stream_tags=orientation',
             '-show_entries', 'stream=width,height',
             rawPath
           ])
-          const data = JSON.parse(stdout || '{}')
-          const stream = data.streams?.[0]
-          orientation = parseInt(stream?.tags?.orientation) || 0
-          const w = stream?.width || 0
-          const h = stream?.height || 0
-          console.log(`[Slideshow] Bild ${i+1}: EXIF-Orient=${orientation || 'normal'}, ${w}x${h}`)
+          const d1 = JSON.parse(s1)
+          orientationBefore = parseInt(d1.streams?.[0]?.tags?.orientation) || 0
+          const w = d1.streams?.[0]?.width || 0
+          const h = d1.streams?.[0]?.height || 0
+          console.log(`[Slideshow] Bild ${i+1}: RAW EXIF-Orient=${orientationBefore}, Dim=${w}x${h}`)
         } catch (e) {
-          console.warn(`[Slideshow] ffprobe EXIF Bild ${i+1}: ${e.message.slice(0, 150)}`)
+          console.warn(`[Slideshow] ffprobe RAW Bild ${i+1}: ${e.message.slice(0, 150)}`)
         }
 
-        await runFfmpeg(FFMPEG, ['-i', rawPath, '-q:v', '2', '-y', fixedPath])
-
-        // ImageMagick: auto-orient korrigiert ALLE EXIF-Fälle korrekt
-        // GrapheneOS, Google Camera, Pixel – alles wird richtig gedreht
+        // ImageMagick auf dem ORIGINAL-Bild
         try {
           await new Promise((resolve, reject) => {
-            const proc = spawn('convert', [fixedPath, '-auto-orient', '-strip', '-quality', '95', fixedPath])
-            proc.on('close', code => code === 0 ? resolve(null) : reject(new Error(`convert exit ${code}`)))
+            const proc = spawn('convert', [rawPath, '-auto-orient', '-strip', '-quality', '95', fixedPath])
+            let stderrData = ''
             proc.stderr.on('data', d => {
               const msg = d.toString().trim()
-              if (msg) console.warn(`[Slideshow] convert stderr: ${msg.slice(0, 200)}`)
+              if (msg) console.log(`[Slideshow] convert stderr: ${msg.slice(0, 300)}`)
+              stderrData += msg
+            })
+            proc.on('close', code => {
+              console.log(`[Slideshow] convert exit code: ${code}`)
+              code === 0 ? resolve(null) : reject(new Error(`convert exit ${code}: ${stderrData.slice(0, 200)}`))
             })
           })
           console.log(`[Slideshow] Bild ${i+1}: ImageMagick -auto-orient ✅`)
+
+          // Prüfe Dimensionen nach ImageMagick
+          try {
+            const { stdout: s2 } = await execFileAsync(FFPROBE, [
+              '-v', 'quiet', '-print_format', 'json',
+              '-show_entries', 'stream=width,height',
+              fixedPath
+            ])
+            const d2 = JSON.parse(s2)
+            console.log(`[Slideshow] Bild ${i+1}: NACH ImageMagick Dim=${d2.streams?.[0]?.width}x${d2.streams?.[0]?.height}`)
+          } catch {}
+
+          // Prüfe ob EXIF-Orientation entfernt wurde
+          try {
+            const { stdout: s3 } = await execFileAsync(FFPROBE, [
+              '-v', 'quiet', '-print_format', 'json',
+              '-show_entries', 'stream_tags=orientation',
+              fixedPath
+            ])
+            const afterOrient = parseInt(JSON.parse(s3)?.streams?.[0]?.tags?.orientation) || 0
+            console.log(`[Slideshow] Bild ${i+1}: EXIF nach ImageMagick = ${afterOrient}`)
+          } catch {}
         } catch (imgErr) {
-          console.warn(`[Slideshow] Bild ${i+1}: ImageMagick fehlgeschlagen (${imgErr.message}), nutze ohne auto-orient`)
+          console.warn(`[Slideshow] Bild ${i+1}: ImageMagick fehlgeschlagen (${imgErr.message})`)
+           // Fallback: FFmpeg Konvertierung ohne Rotation
+          await runFfmpeg(FFMPEG, ['-i', rawPath, '-q:v', '2', '-y', fixedPath])
         }
 
         imagePaths.push(fixedPath)
