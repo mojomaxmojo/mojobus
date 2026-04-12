@@ -1014,10 +1014,10 @@ async function runSlideshowJob(jobId, params) {
       inputArgs.push('-loop', '1', '-t', String(imageDuration), '-i', imgPath)
     }
 
-    // Audio-Input
+    // Audio-Input (Musik wird automatisch geloopt wenn zu kurz!)
     const fadeStart = Math.max(0, totalDuration - 2)
     if (musicPath) {
-      inputArgs.push('-i', musicPath)
+      inputArgs.push('-stream_loop', '-1', '-i', musicPath)
     }
 
     // Video filter_complex: scale+crop+zoompan pro Bild, dann xfade
@@ -1026,7 +1026,9 @@ async function runSlideshowJob(jobId, params) {
     // Audio filter
     let audioFilter
     if (musicPath) {
-      audioFilter = `[${n}:a]atrim=0:${totalDuration},afade=t=out:st=${fadeStart}:d=2[aout]`
+      // -stream_loop -1 im inputArgs: Musik unendlich loopen
+      // atrim: auf Video-Länge trimmen, asetpts: Timestamps resetten, afade: Fade-Out am Ende
+      audioFilter = `[${n}:a]atrim=0:${totalDuration},asetpts=PTS-STARTPTS,afade=t=out:st=${Math.max(0.5, totalDuration - 2)}:d=2[aout]`
     } else {
       inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
       audioFilter = `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
