@@ -995,14 +995,73 @@ async function runSlideshowJob(jobId, params) {
     }
 
     if (musicPath) {
-      console.log(`[Slideshow] Musik (${musicSource}): ${path.basename(musicPath)}`)
-    } else {
-      musicSource = 'silent'
-      console.log('[Slideshow] Kein Musik-File gefunden — verwende ffmpeg lavfi Stille als Audio-Track')
-      console.log(`[Slideshow] HINWEIS: Lege MP3-Dateien in ${MUSIC_DIR} ab um lokale Musik zu aktivieren`)
+      // Prüfe ob Musik-Datei existiert und gültig ist
+      const musicStat = fs.existsSync(musicPath) ? fs.statSync(musicPath) : null
+      if (!musicStat || musicStat.size === 0) {
+        console.error(`[Slideshow] ⚠️ Musik-Datei existiert nicht oder ist leer: ${musicPath}`)
+        musicPath = null
+        musicSource = 'silent'
+      } else {
+        console.log(`[Slideshow] Musik-Datei: ${path.basename(musicPath)} (${(musicStat.size / 1024 / 1024).toFixed(2)}MB)`)
+        // Prüfe Audio-Streams mit ffprobe
+        try {
+          const { stdout: audioProbe } = await execFileAsync(FFPROBE, [
+            '-v', 'quiet', '-print_format', 'json',
+            '-show_streams', '-show_format',
+            musicPath
+          ])
+          const audioData = JSON.parse(audioProbe)
+          const audioStreams = audioData.streams?.filter(s => s.codec_type === 'audio') || []
+          console.log(`[Slideshow] 🎵 Audio-Streams in Musik-Datei: ${audioStreams.length}`)
+          audioStreams.forEach((s, idx) => {
+            console.log(`[Slideshow]   Stream ${idx}: codec=${s.codec_name}, channels=${s.channels}, rate=${s.sample_rate}, duration=${s.duration || audioData.format?.duration}`)
+          })
+          if (audioStreams.length === 0) {
+            console.error(`[Slideshow] ⚠️ KEIN Audio-Stream in ${musicPath}! Musik deaktiviert.`)
+            musicPath = null
+            musicSource = 'silent'
+          }
+        } catch (probeErr) {
+          console.warn(`[Slideshow] ffprobe Musik-Datei: ${probeErr.message}`)
+        }
+      }
     }
 
-    updateJob({ status: 'rendering', progress: 40 })
+     if (!musicPath) {
+       musicSource = 'silent'
+       console.log('[Slideshow] Kein Musik-File gefunden — verwende ffmpeg lavfi Stille als Audio-Track')
+       console.log(`[Slideshow] HINWEIS: Lege MP3-Dateien in ${MUSIC_DIR} ab um lokale Musik zu aktivieren`)
+     }
+
+     // DETAILLIERTE MUSIK-PRÜFUNG
+     if (musicPath && musicSource !== 'silent') {
+       try {
+         const musicStat = fs.statSync(musicPath)
+         console.log(`[Slideshow] 🎵 Musik-Datei PRÜFUNG:`)
+         console.log(`[Slideshow] 🎵 File: ${path.basename(musicPath)}`)
+         console.log(`[Slideshow] 🎵 Größe: ${(musicStat.size / 1024).toFixed(1)} KB`)
+         // ffprobe Audio-Info
+         const { stdout: audioProbe } = await execFileAsync(FFPROBE, [
+           '-v', 'quiet', '-print_format', 'json',
+           '-show_streams', '-show_format', musicPath
+         ])
+         const audioData = JSON.parse(audioProbe)
+         const audioStream = audioData.streams?.find(s => s.codec_type === 'audio')
+         const duration = parseFloat(audioData.format?.duration || '0')
+         if (audioStream) {
+           console.log(`[Slideshow] 🎵 Audio: ${audioStream.codec_name}, ${audioStream.channels}ch, ${audioStream.sample_rate}Hz`)
+           console.log(`[Slideshow] 🎵 ⏱️ Dauer: ${duration.toFixed(1)}s (Video: ${totalDuration}s)`)
+         } else {
+           console.error(`[Slideshow] ⚠️ KEIN Audio-Stream in ${musicPath}!`)
+           musicPath = null
+           musicSource = 'silent'
+         }
+       } catch (probeErr) {
+         console.error(`[Slideshow] ⚠️ Musik-Prüfung fehlgeschlagen: ${probeErr.message}`)
+       }
+     }
+
+     updateJob({ status: 'rendering', progress: 40 })
 
     // ── Schritt 3: ffmpeg Slideshow bauen ─────────────────────────────────
     const outputPath = path.join(jobDir, 'slideshow.mp4')
@@ -1023,35 +1082,37 @@ async function runSlideshowJob(jobId, params) {
     // Video filter_complex: scale+crop+zoompan pro Bild, dann xfade
     const videoFilters = buildFilterComplex(n, imageDuration, fps, aspectRatio, fadeDuration)
 
-    // Audio filter
-    let audioFilter
-    if (musicPath) {
-      audioFilter = `[${n}:a]atrim=0:${totalDuration},afade=t=out:st=${fadeStart}:d=2[aout]`
-    } else {
-      inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
-      audioFilter = `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
-    }
+     // Audio filter
+     let audioFilter
+     if (musicPath) {
+       audioFilter = `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
+     } else {
+       inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
+       audioFilter = `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
+     }
 
-    const filterComplex = videoFilters + '; ' + audioFilter
+     const filterComplex = videoFilters + '; ' + audioFilter
 
-    const ffmpegArgs = [
-      '-y',
-      ...inputArgs,
-      '-filter_complex', filterComplex,
-      '-map', '[vout]',
-      '-map', '[aout]',
-      '-c:v', 'libx264',
-      '-preset', 'fast',
-      '-crf', '23',
-      '-r', String(fps),
-      '-c:a', 'aac',
-      '-b:a', musicPath ? '192k' : '64k',
-      '-movflags', '+faststart',
-      '-t', String(totalDuration),
-      outputPath
-    ]
+     const ffmpegArgs = [
+       '-y',
+       ...inputArgs,
+       '-filter_complex', filterComplex,
+       '-map', '[vout]',
+       '-map', '[aout]',
+       '-c:v', 'libx264',
+       '-preset', 'fast',
+       '-crf', '23',
+       '-r', String(fps),
+       '-c:a', 'aac',
+       '-b:a', musicPath ? '192k' : '64k',
+       '-shortest',
+       '-movflags', '+faststart',
+       '-t', String(totalDuration),
+       outputPath
+     ]
 
-    console.log(`[Slideshow] ffmpeg starten (${n} Bilder, ${fps}fps, ${imageDuration}s/Bild)`)
+     console.log(`[Slideshow] ffmpeg starten (${n} Bilder, ${fps}fps, ${imageDuration}s/Bild)`)
+     console.log(`[Slideshow] ffmpeg: Musik=${musicPath ? path.basename(musicPath) : 'KEINE'}, Source=${musicSource}`)
 
     await runFfmpeg(FFMPEG, ffmpegArgs)
 
