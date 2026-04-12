@@ -1082,14 +1082,17 @@ async function runSlideshowJob(jobId, params) {
     // Video filter_complex: scale+crop+zoompan pro Bild, dann xfade
     const videoFilters = buildFilterComplex(n, imageDuration, fps, aspectRatio, fadeDuration)
 
-     // Audio filter
-     let audioFilter
-     if (musicPath) {
-       audioFilter = `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
-     } else {
-       inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
-       audioFilter = `[${n}:a]afade=t=out:st=${fadeStart}:d=2[aout]`
-     }
+      // Audio filter - TEST: Einfach nur Audio durchreichen ohne afade
+      let audioFilter
+      if (musicPath) {
+        // Kein afade! Audio wird durch -t automatisch gekürzt
+        audioFilter = `[${n}:a]aformat=sample_fmts=fltp:channel_layouts=stereo[aout]`
+        console.log(`[Slideshow] 🎵 Audio: Musik durchreichen (ffmpeg kürzt mit -t)`)
+      } else {
+        inputArgs.push('-f', 'lavfi', '-i', `anullsrc=r=44100:cl=stereo:d=${totalDuration}`)
+        audioFilter = `[${n}:a]aformat=sample_fmts=fltp:channel_layouts=stereo[aout]`
+        console.log(`[Slideshow] 🔇 Kein Musik-File → Stille`)
+      }
 
      const filterComplex = videoFilters + '; ' + audioFilter
 
