@@ -1269,18 +1269,19 @@ app.post('/api/generate-trip', (req, res, next) => {
     const lifestyleConfig = getLifestyleConfig(lifestyle)
 
     // ===== BILDER ANALYSIEREN – Google Gemini 2.5 Flash via OpenRouter =====
-    // Kein Rate-Limit-Problem (bezahltes API), alle Bilder PARALLEL, sehr günstig
+    // Batching in 4er-Gruppen um Rate-Limits zu umgehen, bis zu 20 Bilder
     // Fallback auf Groq wenn OPENROUTER_API_KEY fehlt
-    const MAX_IMAGES_TO_ANALYZE = 12  // Stufe 1=12, 2=10, 3=6 (Frontend-Stufen)
-    const MAX_IMAGE_BYTES = 4 * 1024 * 1024  // 4MB max pro Bild
+    const MAX_IMAGES_TO_ANALYZE = 20
+    const MAX_IMAGE_BYTES = 2 * 1024 * 1024  // 2MB max pro Bild (schneller, weniger RAM)
+    const BATCH_SIZE = 4  // 4 Bilder pro Batch paralell
     const imagesToAnalyze = images.slice(0, MAX_IMAGES_TO_ANALYZE)
     const useGemini = !!process.env.OPENROUTER_API_KEY
-    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern via ${useGemini ? 'Gemini 2.5 Flash (OpenRouter)' : 'Groq Llama-4 (Fallback)'} – PARALLEL`)
+    console.log(`[KI] Analysiere ${imagesToAnalyze.length} von ${images.length} Bildern via ${useGemini ? 'Gemini 2.5 Flash (OpenRouter)' : 'Groq Llama-4 (Fallback)'} – Batching (4er-Gruppen)`)
 
     // Einzelnes Bild analysieren: Gemini preferred, Groq als Fallback
     const analyzeOneBild = async (img, index) => {
       if (img.buffer.length > MAX_IMAGE_BYTES) {
-        console.warn(`[KI] Bild ${index + 1} zu groß (${(img.buffer.length/1024/1024).toFixed(1)}MB > 4MB), überspringe`)
+        console.warn(`[KI] Bild ${index + 1} zu groß (${(img.buffer.length/1024/1024).toFixed(1)}MB > 2MB), überspringe`)
         return '(Bild übersprungen – zu groß)'
       }
       const base64   = img.buffer.toString('base64')
@@ -1308,7 +1309,7 @@ app.post('/api/generate-trip', (req, res, next) => {
               'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
               'Content-Type': 'application/json'
             },
-            timeout: 45000
+            timeout: 60000
           })
           return r.data.choices[0].message.content
         } catch (geminiErr) {
@@ -1319,7 +1320,7 @@ app.post('/api/generate-trip', (req, res, next) => {
         }
       }
 
-      // ── Groq Llama-4-Scout Fallback (sequentiell, mit Pause) ────────────
+      // ── Groq Llama-4-Scout Fallback ─────────────────────────────────────
       try {
         console.log(`[KI] Groq Fallback Bild ${index + 1}/${imagesToAnalyze.length}: ${sizeKB}KB`)
         const r = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
@@ -1347,20 +1348,23 @@ app.post('/api/generate-trip', (req, res, next) => {
       }
     }
 
-    // PARALLEL analysieren (Gemini hat kein striktes Rate-Limit-Problem)
-    // Bei Groq-Fallback: max 4 gleichzeitig um Rate-Limit zu schonen
+    // ── Batching: 4 Bilder parallel, dann nächste Gruppe ──
     let imageDescriptions = []
-    if (useGemini) {
-      // Alle parallel via Gemini
-      const results = await Promise.allSettled(
-        imagesToAnalyze.map((img, i) => analyzeOneBild(img, i))
+    for (let batchStart = 0; batchStart < imagesToAnalyze.length; batchStart += BATCH_SIZE) {
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, imagesToAnalyze.length)
+      const batch = imagesToAnalyze.slice(batchStart, batchEnd)
+      console.log(`[KI] Batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: Bilder ${batchStart + 1}-${batchEnd} (${batchEnd - batchStart} Bilder)`)
+
+      const batchResults = await Promise.allSettled(
+        batch.map((img, i) => analyzeOneBild(img, batchStart + i))
       )
-      imageDescriptions = results.map(r => r.status === 'fulfilled' ? r.value : '(Fehler)')
-    } else {
-      // Groq: sequentiell mit 1s Pause
-      for (let i = 0; i < imagesToAnalyze.length; i++) {
-        imageDescriptions.push(await analyzeOneBild(imagesToAnalyze[i], i))
-        if (i < imagesToAnalyze.length - 1) await new Promise(r => setTimeout(r, 1000))
+      const batchDescriptions = batchResults.map(r => r.status === 'fulfilled' ? r.value : '(Fehler)')
+      imageDescriptions.push(...batchDescriptions)
+
+      // Pause zwischen Batches um Rate-Limits zu beachten
+      if (batchEnd < imagesToAnalyze.length) {
+        console.log(`[KI] Pause zwischen Batches...`)
+        await new Promise(r => setTimeout(r, 2000))
       }
     }
 
