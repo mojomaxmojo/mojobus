@@ -11,24 +11,19 @@ import {
 } from '@/config/imageOptimization';
 
 /**
- * Korrigiert die Bildorientierung: Browser wendet EXIF-Rotation bereits an,
- * daher zeichnen wir das Bild auf Canvas (browser-korrigiert) und speichern
- * ohne EXIF Orientation Tag. Kein manuelles Rotieren nötig!
+ * Stript EXIF-Orientierung von Bildern durch Canvas-Redraw.
+ * Der Browser wendet EXIF-Rotation bereits an beim Laden.
+ * Wir zeichnen das Bild auf Canvas → korrekte Pixel ohne EXIF-Tag.
+ * Wird IMMER ausgeführt, nicht nur bei orientation ≠ 1,
+ * da exifr manche EXIF-Daten nicht lesen kann (z.B. GrapheneOS Camera).
  */
 async function correctImageOrientation(file: File): Promise<File> {
+  // Nur Bilder verarbeiten
+  if (!file.type.startsWith('image/')) {
+    return file;
+  }
+
   try {
-    const exif = await exifr.parse(file);
-    const orientation = exif?.Orientation;
-
-    // Kein EXIF oder Orientation=1 → nichts zu tun
-    if (!orientation || orientation === 1) {
-      return file;
-    }
-
-    console.log(`📷 [Orientation] ${file.name}: EXIF Orientation=${orientation} → redraw to strip EXIF`);
-
-    // Browser hat das Bild bereits korrekt gedreht (EXIF angewendet).
-    // Wir zeichnen es auf Canvas → korrekte Pixel, aber ohne EXIF-Tag.
     const img = new Image();
     const url = URL.createObjectURL(file);
 
@@ -38,7 +33,8 @@ async function correctImageOrientation(file: File): Promise<File> {
       img.src = url;
     });
 
-    // Browser-korrigierte Abmessungen verwenden
+    // Browser hat EXIF-Rotation bereits angewendet.
+    // Canvas Redraw = korrekte Pixel, aber kein EXIF-Orientation-Tag.
     const canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
@@ -49,23 +45,22 @@ async function correctImageOrientation(file: File): Promise<File> {
       return file;
     }
 
-    // Bild zeichnen (bereits korrekt orientiert durch Browser)
     ctx.drawImage(img, 0, 0);
     URL.revokeObjectURL(url);
 
-    // Als JPEG ohne EXIF-Orientation speichern
+    const orientation = (await exifr.parse(file).catch(() => null))?.Orientation || 1;
+    console.log(`📷 [Orientation] ${file.name}: EXIF=${orientation}, Canvas=${img.naturalWidth}x${img.naturalHeight} → EXIF stripped`);
+
     return new Promise((resolve) => {
       canvas.toBlob((blob) => {
         if (!blob) {
           resolve(file);
           return;
         }
-        const correctedFile = new File([blob], file.name, {
+        resolve(new File([blob], file.name, {
           type: 'image/jpeg',
           lastModified: file.lastModified,
-        });
-        console.log(`✅ [Orientation] ${file.name}: EXIF stripped, ${img.naturalWidth}x${img.naturalHeight}`);
-        resolve(correctedFile);
+        }));
       }, 'image/jpeg', 0.95);
     });
 
