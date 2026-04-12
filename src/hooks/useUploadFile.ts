@@ -11,53 +11,69 @@ import {
 } from '@/config/imageOptimization';
 
 /**
- * Korrigiert die Bildorientierung basierend auf EXIF-Daten
- * Berücksichtigt auch die Bildabmessungen für Pixel-Smartphones
+ * Korrigiert die Bildorientierung: Browser wendet EXIF-Rotation bereits an,
+ * daher zeichnen wir das Bild auf Canvas (browser-korrigiert) und speichern
+ * ohne EXIF Orientation Tag. Kein manuelles Rotieren nötig!
  */
 async function correctImageOrientation(file: File): Promise<File> {
   try {
-    console.log(`📷 [Orientation] Checking ${file.name}...`);
-    
-    // EXIF-Daten lesen
     const exif = await exifr.parse(file);
-    const orientation = exif?.Orientation || 1;
-    const make = exif?.Make;
-    const model = exif?.Model;
+    const orientation = exif?.Orientation;
 
-    // EXIF-Bildabmessungen
-    const exifWidth = exif?.ImageWidth || exif?.ExifImageWidth || exif?.PixelXDimension;
-    const exifHeight = exif?.ImageHeight || exif?.ExifImageHeight || exif?.PixelYDimension;
-    
-    // Debug: Orientation = ${orientation}, Make = ${make}, Model = ${model}
-    // Debug: EXIF dimensions = ${exifWidth}x${exifHeight}
-    
-    // Bild laden um tatsächliche Abmessungen zu prüfen
+    // Kein EXIF oder Orientation=1 → nichts zu tun
+    if (!orientation || orientation === 1) {
+      return file;
+    }
+
+    console.log(`📷 [Orientation] ${file.name}: EXIF Orientation=${orientation} → redraw to strip EXIF`);
+
+    // Browser hat das Bild bereits korrekt gedreht (EXIF angewendet).
+    // Wir zeichnen es auf Canvas → korrekte Pixel, aber ohne EXIF-Tag.
     const img = new Image();
     const url = URL.createObjectURL(file);
-    
+
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
       img.onerror = reject;
       img.src = url;
     });
-    
-    const actualWidth = img.naturalWidth;
-    const actualHeight = img.naturalHeight;
-    
-    console.log(`📷 [Orientation] ${file.name}: Actual dimensions = ${actualWidth}x${actualHeight}`);
-    
-    // Prüfen ob Rotation nötig ist
-    // Fall 1: EXIF Orientation ist nicht 1 (Standard EXIF-Rotation)
-    // Fall 2: EXIF sagt Querformat, Bild ist Hochformat (Pixel-Problem)
-    let rotationDegrees = 0;
-    
-      if (orientation !== 1) {
-        // EXIF-Orientation basierte Rotation
-        switch (orientation) {
-          case 3: rotationDegrees = 180; break;
-          case 6: rotationDegrees = 90; break;
-          case 8: rotationDegrees = -90; break;
+
+    // Browser-korrigierte Abmessungen verwenden
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      URL.revokeObjectURL(url);
+      return file;
+    }
+
+    // Bild zeichnen (bereits korrekt orientiert durch Browser)
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+
+    // Als JPEG ohne EXIF-Orientation speichern
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(file);
+          return;
         }
+        const correctedFile = new File([blob], file.name, {
+          type: 'image/jpeg',
+          lastModified: file.lastModified,
+        });
+        console.log(`✅ [Orientation] ${file.name}: EXIF stripped, ${img.naturalWidth}x${img.naturalHeight}`);
+        resolve(correctedFile);
+      }, 'image/jpeg', 0.95);
+    });
+
+  } catch (error) {
+    console.warn('⚠️ [Orientation] Failed:', error);
+    return file;
+  }
+}
         
         // GrapheneOS/Google Camera Fix für Pixel Geräte
         // Orientation 6 bedeutet normalerweise "drehe 90° CW", aber Pixel
