@@ -20,6 +20,16 @@ interface SlideshowBlockProps {
   onVideoReady?: (videoUrl: string) => void;
 }
 
+/** Musik-Prompts für KI-Generierung von Extern (z.B. Suno, Udio etc.) */
+const MUSIC_PROMPTS: Record<string, string> = {
+  mojobus: 'Vintage Americana, a leisurely road trip, the hum of a diesel engine, the open highway, deep house, progressive house, warm and weathered',
+  vanlife: 'chill acoustic guitar, road trip vibes, slow tempo, warm sunset atmosphere, indie folk',
+  rvlife: 'americana country folk, open road, relaxed tempo, guitar and harmonica',
+  beachlife: 'tropical chill, reggae influence, ocean waves, summer vibes, laid back',
+  wohnmobil: 'european cafe music, accordion, relaxed journey, soft piano',
+  'perpetual-travelers': 'world music ambient, travel vibes, ethnic instruments, meditative journey',
+};
+
 export function SlideshowBlock({
   imageUrls,
   localFiles = [],
@@ -31,7 +41,6 @@ export function SlideshowBlock({
   const { toast } = useToast();
 
   const [enabled, setEnabled] = useState(false);
-  const [musicMode, setMusicMode] = useState<'local' | 'elevenlabs'>('local');
   const [aspect, setAspect] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [imgDuration, setImgDuration] = useState<4 | 6 | 8>(4);
 
@@ -105,9 +114,7 @@ export function SlideshowBlock({
       : progress < 32
       ? 'Bilder herunterladen...'
       : progress < 40
-      ? musicMode === 'elevenlabs'
-        ? 'KI-Musik generieren...'
-        : 'Musik laden...'
+      ? 'Musik laden...'
       : progress < 85
       ? 'ffmpeg rendert...'
       : 'Zu Blossom hochladen...';
@@ -156,7 +163,7 @@ export function SlideshowBlock({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageUrls: urlsToUse,
-          musicMode,
+          musicMode: 'local',
           lifestyle,
           aspectRatio: aspect,
           imageDuration: imgDuration,
@@ -167,9 +174,7 @@ export function SlideshowBlock({
 
       toast({
         title: '🎞️ Slideshow wird erstellt...',
-        description: `${data.imageCount} Bilder · ${data.totalDuration}s · ${
-          musicMode === 'elevenlabs' ? 'KI-Musik ($0.50)' : 'Lokale Musik'
-        }`,
+        description: `${data.imageCount} Bilder · ${data.totalDuration}s · Lokale Musik`,
       });
 
       let attempts = 0;
@@ -223,14 +228,6 @@ export function SlideshowBlock({
           });
           setStatus('completed');
           setProgress(100);
-          // ElevenLabs-Fehler als Warnung anzeigen (Slideshow wurde trotzdem erstellt)
-          if (pollData.elevenlabsError) {
-            toast({
-              title: '⚠️ ElevenLabs fehlgeschlagen',
-              description: `Fallback auf lokale Musik. Fehler: ${pollData.elevenlabsError.slice(0, 120)}`,
-              variant: 'destructive',
-            });
-          }
           // Eltern-Komponente über fertige URL informieren
           onVideoReady?.(blossomUrl);
           toast({
@@ -262,6 +259,8 @@ export function SlideshowBlock({
       setIsGenerating(false);
     }
   };
+
+  const currentPrompt = MUSIC_PROMPTS[lifestyle] || MUSIC_PROMPTS['mojobus'];
 
   return (
     <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
@@ -327,58 +326,32 @@ export function SlideshowBlock({
       {/* Erweiterter Bereich nur wenn aktiv */}
       {enabled && (
         <div className="space-y-4 pt-2 border-t border-muted">
-          {/* Musik-Schalter */}
+          {/* Musik: Nur Lokal */}
           <div className="space-y-2">
             <Label className="text-xs font-medium">🎵 Musik</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setMusicMode('local')}
-                className={`p-3 rounded-lg border text-left transition-all ${
-                  musicMode === 'local'
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
-                }`}
-              >
-                <div className="font-medium text-sm">
-                  🎸 Lokal
-                  {localMusicAvailable === false && (
-                    <span className="ml-1 text-xs text-amber-500">⚠️</span>
-                  )}
-                  {localMusicAvailable === true && (
-                    <span className="ml-1 text-xs text-emerald-500">✓ {localMusicFiles.length} Track{localMusicFiles.length !== 1 ? 's' : ''}</span>
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
+            <div className="rounded-lg p-3 border bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800">
+              <div className="font-medium text-sm text-emerald-700 dark:text-emerald-300">
+                🎸 Lokal
+                <span className="ml-1 text-xs text-emerald-500">
                   {localMusicAvailable === true
-                    ? `${localMusicFiles.slice(0, 2).join(', ')}${localMusicFiles.length > 2 ? '...' : ''}`
-                    : 'Fertige Chill-Tracks'}
-                </div>
-                <div className="text-xs font-medium mt-1 text-emerald-600">
-                  $0.00 — kostenlos
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMusicMode('elevenlabs')}
-                className={`p-3 rounded-lg border text-left transition-all ${
-                  musicMode === 'elevenlabs'
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
-                }`}
-              >
-                <div className="font-medium text-sm">🤖 KI-Musik</div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  ElevenLabs · Lifestyle-passend
-                </div>
-                <div className="text-xs font-medium mt-1 text-amber-600">
-                  $0.50 via ppq.ai
-                </div>
-              </button>
+                    ? `✓ ${localMusicFiles.length} Track${localMusicFiles.length !== 1 ? 's' : ''}`
+                    : ''}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {localMusicAvailable === true
+                  ? `${localMusicFiles.slice(0, 2).join(', ')}${localMusicFiles.length > 2 ? '...' : ''}`
+                  : localMusicAvailable === false
+                  ? '⚠️ Keine Musik-Dateien auf dem Server'
+                  : 'Fertige Chill-Tracks · Zufällige Auswahl'}
+              </div>
+              <div className="text-xs font-medium mt-1 text-emerald-600">
+                $0.00 — kostenlos
+              </div>
             </div>
 
             {/* Warnung: keine lokale Musik */}
-            {musicMode === 'local' && localMusicAvailable === false && (
+            {localMusicAvailable === false && (
               <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-1.5">
                 <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
                   ⚠️ Keine lokalen Musik-Dateien gefunden
@@ -392,25 +365,37 @@ export function SlideshowBlock({
                 <p className="text-xs text-muted-foreground">
                   Lege <strong>.mp3</strong>, <strong>.m4a</strong> oder <strong>.ogg</strong> Dateien in diesen Ordner auf dem VPS. Dann wird automatisch ein zufälliger Track verwendet.
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Oder wähle <strong>KI-Musik</strong> für automatisch generierte Musik (~$0.50).
-                </p>
               </div>
             )}
+          </div>
 
-            {/* Info: lokale Musik vorhanden */}
-            {musicMode === 'local' && localMusicAvailable === true && (
-              <p className="text-xs text-muted-foreground bg-emerald-50 dark:bg-emerald-900/20 rounded p-2">
-                🎵 Zufälliger Track aus <strong>{localMusicFiles.length}</strong> verfügbaren Dateien.
-              </p>
-            )}
-
-            {/* Info: ElevenLabs */}
-            {musicMode === 'elevenlabs' && (
-              <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 rounded p-2">
-                🎵 Musik-Stil passend zu <strong>{lifestyle}</strong> wird von ElevenLabs generiert.
-              </p>
-            )}
+          {/* Musik-Prompt Infobox für KI-Musik-Generatoren (Suno, Udio etc.) */}
+          <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3 space-y-1.5">
+            <p className="text-xs font-medium text-blue-700 dark:text-blue-300">
+              🎶 Musik-Prompt für KI-Generatoren (Suno, Udio, ElevenLabs...)
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Für eigene Musik-Generierung:
+            </p>
+            <div className="relative">
+              <pre className="text-xs text-blue-600 dark:text-blue-300 bg-white dark:bg-gray-900 rounded border border-blue-200 dark:border-blue-700 p-2 pr-10 break-words leading-relaxed">
+                {currentPrompt}
+              </pre>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(currentPrompt);
+                  toast({ title: '📋 Prompt kopiert!', variant: 'default' });
+                }}
+                className="absolute top-1.5 right-1.5 p-1 rounded bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors"
+                title="Prompt kopieren"
+              >
+                <svg className="w-4 h-4 text-blue-600 dark:text-blue-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Format + Sek. pro Bild */}
@@ -418,7 +403,11 @@ export function SlideshowBlock({
             <div className="space-y-1">
               <Label className="text-xs">Format</Label>
               <div className="flex gap-1">
-                {(['16:9', '9:16', '1:1'] as const).map((a) => (
+                {([
+                  { value: '16:9' as const, label: '16:9 Cinema' },
+                  { value: '9:16' as const, label: '9:16 Phone' },
+                  { value: '1:1' as const, label: '1:1 Square' },
+                ]).map(({ value: a, label }) => (
                   <button
                     key={a}
                     type="button"
@@ -429,7 +418,7 @@ export function SlideshowBlock({
                         : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-300 dark:border-gray-600 hover:border-emerald-400'
                     }`}
                   >
-                    {a}
+                    {label}
                   </button>
                 ))}
               </div>
@@ -462,7 +451,7 @@ export function SlideshowBlock({
             <span>
               💰{' '}
               <strong className="text-emerald-600">
-                ${musicMode === 'elevenlabs' ? '0.50' : '0.00'}
+                $0.00
               </strong>
             </span>
           </div>
