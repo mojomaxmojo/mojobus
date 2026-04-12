@@ -853,45 +853,18 @@ async function runSlideshowJob(jobId, params) {
     console.log(`[Slideshow] Job ${jobId}: ${imageUrls.length} Bilder, ${musicMode} Musik, ${imageDuration}s/Bild`)
 
     // ── Schritt 1: Bilder downloaden ───────────────────────────────────────
-    // GrapheneOS Camera: Bilder physisch quer gespeichert, EXIF entfernt.
-    // Rotation wird später mit ImageMagick -auto-orient behandelt.
+    // Client korrigiert EXIF-Orientierung bereits vor Upload (Canvas Redraw).
+    // Server muss nur konvertieren, NICHT rotieren.
     const imagePaths = []
     for (let i = 0; i < imageUrls.length; i++) {
-      // rawPath: originale Datei (beliebiges Format: webp/jpg/png)
-      // fixedPath: immer .jpg — ffmpeg konvertiert automatisch
       const urlExt = (imageUrls[i].match(/\.(webp|png|jpe?g)(\?|$)/i) || [])[1]?.toLowerCase() || 'webp'
       const rawPath  = path.join(jobDir, `img_${i}_raw.${urlExt}`)
-      const fixedPath = path.join(jobDir, `img_${i}.jpg`)  // immer jpg
+      const fixedPath = path.join(jobDir, `img_${i}.jpg`)
       try {
         await downloadImage(imageUrls[i], rawPath)
 
-        // Prüfe Bild-Abmessungen mit ffprobe
-        let imgW = 0, imgH = 0
-        try {
-          const { stdout } = await execFileAsync(FFPROBE, [
-            '-v', 'error',
-            '-select_streams', 'v:0',
-            '-show_entries', 'stream=width,height',
-            '-of', 'csv=s=x:p=0',
-            rawPath
-          ])
-          const parts = (stdout || '').trim().split('x')
-          imgW = parseInt(parts[0]) || 0
-          imgH = parseInt(parts[1]) || 0
-        } catch (e) {
-          console.warn(`[Slideshow] ffprobe Bild ${i+1}: ${e.message.slice(0, 100)}`)
-        }
-        console.log(`[Slideshow] Bild ${i+1}: ${imgW}×${imgH}`)
-        
-        // Immer durch ffmpeg jagen: WebP/PNG → JPEG konvertieren
-        // Wenn Bild quer ist (width > height) und sollte hoch sein -> drehen
-        const ffArgs = ['-i', rawPath]
-        if (imgW > imgH) {
-          // Quer-Bild: Rotate 90° CW für korrekte Darstellung
-          ffArgs.push('-vf', 'transpose=1')
-          console.log(`[Slideshow] Bild ${i+1}: 90°CW drehen (quer→hoch) ✓`)
-        }
-        ffArgs.push('-q:v', '2', '-y', fixedPath)
+        // Nur konvertieren: WebP/PNG → JPEG, KEINE Rotation
+        const ffArgs = ['-i', rawPath, '-q:v', '2', '-y', fixedPath]
         await runFfmpeg(FFMPEG, ffArgs)
         console.log(`[Slideshow] Bild ${i+1}: JPEG konvertiert ✓`)
         imagePaths.push(fixedPath)
