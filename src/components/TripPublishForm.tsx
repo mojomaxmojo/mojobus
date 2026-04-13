@@ -1237,7 +1237,7 @@ export function TripPublishForm() {
                 teaserParts.push(`🗺️ ${tripData.title || 'Trip'}`);
                 if (teaserSummary) teaserParts.push(teaserSummary);
                 if (slideshowVideoUrl) teaserParts.push(slideshowVideoUrl);
-                teaserParts.push(`more: https://mojobus.co/trip/${dTag}`);
+                teaserParts.push(`https://mojobus.co/trip/${dTag}`);
                 teaserParts.push(`${gpsStations.length} Stationen · ${Math.round(totalDistance)}km`);
                 const teaserContent = teaserParts.join('\n\n');
 

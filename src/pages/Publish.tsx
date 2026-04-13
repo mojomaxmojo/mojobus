@@ -4818,7 +4818,7 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         teaserParts.push(`📖 ${title.trim()}`);
         if (teaserSummary) teaserParts.push(teaserSummary);
         if (videoUrl && videoUrl.trim()) teaserParts.push(videoUrl);
-        teaserParts.push(`more: https://mojobus.co/artikel/${dTag}`);
+        teaserParts.push(`https://mojobus.co/artikel/${dTag}`);
         teaserParts.push(`nostr:${naddr}`);
 
         const teaserContent = teaserParts.join('\n\n');
