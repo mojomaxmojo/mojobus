@@ -4817,8 +4817,8 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
         const teaserParts: string[] = [];
         teaserParts.push(`📖 ${title.trim()}`);
         if (teaserSummary) teaserParts.push(teaserSummary);
-        if (videoUrl) teaserParts.push(videoUrl);
-        teaserParts.push(`\n${articleUrl}`);
+        if (videoUrl && videoUrl.trim()) teaserParts.push(videoUrl);
+        teaserParts.push(`more: https://mojobus.co/artikel/${dTag}`);
         teaserParts.push(`nostr:${naddr}`);
 
         const teaserContent = teaserParts.join('\n\n');

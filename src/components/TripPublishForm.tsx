@@ -1231,14 +1231,15 @@ export function TripPublishForm() {
                    : 'Dein Trip wurde erfolgreich veröffentlicht.',
                });
                
-               // Teaser-Note vorbereiten
-               const teaserSummary = tripData.summary.trim().slice(0, 150) + (tripData.summary.trim().length > 150 ? '…' : '');
-               const teaserParts: string[] = [];
-               teaserParts.push(`🗺️ ${tripData.title || 'Trip'}`);
-               if (teaserSummary) teaserParts.push(teaserSummary);
-               if (slideshowVideoUrl) teaserParts.push(slideshowVideoUrl);
-               teaserParts.push(`\n${gpsStations.length} Stationen · ${Math.round(totalDistance)}km`);
-               const teaserContent = teaserParts.join('\n\n');
+                // Teaser-Note vorbereiten
+                const teaserSummary = tripData.summary.trim().slice(0, 150) + (tripData.summary.trim().length > 150 ? '…' : '');
+                const teaserParts: string[] = [];
+                teaserParts.push(`🗺️ ${tripData.title || 'Trip'}`);
+                if (teaserSummary) teaserParts.push(teaserSummary);
+                if (slideshowVideoUrl) teaserParts.push(slideshowVideoUrl);
+                teaserParts.push(`more: https://mojobus.co/trip/${dTag}`);
+                teaserParts.push(`${gpsStations.length} Stationen · ${Math.round(totalDistance)}km`);
+                const teaserContent = teaserParts.join('\n\n');
 
                const teaserTags: string[][] = [
                  ['t', 'trip'],
