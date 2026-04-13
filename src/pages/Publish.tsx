@@ -5734,8 +5734,8 @@ Schreibe deinen Artikel hier...
           </div>
         </div>
 
-        {/* ── Teaser-Note Preview + Manueller Publish (nur bei neuem Artikel) ── */}
-        {teaserPreview && !editEvent && (
+        {/* ── Teaser-Note Preview + Manueller Publish ── */}
+        {teaserPreview && (
           <div className="p-4 border-2 rounded-lg border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30 space-y-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">📢</span>

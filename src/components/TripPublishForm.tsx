@@ -378,6 +378,7 @@ export function TripPublishForm() {
   const [tripLength, setTripLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [aiGeneratedCaptions, setAiGeneratedCaptions] = useState<Set<string>>(new Set()); // station.ids mit KI-Caption
   const [slideshowVideoUrl, setSlideshowVideoUrl] = useState<string | null>(null); // Fertige Blossom-URL der Slideshow
+  const [stationPreviewOpen, setStationPreviewOpen] = useState<string | null>(null); // Dialog: Station-Bild groß anzeigen
 
   // Hooks
   const { toast } = useToast();
@@ -1859,8 +1860,9 @@ export function TripPublishForm() {
                 <div className="flex-shrink-0">
                   <img
                     src={station.preview}
-                    alt=""
-                    className="w-20 h-20 object-cover rounded"
+                    alt={station.title || `Station ${index + 1}`}
+                    className="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity hover:ring-2 hover:ring-primary"
+                    onClick={() => setStationPreviewOpen(station.id)}
                   />
                 </div>
               </div>
@@ -1869,7 +1871,7 @@ export function TripPublishForm() {
         </CardContent>
       </Card>
 
-      {/* Navigation */}
+       {/* Navigation */}
       <div className="flex justify-between">
         <Button variant="outline" onClick={() => setCurrentStep('upload')}>
           <ChevronLeft className="h-4 w-4 mr-2" />
@@ -1883,6 +1885,61 @@ export function TripPublishForm() {
           <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
+
+      {/* Station-Bild Dialog (groß) */}
+      <Dialog open={!!stationPreviewOpen} onOpenChange={() => setStationPreviewOpen(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {(() => {
+                const st = stations.find(s => s.id === stationPreviewOpen);
+                if (!st) return '';
+                const idx = stations.indexOf(st);
+                return `Station ${idx + 1}: ${st.title || st.location || 'Unbenannt'}`;
+              })()}
+            </DialogTitle>
+            <DialogDescription>
+              {(() => {
+                const st = stations.find(s => s.id === stationPreviewOpen);
+                if (!st) return '';
+                return st.date ? new Date(st.date).toLocaleDateString('de-DE') : '';
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const stIndex = stations.findIndex(s => s.id === stationPreviewOpen);
+            if (stIndex === -1) return null;
+            const st = stations[stIndex];
+            return (
+              <div className="space-y-4">
+                {/* Großes Bild */}
+                <div className="relative rounded-lg overflow-hidden bg-black">
+                  <img
+                    src={st.preview}
+                    alt={st.title || `Station ${stIndex + 1}`}
+                    className="w-full max-h-[60vh] object-contain mx-auto"
+                  />
+                </div>
+                {/* Station-Info */}
+                <div className="space-y-3">
+                  {st.gps && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-green-600" />
+                      <span className="text-muted-foreground">{formatCoordinatesSimple(st.gps.latitude, st.gps.longitude)}</span>
+                      {st.location && <span>· {st.location}</span>}
+                    </div>
+                  )}
+                  {st.description && (
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{st.description}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
