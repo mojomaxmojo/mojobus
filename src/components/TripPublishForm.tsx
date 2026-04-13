@@ -378,7 +378,8 @@ export function TripPublishForm() {
   const [tripLength, setTripLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [aiGeneratedCaptions, setAiGeneratedCaptions] = useState<Set<string>>(new Set()); // station.ids mit KI-Caption
   const [slideshowVideoUrl, setSlideshowVideoUrl] = useState<string | null>(null); // Fertige Blossom-URL der Slideshow
-  const [stationPreviewOpen, setStationPreviewOpen] = useState<string | null>(null); // Dialog: Station-Bild groß anzeigen
+  const [stationPreviewOpen, setStationPreviewOpen] = useState<string | null>(null);
+  const [draftDescription, setDraftDescription] = useState('');
 
   // Hooks
   const { toast } = useToast();
@@ -1862,7 +1863,10 @@ export function TripPublishForm() {
                     src={station.preview}
                     alt={station.title || `Station ${index + 1}`}
                     className="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity hover:ring-2 hover:ring-primary"
-                    onClick={() => setStationPreviewOpen(station.id)}
+                    onClick={() => {
+                      setDraftDescription(station.description);
+                      setStationPreviewOpen(station.id);
+                    }}
                   />
                 </div>
               </div>
@@ -1887,8 +1891,28 @@ export function TripPublishForm() {
       </div>
 
       {/* Station-Bild Dialog (groß) */}
-      <Dialog open={!!stationPreviewOpen} onOpenChange={() => setStationPreviewOpen(null)}>
-        <DialogContent className="max-w-3xl">
+      <Dialog 
+        open={!!stationPreviewOpen} 
+        onOpenChange={(open) => {
+          if (!open) {
+            // Speichern beim Schließen
+            if (stationPreviewOpen) {
+              updateStation(stationPreviewOpen, 'description', draftDescription);
+              // KI-Badge entfernen
+              const st = stations.find(s => s.id === stationPreviewOpen);
+              if (st && aiGeneratedCaptions.has(st.id)) {
+                setAiGeneratedCaptions(prev => {
+                  const next = new Set(prev);
+                  next.delete(st.id);
+                  return next;
+                });
+              }
+            }
+            setStationPreviewOpen(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>
               {(() => {
@@ -1901,8 +1925,7 @@ export function TripPublishForm() {
             <DialogDescription>
               {(() => {
                 const st = stations.find(s => s.id === stationPreviewOpen);
-                if (!st) return '';
-                return st.date ? new Date(st.date).toLocaleDateString('de-DE') : '';
+                return st?.date ? new Date(st.date).toLocaleDateString('de-DE') : '';
               })()}
             </DialogDescription>
           </DialogHeader>
@@ -1910,6 +1933,10 @@ export function TripPublishForm() {
             const stIndex = stations.findIndex(s => s.id === stationPreviewOpen);
             if (stIndex === -1) return null;
             const st = stations[stIndex];
+            // Draft laden wenn Dialog für neue Station geöffnet wird
+            if (draftDescription === '' && st.description !== '') {
+              setDraftDescription(st.description);
+            }
             return (
               <div className="space-y-4">
                 {/* Großes Bild */}
@@ -1917,7 +1944,7 @@ export function TripPublishForm() {
                   <img
                     src={st.preview}
                     alt={st.title || `Station ${stIndex + 1}`}
-                    className="w-full max-h-[60vh] object-contain mx-auto"
+                    className="w-full max-h-[50vh] object-contain mx-auto"
                   />
                 </div>
                 {/* Station-Info */}
@@ -1929,11 +1956,18 @@ export function TripPublishForm() {
                       {st.location && <span>· {st.location}</span>}
                     </div>
                   )}
-                  {st.description && (
-                    <div className="rounded-lg border bg-muted/30 p-3">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{st.description}</p>
-                    </div>
-                  )}
+                  
+                  {/* Editable Description */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">✏️ Bildtext editieren</Label>
+                    <Textarea
+                      value={draftDescription}
+                      onChange={(e) => setDraftDescription(e.target.value)}
+                      placeholder="Beschreibe dieses Bild..."
+                      rows={5}
+                      className="min-h-[120px]"
+                    />
+                  </div>
                 </div>
               </div>
             );
