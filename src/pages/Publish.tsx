@@ -4784,8 +4784,9 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
     // Schritt 2: Teaser-Note VORBEREITEN (nicht auto-publizieren!)
     // Wird nach dem Publish als Preview + manueller Button angezeigt
+    // Auch beim Editieren – damit Teaser aktualisiert werden kann
     // ─────────────────────────────────────────────────────────
-    if (!editEvent && currentUser?.pubkey) {
+    if (currentUser?.pubkey) {
       try {
         const { nip19 } = await import('nostr-tools');
         const naddrData = {
@@ -4879,23 +4880,29 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
       setTeaserPublished(true);
       toast({ title: '✅ Teaser-Note veröffentlicht!', description: 'Erscheint im Nostr-Feed bei Primal, Amethyst & Damus' });
 
-      // Jetzt erst Reset + Redirect
+      // Reset + Redirect nach erfolgreicher Teaser-Publikation
       setTimeout(() => {
-        setTitle('');
-        setSummary('');
-        setContent('');
-        setImage('');
-        setCategory('');
-        setTags([]);
-        setLocation('');
-        setSelectedCountry('');
-        setPublishedAt('');
-        setImageFile(null);
-        setImageGps(null);
-        setImageGpsStatus('not_found');
-        setEditingImageGps(false);
-        setTeaserPreview(null);
-        navigate('/artikel');
+        if (editEvent) {
+          // Edit-Modus: Zurück zur Übersicht, Formular nicht resetten (User will evtl. weiter editieren)
+          navigate('/artikel');
+        } else {
+          // Neu-Modus: Formular resetten
+          setTitle('');
+          setSummary('');
+          setContent('');
+          setImage('');
+          setCategory('');
+          setTags([]);
+          setLocation('');
+          setSelectedCountry('');
+          setPublishedAt('');
+          setImageFile(null);
+          setImageGps(null);
+          setImageGpsStatus('not_found');
+          setEditingImageGps(false);
+          setTeaserPreview(null);
+          navigate('/artikel');
+        }
       }, 1500);
     } catch (err: any) {
       setTeaserError(err.message || 'Unbekannter Fehler');
@@ -4907,21 +4914,27 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
 
   // Teaser überspringen
   const skipTeaser = () => {
-    setTitle('');
-    setSummary('');
-    setContent('');
-    setImage('');
-    setCategory('');
-    setTags([]);
-    setLocation('');
-    setSelectedCountry('');
-    setPublishedAt('');
-    setImageFile(null);
-    setImageGps(null);
-    setImageGpsStatus('not_found');
-    setEditingImageGps(false);
-    setTeaserPreview(null);
-    navigate('/artikel');
+    if (editEvent) {
+      // Edit-Modus: Einfach zurück ohne Reset
+      navigate('/artikel');
+    } else {
+      // Neu-Modus: Formular resetten
+      setTitle('');
+      setSummary('');
+      setContent('');
+      setImage('');
+      setCategory('');
+      setTags([]);
+      setLocation('');
+      setSelectedCountry('');
+      setPublishedAt('');
+      setImageFile(null);
+      setImageGps(null);
+      setImageGpsStatus('not_found');
+      setEditingImageGps(false);
+      setTeaserPreview(null);
+      navigate('/artikel');
+    }
   };
 
   return (

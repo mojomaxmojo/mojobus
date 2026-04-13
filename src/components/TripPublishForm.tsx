@@ -13,6 +13,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import exifr from 'exifr';
 import { SlideshowBlock } from '@/components/SlideshowBlock';
+import { TeaserPreviewBox, type TeaserPreviewData } from '@/components/TeaserPreviewBox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -1053,6 +1054,45 @@ export function TripPublishForm() {
   };
 
   // Publish trip
+  // Teaser-Note State (nach Trip-Publish anzeigen)
+  const [showTeaserBox, setShowTeaserBox] = useState(false);
+  const [tripTeaserPreview, setTripTeaserPreview] = useState<TeaserPreviewData | null>(null);
+  const [isTripTeaserPublished, setIsTripTeaserPublished] = useState(false);
+
+  const publishTeaserForTrip = async () => {
+    if (!tripTeaserPreview) return;
+    setIsPublishing(true);
+    try {
+      await publishEvent({
+        kind: 1,
+        content: tripTeaserPreview.content,
+        tags: tripTeaserPreview.tags,
+      }, {
+        onSuccess: () => {
+          setIsTripTeaserPublished(true);
+          setIsPublishing(false);
+        },
+        onError: (err) => {
+          toast({ title: '❌ Teaser fehlgeschlagen', description: err?.message || err, variant: 'destructive' });
+          setIsPublishing(false);
+        },
+      });
+    } catch (err: any) {
+      toast({ title: '❌ Teaser fehlgeschlagen', description: err?.message || err, variant: 'destructive' });
+      setIsPublishing(false);
+    }
+  };
+
+  const skipTripTeaser = () => {
+    setShowTeaserBox(false);
+    setTripTeaserPreview(null);
+    setStations([]);
+    setTripData({ title: '', summary: '', country: '', tripType: '' });
+    setEditDtag(null);
+    setCurrentStep('upload');
+    setTimeout(() => navigate('/map/trips'), 500);
+  };
+
   const handlePublish = async () => {
     // First upload all images and get updated stations
     const uploadedStations = await uploadImages();
@@ -1181,26 +1221,48 @@ export function TripPublishForm() {
             content,
             tags
           }, {
-            onSuccess: () => {
-              toast({
-                title: isEditMode ? 'Trip aktualisiert!' : 'Trip veröffentlicht!',
-                description: isEditMode 
-                  ? 'Dein Trip wurde erfolgreich aktualisiert.' 
-                  : 'Dein Trip wurde erfolgreich veröffentlicht.',
-              });
-              
-              // Reset and redirect
-              setStations([]);
-              setTripData({ title: '', summary: '', country: '', tripType: '' });
-              setEditDtag(null);
-              setCurrentStep('upload');
-              
-              setTimeout(() => {
-                navigate('/map/trips');
-              }, 1500);
-              
-              resolve();
-            },
+             onSuccess: () => {
+               toast({
+                 title: isEditMode ? 'Trip aktualisiert!' : 'Trip veröffentlicht!',
+                 description: isEditMode 
+                   ? 'Dein Trip wurde erfolgreich aktualisiert.' 
+                   : 'Dein Trip wurde erfolgreich veröffentlicht.',
+               });
+               
+               // Teaser-Note vorbereiten
+               const teaserSummary = tripData.summary.trim().slice(0, 150) + (tripData.summary.trim().length > 150 ? '…' : '');
+               const teaserParts: string[] = [];
+               teaserParts.push(`🗺️ ${tripData.title || 'Trip'}`);
+               if (teaserSummary) teaserParts.push(teaserSummary);
+               if (slideshowVideoUrl) teaserParts.push(slideshowVideoUrl);
+               teaserParts.push(`\n${gpsStations.length} Stationen · ${Math.round(totalDistance)}km`);
+               const teaserContent = teaserParts.join('\n\n');
+
+               const teaserTags: string[][] = [
+                 ['t', 'trip'],
+                 ['t', 'reisen'],
+               ];
+               if (tripData.tripType) teaserTags.push(['t', tripData.tripType]);
+               if (tripData.country) {
+                 const countryTags = getCountryTag(tripData.country);
+                 countryTags.forEach(tag => teaserTags.push(['t', tag]));
+               }
+               const firstStation = gpsStations.find(s => s.uploadedUrl);
+               if (firstStation?.uploadedUrl) {
+                 teaserTags.push(['imeta', `url ${firstStation.uploadedUrl}`, 'alt', tripData.title || 'Trip']);
+               }
+
+               setTripTeaserPreview({
+                 content: teaserContent,
+                 tags: teaserTags,
+                 hasImage: !!firstStation?.uploadedUrl,
+                 hasVideo: !!slideshowVideoUrl,
+               });
+               setShowTeaserBox(true);
+               setIsTripTeaserPublished(false);
+               
+               resolve();
+             },
             onError: (error) => {
               reject(error);
             }
@@ -2028,6 +2090,37 @@ export function TripPublishForm() {
           <p className="text-sm text-center text-muted-foreground">
             {uploadProgress.status} ({uploadProgress.current} von {uploadProgress.total} Bildern)
           </p>
+        </div>
+      )}
+
+      {/* Teaser-Box nach Trip-Publish */}
+      {showTeaserBox && tripTeaserPreview && (
+        <TeaserPreviewBox
+          preview={tripTeaserPreview}
+          buttonLabel="🚀 Trip im Nostr-Feed teilen"
+          publishedLabel="✅ Trip-Teaser veröffentlicht!"
+          infoText="Erscheint bei Primal, Amethyst & Damus mit Titel, Bild, Video-Link"
+          isPublished={isTripTeaserPublished}
+          onSuccess={() => {
+            setIsTripTeaserPublished(true);
+            // Nach 1.5s zurück zur Übersicht
+            setTimeout(() => {
+              setStations([]);
+              setTripData({ title: '', summary: '', country: '', tripType: '' });
+              setEditDtag(null);
+              setCurrentStep('upload');
+              navigate('/map/trips');
+            }, 1500);
+          }}
+        />
+      )}
+
+      {/* Skip Teaser Button (angezeigt nach Trip-Publish) */}
+      {showTeaserBox && !isTripTeaserPublished && (
+        <div className="mt-2">
+          <Button variant="outline" onClick={skipTripTeaser} className="w-full">
+            Überspringen &amp; zurück
+          </Button>
         </div>
       )}
     </div>

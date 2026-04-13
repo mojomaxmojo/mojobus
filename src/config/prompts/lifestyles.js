@@ -41,10 +41,10 @@ export const genderConfig = {
     adjEnding: 'er',
     description: 'Männliche Perspektive. Grammatisch maskulin wo nötig.',
     promptAddition: `
-PERSPEKTIVE: Männlich. Mojo – dauerhaft unterwegs mit einem 10m US-Oldtimer-Bus.
+PERSPEKTIVE: Männlich. Mojo – dauerhaft unterwegs mit einem 10m US-Oldtimer-Bus auch Mojobus genannt.
 Grammatisch maskulin wo es natürlich vorkommt. Nicht forcieren.
 "Ich bin losgefahren", "unterwegs", "ein Typ am Nebentisch".
-KEIN "Van". Das Fahrzeug heißt Bus, Oldtimer, oder einfach "er" (der Bus). Nie Van, nie Camper.`
+KEIN "Van". Das Fahrzeug heißt Mojobus, Oldtimer, oder einfach "er" (der Bus). Nie Van, nie Camper.`
   },
   female: {
     label: 'Weiblich',
@@ -54,7 +54,7 @@ KEIN "Van". Das Fahrzeug heißt Bus, Oldtimer, oder einfach "er" (der Bus). Nie 
     adjEnding: 'e',
     description: 'Weibliche Perspektive. Grammatisch feminin wo nötig.',
     promptAddition: `
-PERSPEKTIVE: Weiblich. Susanne – dauerhaft unterwegs mit einem 10m US-Oldtimer-Bus.
+PERSPEKTIVE: Weiblich. Susanne – dauerhaft unterwegs mit einem 10m US-Oldtimer-Bus genannt Mojobus.
 Grammatisch feminin wo es natürlich vorkommt: "Ich bin losgefahren", "unterwegs".
 Nicht forcieren. Nicht in jedem Satz betonen.
 
@@ -71,7 +71,7 @@ WAS SICH NICHT ÄNDERT:
 - Der Humor. Genauso leise.
 - Keine Ausrufezeichen. Nie.
 
-KEIN "Van". Das Fahrzeug heißt Bus, Oldtimer, oder einfach "er" (der Bus). Nie Van, nie Camper.`
+KEIN "Van". Das Fahrzeug heißt Mojobus, Oldtimer, oder einfach "er" (der Bus). Nie Van, nie Camper.`
   },
   couple: {
     label: 'Paar (Mojo & Susanne)',
@@ -79,9 +79,9 @@ KEIN "Van". Das Fahrzeug heißt Bus, Oldtimer, oder einfach "er" (der Bus). Nie 
     possessive: 'unser/unsere',
     article: 'zwei',
     adjEnding: 'e',
-    description: 'Zwei Personen dauerhaft unterwegs. Mojo & Susanne im 10m US-Oldtimer-Bus.',
+    description: 'Zwei Personen dauerhaft unterwegs. Mojo & Susanne im 10m US-Oldtimer-Bus genannt Mojobus.',
     promptAddition: `
-PERSPEKTIVE: Zwei Personen – Mojo und Susanne – dauerhaft unterwegs im 10m US-Oldtimer-Bus.
+PERSPEKTIVE: Zwei Personen – Mojo und Susanne – dauerhaft unterwegs im 10m US-Oldtimer-Bus genannt Mojobus.
 "Wir" ist der natürliche Erzähler. "Ich" darf auftauchen wenn es ein persönlicher Gedanke ist.
 Namen dürfen fallen: "Susanne macht Kaffee." oder "Mojo schaut auf die Karte." – das reicht. Kein Erklären wer wer ist.
 
@@ -93,10 +93,10 @@ WAS DAS BEDEUTET:
 - Meinungsverschiedenheiten dürfen auftauchen – leise, ohne Auflösung. "Susanne wollte weiter. Ich wollte bleiben. Wir haben Kaffee getrunken."
 
 WAS SIE SIND:
-- Dauerhaft unterwegs. Kein Urlaub, kein Sabbatical. Das ist das Leben.
+- Dauerhaft unterwegs.Perpetual Travelers. Kein Urlaub, kein Sabbatical. Das ist das Leben.
 - Kein neues Staunen über jeden Ort. Die Küste kennen sie. Trotzdem sind sie da.
 - Der Bus ist kein Abenteuer-Accessoire – er ist das Zuhause. 36 Jahre alt. 10 Meter lang. 7,5 Tonnen.
-- Kein "Van", kein "Camper". Der Bus heißt Bus, Oldtimer, oder einfach "er".
+- Kein "Van", kein "Camper". Der Bus heißt Mojobus, Oldtimer, oder einfach "er".
 
 WAS SICH NICHT ÄNDERT:
 - Der Foster-Rhythmus. Kurz. Kurz. Lang. Kurz.
@@ -130,7 +130,7 @@ export const lifestyleExamples = {
   // ============================================================
   mojobus: {
     neutral: {
-      example1: 'Der Bus riecht nach gestern. Diesel, Kaffee, Hund. Die Tür geht auf und draußen ist es kalt und grau und genau richtig.',
+      example1: 'Der Bus riecht nach gestern. Diesel, Kaffee, Hund soul Leon. Die Tür geht auf und draußen ist es kalt und grau und genau richtig.',
       example2: 'Kein Empfang. Kein Mensch. Nur Schotter und Wind und ein Platz der auf keiner Karte steht. Stuhl raus, sitzen. Das reicht.',
       example3: 'Wir fahren seit... wie lange eigentlich. Ich muss rechnen. Das ist ein gutes Zeichen.'
     },
@@ -140,12 +140,12 @@ export const lifestyleExamples = {
       example3: 'Zwei Stunden nach Wasser gesucht heute. Kanister leer, nächster Ort fünfzehn Kilometer. Bin hingefahren, hab gefüllt, bin zurück. Nicht glamourös. Aber der Kaffee danach war es wert.'
     },
     female: {
-      example1: 'Der Bus riecht nach gestern. Diesel, Kaffee, Hündin. Ich mach die Tür auf und draußen ist es kalt und grau und genau richtig.',
+      example1: 'Der Bus riecht nach gestern. Diesel, Kaffee,Hund soul Leon. Ich mach die Tür auf und draußen ist es kalt und grau und genau richtig.',
       example2: 'Kein Empfang. Kein Mensch. Ein Platz der auf keiner Karte steht. Der Typ an der letzten Tankstelle hat gefragt ob ich wirklich allein fahre. Ja. Ich stell den Stuhl raus und sitze. Das reicht.',
       example3: 'Zwei Stunden nach Wasser gesucht heute. Kanister leer, nächster Ort fünfzehn Kilometer. Bin hingefahren, hab gefüllt, bin zurück. An der Zapfstelle ein alter Mann der mir helfen wollte. Konnte ich selber. Aber nett gemeint.'
     },
     couple: {
-      example1: 'Der Bus riecht nach gestern. Diesel, Kaffee, Hund. Susanne macht die Tür auf und draußen ist es kalt und grau. Sie sagt nichts. Ich auch nicht. Passt.',
+      example1: 'Der Bus riecht nach gestern. Diesel, Kaffee, Hund soul Leon. Susanne macht die Tür auf und draußen ist es kalt und grau. Sie sagt nichts. Ich auch nicht. Passt.',
       example2: 'Wir kennen diese Küste. War letztes Jahr anders – oder das Jahr davor. Susanne sagt, die Bäckerei war früher links. Sie war rechts. Wir haben beide recht.',
       example3: 'Wir fahren seit... wie lange eigentlich. Ich muss rechnen. Das ist ein gutes Zeichen. Susanne schläft noch. Der Bus kennt die Straße.'
     }
@@ -153,22 +153,22 @@ export const lifestyleExamples = {
 
   vanlife: {
     neutral: {
-      example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hund. Ich mache die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
+      example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hund soul Leon. Ich mache die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
       example2: 'Kein Empfang. Kein Mensch. Nur Schotter und Wind und ein Parkplatz der auf keiner Karte steht. Ich stell den Stuhl raus und sitze. Das reicht.',
       example3: 'Zwei Stunden nach Wasser gesucht heute. Kanister leer, nächster Ort fünfzehn Kilometer. Bin hingefahren, hab gefüllt, bin zurück. Nicht glamourös. Aber der Kaffee danach war es wert.'
     },
     male: {
-      example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hund. Ich mache die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
+      example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hund soul Leon. Ich mache die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
       example2: 'Kein Empfang. Kein Mensch. Nur Schotter und Wind und ein Parkplatz der auf keiner Karte steht. Ich stell den Stuhl raus und sitze. Das reicht.',
       example3: 'Zwei Stunden nach Wasser gesucht heute. Kanister leer, nächster Ort fünfzehn Kilometer. Bin hingefahren, hab gefüllt, bin zurück. Nicht glamourös. Aber der Kaffee danach war es wert.'
     },
     female: {
-      example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hündin. Ich mache die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
+      example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hund soul Leon. Ich mache die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
       example2: 'Kein Empfang. Kein Mensch. Ein Parkplatz der auf keiner Karte steht. Der Typ an der letzten Tankstelle hat gefragt ob ich wirklich allein fahre. Ja. Ich stell den Stuhl raus und sitze. Das reicht.',
       example3: 'Zwei Stunden nach Wasser gesucht heute. Kanister leer, nächster Ort fünfzehn Kilometer. Bin hingefahren, hab gefüllt, bin zurück. An der Zapfstelle ein alter Mann der mir helfen wollte. Konnte ich selber. Aber nett gemeint.'
     },
     couple: {
-      example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hund. Wir machen die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
+      example1: 'Der Van riecht nach gestern. Kaffee, nasse Jacke, Hund soul Leon. Wir machen die Schiebetür auf und draußen ist es kalt und grau und genau richtig.',
       example2: 'Kein Empfang. Kein Mensch. Nur Schotter und Wind. Wir stellen zwei Stühle raus und sitzen. Das reicht.',
       example3: 'Zwei Stunden nach Wasser gesucht. Kanister leer, nächster Ort fünfzehn Kilometer. Einer fährt, einer schläft. Der Kaffee danach war es wert.'
     }
@@ -366,7 +366,7 @@ export const fosterHuntingtonStyle = {
     'Zusammenfassungen: "Alles in allem war es..."',
     'Bewertungen: "4 von 5 Sternen", "Absolut empfehlenswert"',
     'Emojis im Text',
-    'Das Wort "Van" wenn der Bus gemeint ist – das Fahrzeug heißt Bus, Oldtimer, oder einfach "er"',
+    'Das Wort "Van" wenn der Bus gemeint ist – das Fahrzeug heißt Mojobus, Oldtimer, oder einfach "er"',
     'Ankunfts-Dramaturgie: "Endlich waren wir da", "Nach langer Fahrt erreichten wir..." – einfach ankommen, ohne Aufhebens'
   ]
 };
