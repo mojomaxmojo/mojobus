@@ -21,7 +21,6 @@ import { useHead } from '@unhead/react';
 import { DEFAULT_PERFORMANCE_CONFIG } from '@/config/performance';
 import { SocialBar } from '@/components/SocialBar';
 import { useToast } from '@/hooks/useToast';
-import { LivePositionIndicator } from '@/components/LivePositionIndicator';
 
 type ContentItem = {
   type: 'article' | 'note' | 'image' | 'place' | 'trip';
@@ -229,7 +228,7 @@ export function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section with Modern Design */}
-      <section className="relative min-h-[auto] py-12 flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[auto] py-6 flex items-center justify-center overflow-hidden">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/20 to-background" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
@@ -237,12 +236,7 @@ export function Home() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-5xl mx-auto text-center space-y-5">
-            {/* Live Position Indicator - One-Liner */}
-            <div className="flex justify-center">
-              <LivePositionIndicator />
-            </div>
-
-            <div className="space-y-6">
+            <div className="space-y-4">
               <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-tight">
                 <span className="gradient-text">Perpetual Travelers</span>
               </h1>
