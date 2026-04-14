@@ -11,13 +11,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   BudgetEntry,
+  AFAEntry,
+  AFAMonthlyRate,
   BudgetFilter,
   BudgetStats,
   BUDGET_KINDS,
   BUDGET_TAGS,
   isValidBudgetEntry,
+  isValidAFAEntry,
   createBudgetEntryId,
+  createAFAEntryId,
   getMonthKey,
+  getAFASumForMonth,
   getDateRangeForMonth,
   formatAmount,
 } from '@/types/budget';
@@ -427,6 +432,223 @@ export function useBudget() {
     };
   };
 
+  // ========== AFA Hooks ==========
+
+  // AFA-Einträge abrufen
+  const useAFAEntries = () => {
+    return useQuery({
+      queryKey: ['afa', 'entries'],
+      queryFn: async () => {
+        try {
+          console.log('Fetching AFA entries from relay...');
+          
+          let events = [];
+          try {
+            events = await query([
+              {
+                kinds: [BUDGET_CONFIG.KINDS.AFA],
+                authors: authorPubkeys,
+                limit: 1000,
+              }
+            ], budgetRelayConfig) || [];
+          } catch (queryError: any) {
+            console.warn('AFA Query failed:', queryError?.message);
+            return [];
+          }
+
+          const entries: AFAEntry[] = [];
+          
+          for (const event of events) {
+            try {
+              const content = JSON.parse(event.content);
+              if (isValidAFAEntry(content)) {
+                entries.push(content);
+              }
+            } catch (error) {
+              console.warn('Failed to parse AFA entry:', error);
+            }
+          }
+
+          // Soft-deleted Einträge filtern
+          const activeEntries = entries.filter(entry => !entry.deleted);
+
+          // Sortieren nach Datum (neueste zuerst)
+          return activeEntries.sort((a, b) => b.date - a.date);
+        } catch (error) {
+          console.error('Failed to fetch AFA entries:', error);
+          return [];
+        }
+      },
+      staleTime: 30000,
+      gcTime: 300000,
+      enabled: authorPubkeys.length > 0,
+      retry: false,
+    });
+  };
+
+  // AFA-Eintrag erstellen
+  const useCreateAFAEntry = () => {
+    const mutation = useMutation({
+      mutationFn: async (entry: Omit<AFAEntry, 'id' | 'createdAt'>) => {
+        try {
+          const newEntry: AFAEntry = {
+            ...entry,
+            id: createAFAEntryId(),
+            createdAt: Math.floor(Date.now() / 1000),
+          };
+
+          console.log('Creating AFA entry:', newEntry);
+
+          const monthlyAmount = entry.amount / entry.months;
+          const endDate = new Date(entry.date * 1000);
+          endDate.setMonth(endDate.getMonth() + entry.months);
+
+          const tags: string[][] = [
+            ['d', BUDGET_TAGS.D_AFA],
+            ['category', entry.category],
+            ['months', entry.months.toString()],
+          ];
+
+          const event = await publishMutation.mutateAsync({
+            kind: BUDGET_CONFIG.KINDS.AFA,
+            content: JSON.stringify(newEntry),
+            tags,
+          });
+
+          if (!event) {
+            throw new Error('Failed to publish AFA entry');
+          }
+
+          console.log('Published AFA entry to relay:', event.id);
+          return newEntry;
+        } catch (error) {
+          console.error('Failed to create AFA entry:', error);
+          throw error;
+        }
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['afa', 'entries'] });
+        queryClient.invalidateQueries({ queryKey: ['budget', 'stats'] });
+        toast({ title: 'Erfolg', description: 'AFA-Eintrag gespeichert' });
+      },
+      onError: (error) => {
+        console.error('Failed to create AFA entry:', error);
+        toast({ title: 'Fehler', description: 'Fehler beim Speichern des AFA-Eintrags', variant: 'destructive' });
+      },
+    });
+
+    return mutation;
+  };
+
+  // AFA-Eintrag aktualisieren
+  const useUpdateAFAEntry = () => {
+    const mutation = useMutation({
+      mutationFn: async (entry: AFAEntry) => {
+        try {
+          const updatedEntry: AFAEntry = {
+            ...entry,
+            updatedAt: Math.floor(Date.now() / 1000),
+          };
+
+          const tags: string[][] = [
+            ['d', BUDGET_TAGS.D_AFA],
+            ['category', updatedEntry.category],
+            ['months', updatedEntry.months.toString()],
+          ];
+
+          const event = await publishMutation.mutateAsync({
+            kind: BUDGET_CONFIG.KINDS.AFA,
+            content: JSON.stringify(updatedEntry),
+            tags,
+          });
+
+          if (!event) {
+            throw new Error('Failed to publish updated AFA entry');
+          }
+
+          console.log('Updated AFA entry on relay:', event.id);
+          return updatedEntry;
+        } catch (error) {
+          console.error('Failed to update AFA entry:', error);
+          throw error;
+        }
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['afa'] });
+        queryClient.invalidateQueries({ queryKey: ['budget', 'stats'] });
+        toast({ title: 'Erfolg', description: 'AFA-Eintrag aktualisiert' });
+      },
+      onError: (error) => {
+        console.error('Failed to update AFA entry:', error);
+        toast({ title: 'Fehler', description: 'Fehler beim Aktualisieren des AFA-Eintrags', variant: 'destructive' });
+      },
+    });
+
+    return mutation;
+  };
+
+  // AFA-Eintrag löschen (soft delete)
+  const useDeleteAFAEntry = () => {
+    const mutation = useMutation({
+      mutationFn: async (entry: AFAEntry) => {
+        try {
+          const deletedEntry: AFAEntry = {
+            ...entry,
+            deleted: true,
+            updatedAt: Math.floor(Date.now() / 1000),
+          };
+
+          const tags: string[][] = [
+            ['d', BUDGET_TAGS.D_AFA],
+            ['category', deletedEntry.category],
+            ['months', deletedEntry.months.toString()],
+            ['deleted', 'true'],
+          ];
+
+          const event = await publishMutation.mutateAsync({
+            kind: BUDGET_CONFIG.KINDS.AFA,
+            content: JSON.stringify(deletedEntry),
+            tags,
+          });
+
+          if (!event) {
+            throw new Error('Failed to publish deleted AFA entry');
+          }
+
+          console.log('Deleted AFA entry on relay:', event.id);
+          return entry.id;
+        } catch (error) {
+          console.error('Failed to delete AFA entry:', error);
+          throw error;
+        }
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['afa'] });
+        queryClient.invalidateQueries({ queryKey: ['budget', 'stats'] });
+        toast({ title: 'Erfolg', description: 'AFA-Eintrag gelöscht' });
+      },
+      onError: (error) => {
+        console.error('Failed to delete AFA entry:', error);
+        toast({ title: 'Fehler', description: 'Fehler beim Löschen des AFA-Eintrags', variant: 'destructive' });
+      },
+    });
+
+    return mutation;
+  };
+
+  // AFA-Zusammenfassung für einen bestimmten Monat
+  const useAFAMonthlySummary = (year: number, month: number) => {
+    const { data: afaEntries } = useAFAEntries();
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+    const summary = useMemo(() => {
+      if (!afaEntries) return { total: 0, details: [], byCategory: {} };
+      return getAFASumForMonth(afaEntries, monthKey);
+    }, [afaEntries, monthKey]);
+
+    return summary;
+  };
+
   return {
     // Queries
     useBudgetEntries,
@@ -434,10 +656,19 @@ export function useBudget() {
     useEntriesByCategory,
     useEntriesByDateRange,
     
+    // AFA Queries
+    useAFAEntries,
+    useAFAMonthlySummary,
+    
     // Mutations
     useCreateBudgetEntry,
     useUpdateBudgetEntry,
     useDeleteBudgetEntry,
+    
+    // AFA Mutations
+    useCreateAFAEntry,
+    useUpdateAFAEntry,
+    useDeleteAFAEntry,
     
     // Utilities
     formatAmount,

@@ -2,6 +2,8 @@
  * Budget-Typen für Haushaltsbuch
  */
 
+import { DEFAULT_CATEGORIES } from '@/config/budget';
+
 export interface BudgetEntry {
   id: string;                    // Eindeutige ID (UUID)
   date: number;                  // Unix timestamp
@@ -20,6 +22,28 @@ export interface BudgetEntry {
   fuelKm?: number;               // Kilometerstand beim Tanken
   fuelLiters?: number;           // Getankte Liter
   fuelFullTank?: boolean;        // Vollbetankung (true) oder Teilbetankung (false)
+}
+
+// AFA (Abgeltung für Abnutzung) - über Monate verteilte Anschaffungen
+export interface AFAEntry {
+  id: string;                    // Eindeutige ID (UUID)
+  date: number;                  // Kauf-/Startdatum (Unix timestamp)
+  amount: number;               // Gesamtbetrag in Cent
+  months: number;               // Anzahl Monate zur Verteilung
+  category: string;             // Kategorie-ID (Pflichtfeld)
+  description: string;          // Bemerkung / Beschreibung
+  createdAt: number;            // Erstellungszeitpunkt (Unix timestamp)
+  updatedAt?: number;           // Optional: Letzte Aktualisierung
+  deleted?: boolean;            // Soft-Delete-Flag
+}
+
+// Berechnete AFA-Monatsrate für einen bestimmten Monat
+export interface AFAMonthlyRate {
+  entry: AFAEntry;
+  monthKey: string;             // Format: "YYYY-MM"
+  monthlyAmount: number;        // Betrag für diesen Monat (in Cent)
+  isFirstMonth: boolean;        // Ist dies der erste Monat?
+  isLastMonth: boolean;         // Ist dies der letzte Monat?
 }
 
 export interface BudgetStats {
@@ -83,6 +107,7 @@ export const BUDGET_KINDS = {
   ENTRY: 9041 as const,          // Budget-Einträge
   CATEGORY: 9042 as const,        // Kategorie-Definitionen (replaceable)
   SETTINGS: 9043 as const,       // Einstellungen (replaceable)
+  AFA: 9044 as const,            // AFA-Einträge (Abgeltung für Abnutzung)
 } as const;
 
 export type BudgetKind = typeof BUDGET_KINDS[keyof typeof BUDGET_KINDS];
@@ -98,6 +123,7 @@ export const BUDGET_TAGS = {
   CURRENCY: 'currency',          // Währung
   CATEGORY: 'category',          // Kategorie
   ATTACHMENT: 'attachment',      // Anhang
+  D_AFA: 'afa',                  // d-Tag für AFA-Einträge
 } as const;
 
 // Validation Funktionen
@@ -123,7 +149,89 @@ export function isValidBudgetEntry(entry: any): entry is BudgetEntry {
   );
 }
 
+// AFA Validation
+export function isValidAFAEntry(entry: any): entry is AFAEntry {
+  // Kategorie gegen DEFAULT_CATEGORIES validieren
+  const validCategoryIds = DEFAULT_CATEGORIES.map(c => c.id);
+  
+  return (
+    entry &&
+    typeof entry.id === 'string' &&
+    typeof entry.date === 'number' &&
+    typeof entry.amount === 'number' &&
+    typeof entry.months === 'number' && entry.months > 0 &&
+    typeof entry.category === 'string' && validCategoryIds.includes(entry.category) &&
+    typeof entry.description === 'string' &&
+    typeof entry.createdAt === 'number' &&
+    (!entry.updatedAt || typeof entry.updatedAt === 'number') &&
+    (!entry.deleted || typeof entry.deleted === 'boolean')
+  );
+}
+
+// AFA-Berechnung: Alle Monatsraten für einen Eintrag
+export function getAFAMonthlyRates(entry: AFAEntry): AFAMonthlyRate[] {
+  const startDate = new Date(entry.date * 1000);
+  const startYear = startDate.getFullYear();
+  const startMonth = startDate.getMonth(); // 0-basiert
+
+  const rates: AFAMonthlyRate[] = [];
+
+  for (let i = 0; i < entry.months; i++) {
+    // Monat berechnen (mit Jahreswechsel)
+    const totalMonth = startMonth + i;
+    const year = startYear + Math.floor(totalMonth / 12);
+    const month = (totalMonth % 12) + 1; // 1-basiert für monthKey
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+    rates.push({
+      entry,
+      monthKey,
+      monthlyAmount: entry.amount / entry.months,
+      isFirstMonth: i === 0,
+      isLastMonth: i === entry.months - 1,
+    });
+  }
+
+  return rates;
+}
+
+// AFA-Monatsrate für einen bestimmten Monat berechnen
+export function getAFARateForMonth(entry: AFAEntry, monthKey: string): AFAMonthlyRate | null {
+  const rates = getAFAMonthlyRates(entry);
+  return rates.find(r => r.monthKey === monthKey) || null;
+}
+
+// Alle AFAs für einen bestimmten Monat filtern und Summe berechnen
+export function getAFASumForMonth(afaEntries: AFAEntry[], monthKey: string): {
+  total: number;
+  details: AFAMonthlyRate[];
+  byCategory: Record<string, number>;
+} {
+  const details: AFAMonthlyRate[] = [];
+  const byCategory: Record<string, number> = {};
+
+  for (const entry of afaEntries) {
+    if (entry.deleted) continue;
+    const rate = getAFARateForMonth(entry, monthKey);
+    if (rate) {
+      details.push(rate);
+      if (!byCategory[entry.category]) byCategory[entry.category] = 0;
+      byCategory[entry.category] += rate.monthlyAmount;
+    }
+  }
+
+  return {
+    total: details.reduce((sum, r) => sum + r.monthlyAmount, 0),
+    details,
+    byCategory,
+  };
+}
+
 export function createBudgetEntryId(): string {
+  return crypto.randomUUID();
+}
+
+export function createAFAEntryId(): string {
   return crypto.randomUUID();
 }
 

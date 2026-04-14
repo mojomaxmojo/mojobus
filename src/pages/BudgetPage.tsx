@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BudgetEntry, BudgetFilter, getDateRangeForMonth } from '@/types/budget';
+import { BudgetEntry, BudgetFilter, AFAEntry, getDateRangeForMonth } from '@/types/budget';
 import { useBudget } from '@/hooks/useBudget';
 import { useBudgetEntriesFiltered, useBudgetRelay } from '@/hooks/useBudgetRelay';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -9,6 +9,9 @@ import { BudgetEntryForm } from '@/components/BudgetEntryForm';
 import { BudgetStats } from '@/components/BudgetStats';
 import { BudgetOverview } from '@/components/BudgetOverview';
 import { BudgetFilters } from '@/components/BudgetFilters';
+import { AFATable } from '@/components/AFATable';
+import { AFAEntryForm } from '@/components/AFAEntryForm';
+import { AFAMonthlySummary } from '@/components/AFAMonthlySummary';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Filter, Calendar, TrendingUp, Download, Settings, Lock } from 'lucide-react';
+import { Plus, Filter, Calendar, TrendingUp, Download, Settings, Lock, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DEFAULT_BUDGET_SETTINGS } from '@/config/budget';
@@ -44,12 +47,23 @@ function BudgetPageContent() {
     useCreateBudgetEntry,
     useUpdateBudgetEntry,
     useDeleteBudgetEntry,
+    useAFAEntries,
+    useCreateAFAEntry,
+    useUpdateAFAEntry,
+    useDeleteAFAEntry,
+    useAFAMonthlySummary,
   } = useBudget();
 
-  // Mutation Hooks aufrufen
+  // Budget Mutation Hooks
   const createMutation = useCreateBudgetEntry();
   const updateMutation = useUpdateBudgetEntry();
   const deleteMutation = useDeleteBudgetEntry();
+
+  // AFA Hooks
+  const afaCreateMutation = useCreateAFAEntry();
+  const afaUpdateMutation = useUpdateAFAEntry();
+  const afaDeleteMutation = useDeleteAFAEntry();
+  const { data: afaEntries, isLoading: isLoadingAFA } = useAFAEntries();
 
   // State für Filter und Ansicht
   const [filters, setFilters] = useState<BudgetFilter>({});
@@ -61,6 +75,13 @@ function BudgetPageContent() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<BudgetEntry | null>(null);
 
+  // AFA State
+  const [editingAFA, setEditingAFA] = useState<AFAEntry | null>(null);
+  const [isAFAFormOpen, setIsAFAFormOpen] = useState(false);
+
+  // AFA Zusammenfassung für den gewählten Monat (nach selectedYear/Month definiert)
+  const afaSummary = useAFAMonthlySummary(selectedYear, selectedMonth);
+
   // Jahr/Monat Auswahl für Zeitraum
   const years = Array.from({ length: 5 }, (_, i) => selectedYear - 2 + i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -71,7 +92,7 @@ function BudgetPageContent() {
   // ALLE Einträge für das Balkendiagramm (ungefiltert)
   const { entries: allEntries } = useBudgetRelay();
 
-  // Budget-Daten abrufen - NEU: Isolierte Relay-Query (gefiltert nach Monat)
+  // Budget-Daten abrufen
   const { entries, isLoading: isLoadingEntries, refetch: refetchEntries } = useBudgetEntriesFiltered(
     filters.startDate || dateRange.start,
     filters.endDate || dateRange.end,
@@ -135,7 +156,6 @@ function BudgetPageContent() {
   const isAuthorized = React.useMemo(() => {
     if (!user?.pubkey) return false;
     
-    // Check if user is Mojo or Susanne
     const mojoPubkey = '4d584dab7c880a9809e7df0476d745bfe9a3fe91a1c062bc1fec024e0b5e1f1f';
     const susannePubkey = '94ebd1c0940881de438b7f3c532b73e0d4d6c6b0160d3fe0b8a55fe49d477bd4';
     
@@ -146,7 +166,6 @@ function BudgetPageContent() {
   useEffect(() => {
     if (!isAuthorized) return;
 
-    // Polling für Updates (alle 30 Sekunden)
     const interval = setInterval(() => {
       refetchEntries();
     }, 30000);
@@ -154,7 +173,7 @@ function BudgetPageContent() {
     return () => clearInterval(interval);
   }, [isAuthorized, refetchEntries]);
 
-  // Handler für Formular
+  // Budget Handler
   const handleSubmit = async (data: Omit<BudgetEntry, 'id' | 'createdAt'>) => {
     if (!isAuthorized) {
       alert('Nicht autorisiert');
@@ -163,7 +182,6 @@ function BudgetPageContent() {
 
     try {
       if (editingEntry) {
-        // Bearbeiten: Kompletten Eintrag mit Updates zusammenführen
         const updatedEntry: BudgetEntry = {
           ...editingEntry,
           ...data,
@@ -241,6 +259,51 @@ function BudgetPageContent() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // AFA Handler
+  const handleAFASubmit = async (data: Omit<AFAEntry, 'id' | 'createdAt'>) => {
+    if (!isAuthorized) {
+      alert('Nicht autorisiert');
+      return;
+    }
+
+    try {
+      if (editingAFA) {
+        const updatedEntry: AFAEntry = {
+          ...editingAFA,
+          ...data,
+          id: editingAFA.id,
+          createdAt: editingAFA.createdAt,
+        };
+        await afaUpdateMutation.mutateAsync(updatedEntry);
+      } else {
+        await afaCreateMutation.mutateAsync(data);
+      }
+
+      setIsAFAFormOpen(false);
+      setEditingAFA(null);
+    } catch (error) {
+      console.error('Failed to save AFA entry:', error);
+    }
+  };
+
+  const handleAFAEdit = (entry: AFAEntry) => {
+    setEditingAFA(entry);
+    setIsAFAFormOpen(true);
+  };
+
+  const handleAFADelete = async (entry: AFAEntry) => {
+    if (!isAuthorized) {
+      alert('Nicht autorisiert!');
+      return;
+    }
+
+    try {
+      await afaDeleteMutation.mutateAsync(entry);
+    } catch (error) {
+      console.error('Failed to delete AFA entry:', error);
+    }
   };
 
   // Wenn nicht autorisiert
@@ -326,6 +389,31 @@ function BudgetPageContent() {
         </div>
       </div>
 
+      {/* AFA Dialog */}
+      <Dialog open={isAFAFormOpen} onOpenChange={(open) => {
+        setIsAFAFormOpen(open);
+        if (!open) setEditingAFA(null);
+      }}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingAFA ? 'AFA-Eintrag bearbeiten' : 'Neuer AFA-Eintrag'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <AFAEntryForm
+              entry={editingAFA || undefined}
+              onSubmit={handleAFASubmit}
+              onCancel={() => {
+                setIsAFAFormOpen(false);
+                setEditingAFA(null);
+              }}
+              isSubmitting={afaCreateMutation.isPending || afaUpdateMutation.isPending}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Monatsauswahl */}
       <Card className="mb-6">
         <CardContent className="pt-6">
@@ -376,7 +464,7 @@ function BudgetPageContent() {
 
       {/* Hauptinhalt */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
+        <TabsList className="grid grid-cols-4 w-full max-w-lg">
           <TabsTrigger value="overview">
             <TrendingUp className="h-4 w-4 mr-2" />
             Übersicht
@@ -384,6 +472,10 @@ function BudgetPageContent() {
           <TabsTrigger value="entries">
             <Calendar className="h-4 w-4 mr-2" />
             Einträge
+          </TabsTrigger>
+          <TabsTrigger value="afa">
+            <Layers className="h-4 w-4 mr-2" />
+            AFA
           </TabsTrigger>
           <TabsTrigger value="stats">
             <Settings className="h-4 w-4 mr-2" />
@@ -393,6 +485,15 @@ function BudgetPageContent() {
 
         {/* Übersicht Tab */}
         <TabsContent value="overview" className="space-y-6">
+          {/* AFA Summary if any active */}
+          {afaSummary.total > 0 && (
+            <AFAMonthlySummary
+              total={afaSummary.total}
+              details={afaSummary.details}
+              byCategory={afaSummary.byCategory}
+            />
+          )}
+
           {/* Statistiken */}
           {isLoadingStats ? (
             <div className="space-y-4">
@@ -504,6 +605,77 @@ function BudgetPageContent() {
           </Card>
         </TabsContent>
 
+        {/* AFA Tab */}
+        <TabsContent value="afa" className="space-y-6">
+          {/* AFA Übersicht für aktuellen Monat */}
+          {afaSummary.total > 0 && (
+            <AFAMonthlySummary
+              total={afaSummary.total}
+              details={afaSummary.details}
+              byCategory={afaSummary.byCategory}
+            />
+          )}
+
+          {/* AFA Einträge */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>AFA-Einträge (Abschreibungen)</CardTitle>
+                  <CardDescription>
+                    Über Monate verteilte Anschaffungen – {afaEntries?.length || 0} Einträge
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => {
+                    setEditingAFA(null);
+                    setIsAFAFormOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Neuer AFA-Eintrag
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingAFA ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : afaEntries && afaEntries.length > 0 ? (
+                <AFATable
+                  entries={afaEntries}
+                  onEdit={handleAFAEdit}
+                  onDelete={handleAFADelete}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
+                    <Layers className="h-12 w-12" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Keine AFA-Einträge
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    Füge Anschaffungen hinzu, die über mehrere Monate abgeschrieben werden.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setEditingAFA(null);
+                      setIsAFAFormOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ersten AFA-Eintrag hinzufügen
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Statistiken Tab */}
         <TabsContent value="stats" className="space-y-6">
           {isLoadingStats ? (
@@ -527,13 +699,14 @@ function BudgetPageContent() {
       </Tabs>
 
       {/* Status-Nachrichten */}
-      {(createMutation.isPending || updateMutation.isPending || deleteMutation.isPending) && (
+      {(createMutation.isPending || updateMutation.isPending || deleteMutation.isPending ||
+        afaCreateMutation.isPending || afaUpdateMutation.isPending || afaDeleteMutation.isPending) && (
         <div className="fixed bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
           Speichere Änderungen...
         </div>
       )}
 
-      {createMutation.isError && (
+      {(createMutation.isError || afaCreateMutation.isError) && (
         <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
           Fehler beim Speichern
         </div>

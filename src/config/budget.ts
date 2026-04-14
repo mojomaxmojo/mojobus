@@ -114,6 +114,7 @@ export const BUDGET_CONFIG = {
     ENTRY: 9041,        // Budget-Einträge
     CATEGORY: 9042,     // Kategorie-Definitionen (replaceable)
     SETTINGS: 9043,     // Einstellungen (replaceable)
+    AFA: 9044,          // AFA-Einträge (Abgeltung für Abnutzung)
   } as const,
 
   // Tag-Konstanten
@@ -128,6 +129,7 @@ export const BUDGET_CONFIG = {
     CATEGORY: 'category',      // Kategorie
     ATTACHMENT: 'attachment',  // Anhang
     DELETED: 'deleted',        // Gelöscht
+    AFA: 'afa',                // AFA-Einträge
   } as const,
 
   // Cache-Einstellungen
@@ -157,7 +159,7 @@ export const BUDGET_RELAY_CONFIG = {
   allowedAuthors: AUTHOR_PUBKEYS,
   
   // Event-Kinds die wir abfragen
-  kinds: [BUDGET_CONFIG.KINDS.ENTRY, BUDGET_CONFIG.KINDS.CATEGORY, BUDGET_CONFIG.KINDS.SETTINGS],
+  kinds: [BUDGET_CONFIG.KINDS.ENTRY, BUDGET_CONFIG.KINDS.CATEGORY, BUDGET_CONFIG.KINDS.SETTINGS, BUDGET_CONFIG.KINDS.AFA],
 };
 
 // Helper-Funktionen
