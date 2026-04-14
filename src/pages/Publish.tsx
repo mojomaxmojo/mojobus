@@ -2789,6 +2789,7 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
   const [facilities, setFacilities] = useState<string[]>([]);
   const [bestFor, setBestFor] = useState<string[]>([]);
   const [price, setPrice] = useState('');
+  const [visitDate, setVisitDate] = useState('');
   const [image, setImage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
    const [imageGps, setImageGps] = useState<GpsData | null>(null);
@@ -3005,6 +3006,14 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
       const bestForTags = editEvent.tags?.filter((tag: any) => tag[0] === 'best_for')?.map((tag: any) => tag[1]) || [];
       setBestFor(bestForTags);
       setPrice(editEvent.tags?.find((tag: any) => tag[0] === 'price')?.[1] || '');
+
+      // Load visit date (from published_at or visit_date tag)
+      const visitDateTag = editEvent.tags?.find((tag: any) => tag[0] === 'visit_date')?.[1]
+        || editEvent.tags?.find((tag: any) => tag[0] === 'published_at')?.[1];
+      if (visitDateTag) {
+        const d = new Date(parseInt(visitDateTag) * 1000);
+        setVisitDate(d.toISOString().split('T')[0]);
+      }
 
       // Load images
       const imageTags = editEvent.tags?.filter((tag: any) => tag[0] === 'image')?.map((tag: any) => tag[1]) || [];
@@ -3318,17 +3327,25 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     const originalDTag = editEvent?.tags?.find((tag: any) => tag[0] === 'd')?.[1];
     const dTag = originalDTag || `place-${Date.now()}`;
 
+    // published_at / visit_date: Beim Edit ORIGINALES Datum behalten, bei Neuem visitDate oder heute
+    const existingPublishedAt = editEvent?.tags?.find((tag: any) => tag[0] === 'published_at')?.[1];
+    const visitTimestamp = editEvent && existingPublishedAt
+      ? existingPublishedAt
+      : (visitDate ? Math.floor(new Date(visitDate).getTime() / 1000).toString() : Math.floor(Date.now() / 1000).toString());
+
     const additionalTags = [
-      ['d', dTag], // Use existing d-tag for edit, create new for new places
-      ['t', 'place'], // Content type tag for filtering
-      ['type', 'place'], // Explicit type marker
-      ['title', name.trim()], // Place name (important for display)
-      ['name', name.trim()], // Place name (important for display)
-      ['summary', placeSummary], // Summary for preview on homepage
+      ['d', dTag],
+      ['t', 'place'],
+      ['type', 'place'],
+      ['title', name.trim()],
+      ['name', name.trim()],
+      ['summary', placeSummary],
       ['category', category],
       ['rating', rating.toString()],
       ...facilities.map(f => ['facility', f]),
-      ...bestFor.map(b => ['best_for', b])
+      ...bestFor.map(b => ['best_for', b]),
+      ['published_at', visitTimestamp],
+      ['visit_date', visitTimestamp],
     ];
 
     const tags = [
@@ -3398,7 +3415,8 @@ function PlaceForm({ editEvent }: { editEvent?: any }) {
     setRating(5);
     setFacilities([]);
     setBestFor([]);
-    setPrice('');
+       setPrice('');
+       setVisitDate('');
     setImageFile(null);
     setImageGps(null);
     setImageGpsStatus('not_found');
@@ -3851,6 +3869,19 @@ Beschreibe hier den Ort, was macht ihn besonders...
               onChange={(e) => setPrice(e.target.value)}
               placeholder="z.B. 15€/Nacht oder Kostenlos"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="place-visit-date">Besuchsdatum</Label>
+            <Input
+              id="place-visit-date"
+              type="date"
+              value={visitDate}
+              onChange={(e) => setVisitDate(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Wann warst du dort? (Standard: Heute)
+            </p>
           </div>
         </div>
 
@@ -4735,12 +4766,18 @@ function ArticleForm({ editEvent }: { editEvent?: any }) {
     const originalDTag = editEvent?.tags?.find((tag: any) => tag[0] === 'd')?.[1];
     const dTag = originalDTag || `article-${Date.now()}`;
 
+    // published_at: Beim Edit ORIGINALES Datum behalten, bei Neuem aktuelles Datum setzen
+    const existingPublishedAt = editEvent?.tags?.find((tag: any) => tag[0] === 'published_at')?.[1];
+    const publishedAtTimestamp = editEvent && existingPublishedAt 
+      ? existingPublishedAt 
+      : Math.floor(new Date(publishedAt).getTime() / 1000).toString();
+
     const additionalTags = [
-      ['d', dTag], // Use existing d-tag for edit, create new for new articles
-      ['type', 'article'], // Explicit type marker
+      ['d', dTag],
+      ['type', 'article'],
       ['title', title.trim()],
       ['summary', summary.trim()],
-      ['published_at', Math.floor(new Date(publishedAt).getTime() / 1000).toString()] // Unix-Timestamp!
+      ['published_at', publishedAtTimestamp],
     ];
 
     // Add location tag if set
