@@ -19,12 +19,6 @@ export function isServiceWorkerSupported(): boolean {
  * Registriert den Service Worker
  */
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
-  // Skip SW in Shakespeare preview to avoid reload loops
-  if (location.href.includes('/projects/') || !location.host || location.host === 'localhost') {
-    console.log('🛑 Service Worker skipped in preview/development');
-    return null;
-  }
-
   if (!isServiceWorkerSupported()) {
     console.warn('⚠️ Service Worker wird nicht unterstützt');
     return null;
