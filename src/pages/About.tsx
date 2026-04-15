@@ -57,7 +57,7 @@ export function About() {
             <CardContent className="prose prose-slate dark:prose-invert max-w-none space-y-4">
               <p className="text-muted-foreground leading-relaxed">
                 Es war an einem ganz normalen Morgen – der Wecker klingelte um 6:30. Zum letzten Mal.
-                Wenig später rollten wir los: Mojo, Leon (Lionhunter) und unser 10 Meter langer US-Wohnmobil –
+                Wenig später rollten wir los: Max, Susanne und Leon unser Rhodesian Ridgeback mit unserem 10 Meter langem Mojobus –
                 unser Zuhause auf Rädern. Kein festes Ziel, kein Endpunkt. Nur die Straße, das Meer
                 und das Gefühl: Das ist es.
               </p>
