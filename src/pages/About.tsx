@@ -38,7 +38,7 @@ export function About() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4">
           <div className="text-center space-y-4">
-            <h1 className="text-4xl md:text-6xl font-bold"><span className="gradient-text">Kein Zuhause. Überall zuhause.</span></h1>
+            <h1 className="text-4xl md:text-6xl font-bold"><span className="gradient-text">Zuhause. Überall zuhause.</span></h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Seit Jahren kein fester Wohnsitz. Dafür unzählige Sonnenuntergänge, echte Begegnungen und eine Freiheit, die man nicht kaufen kann – nur leben.
             </p>
