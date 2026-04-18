@@ -475,12 +475,22 @@ export function PromotionDashboard() {
 
   const buildPinterestUrl = (): string => {
     const params = new URLSearchParams()
+    // Artikel-URL (wird beim Klick auf Pinterest als Link gesetzt)
     if (articleLink) params.set('url', articleLink)
+    // Bild: gerenderter Pin bevorzugt, sonst Original-Bild
     if (pinImageUrl || imageUrls[selectedImageIdx]) {
       params.set('media', pinImageUrl || imageUrls[selectedImageIdx])
     }
-    const desc = editDesc || `${editTitle} – Perpetual Travelers`
-    params.set('description', `${editTitle} – ${desc} ${editHashtags}`)
+    // Beschreibung: Titel + KI-Text + Hashtags
+    const brandName = lifestyle === 'mojobus' ? 'MojoBus'
+      : lifestyle === 'perpetual-travelers' ? 'Perpetual Travelers'
+      : lifestyle === 'vanlife' ? 'Vanlife'
+      : lifestyle === 'wohnmobil' ? 'Wohnmobil-Leben'
+      : lifestyle === 'rvlife' ? 'RV Life'
+      : lifestyle === 'beachlife' ? 'Beach Life'
+      : 'MojoBus'
+    const desc = editDesc || `${editTitle} – ${brandName}`
+    params.set('description', `${editTitle} – ${desc} ${editHashtags}`.trim())
     return `https://www.pinterest.com/pin/create/button/?${params.toString()}`
   }
 
@@ -1031,6 +1041,24 @@ export function PromotionDashboard() {
                 <div>
                   <p className="text-sm font-medium">Hashtags</p>
                   <p className="text-sm text-muted-foreground">{editHashtags}</p>
+                </div>
+                {/* Artikel-URL Anzeige + Bearbeitung */}
+                <div>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    🔗 Artikel-URL
+                    {articleLink
+                      ? <span className="text-xs text-green-600 font-normal">✓ gesetzt</span>
+                      : <span className="text-xs text-amber-500 font-normal">⚠ nicht gesetzt – Pin verlinkt auf nichts</span>
+                    }
+                  </p>
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      className="flex-1 text-xs px-2 py-1 rounded border bg-background text-muted-foreground font-mono"
+                      value={articleLink}
+                      onChange={e => setArticleLink(e.target.value)}
+                      placeholder="https://mojobus.co/naddr1..."
+                    />
+                  </div>
                 </div>
               </div>
 
