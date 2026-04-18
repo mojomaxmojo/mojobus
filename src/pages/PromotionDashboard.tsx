@@ -238,6 +238,9 @@ export function PromotionDashboard() {
     setArticleSummary(item.summary)
     setArticleText(item.content.substring(0, 2000))
 
+    // URL automatisch setzen
+    if (item.url) setArticleLink(item.url)
+
     // Bilder übernehmen
     if (item.images.length > 0) {
       setImageUrls(item.images.slice(0, 20))
