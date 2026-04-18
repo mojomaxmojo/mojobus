@@ -152,7 +152,7 @@ export function PromotionDashboard() {
   // Template
   const [selectedTemplate, setSelectedTemplate] = useState<PinTemplateType>('infographic')
   const [kiModel, setKiModel] = useState<'llama4' | 'claude'>('llama4')
-  const [lifestyle, setLifestyle] = useState('perpetual-travelers')
+  const [lifestyle, setLifestyle] = useState('mojobus')
 
   // Pin Data (from KI)
   const [pinData, setPinData] = useState<any>(null)
@@ -314,7 +314,12 @@ export function PromotionDashboard() {
       setEditTextInput(data.pinData.textOverlay || '')
       setEditSubInput(data.pinData.subOverlay || '')
       setEditListItems(data.pinData.listItems || [])
-      setEditSteps(data.pinData.steps || [])
+      // mojobus-story: storyTag in editSteps[0] speichern; sonst normale steps
+      if (selectedTemplate === 'mojobus-story') {
+        setEditSteps([data.pinData.storyTag || 'mojobus.co'])
+      } else {
+        setEditSteps(data.pinData.steps || [])
+      }
       setEditQuote(data.pinData.quote || '')
       setEditTip(data.pinData.tip || '')
       setEditBefore(data.pinData.beforeText || '')
@@ -374,12 +379,16 @@ export function PromotionDashboard() {
         case 'route':
           renderData.waypoints = editWaypoints.length > 0 ? editWaypoints : undefined
           break
+        case 'mojobus-story':
+          renderData.storyTag = editSteps[0] || 'mojobus.co'
+          break
       }
 
       const dataUrl = await renderPinTemplate(
         imageUrls[selectedImageIdx],
         selectedTemplate,
-        renderData
+        renderData,
+        lifestyle
       )
 
       setPinImageUrl(dataUrl)
@@ -771,8 +780,8 @@ export function PromotionDashboard() {
                   <Select value={lifestyle} onValueChange={setLifestyle}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="perpetual-travelers">🌊 Perpetual Travelers</SelectItem>
                       <SelectItem value="mojobus">🚌 MojoBus</SelectItem>
+                       <SelectItem value="perpetual-travelers">🌊 Perpetual Travelers</SelectItem>
                       <SelectItem value="vanlife">🚐 Vanlife</SelectItem>
                       <SelectItem value="wohnmobil">🏕️ Wohnmobil</SelectItem>
                       <SelectItem value="rvlife">🚗 RV Life</SelectItem>
@@ -821,17 +830,33 @@ export function PromotionDashboard() {
                   <Input value={editAltText} onChange={e => setEditAltText(e.target.value)} placeholder="Beschreibung für Suchmaschinen" />
                 </div>
 
-                {/* Template-spezifische Felder */}
-                {(selectedTemplate === 'infographic' || selectedTemplate === 'listicle' || selectedTemplate === 'howto' || selectedTemplate === 'route' || selectedTemplate === 'beforeafter') && (
+                {/* Template-spezifische Overlay-Felder */}
+                {selectedTemplate !== 'testimonial' && selectedTemplate !== 'quicktip' && (
                   <div>
-                    <Label>Overlay-Text (auf dem Bild)</Label>
-                    <Input value={editTextInput} onChange={e => setEditTextInput(e.target.value)} placeholder="Großer Text auf dem Pin" />
+                    <Label>
+                      {selectedTemplate === 'mojobus-story' ? 'Story-Zeile (große Zeile auf dem Bild)' : 'Overlay-Text (auf dem Bild)'}
+                    </Label>
+                    <Input
+                      value={editTextInput}
+                      onChange={e => setEditTextInput(e.target.value)}
+                      placeholder={selectedTemplate === 'mojobus-story'
+                        ? 'Kurzer, echter Satz – z.B. "Regen. Kaffee. Kein Plan."'
+                        : 'Großer Text auf dem Pin (GROSSBUCHSTABEN)'}
+                    />
                   </div>
                 )}
                 {selectedTemplate !== 'quicktip' && (
                   <div>
-                    <Label>Sub-Overlay (unter dem Overlay-Text)</Label>
-                    <Input value={editSubInput} onChange={e => setEditSubInput(e.target.value)} placeholder="Zusatztext" />
+                    <Label>
+                      {selectedTemplate === 'mojobus-story' ? 'Story-Sub (zweiter Satz)' : 'Sub-Overlay (unter dem Overlay-Text)'}
+                    </Label>
+                    <Input
+                      value={editSubInput}
+                      onChange={e => setEditSubInput(e.target.value)}
+                      placeholder={selectedTemplate === 'mojobus-story'
+                        ? 'z.B. "Drei Wochen am selben Küstenstreifen."'
+                        : 'Zusatztext unter dem Haupt-Overlay'}
+                    />
                   </div>
                 )}
 
@@ -910,6 +935,26 @@ export function PromotionDashboard() {
                       <Input key={i} value={wp} onChange={e => { const n = [...editWaypoints]; n[i] = e.target.value; setEditWaypoints(n) }} placeholder={`Wegpunkt ${i + 1}`} />
                     ))}
                     <Button size="sm" variant="outline" onClick={() => setEditWaypoints(prev => [...prev, ''])}>+ Wegpunkt</Button>
+                  </div>
+                )}
+
+                {/* MojoBus Story: Story-Tag */}
+                {selectedTemplate === 'mojobus-story' && (
+                  <div className="space-y-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                    <p className="text-xs text-muted-foreground font-medium">🚌 MojoBus Story – das Bild dominiert, Text minimal</p>
+                    <div>
+                      <Label>Story-Tag (oben links, z.B. "Tag 847" oder Ort)</Label>
+                      <Input
+                        value={editSteps[0] || ''}
+                        onChange={e => setEditSteps([e.target.value])}
+                        placeholder="mojobus.co  oder  Tag 847  oder  Sagres"
+                        maxLength={22}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Overlay-Text → große Story-Zeile unten<br />
+                      Sub-Overlay → zweiter Satz, weiterführend
+                    </p>
                   </div>
                 )}
 
