@@ -477,9 +477,11 @@ export function PromotionDashboard() {
     const params = new URLSearchParams()
     // Artikel-URL (wird beim Klick auf Pinterest als Link gesetzt)
     if (articleLink) params.set('url', articleLink)
-    // Bild: gerenderter Pin bevorzugt, sonst Original-Bild
-    if (pinImageUrl || imageUrls[selectedImageIdx]) {
-      params.set('media', pinImageUrl || imageUrls[selectedImageIdx])
+    // Bild: Pinterest braucht eine öffentliche URL, KEINE base64 Data URL
+    // → immer das Original-Bild verwenden (das ist bereits eine echte URL)
+    const originalImageUrl = imageUrls[selectedImageIdx]
+    if (originalImageUrl) {
+      params.set('media', originalImageUrl)
     }
     // Beschreibung: Titel + KI-Text + Hashtags
     const brandName = lifestyle === 'mojobus' ? 'MojoBus'
