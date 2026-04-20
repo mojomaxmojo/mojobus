@@ -214,6 +214,8 @@ export function PromotionDashboard() {
       const data = await safeResJson(res)
       if (data?.success && Array.isArray(data.pins)) {
         setSavedPins(data.pins)
+        // Server-Daten immer in localStorage spiegeln
+        savePinsToLocal(data.pins)
         return
       }
     } catch { /* Server nicht erreichbar */ }
@@ -482,7 +484,20 @@ export function PromotionDashboard() {
         template: selectedTemplate
       }
 
-      let savedViaApi = false
+      // Lokales Pin-Objekt vorbereiten (immer)
+      const newPin: SavedPin = {
+        id: `pin_${Date.now()}`,
+        ...pinPayload,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      // 1) Immer sofort lokal speichern
+      const localPins = loadPinsFromLocal()
+      localPins.push(newPin)
+      savePinsToLocal(localPins)
+
+      // 2) Zusätzlich auf Server speichern (best-effort)
       try {
         const res = await fetch('/api/promotion/pins', {
           method: 'POST',
@@ -490,21 +505,14 @@ export function PromotionDashboard() {
           body: JSON.stringify(pinPayload)
         })
         const data = await safeResJson(res)
-        if (data?.success) savedViaApi = true
-      } catch { /* Server nicht erreichbar */ }
-
-      if (!savedViaApi) {
-        // Fallback: lokal speichern
-        const newPin: SavedPin = {
-          id: `pin_${Date.now()}`,
-          ...pinPayload,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+        if (data?.success && data.pin?.id) {
+          // Server hat gespeichert → lokale ID mit Server-ID synchronisieren
+          const synced = loadPinsFromLocal().map(p =>
+            p.id === newPin.id ? { ...p, id: data.pin.id } : p
+          )
+          savePinsToLocal(synced)
         }
-        const pins = loadPinsFromLocal()
-        pins.push(newPin)
-        savePinsToLocal(pins)
-      }
+      } catch { /* Server nicht erreichbar – lokaler Speicher genügt */ }
 
       toast({ title: 'Pin gespeichert!', description: 'Pin wurde in deiner Liste gespeichert.' })
       await loadSavedPins()
