@@ -222,7 +222,7 @@ export function SlideshowBlock({
 
           // Blossom gibt SHA256-Hash ohne Extension zurück.
           // Primal / Amethyst erkennen Videos NUR wenn URL auf .mp4 endet!
-          // → .mp4 anhängen falls fehlend (relay.mojobus.co und blossom.primal.net unterstützen das)
+          // relay.mojobus.co unterstützt .mp4-Suffix → anhängen falls fehlend
           const blossomUrl = rawBlossomUrl.endsWith('.mp4')
             ? rawBlossomUrl
             : rawBlossomUrl + '.mp4';
