@@ -2202,9 +2202,11 @@ app.post('/api/render-remotion', async (req, res) => {
     colorGrade,
     filmGrain = 'fine',
     captions = [],
+    captionStyle = 'tiktok',
     websiteUrl = 'mojobus.co',
     handle = '@mojobus',
     accentColor = '#F59E0B',
+    motionBlurStrength = 1,
   } = req.body
 
   // Validierung
@@ -2276,9 +2278,11 @@ app.post('/api/render-remotion', async (req, res) => {
         colorGrade,
         filmGrain,
         captions,
+        captionStyle,
         websiteUrl,
         handle,
         accentColor,
+        motionBlurStrength: parseFloat(String(motionBlurStrength)) || 1,
         onProgress: (percent) => {
           const j = remotionJobs.get(jobId)
           if (j) j.progress = Math.max(j.progress, percent)

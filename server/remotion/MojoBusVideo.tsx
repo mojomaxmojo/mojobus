@@ -1,18 +1,21 @@
 /**
  * MojoBusVideo — Haupt-Remotion Composition
  * 
- * Aufbau jedes Videos:
+ * Video-Aufbau:
  *  [0 – HOOK_FRAMES]              Hook: Erstes Foto + animierter Titel
- *  [HOOK_FRAMES – HOOK+SLIDES]    Slideshow: Fotos mit Ken Burns + Transitions
+ *  [HOOK_FRAMES – HOOK+SLIDES]    Slideshow: Fotos mit Ken Burns + Motion Blur + Transitions
  *  [HOOK+SLIDES – END]            CTA: Endkarte (6 Sekunden)
  *
- * Props werden via inputProps an renderMedia() übergeben.
+ * Neue Features v2:
+ *  - @remotion/google-fonts: Montserrat überall (via LoadFonts)
+ *  - Motion Blur: Trail-Frames beim KenBurns Zoom
+ *  - AutoCaptions: Wort-für-Wort Einblendung (TikTok-Style oder Minimal)
  */
 
 import React from 'react';
 import { AbsoluteFill, Sequence, useVideoConfig } from 'remotion';
 
-import { KenBurnsImage, pickDirection } from './components/KenBurnsImage';
+import { KenBurnsImageWithMotionBlur, KenBurnsImage, pickDirection } from './components/KenBurnsImage';
 import { ColorGradeOverlay, ColorGradeWrapper, lifestyleToGrade, type ColorGrade } from './components/ColorGradeOverlay';
 import { HookTitle } from './components/HookTitle';
 import { LocationBadge } from './components/LocationBadge';
@@ -22,6 +25,8 @@ import { AudioLayer } from './components/AudioLayer';
 import { FilmGrain } from './components/FilmGrain';
 import { FadeIn, FadeOut, ZoomBlur } from './components/CrossFade';
 import { StoryCaption } from './components/StoryCaption';
+import { AutoCaptions, SubtitleLine, captionsToTimeline, type CaptionStyle } from './components/Captions';
+import { LoadFonts } from './components/Fonts';
 
 export interface MojoBusVideoProps {
   /** Array von Bild-URLs (Blossom CDN) */
@@ -45,14 +50,27 @@ export interface MojoBusVideoProps {
   colorGrade?: ColorGrade;
   /** Film-Grain Intensität */
   filmGrain?: 'none' | 'fine' | 'medium' | 'coarse';
-  /** Caption-Texte pro Bild (optional) */
+  /** Caption-Texte pro Bild (manuell eingegeben) */
   captions?: string[];
+  /**
+   * Auto-Captions aktivieren:
+   * 'off' = keine Untertitel
+   * 'tiktok' = Wort-Highlight TikTok-Style
+   * 'minimal' = dezenter Kasten unten
+   * 'full-line' = ganze Zeile auf einmal
+   */
+  captionStyle?: 'off' | CaptionStyle;
   /** Website URL für CTA */
   websiteUrl?: string;
   /** Handle / Social Handle */
   handle?: string;
   /** Akzentfarbe */
   accentColor?: string;
+  /**
+   * Motion Blur Stärke beim KenBurns Zoom
+   * 0 = aus, 1 = standard (empfohlen), 2 = stark
+   */
+  motionBlurStrength?: number;
 }
 
 /** Berechnet Gesamt-Frames für das Video */
@@ -61,8 +79,8 @@ export function calculateDuration(
   fps: number,
   secondsPerImage: number
 ): { totalFrames: number; hookFrames: number; ctaFrames: number; slideshowFrames: number } {
-  const hookFrames = 4 * fps;   // 4 Sekunden Hook
-  const ctaFrames = 6 * fps;    // 6 Sekunden CTA
+  const hookFrames = 4 * fps;
+  const ctaFrames = 6 * fps;
   const perSlide = Math.round(secondsPerImage * fps);
   const slideshowFrames = imageCount * perSlide;
   const totalFrames = hookFrames + slideshowFrames + ctaFrames;
@@ -81,14 +99,16 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
   colorGrade,
   filmGrain = 'fine',
   captions = [],
+  captionStyle = 'tiktok',
   websiteUrl = 'mojobus.co',
   handle = '@mojobus',
   accentColor = '#F59E0B',
+  motionBlurStrength = 1,
 }) => {
   const { fps } = useVideoConfig();
 
   const grade = colorGrade || lifestyleToGrade(lifestyle);
-  const images = imageUrls.slice(0, 20); // max 20 Bilder
+  const images = imageUrls.slice(0, 20);
   const imageCount = images.length;
 
   const { hookFrames, ctaFrames, slideshowFrames } = calculateDuration(
@@ -96,56 +116,68 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
   );
 
   const perSlide = Math.round(secondsPerImage * fps);
-  const TRANSITION_FRAMES = Math.min(12, Math.round(fps * 0.4)); // 0.4s Überblendung
+  const TRANSITION_FRAMES = Math.min(12, Math.round(fps * 0.4));
+
+  // ── Lifestyle-spezifisches Emoji für Hook ────────────────────────────────
+  const hookEmoji = {
+    mojobus: '🚌', vanlife: '🚐', rvlife: '🏕️',
+    beachlife: '🌊', wohnmobil: '🏠', 'perpetual-travelers': '🌍',
+  }[lifestyle] ?? '🌍';
+
+  // ── Auto-Captions: Timeline aus captions-Array bauen ───────────────────
+  const hasCaptions = captionStyle !== 'off' && captions.length > 0;
 
   return (
     <AbsoluteFill style={{ background: '#000' }}>
-      {/* ═══════════════════════════════════════════
-          SCHICHT 1: Bilder mit Ken Burns + Color Grade
-      ═══════════════════════════════════════════ */}
+
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 0: Fonts laden (Montserrat via @remotion/google-fonts)
+      ══════════════════════════════════════════════════════ */}
+      <LoadFonts />
+
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 1: Bilder — Ken Burns mit Motion Blur + Color Grade
+      ══════════════════════════════════════════════════════ */}
       <ColorGradeWrapper grade={grade}>
 
-        {/* HOOK — erstes Bild als Hintergrund */}
+        {/* HOOK — erstes Bild */}
         {images[0] && (
           <Sequence from={0} durationInFrames={hookFrames + TRANSITION_FRAMES}>
             <FadeOut durationFrames={TRANSITION_FRAMES} totalFrames={hookFrames + TRANSITION_FRAMES}>
-              <KenBurnsImage
+              <KenBurnsImageWithMotionBlur
                 src={images[0]}
                 direction={pickDirection(0)}
                 intensity={0.12}
+                motionBlurStrength={motionBlurStrength}
               />
             </FadeOut>
           </Sequence>
         )}
 
-        {/* SLIDESHOW — alle Bilder nacheinander */}
+        {/* SLIDESHOW */}
         {images.map((src, i) => {
           const startFrame = hookFrames + i * perSlide;
           const isLast = i === imageCount - 1;
           const endFrame = startFrame + perSlide + (isLast ? 0 : TRANSITION_FRAMES);
 
           return (
-            <Sequence
-              key={i}
-              from={startFrame}
-              durationInFrames={endFrame - startFrame}
-            >
-              {/* Einblenden */}
+            <Sequence key={i} from={startFrame} durationInFrames={endFrame - startFrame}>
               <ZoomBlur durationFrames={TRANSITION_FRAMES}>
-                {/* Ausblenden (außer letztem Bild) */}
                 {!isLast ? (
                   <FadeOut durationFrames={TRANSITION_FRAMES} totalFrames={endFrame - startFrame}>
-                    <KenBurnsImage
+                    <KenBurnsImageWithMotionBlur
                       src={src}
                       direction={pickDirection(i + 1)}
                       intensity={0.13}
+                      motionBlurStrength={motionBlurStrength}
                     />
                   </FadeOut>
                 ) : (
-                  <KenBurnsImage
+                  <KenBurnsImageWithMotionBlur
                     src={src}
                     direction={pickDirection(i + 1)}
                     intensity={0.13}
+                    motionBlurStrength={motionBlurStrength}
                   />
                 )}
               </ZoomBlur>
@@ -153,17 +185,15 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
           );
         })}
 
-        {/* CTA — letztes Bild stark dunkel abgeblendet als Hintergrund */}
+        {/* CTA Hintergrund */}
         {images[imageCount - 1] && (
-          <Sequence
-            from={hookFrames + slideshowFrames}
-            durationInFrames={ctaFrames}
-          >
+          <Sequence from={hookFrames + slideshowFrames} durationInFrames={ctaFrames}>
             <FadeIn durationFrames={15}>
               <KenBurnsImage
                 src={images[imageCount - 1]}
                 direction="zoom-out"
-                intensity={0.05}
+                intensity={0.04}
+                motionBlurStrength={0}
               />
             </FadeIn>
           </Sequence>
@@ -171,38 +201,35 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
 
       </ColorGradeWrapper>
 
-      {/* ═══════════════════════════════════════════
-          SCHICHT 2: Color Grade Overlay (Gradient + Vignette)
-      ═══════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 2: Color Grade Overlay
+      ══════════════════════════════════════════════════════ */}
       <ColorGradeOverlay grade={grade} />
 
-      {/* ═══════════════════════════════════════════
+      {/* ══════════════════════════════════════════════════════
           SCHICHT 3: Film Grain
-      ═══════════════════════════════════════════ */}
+      ══════════════════════════════════════════════════════ */}
       {filmGrain !== 'none' && <FilmGrain intensity={filmGrain} opacity={0.05} />}
 
-      {/* ═══════════════════════════════════════════
-          SCHICHT 4: Hook Titel (erste 4 Sek)
-      ═══════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 4: Hook Titel — Montserrat Black, erste 4s
+      ══════════════════════════════════════════════════════ */}
       <Sequence from={0} durationInFrames={hookFrames}>
         <HookTitle
           title={title}
           subtitle={location || lifestyle.toUpperCase()}
-          emoji={lifestyle === 'mojobus' ? '🚌' : lifestyle === 'vanlife' ? '🚐' : lifestyle === 'beachlife' ? '🌊' : '🌍'}
+          emoji={hookEmoji}
           fromFrame={5}
           toFrame={hookFrames - 5}
           accentColor={accentColor}
         />
       </Sequence>
 
-      {/* ═══════════════════════════════════════════
-          SCHICHT 5: Location Badge (erscheint im 2. Slide)
-      ═══════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 5: Location Badge (2. Slide)
+      ══════════════════════════════════════════════════════ */}
       {location && (
-        <Sequence
-          from={hookFrames + perSlide}
-          durationInFrames={perSlide * 2}
-        >
+        <Sequence from={hookFrames + perSlide} durationInFrames={perSlide * 2}>
           <LocationBadge
             location={location}
             country={country}
@@ -213,10 +240,46 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
         </Sequence>
       )}
 
-      {/* ═══════════════════════════════════════════
-          SCHICHT 6: Story Captions (optional, pro Bild)
-      ═══════════════════════════════════════════ */}
-      {captions.map((caption, i) => {
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 6: Auto-Captions — Wort-für-Wort Einblendung
+          85% schauen ohne Ton → immer aktivieren wenn captions vorhanden!
+      ══════════════════════════════════════════════════════ */}
+      {hasCaptions && (
+        <AutoCaptions
+          captions={captions}
+          framesPerCaption={perSlide}
+          startFrame={hookFrames}
+          style={captionStyle === 'off' ? 'minimal' : captionStyle as CaptionStyle}
+          accentColor={accentColor}
+          position="bottom"
+        />
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 7: Summary Subtitle (Mitte des Videos)
+          Eingeblendet wenn keine Captions aktiv
+      ══════════════════════════════════════════════════════ */}
+      {summary && imageCount >= 3 && !hasCaptions && (
+        <Sequence
+          from={hookFrames + Math.floor(imageCount / 2) * perSlide}
+          durationInFrames={perSlide}
+        >
+          <StoryCaption
+            text={summary.slice(0, 80)}
+            fromFrame={8}
+            toFrame={perSlide - 8}
+            position="bottom"
+            style="subtitle"
+            accentColor={accentColor}
+          />
+        </Sequence>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 8: Manuelle StoryCaption-Overlays (nur wenn kein AutoCaption)
+          → bei AutoCaptions zeigen wir nur die AutoCaptions
+      ══════════════════════════════════════════════════════ */}
+      {!hasCaptions && captions.map((caption, i) => {
         if (!caption) return null;
         const startFrame = hookFrames + i * perSlide + Math.round(fps * 0.5);
         const endFrame = hookFrames + (i + 1) * perSlide - Math.round(fps * 0.5);
@@ -233,32 +296,10 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
         );
       })}
 
-      {/* ═══════════════════════════════════════════
-          SCHICHT 7: Summary Text (Mitte des Videos)
-      ═══════════════════════════════════════════ */}
-      {summary && imageCount >= 3 && (
-        <Sequence
-          from={hookFrames + Math.floor(imageCount / 2) * perSlide}
-          durationInFrames={perSlide}
-        >
-          <StoryCaption
-            text={summary.slice(0, 80)}
-            fromFrame={8}
-            toFrame={perSlide - 8}
-            position="bottom"
-            style="subtitle"
-            accentColor={accentColor}
-          />
-        </Sequence>
-      )}
-
-      {/* ═══════════════════════════════════════════
-          SCHICHT 8: CTA Endkarte
-      ═══════════════════════════════════════════ */}
-      <Sequence
-        from={hookFrames + slideshowFrames}
-        durationInFrames={ctaFrames}
-      >
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 9: CTA Endkarte — Montserrat, Lifestyle-spezifisch
+      ══════════════════════════════════════════════════════ */}
+      <Sequence from={hookFrames + slideshowFrames} durationInFrames={ctaFrames}>
         <MojoBusCTA
           lifestyle={lifestyle}
           websiteUrl={websiteUrl}
@@ -267,9 +308,9 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
         />
       </Sequence>
 
-      {/* ═══════════════════════════════════════════
-          SCHICHT 9: Progress Bar (Retention)
-      ═══════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 10: Progress Bar (Retention)
+      ══════════════════════════════════════════════════════ */}
       <ProgressBar
         color={accentColor}
         height={3}
@@ -278,17 +319,18 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
         endFrame={hookFrames + slideshowFrames}
       />
 
-      {/* ═══════════════════════════════════════════
-          SCHICHT 10: Audio mit Fade-In/Out
-      ═══════════════════════════════════════════ */}
+      {/* ══════════════════════════════════════════════════════
+          SCHICHT 11: Audio mit Fade-In/Out
+      ══════════════════════════════════════════════════════ */}
       {musicUrl && (
         <AudioLayer
           src={musicUrl}
-          volume={0.70}
+          volume={0.68}
           fadeInFrames={fps * 2}
           fadeOutFrames={fps * 3}
         />
       )}
+
     </AbsoluteFill>
   );
 };

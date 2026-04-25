@@ -1,9 +1,9 @@
 /**
- * LocationBadge — Orts-Anzeige mit Pin-Icon
- * Slide-in von links, zeigt Location + Land-Flag
+ * LocationBadge — Orts-Anzeige mit Pin-Icon + Montserrat Font
  */
 
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { FONT_FAMILY_REGULAR, FONT_WEIGHT, TEXT_STYLES } from './Fonts';
 
 interface LocationBadgeProps {
   location: string;
@@ -15,27 +15,14 @@ interface LocationBadgeProps {
 }
 
 const FLAG_MAP: Record<string, string> = {
-  portugal: '🇵🇹',
-  spain: '🇪🇸',
-  spanien: '🇪🇸',
-  france: '🇫🇷',
-  frankreich: '🇫🇷',
-  italy: '🇮🇹',
-  italien: '🇮🇹',
-  croatia: '🇭🇷',
-  kroatien: '🇭🇷',
-  germany: '🇩🇪',
-  deutschland: '🇩🇪',
-  austria: '🇦🇹',
-  österreich: '🇦🇹',
-  switzerland: '🇨🇭',
-  schweiz: '🇨🇭',
-  usa: '🇺🇸',
-  mexico: '🇲🇽',
-  morocco: '🇲🇦',
-  marokko: '🇲🇦',
-  greece: '🇬🇷',
-  griechenland: '🇬🇷',
+  portugal: '🇵🇹', spain: '🇪🇸', spanien: '🇪🇸', france: '🇫🇷', frankreich: '🇫🇷',
+  italy: '🇮🇹', italien: '🇮🇹', croatia: '🇭🇷', kroatien: '🇭🇷',
+  germany: '🇩🇪', deutschland: '🇩🇪', austria: '🇦🇹', österreich: '🇦🇹',
+  switzerland: '🇨🇭', schweiz: '🇨🇭', usa: '🇺🇸', mexico: '🇲🇽',
+  morocco: '🇲🇦', marokko: '🇲🇦', greece: '🇬🇷', griechenland: '🇬🇷',
+  netherlands: '🇳🇱', niederlande: '🇳🇱', belgium: '🇧🇪', belgien: '🇧🇪',
+  norway: '🇳🇴', norwegen: '🇳🇴', sweden: '🇸🇪', schweden: '🇸🇪',
+  uk: '🇬🇧', england: '🇬🇧', ireland: '🇮🇪', irland: '🇮🇪',
 };
 
 export const LocationBadge: React.FC<LocationBadgeProps> = ({
@@ -56,14 +43,14 @@ export const LocationBadge: React.FC<LocationBadgeProps> = ({
     config: { damping: 18, stiffness: 100 },
   });
 
-  const fadeOut = interpolate(frame, [end - 8, end], [1, 0], {
+  const fadeOut = interpolate(frame, [end - 10, end], [1, 0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
   if (frame < fromFrame || frame > end) return null;
 
-  const translateX = interpolate(enter, [0, 1], [-200, 0]);
+  const translateX = interpolate(enter, [0, 1], [-250, 0]);
   const opacity = Math.min(enter, fadeOut);
 
   const flag =
@@ -73,10 +60,10 @@ export const LocationBadge: React.FC<LocationBadgeProps> = ({
 
   const posStyles: React.CSSProperties =
     position === 'top-left'
-      ? { top: '8%', left: '6%' }
+      ? { top: '8%', left: '5%' }
       : position === 'bottom-right'
-      ? { bottom: '12%', right: '6%' }
-      : { bottom: '20%', left: '6%' };
+      ? { bottom: '14%', right: '5%' }
+      : { bottom: '20%', left: '5%' };
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
@@ -88,23 +75,21 @@ export const LocationBadge: React.FC<LocationBadgeProps> = ({
           transform: `translateX(${translateX}px)`,
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
-          background: 'rgba(0,0,0,0.55)',
-          backdropFilter: 'blur(8px)',
+          gap: '0.45rem',
+          background: 'rgba(0,0,0,0.58)',
+          backdropFilter: 'blur(10px)',
           borderRadius: '100px',
-          padding: '0.4rem 1rem 0.4rem 0.7rem',
-          border: '1px solid rgba(255,255,255,0.15)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          padding: '0.38rem 1rem 0.38rem 0.6rem',
+          border: '1px solid rgba(255,255,255,0.14)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.45)',
         }}
       >
-        <span style={{ fontSize: '1.1rem' }}>{flag}</span>
+        <span style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)', lineHeight: 1 }}>{flag}</span>
         <span
           style={{
-            fontFamily: '"Montserrat", Arial, sans-serif',
-            fontWeight: 600,
-            fontSize: 'clamp(0.65rem, 2vw, 0.9rem)',
+            ...TEXT_STYLES.badge,
+            fontSize: 'clamp(0.6rem, 1.8vw, 0.88rem)',
             color: '#FFFFFF',
-            letterSpacing: '0.04em',
             whiteSpace: 'nowrap',
             textShadow: '0 1px 4px rgba(0,0,0,0.5)',
           }}

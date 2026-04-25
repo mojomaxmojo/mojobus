@@ -31,16 +31,29 @@ nvm use 20
 # In den server/ Ordner wechseln
 cd /var/www/mojobus.co/server
 
-# Remotion Kern-Packages
-npm install @remotion/renderer @remotion/bundler remotion
+# Remotion Kern-Packages (Pflicht)
+npm install @remotion/renderer @remotion/bundler remotion react react-dom @types/react @types/react-dom
 
-# Optional aber empfohlen (für bessere Qualität):
-npm install @remotion/transitions @remotion/motion-blur
+# NEU: Google Fonts — Montserrat Brand-Schrift (offline, kein CDN-Aufruf beim Render)
+npm install @remotion/google-fonts
+
+# NEU: Motion Blur — Film-Feeling beim Ken Burns Zoom
+npm install @remotion/motion-blur
+
+# NEU: Captions — Wort-für-Wort Untertitel (85% schauen ohne Ton!)
+npm install @remotion/captions
 ```
 
-### Erwartete Installation (~2-3 Minuten):
+### Alle auf einmal (empfohlen):
+```bash
+npm install @remotion/renderer @remotion/bundler remotion react react-dom \
+  @types/react @types/react-dom \
+  @remotion/google-fonts @remotion/motion-blur @remotion/captions
 ```
-added 847 packages in 2m
+
+### Erwartete Installation (~3-4 Minuten):
+```
+added 950 packages in 3m
 ```
 
 ---

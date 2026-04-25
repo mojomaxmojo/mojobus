@@ -115,9 +115,11 @@ export async function renderMojoBusVideo(params) {
     colorGrade,
     filmGrain = 'fine',
     captions = [],
+    captionStyle = 'tiktok',
     websiteUrl = 'mojobus.co',
     handle = '@mojobus',
     accentColor = '#F59E0B',
+    motionBlurStrength = 1,
     onProgress,
   } = params;
 
@@ -150,9 +152,11 @@ export async function renderMojoBusVideo(params) {
     colorGrade,
     filmGrain,
     captions,
+    captionStyle,
     websiteUrl,
     handle,
     accentColor,
+    motionBlurStrength,
   };
 
   // Composition auswählen (mit calculateMetadata für dynamische Länge)

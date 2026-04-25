@@ -30,7 +30,16 @@ import { Badge } from '@/components/ui/badge';
 type AspectRatio = '16:9' | '9:16' | '1:1';
 type ColorGrade = 'golden' | 'warm' | 'moody' | 'blue' | 'teal-orange' | 'vintage' | 'auto';
 type FilmGrain = 'none' | 'fine' | 'medium' | 'coarse';
+type CaptionStyle = 'off' | 'tiktok' | 'minimal' | 'full-line';
+type MotionBlur = 0 | 1 | 2;
 type RenderStatus = 'idle' | 'uploading-local' | 'queued' | 'rendering' | 'downloading' | 'uploading-blossom' | 'completed' | 'failed';
+
+const CAPTION_STYLE_LABELS: Record<CaptionStyle, string> = {
+  off: '🚫 Aus',
+  tiktok: '🎵 TikTok',
+  minimal: '💬 Minimal',
+  'full-line': '📝 Zeile',
+};
 
 export interface RemotionVideoBlockProps {
   /** Bereits hochgeladene Blossom-Bild-URLs */
@@ -141,6 +150,8 @@ export function RemotionVideoBlock({
   const [imgDuration, setImgDuration] = useState<number>(5);
   const [colorGrade, setColorGrade] = useState<ColorGrade>('auto');
   const [filmGrain, setFilmGrain] = useState<FilmGrain>('fine');
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyle>('tiktok');
+  const [motionBlur, setMotionBlur] = useState<MotionBlur>(1);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // ── Render State ────────────────────────────────────────────────────────
@@ -266,7 +277,9 @@ export function RemotionVideoBlock({
           aspectRatio: aspect,
           colorGrade: resolvedGrade,
           filmGrain,
+          captionStyle,
           accentColor,
+          motionBlurStrength: motionBlur,
           websiteUrl: 'mojobus.co',
           handle: '@mojobus',
         }),
@@ -507,7 +520,68 @@ export function RemotionVideoBlock({
           </button>
 
           {showAdvanced && (
-            <div className="space-y-3 p-3 bg-muted/40 rounded-lg border">
+            <div className="space-y-4 p-3 bg-muted/40 rounded-lg border">
+
+              {/* Untertitel-Style — 85% ohne Ton! */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">
+                  💬 Untertitel-Style
+                  <span className="ml-1.5 text-[10px] font-normal opacity-60">(85% schauen ohne Ton)</span>
+                </Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(Object.entries(CAPTION_STYLE_LABELS) as [CaptionStyle, string][]).map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setCaptionStyle(val)}
+                      className={`py-1.5 px-2 text-xs rounded border transition-all text-left ${
+                        captionStyle === val
+                          ? 'text-white border-transparent'
+                          : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-300 dark:border-gray-600'
+                      }`}
+                      style={captionStyle === val ? { background: accentColor } : {}}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {captionStyle !== 'off' && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Caption-Texte werden aus den Bild-Beschreibungen generiert. Eingaben im Publish-Formular werden verwendet.
+                  </p>
+                )}
+              </div>
+
+              {/* Motion Blur */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">
+                  🎬 Motion Blur
+                  <span className="ml-1.5 text-[10px] font-normal opacity-60">(Film-Feeling beim Zoom)</span>
+                </Label>
+                <div className="flex gap-1">
+                  {([
+                    { val: 0, label: 'Aus' },
+                    { val: 1, label: 'Standard' },
+                    { val: 2, label: 'Stark' },
+                  ] as { val: MotionBlur; label: string }[]).map(({ val, label }) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setMotionBlur(val)}
+                      className={`flex-1 py-1.5 text-xs rounded border transition-all ${
+                        motionBlur === val
+                          ? 'text-white border-transparent'
+                          : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-300 dark:border-gray-600'
+                      }`}
+                      style={motionBlur === val ? { background: accentColor } : {}}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Film Grain */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">🎞️ Film Grain</Label>
                 <div className="flex gap-1">
@@ -528,6 +602,7 @@ export function RemotionVideoBlock({
                   ))}
                 </div>
               </div>
+
             </div>
           )}
 
@@ -557,13 +632,16 @@ export function RemotionVideoBlock({
               `${LIFESTYLE_EMOJI[lifestyle] || '🎬'} ${lifestyle}`,
               `🎨 ${GRADE_LABELS[colorGrade === 'auto' ? defaultGrade : colorGrade]}`,
               '✨ Ken Burns',
+              motionBlur > 0 ? `🎬 Motion Blur` : null,
               '🔀 Transitions',
-              '🎞️ Film Grain',
+              filmGrain !== 'none' ? `🎞️ Film Grain` : null,
+              captionStyle !== 'off' ? `💬 ${CAPTION_STYLE_LABELS[captionStyle]}` : null,
+              '🔤 Montserrat',
               '📊 Progress Bar',
               '🎵 Musik',
               '📢 CTA',
-            ].map(f => (
-              <Badge key={f} variant="outline" className="text-[10px] py-0.5">
+            ].filter(Boolean).map(f => (
+              <Badge key={f as string} variant="outline" className="text-[10px] py-0.5">
                 {f}
               </Badge>
             ))}

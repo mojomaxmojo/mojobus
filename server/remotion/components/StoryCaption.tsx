@@ -1,10 +1,9 @@
 /**
- * StoryCaption — Text-Einblendung während Slideshow
- * Zeigt kurze Story-Texte / Captions unten im Bild
- * → ideal für Instagram Reels und TikTok
+ * StoryCaption — Text-Einblendung mit Montserrat Font
  */
 
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { FONT_FAMILY, FONT_FAMILY_REGULAR, FONT_WEIGHT, TEXT_STYLES } from './Fonts';
 
 interface StoryCaptionProps {
   text: string;
@@ -43,53 +42,47 @@ export const StoryCaption: React.FC<StoryCaptionProps> = ({
   });
 
   const opacity = Math.min(enter, fadeOut);
-  const translateY = interpolate(enter, [0, 1], [30, 0]);
+  const translateY = interpolate(enter, [0, 1], [28, 0]);
 
   const posStyle: React.CSSProperties =
     position === 'top'
-      ? { top: '8%', left: '8%', right: '8%' }
+      ? { top: '7%', left: '7%', right: '7%' }
       : position === 'center'
-      ? { top: '50%', left: '8%', right: '8%', transform: `translateY(calc(-50% + ${translateY}px))` }
-      : { bottom: '10%', left: '8%', right: '8%' };
+      ? { top: '50%', left: '7%', right: '7%' }
+      : { bottom: '9%', left: '7%', right: '7%' };
 
-  if (position !== 'center') {
-    (posStyle as any).transform = `translateY(${position === 'top' ? -translateY : translateY}px)`;
-  }
+  const transformVal = position === 'center'
+    ? `translateY(calc(-50% + ${translateY}px))`
+    : `translateY(${position === 'top' ? -translateY : translateY}px)`;
 
-  const textStyles: React.CSSProperties =
+  const textStyleProps: React.CSSProperties =
     style === 'bold'
       ? {
-          fontWeight: 800,
-          fontSize: 'clamp(1rem, 4vw, 2rem)',
+          ...TEXT_STYLES.captionBold,
+          fontSize: 'clamp(0.95rem, 3.8vw, 1.9rem)',
           color: '#FFFFFF',
-          textShadow: '0 2px 12px rgba(0,0,0,0.8)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
+          textShadow: '0 2px 14px rgba(0,0,0,0.9)',
         }
       : style === 'subtitle'
       ? {
-          fontWeight: 500,
-          fontSize: 'clamp(0.75rem, 2.5vw, 1.2rem)',
-          color: 'rgba(255,255,255,0.95)',
-          textShadow: '0 1px 8px rgba(0,0,0,0.9)',
-          fontStyle: 'italic',
-          letterSpacing: '0.03em',
+          ...TEXT_STYLES.subtitle,
+          fontSize: 'clamp(0.7rem, 2.3vw, 1.15rem)',
+          color: 'rgba(255,255,255,0.92)',
+          textShadow: '0 1px 10px rgba(0,0,0,0.95)',
         }
       : {
-          fontWeight: 600,
-          fontSize: 'clamp(0.8rem, 2.8vw, 1.3rem)',
+          ...TEXT_STYLES.caption,
+          fontSize: 'clamp(0.8rem, 2.7vw, 1.3rem)',
           color: '#FFFFFF',
-          textShadow: '0 2px 10px rgba(0,0,0,0.85)',
-          letterSpacing: '0.02em',
+          textShadow: '0 2px 12px rgba(0,0,0,0.9)',
         };
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
-      {/* Gradient-Hintergrund für Lesbarkeit */}
       {position === 'bottom' && (
         <AbsoluteFill
           style={{
-            background: 'linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 35%)',
+            background: 'linear-gradient(0deg, rgba(0,0,0,0.58) 0%, transparent 32%)',
             opacity,
           }}
         />
@@ -99,10 +92,11 @@ export const StoryCaption: React.FC<StoryCaptionProps> = ({
           position: 'absolute',
           ...posStyle,
           opacity,
-          padding: '0.5rem 0.5rem',
+          transform: transformVal,
+          padding: '0.4rem 0.5rem',
         }}
       >
-        {/* Akzent-Linie links */}
+        {/* Akzentlinie links (nur bei minimal + bold) */}
         {style !== 'subtitle' && (
           <div
             style={{
@@ -113,15 +107,14 @@ export const StoryCaption: React.FC<StoryCaptionProps> = ({
               left: 0,
               top: 0,
               borderRadius: '2px',
-              boxShadow: `0 0 8px ${accentColor}80`,
+              boxShadow: `0 0 10px ${accentColor}70`,
             }}
           />
         )}
         <div
           style={{
-            fontFamily: '"Montserrat", Arial, sans-serif',
-            paddingLeft: style !== 'subtitle' ? '0.75rem' : 0,
-            ...textStyles,
+            paddingLeft: style !== 'subtitle' ? '0.7rem' : 0,
+            ...textStyleProps,
           }}
         >
           {text}
