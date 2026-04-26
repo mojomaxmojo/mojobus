@@ -1,0 +1,56 @@
+# MojoBus Backend — systemd Service
+# Kopieren nach: /etc/systemd/system/mojobus-server.service
+#
+# Einrichten (einmalig):
+#   cp mojobus-server.service /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable mojobus-server
+#   systemctl start mojobus-server
+#
+# Befehle:
+#   systemctl status mojobus-server
+#   systemctl restart mojobus-server
+#   journalctl -u mojobus-server -f
+
+[Unit]
+Description=MojoBus Backend Server
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nginx
+Group=nginx
+WorkingDirectory=/home/nginx/domains/mojobus.co/public/server
+
+# Node.js mit 4GB Heap — nötig für Remotion/esbuild Bundling
+# Ohne --max-old-space-size stürzt esbuild mit EPIPE ab
+ExecStart=/usr/bin/node --max-old-space-size=4096 server.js
+
+# Umgebungsvariablen
+Environment=NODE_ENV=production
+Environment=PORT=3002
+Environment=FFMPEG_PATH=/opt/bin/ffmpeg
+Environment=FFPROBE_PATH=/opt/bin/ffprobe
+
+# .env Datei laden falls vorhanden
+EnvironmentFile=-/home/nginx/domains/mojobus.co/public/server/.env
+
+# Restart-Verhalten
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=60s
+StartLimitBurst=5
+
+# Ressourcen-Limits (8GB VPS)
+# Max 6GB RAM — schützt vor OOM beim Remotion-Render
+MemoryMax=6G
+MemorySwapMax=0
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mojobus-server
+
+[Install]
+WantedBy=multi-user.target
