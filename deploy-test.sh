@@ -271,16 +271,7 @@ deploy_files() {
                 fi
             fi
 
-            # ── esbuild Execute-Rechte setzen (KRITISCH!) ─────────────────────
-            info_msg "Setze Execute-Rechte auf esbuild-Binaries..."
-            find "$DEPLOY_DIR/server/node_modules" \
-                \( -name "esbuild" -o -name "esbuild.exe" \) \
-                -type f \
-                -exec chmod +x {} \; 2>/dev/null
-            find "$DEPLOY_DIR/server/node_modules/@esbuild" \
-                -name "esbuild" -o -name "esbuild.exe" 2>/dev/null | \
-                xargs -r chmod +x
-            success_msg "✓ esbuild Execute-Rechte gesetzt"
+            # esbuild chmod wird NACH dem globalen chmod 644 gesetzt (weiter unten)
         fi
     fi
 
@@ -321,6 +312,19 @@ deploy_files() {
     chown -R nginx:nginx "$DEPLOY_DIR"
     find "$DEPLOY_DIR" -type d -exec chmod 755 {} \;
     find "$DEPLOY_DIR" -type f -exec chmod 644 {} \;
+
+    # ── esbuild +x NACH chmod 644 wiederherstellen ────────────────────────
+    find "$DEPLOY_DIR/server/node_modules" \
+        \( -name "esbuild" -o -name "chrome-headless-shell" \) \
+        -type f \
+        -exec chmod 755 {} \; 2>/dev/null
+    find "$DEPLOY_DIR/server/node_modules/@esbuild" \
+        -type f -name "esbuild" \
+        -exec chmod 755 {} \; 2>/dev/null
+    find "$DEPLOY_DIR/server/node_modules/.remotion" \
+        -type f \
+        -exec chmod 755 {} \; 2>/dev/null
+    info_msg "✓ Binary Execute-Rechte wiederhergestellt (esbuild, chrome)"
 
     success_msg "Files deployed und Permissions gesetzt"
 }
