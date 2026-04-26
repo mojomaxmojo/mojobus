@@ -359,6 +359,18 @@ export async function renderMojoBusVideo(params) {
     handle = '@mojobus',
     accentColor = '#F59E0B',
     motionBlurStrength = 1,
+    // ── NEU: Beat-Sync ────────────────────────────────────────────────
+    beatSyncStrength = 0.6,
+    beatThreshold = 0.60,
+    showWaveformBar = false,
+    // ── NEU: Transitions ─────────────────────────────────────────────
+    transitionType = 'auto',
+    // ── NEU: Routen-Karte ────────────────────────────────────────────
+    showRouteMap = false,
+    routeCoords,
+    mapImageUrl,
+    // ── NEU: Lottie Bus ───────────────────────────────────────────────
+    showLottieBus = true,
     onProgress,
   } = params;
 
@@ -407,6 +419,11 @@ export async function renderMojoBusVideo(params) {
       title, summary, location, country, lifestyle, musicUrl,
       secondsPerImage, aspectRatio, colorGrade, filmGrain,
       captions, captionStyle, websiteUrl, handle, accentColor, motionBlurStrength,
+      // ── NEU: Beat-Sync, Transitions, Route, Lottie ────────────────
+      beatSyncStrength, beatThreshold, showWaveformBar,
+      transitionType,
+      showRouteMap, routeCoords, mapImageUrl,
+      showLottieBus,
     };
 
     const composition = await selectComposition({
