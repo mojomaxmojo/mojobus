@@ -353,7 +353,7 @@ export async function renderMojoBusVideo(params) {
     musicUrl,
     secondsPerImage = 5,
     aspectRatio = '16:9',
-    colorGrade, filmGrain = 'fine',
+    colorGrade,
     captions = [], captionStyle = 'tiktok',
     websiteUrl = 'mojobus.co',
     handle = '@mojobus',
@@ -442,7 +442,7 @@ export async function renderMojoBusVideo(params) {
     const inputProps = {
       imageUrls: httpImageUrls, // ← HTTP statt file://
       title, summary, location, country, lifestyle, musicUrl,
-      secondsPerImage, aspectRatio, colorGrade, filmGrain,
+      secondsPerImage, aspectRatio, colorGrade,
       captions, captionStyle, websiteUrl, handle, accentColor, motionBlurStrength,
       // ── NEU: Beat-Sync, Transitions, Route, Lottie ────────────────
       beatSyncStrength, beatThreshold, showWaveformBar,

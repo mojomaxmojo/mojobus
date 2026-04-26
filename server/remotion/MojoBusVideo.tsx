@@ -23,7 +23,6 @@ import { LocationBadge } from './components/LocationBadge';
 import { MojoBusCTA } from './components/MojoBusCTA';
 import { ProgressBar } from './components/ProgressBar';
 import { AudioLayer } from './components/AudioLayer';
-import { FilmGrain } from './components/FilmGrain';
 import { FadeIn, FadeOut } from './components/CrossFade';
 import { StoryCaption } from './components/StoryCaption';
 import { AutoCaptions, type CaptionStyle } from './components/Captions';
@@ -60,7 +59,6 @@ export interface MojoBusVideoProps {
   secondsPerImage?: number;
   aspectRatio?: '16:9' | '9:16' | '1:1';
   colorGrade?: ColorGrade;
-  filmGrain?: 'none' | 'fine' | 'medium' | 'coarse';
   captions?: string[];
   captionStyle?: 'off' | CaptionStyle;
   websiteUrl?: string;
@@ -133,7 +131,6 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
   musicUrl,
   secondsPerImage = 5,
   colorGrade,
-  filmGrain = 'fine',
   captions = [],
   captionStyle = 'tiktok',
   websiteUrl = 'mojobus.co',
@@ -331,9 +328,6 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
 
       {/* ══ SCHICHT 2: Color Grade Overlay ══════════════════════════════════ */}
       <ColorGradeOverlay grade={grade} />
-
-      {/* ══ SCHICHT 3: Film Grain ════════════════════════════════════════════ */}
-      {filmGrain !== 'none' && <FilmGrain intensity={filmGrain} opacity={0.04} />}
 
       {/* ══ SCHICHT 4: Hook Titel (erste 4s) ════════════════════════════════ */}
       <Sequence from={0} durationInFrames={hookFrames}>
