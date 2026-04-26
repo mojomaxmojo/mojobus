@@ -445,7 +445,8 @@ export async function renderMojoBusVideo(params) {
       inputProps,
       ffmpegExecutable:  FFMPEG_PATH,
       ffprobeExecutable: FFPROBE_PATH,
-      crf: 20,
+      crf: 28,          // 20→28: ~4x kleinere Datei, kaum sichtbarer Qualitätsverlust
+      pixelFormat: 'yuv420p',  // maximale Kompatibilität (iPhone, Android, Browser)
       concurrency: Math.max(1, Math.floor(os.cpus().length * 0.75)),
       ...(CHROME_PATH ? { browserExecutable: CHROME_PATH } : {}),
       chromiumOptions: CHROMIUM_OPTIONS,

@@ -358,8 +358,25 @@ export function RemotionVideoBlock({
             .slice(0, 40);
 
           const videoFile = new File([blob], `${safeName}-remotion.mp4`, { type: 'video/mp4' });
-          const blossomTags = await uploadFile(videoFile);
-          const rawBlossomUrl = (blossomTags as string[][]).find(t => t[0] === 'url')?.[1];
+
+          // BlossomUploader via useUploadFile — wirft AggregateError wenn alle Server fehlschlagen
+          // Wir entpacken den AggregateError für eine lesbare Fehlermeldung
+          let blossomTags: string[][];
+          try {
+            blossomTags = await uploadFile(videoFile) as string[][];
+          } catch (uploadErr: any) {
+            // AggregateError: "No Promise in Promise.any was resolved"
+            // → enthält .errors[] mit den echten Fehlern pro Server
+            if (uploadErr?.errors?.length) {
+              const details = uploadErr.errors
+                .map((e: Error) => e.message || String(e))
+                .join(' | ');
+              throw new Error(`Blossom-Upload fehlgeschlagen (${(blob.size / 1024 / 1024).toFixed(1)}MB): ${details}`);
+            }
+            throw new Error(`Blossom-Upload fehlgeschlagen: ${uploadErr.message || uploadErr}`);
+          }
+
+          const rawBlossomUrl = blossomTags.find(t => t[0] === 'url')?.[1];
           if (!rawBlossomUrl) throw new Error('Keine Blossom-URL erhalten.');
 
           // .mp4 Suffix sicherstellen
