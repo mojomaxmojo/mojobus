@@ -279,6 +279,7 @@ deploy_files() {
                         @remotion/transitions@"$REMOTION_VER" \
                         @remotion/shapes@"$REMOTION_VER" \
                         @remotion/lottie@"$REMOTION_VER" \
+                        @remotion/noise@"$REMOTION_VER" \
                         lottie-web \
                         --silent >> "$LOG_FILE" 2>&1 \
                         && success_msg "✓ v2.0-Skill-Packages installiert" \
