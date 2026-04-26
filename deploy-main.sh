@@ -251,6 +251,7 @@ deploy_files() {
             REMOTION_TRANSITIONS_CHECK="$DEPLOY_DIR/server/node_modules/@remotion/transitions/package.json"
             REMOTION_SHAPES_CHECK="$DEPLOY_DIR/server/node_modules/@remotion/shapes/package.json"
             REMOTION_LOTTIE_CHECK="$DEPLOY_DIR/server/node_modules/@remotion/lottie/package.json"
+            REMOTION_NOISE_CHECK="$DEPLOY_DIR/server/node_modules/@remotion/noise/package.json"
 
             if [ ! -f "$REMOTION_CHECK" ]; then
                 info_msg "Remotion nicht gefunden — führe einmaligen Setup aus (dauert 2-3 Min)..."
@@ -271,6 +272,7 @@ deploy_files() {
                 [ ! -f "$REMOTION_TRANSITIONS_CHECK" ] && MISSING_SKILLS=$((MISSING_SKILLS+1)) && warn_msg "⚠ @remotion/transitions fehlt"
                 [ ! -f "$REMOTION_SHAPES_CHECK" ]      && MISSING_SKILLS=$((MISSING_SKILLS+1)) && warn_msg "⚠ @remotion/shapes fehlt"
                 [ ! -f "$REMOTION_LOTTIE_CHECK" ]      && MISSING_SKILLS=$((MISSING_SKILLS+1)) && warn_msg "⚠ @remotion/lottie fehlt"
+                [ ! -f "$REMOTION_NOISE_CHECK" ]       && MISSING_SKILLS=$((MISSING_SKILLS+1)) && warn_msg "⚠ @remotion/noise fehlt"
 
                 if [ $MISSING_SKILLS -gt 0 ]; then
                     info_msg "$MISSING_SKILLS v2.0-Skill-Package(s) fehlen — installiere nach..."
