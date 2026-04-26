@@ -1,75 +1,612 @@
 /**
- * LottieBusIcon — Animierter MojoBus in der Endkarte
+ * LottieBusIcon — Animierter MojoBus in der Endkarte (v2)
  *
- * Kein require(), kein dynamischer Import in dieser Datei.
- * lottieData wird als Prop übergeben (aus render.js per Node.js geladen).
- * Wenn kein lottieData → CSS-animierter Bus (immer verfügbar).
+ * Komplett neu gezeichneter Bus:
+ *  - Realistischere Proportionen (Reisebus / Fernbus-Stil)
+ *  - Windschutzscheibe mit Spiegelung
+ *  - Panorama-Seitenfenster mit Glaseffekt
+ *  - Stoßstange, Unterbodenverkleidung, Chromstreifen
+ *  - Scheinwerfer mit Lichteffekt (Tag-/Fernlicht)
+ *  - Rückspiegel
+ *  - Räder mit Felgendesign (5 Speichen)
+ *  - Abgaswölkchen animiert
+ *  - Farbige Akzentstreifen seitlich
  */
 
 import React from 'react';
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-// ── CSS-Animierter Bus (immer verfügbar, kein Package) ────────────────────
+// ── Hilfsfunktion: pulsierendes Abgas-Wölkchen ────────────────────────────
+
+const ExhaustPuff: React.FC<{
+  cx: number;
+  cy: number;
+  frame: number;
+  fps: number;
+  delay?: number;
+  accentColor?: string;
+}> = ({ cx, cy, frame, fps, delay = 0, accentColor = '#F59E0B' }) => {
+  const t = ((frame - delay) / fps) % 1.2;
+  if (t < 0) return null;
+
+  const opacity = interpolate(t, [0, 0.3, 1.2], [0.5, 0.35, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const scale = interpolate(t, [0, 1.2], [0.4, 1.6], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const dx = interpolate(t, [0, 1.2], [0, -18], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const dy = interpolate(t, [0, 1.2], [0, -8], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  return (
+    <ellipse
+      cx={cx + dx}
+      cy={cy + dy}
+      rx={5 * scale}
+      ry={3.5 * scale}
+      fill="#c0c8d0"
+      opacity={opacity}
+    />
+  );
+};
+
+// ── Felgen-Komponente (5 Speichen) ────────────────────────────────────────
+
+const Wheel: React.FC<{
+  cx: number;
+  cy: number;
+  r: number;
+  wheelRot: number;
+  accentColor: string;
+}> = ({ cx, cy, r, wheelRot, accentColor }) => {
+  const spokeAngles = [0, 72, 144, 216, 288]; // 5 Speichen
+
+  return (
+    <g transform={`translate(${cx},${cy})`}>
+      {/* Reifen außen */}
+      <circle r={r} fill="#1a1a1a" />
+      {/* Reifen-Profil */}
+      <circle r={r} fill="none" stroke="#333" strokeWidth={r * 0.12} />
+      <circle r={r * 0.82} fill="#2a2a2a" />
+
+      {/* Felge — dreht sich */}
+      <g transform={`rotate(${wheelRot})`}>
+        {/* Felgenstern */}
+        {spokeAngles.map((a) => {
+          const rad = (a * Math.PI) / 180;
+          return (
+            <line
+              key={a}
+              x1={Math.cos(rad) * r * 0.22}
+              y1={Math.sin(rad) * r * 0.22}
+              x2={Math.cos(rad) * r * 0.7}
+              y2={Math.sin(rad) * r * 0.7}
+              stroke="#bbb"
+              strokeWidth={r * 0.14}
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {/* Felgenring */}
+        <circle r={r * 0.68} fill="none" stroke="#aaa" strokeWidth={r * 0.06} />
+        <circle r={r * 0.22} fill="#ccc" />
+        {/* Nabenmitte */}
+        <circle r={r * 0.1} fill="#888" />
+        {/* Highlight */}
+        <circle r={r * 0.06} fill="#fff" opacity={0.4} cx={-r * 0.04} cy={-r * 0.04} />
+      </g>
+
+      {/* Bremssattel (statisch) */}
+      <rect
+        x={-r * 0.18}
+        y={r * 0.35}
+        width={r * 0.36}
+        height={r * 0.22}
+        rx={r * 0.05}
+        fill={accentColor}
+        opacity={0.9}
+      />
+    </g>
+  );
+};
+
+// ── Haupt-Bus-SVG ─────────────────────────────────────────────────────────
 
 const CSSAnimatedBus: React.FC<{
   size?: number;
   accentColor?: string;
+  bodyColor?: string;
   color?: string;
   driveIn?: boolean;
-}> = ({ size = 120, accentColor = '#F59E0B', color = '#FFFFFF', driveIn = true }) => {
+  label?: string;
+}> = ({
+  size = 200,
+  accentColor = '#F59E0B',
+  bodyColor,
+  color = '#FFFFFF',
+  driveIn = true,
+  label = 'MOJOBUS',
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const enter = spring({ frame, fps, config: { damping: 18, stiffness: 60, mass: 1.2 } });
-  const driveInX = driveIn ? interpolate(enter, [0, 1], [-size * 2.5, 0]) : 0;
-  const rockAngle = Math.sin((frame / fps) * Math.PI * 2 * 1.8) * 1.2;
-  const bounceY = Math.abs(Math.sin((frame / fps) * Math.PI * 4 * 1.8)) * 1.5;
-  const wheelRot = (frame / fps) * 360 * 1.5;
+  // ── Animationen ──────────────────────────────────────────────────────────
+  const enter = spring({ frame, fps, config: { damping: 22, stiffness: 55, mass: 1.1 } });
+  const driveInX = driveIn ? interpolate(enter, [0, 1], [-(size * 3), 0]) : 0;
 
-  const bH = size * 0.55;
-  const bW = size;
-  const wc = 'rgba(180,220,255,0.85)';
-  const dc = '#1a1a1a';
+  // Leichtes Wippen (Federung)
+  const rockAngle = Math.sin((frame / fps) * Math.PI * 2 * 1.6) * 0.8;
+  const bounceY   = Math.abs(Math.sin((frame / fps) * Math.PI * 3.2)) * 2.5;
+  const wheelRot  = (frame / fps) * 360 * 1.8;
+
+  // Scheinwerfer-Pulse
+  const lightPulse = 0.7 + Math.sin((frame / fps) * Math.PI * 2 * 0.8) * 0.15;
+
+  // ── Maße (skalierbar) ────────────────────────────────────────────────────
+  const W  = size;          // Gesamt-Breite
+  const H  = size * 0.48;  // Rumpf-Höhe (ohne Räder)
+  const WR = size * 0.11;  // Rad-Radius
+  const RY = H + WR * 0.6; // Rad-Mittelpunkt Y
+
+  // Bus-Körperfarbe: wenn nicht übergeben → dunklere Variante der accentColor
+  const busBody   = bodyColor || '#1e293b';
+  const roofColor = '#e2e8f0';
+  const glassColor = 'rgba(180, 220, 255, 0.82)';
+  const glassHighlight = 'rgba(255,255,255,0.35)';
+
+  // Akzentfarbe leicht dunkler für Streifen-Schatten
+  const accentDark = accentColor + 'cc';
 
   return (
     <div style={{
       transform: `translateX(${driveInX}px) rotate(${rockAngle}deg) translateY(${bounceY}px)`,
-      transformOrigin: 'bottom center', display: 'inline-block',
+      transformOrigin: 'bottom center',
+      display: 'inline-block',
+      filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.55))',
     }}>
-      <svg width={bW} height={bH * 1.5} viewBox={`0 0 ${bW} ${bH * 1.5}`} overflow="visible">
-        <rect x={4} y={bH * 0.1} width={bW - 8} height={bH * 0.72} rx={6} fill={accentColor} />
-        <rect x={8} y={bH * 0.08} width={bW - 16} height={bH * 0.1} rx={4} fill={dc} opacity={0.4} />
-        <rect x={6} y={bH * 0.13} width={bW - 12} height={bH * 0.06} rx={3} fill={color} opacity={0.15} />
-        {[0.12, 0.27, 0.44, 0.59, 0.74].map((x, i) => (
-          <rect key={i} x={bW * x} y={bH * 0.16} width={bW * 0.11} height={bH * 0.22}
-            rx={3} fill={wc} stroke={dc} strokeWidth={1} />
+      <svg
+        width={W}
+        height={RY + WR * 1.15}
+        viewBox={`0 0 ${W} ${RY + WR * 1.15}`}
+        overflow="visible"
+      >
+        <defs>
+          {/* Glas-Gradient für Windschutzscheibe */}
+          <linearGradient id="windshield-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#c8e6ff" stopOpacity="0.9" />
+            <stop offset="40%" stopColor="#e8f4ff" stopOpacity="0.75" />
+            <stop offset="100%" stopColor="#90c4e8" stopOpacity="0.6" />
+          </linearGradient>
+
+          {/* Seitenfenster-Gradient */}
+          <linearGradient id="side-glass-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#daf0ff" stopOpacity="0.85" />
+            <stop offset="50%" stopColor="#b8dcf8" stopOpacity="0.65" />
+            <stop offset="100%" stopColor="#7ab8e0" stopOpacity="0.5" />
+          </linearGradient>
+
+          {/* Bus-Körper Gradient (Metallic) */}
+          <linearGradient id="body-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={roofColor} />
+            <stop offset="15%" stopColor={roofColor} />
+            <stop offset="22%" stopColor={accentColor} />
+            <stop offset="28%" stopColor={accentColor} />
+            <stop offset="30%" stopColor={busBody} />
+            <stop offset="85%" stopColor={busBody} />
+            <stop offset="100%" stopColor="#0f172a" />
+          </linearGradient>
+
+          {/* Scheinwerfer-Glow */}
+          <radialGradient id="headlight-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#fff9c4" stopOpacity="1" />
+            <stop offset="40%" stopColor="#fef08a" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
+          </radialGradient>
+
+          {/* Chromstreifen Gradient */}
+          <linearGradient id="chrome-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f8fafc" />
+            <stop offset="50%" stopColor="#cbd5e1" />
+            <stop offset="100%" stopColor="#94a3b8" />
+          </linearGradient>
+        </defs>
+
+        {/* ══ Schatten unter dem Bus ══════════════════════════════════════ */}
+        <ellipse
+          cx={W * 0.5}
+          cy={RY + WR * 1.1}
+          rx={W * 0.44}
+          ry={WR * 0.22}
+          fill="rgba(0,0,0,0.35)"
+        />
+
+        {/* ══ Bus-Körper (Hauptform) ══════════════════════════════════════ */}
+        {/* Dach – leicht abgerundet */}
+        <rect
+          x={W * 0.04}
+          y={0}
+          width={W * 0.92}
+          height={H * 0.18}
+          rx={W * 0.025}
+          fill={roofColor}
+        />
+        {/* Hauptkörper */}
+        <rect
+          x={W * 0.02}
+          y={H * 0.06}
+          width={W * 0.96}
+          height={H * 0.94}
+          rx={W * 0.018}
+          fill="url(#body-grad)"
+        />
+
+        {/* ══ Akzentstreifen ══════════════════════════════════════════════ */}
+        {/* Oberer Akzentstreifen */}
+        <rect
+          x={W * 0.02}
+          y={H * 0.21}
+          width={W * 0.96}
+          height={H * 0.055}
+          fill={accentColor}
+        />
+        {/* Unterer Akzentstreifen (dünn) */}
+        <rect
+          x={W * 0.02}
+          y={H * 0.26}
+          width={W * 0.96}
+          height={H * 0.018}
+          fill={accentDark}
+          opacity={0.7}
+        />
+
+        {/* ══ Chromstreifen (Unterseite) ══════════════════════════════════ */}
+        <rect
+          x={W * 0.02}
+          y={H * 0.87}
+          width={W * 0.96}
+          height={H * 0.04}
+          fill="url(#chrome-grad)"
+          rx={2}
+        />
+
+        {/* ══ Unterbodenverkleidung ═══════════════════════════════════════ */}
+        <rect
+          x={W * 0.05}
+          y={H * 0.92}
+          width={W * 0.9}
+          height={H * 0.1}
+          rx={4}
+          fill="#0f172a"
+        />
+
+        {/* ══ VORNE (rechts im SVG): Windschutzscheibe + Front ══════════ */}
+        {/* Front-Maske abrunden */}
+        <rect
+          x={W * 0.87}
+          y={H * 0.06}
+          width={W * 0.11}
+          height={H * 0.86}
+          rx={W * 0.018}
+          fill={busBody}
+        />
+        {/* Windschutzscheibe */}
+        <rect
+          x={W * 0.88}
+          y={H * 0.08}
+          width={W * 0.085}
+          height={H * 0.52}
+          rx={W * 0.012}
+          fill="url(#windshield-grad)"
+        />
+        {/* Windschutzscheibe-Spiegelung */}
+        <rect
+          x={W * 0.89}
+          y={H * 0.09}
+          width={W * 0.025}
+          height={H * 0.42}
+          rx={3}
+          fill={glassHighlight}
+        />
+        {/* Windschutzscheibe-Rahmen */}
+        <rect
+          x={W * 0.88}
+          y={H * 0.08}
+          width={W * 0.085}
+          height={H * 0.52}
+          rx={W * 0.012}
+          fill="none"
+          stroke="#0f172a"
+          strokeWidth={2}
+        />
+
+        {/* Scheinwerfer rechts (Tagfahrlicht) */}
+        <rect
+          x={W * 0.895}
+          y={H * 0.64}
+          width={W * 0.072}
+          height={H * 0.13}
+          rx={4}
+          fill="#1e293b"
+        />
+        {/* DRL-Leuchten */}
+        <rect
+          x={W * 0.9}
+          y={H * 0.655}
+          width={W * 0.055}
+          height={H * 0.04}
+          rx={2}
+          fill="#fef9c3"
+          opacity={lightPulse}
+        />
+        <rect
+          x={W * 0.9}
+          y={H * 0.705}
+          width={W * 0.055}
+          height={H * 0.055}
+          rx={2}
+          fill="#fef08a"
+          opacity={lightPulse * 0.9}
+        />
+        {/* Scheinwerfer-Glow */}
+        <ellipse
+          cx={W * 0.97}
+          cy={H * 0.71}
+          rx={W * 0.06}
+          ry={H * 0.07}
+          fill="url(#headlight-glow)"
+          opacity={lightPulse * 0.6}
+        />
+
+        {/* Front-Stoßstange */}
+        <rect
+          x={W * 0.88}
+          y={H * 0.82}
+          width={W * 0.09}
+          height={H * 0.1}
+          rx={3}
+          fill="#334155"
+        />
+        <rect
+          x={W * 0.89}
+          y={H * 0.84}
+          width={W * 0.07}
+          height={H * 0.025}
+          rx={1}
+          fill="url(#chrome-grad)"
+        />
+        {/* Nebelscheinwerfer */}
+        <circle
+          cx={W * 0.905}
+          cy={H * 0.86}
+          r={H * 0.025}
+          fill="#fef9c3"
+          opacity={0.8}
+        />
+
+        {/* Front-Rückspiegel */}
+        <rect
+          x={W * 0.875}
+          y={H * 0.08}
+          width={W * 0.03}
+          height={H * 0.09}
+          rx={2}
+          fill="#334155"
+        />
+        <rect
+          x={W * 0.865}
+          y={H * 0.05}
+          width={W * 0.04}
+          height={H * 0.06}
+          rx={3}
+          fill="#475569"
+          stroke="#1e293b"
+          strokeWidth={1}
+        />
+        {/* Spiegel-Reflex */}
+        <rect
+          x={W * 0.87}
+          y={H * 0.055}
+          width={W * 0.012}
+          height={H * 0.04}
+          rx={1}
+          fill={glassHighlight}
+        />
+
+        {/* ══ SEITE: Panorama-Fenster ════════════════════════════════════ */}
+        {/* Fenster-Band (durchgehendes Band) */}
+        <rect
+          x={W * 0.04}
+          y={H * 0.08}
+          width={W * 0.83}
+          height={H * 0.46}
+          rx={4}
+          fill="url(#side-glass-grad)"
+          stroke="#0f172a"
+          strokeWidth={1.5}
+        />
+        {/* Fenster-Trennstege */}
+        {[0.175, 0.31, 0.445, 0.58, 0.715].map((x, i) => (
+          <rect
+            key={i}
+            x={W * x}
+            y={H * 0.08}
+            width={W * 0.012}
+            height={H * 0.46}
+            fill="#0f172a"
+          />
         ))}
-        <rect x={bW * 0.88} y={bH * 0.14} width={bW * 0.09} height={bH * 0.24} rx={3} fill={wc} stroke={dc} strokeWidth={1} />
-        <circle cx={bW * 0.94} cy={bH * 0.45} r={bH * 0.045} fill="#FFFDE7" opacity={0.9} />
-        <circle cx={bW * 0.94} cy={bH * 0.45} r={bH * 0.025} fill="#FFF9C4" />
-        <rect x={bW * 0.27} y={bH * 0.42} width={bW * 0.11} height={bH * 0.38}
-          rx={2} fill={wc} stroke={dc} strokeWidth={0.8} opacity={0.7} />
-        <line x1={bW * 0.325} y1={bH * 0.42} x2={bW * 0.325} y2={bH * 0.80} stroke={dc} strokeWidth={0.8} />
-        <rect x={4} y={bH * 0.77} width={bW - 8} height={bH * 0.06} fill={dc} opacity={0.5} />
-        <text x={bW * 0.5} y={bH * 0.73} textAnchor="middle" fill={color}
-          fontSize={bH * 0.14} fontFamily="Arial Black, sans-serif"
-          fontWeight="900" letterSpacing="2" opacity={0.9}>MOJOBUS</text>
-        {[bW * 0.22, bW * 0.72].map((cx, i) => (
-          <g key={i} transform={`translate(${cx},${bH * 0.9})`}>
-            <circle r={bH * 0.16} fill={dc} />
-            <circle r={bH * 0.09} fill="#888" />
-            {[0, 60, 120].map((a) => {
-              const rad = ((a + wheelRot) * Math.PI) / 180;
-              const r2 = bH * 0.085;
-              return <line key={a}
-                x1={Math.cos(rad) * r2} y1={Math.sin(rad) * r2}
-                x2={Math.cos(rad + Math.PI) * r2} y2={Math.sin(rad + Math.PI) * r2}
-                stroke={dc} strokeWidth={2} />;
-            })}
-            <circle r={bH * 0.025} fill={dc} />
-          </g>
+        {/* Fenster-Spiegelungen (diagonale Highlights) */}
+        {[0.06, 0.195, 0.33, 0.465, 0.60, 0.735].map((x, i) => (
+          <rect
+            key={i}
+            x={W * (x + 0.015)}
+            y={H * 0.09}
+            width={W * 0.025}
+            height={H * 0.38}
+            rx={2}
+            fill={glassHighlight}
+            transform={`skewX(-8)`}
+          />
         ))}
-        <rect x={bW * 0.08} y={bH * 0.83} width={bW * 0.84} height={bH * 0.05} rx={2} fill={dc} opacity={0.6} />
+        {/* Obere Fenster-Lüftung */}
+        <rect
+          x={W * 0.04}
+          y={H * 0.08}
+          width={W * 0.83}
+          height={H * 0.04}
+          rx={0}
+          fill="rgba(0,0,0,0.25)"
+        />
+
+        {/* ══ HINTEN (links im SVG): Heckpartie ═════════════════════════ */}
+        {/* Heck-Fläche */}
+        <rect
+          x={W * 0.01}
+          y={H * 0.08}
+          width={W * 0.045}
+          height={H * 0.84}
+          rx={W * 0.018}
+          fill={busBody}
+        />
+        {/* Heckscheibe (klein) */}
+        <rect
+          x={W * 0.015}
+          y={H * 0.1}
+          width={W * 0.032}
+          height={H * 0.4}
+          rx={3}
+          fill="url(#side-glass-grad)"
+          stroke="#0f172a"
+          strokeWidth={1}
+        />
+        {/* Rücklichter */}
+        <rect
+          x={W * 0.015}
+          y={H * 0.55}
+          width={W * 0.03}
+          height={H * 0.14}
+          rx={3}
+          fill="#dc2626"
+          opacity={0.9}
+        />
+        <rect
+          x={W * 0.018}
+          y={H * 0.57}
+          width={W * 0.02}
+          height={H * 0.05}
+          rx={1}
+          fill="#fca5a5"
+          opacity={0.8}
+        />
+        {/* Heck-Stoßstange */}
+        <rect
+          x={W * 0.015}
+          y={H * 0.82}
+          width={W * 0.03}
+          height={H * 0.1}
+          rx={2}
+          fill="#334155"
+        />
+
+        {/* ══ Bus-Beschriftung ════════════════════════════════════════════ */}
+        {/* Label-Hintergrund */}
+        <rect
+          x={W * 0.12}
+          y={H * 0.59}
+          width={W * 0.62}
+          height={H * 0.19}
+          rx={4}
+          fill="rgba(0,0,0,0.25)"
+        />
+        {/* Haupt-Beschriftung */}
+        <text
+          x={W * 0.43}
+          y={H * 0.735}
+          textAnchor="middle"
+          fill={color}
+          fontSize={H * 0.16}
+          fontFamily="Arial Black, Impact, sans-serif"
+          fontWeight="900"
+          letterSpacing="3"
+          opacity={0.95}
+        >
+          {label}
+        </text>
+        {/* Akzent-Linie unter dem Text */}
+        <rect
+          x={W * 0.2}
+          y={H * 0.76}
+          width={W * 0.46}
+          height={H * 0.018}
+          rx={1}
+          fill={accentColor}
+          opacity={0.8}
+        />
+
+        {/* ══ Abgas-Effekt (links hinten) ════════════════════════════════ */}
+        <ExhaustPuff cx={W * 0.02} cy={H * 0.9} frame={frame} fps={fps} delay={0} />
+        <ExhaustPuff cx={W * 0.02} cy={H * 0.88} frame={frame} fps={fps} delay={15} />
+        <ExhaustPuff cx={W * 0.02} cy={H * 0.92} frame={frame} fps={fps} delay={8} />
+
+        {/* ══ Räder ══════════════════════════════════════════════════════ */}
+        {/* Radkästen */}
+        <ellipse cx={W * 0.22} cy={RY} rx={WR * 1.35} ry={WR * 0.55} fill="#0f172a" />
+        <ellipse cx={W * 0.74} cy={RY} rx={WR * 1.35} ry={WR * 0.55} fill="#0f172a" />
+
+        {/* Vorderrad (rechts) */}
+        <Wheel cx={W * 0.74} cy={RY} r={WR} wheelRot={wheelRot} accentColor={accentColor} />
+        {/* Hinterrad (links) */}
+        <Wheel cx={W * 0.22} cy={RY} r={WR} wheelRot={wheelRot} accentColor={accentColor} />
+
+        {/* ══ Dach-Details ════════════════════════════════════════════════ */}
+        {/* Klimaanlage */}
+        <rect
+          x={W * 0.35}
+          y={-H * 0.06}
+          width={W * 0.28}
+          height={H * 0.1}
+          rx={3}
+          fill="#94a3b8"
+        />
+        <rect
+          x={W * 0.37}
+          y={-H * 0.04}
+          width={W * 0.24}
+          height={H * 0.065}
+          rx={2}
+          fill="#64748b"
+        />
+        {/* Klima-Lamellen */}
+        {[0.38, 0.42, 0.46, 0.5, 0.54, 0.58].map((x, i) => (
+          <rect
+            key={i}
+            x={W * x}
+            y={-H * 0.035}
+            width={W * 0.012}
+            height={H * 0.055}
+            rx={1}
+            fill="#475569"
+          />
+        ))}
+        {/* Dach-Antenne */}
+        <rect
+          x={W * 0.7}
+          y={-H * 0.12}
+          width={W * 0.008}
+          height={H * 0.16}
+          rx={1}
+          fill="#94a3b8"
+        />
+        <circle cx={W * 0.704} cy={-H * 0.13} r={W * 0.008} fill="#64748b" />
+
       </svg>
     </div>
   );
@@ -80,19 +617,23 @@ const CSSAnimatedBus: React.FC<{
 export interface LottieBusIconProps {
   size?: number;
   accentColor?: string;
+  bodyColor?: string;
   color?: string;
   driveIn?: boolean;
   position?: 'center' | 'bottom-center' | 'top-center';
-  /** Lottie JSON-Daten — von render.js per Node.js require() geladen und als inputProp übergeben */
+  label?: string;
+  /** Lottie JSON-Daten — reserviert für zukünftige echte Lottie-Integration */
   lottieData?: object | null;
 }
 
 export const LottieBusIcon: React.FC<LottieBusIconProps> = ({
-  size = 140,
+  size = 220,
   accentColor = '#F59E0B',
+  bodyColor,
   color = '#FFFFFF',
   driveIn = true,
   position = 'center',
+  label = 'MOJOBUS',
   lottieData,
 }) => {
   const frame = useCurrentFrame();
@@ -100,44 +641,58 @@ export const LottieBusIcon: React.FC<LottieBusIconProps> = ({
 
   const posStyles: React.CSSProperties =
     position === 'bottom-center'
-      ? { position: 'absolute', bottom: '12%', left: '50%', transform: 'translateX(-50%)' }
+      ? { position: 'absolute', bottom: '8%', left: '50%', transform: 'translateX(-50%)' }
       : position === 'top-center'
-      ? { position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)' }
+      ? { position: 'absolute', top: '8%', left: '50%', transform: 'translateX(-50%)' }
       : { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
 
   const enter = spring({ frame, fps, config: { damping: 20, stiffness: 80 } });
   const opacity = interpolate(enter, [0, 1], [0, 1]);
 
-  // lottieData kommt als Prop von außen — kein require() hier
-  // (render.js lädt die JSON-Datei und übergibt sie als inputProp)
   return (
     <div style={{ ...posStyles, opacity, pointerEvents: 'none' }}>
-      <CSSAnimatedBus size={size} accentColor={accentColor} color={color} driveIn={driveIn} />
+      <CSSAnimatedBus
+        size={size}
+        accentColor={accentColor}
+        bodyColor={bodyColor}
+        color={color}
+        driveIn={driveIn}
+        label={label}
+      />
     </div>
   );
 };
 
-// ── BusRideOverlay ────────────────────────────────────────────────────────
+// ── BusRideOverlay — Bus fährt durchs Bild ───────────────────────────────
 
 export const BusRideOverlay: React.FC<{
   accentColor?: string;
   size?: number;
   verticalPosition?: number;
-}> = ({ accentColor = '#F59E0B', size = 80, verticalPosition = 75 }) => {
+  label?: string;
+}> = ({ accentColor = '#F59E0B', size = 160, verticalPosition = 75, label = 'MOJOBUS' }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
 
-  const xPercent = interpolate(frame, [0, durationInFrames], [-15, 115], {
-    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+  const xPercent = interpolate(frame, [0, durationInFrames], [-20, 115], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
   });
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       <div style={{
-        position: 'absolute', left: `${xPercent}%`, top: `${verticalPosition}%`,
+        position: 'absolute',
+        left: `${xPercent}%`,
+        top: `${verticalPosition}%`,
         transform: 'translate(-50%, -50%)',
       }}>
-        <CSSAnimatedBus size={size} accentColor={accentColor} driveIn={false} />
+        <CSSAnimatedBus
+          size={size}
+          accentColor={accentColor}
+          driveIn={false}
+          label={label}
+        />
       </div>
     </AbsoluteFill>
   );
