@@ -456,8 +456,8 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
         />
       )}
 
-      {/* ══ NEU SCHICHT 12: Beat-Sync Flash Effekt ═══════════════════════════ */}
-      {beatSyncStrength > 0 && (
+      {/* ══ FEHLERBEHEBUNG: Beat-Sync VORÜBERGEHEND DEAKTIVIERT ════════════════ */}
+      {/* {beatSyncStrength > 0 && (
         <Sequence from={hookFrames} durationInFrames={slideshowFrames}>
           <BeatSyncLayer
             musicUrl={musicUrl}
@@ -468,7 +468,7 @@ export const MojoBusVideo: React.FC<MojoBusVideoProps> = ({
             fallbackBeats={fallbackBeats}
           />
         </Sequence>
-      )}
+      )} */}
 
     </AbsoluteFill>
   );
